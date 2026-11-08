@@ -24,11 +24,13 @@ const rejected: Array<[name: string, code: string, rule: string]> = [
   ['npm import', "import 'pixi.js';", 'no-restricted-imports'],
   ['node import', "import 'node:crypto';", 'no-restricted-imports'],
   ['workspace import', "import '@game/analysis';", 'no-restricted-imports'],
+  ['import two levels up', "import '../../../analysis/src/index.ts';", 'no-restricted-imports'],
 ];
 
 const allowed = [
   "import { TICK_HZ } from '../version.ts';",
-  'export const a = Math.sqrt(2) + Math.floor(1.5) + Math.imul(3, 5) + TICK_HZ;',
+  "import { NESTED } from './sub/nested.ts';",
+  'export const a = Math.sqrt(2) + Math.floor(1.5) + Math.imul(3, 5) + TICK_HZ + NESTED;',
   'export const b = (7 * 3) | 0;',
 ].join('\n');
 
@@ -36,11 +38,12 @@ type Diagnostic = { code: string; filename: string };
 let byFile = new Map<string, string[]>();
 
 beforeAll(() => {
-  mkdirSync(coreProbe, { recursive: true });
+  mkdirSync(`${coreProbe}sub/`, { recursive: true });
   mkdirSync(clientProbe, { recursive: true });
   const files = new Map<string, string>([
     ...rejected.map(([, code], i) => [`${coreProbe}case${i}.ts`, code] as const),
     [`${coreProbe}allowed.ts`, allowed],
+    [`${coreProbe}sub/nested.ts`, 'export const NESTED = 1;'],
     [`${clientProbe}random.ts`, 'export const x = Math.random();'],
   ]);
   for (const [file, code] of files) writeFileSync(file, code);

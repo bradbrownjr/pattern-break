@@ -24,6 +24,7 @@ pnpm install
 | `pnpm typecheck` | `tsc` (TypeScript 7) in each package, then in `tools/`. |
 | `pnpm test` | Vitest in each package. |
 | `pnpm check:docs` | The writing-rules check (`tools/check-docs.ts`). |
+| `pnpm gen:tables` | Regenerates `packages/core/src/spectrum/tables.generated.ts`. |
 | `pnpm check` | Lint, type-check, tests, and the docs check, in that order. |
 
 One package: `pnpm --filter @game/core test`. One test file:
@@ -45,14 +46,19 @@ pattern-break/
 ├── packages/
 │   ├── core/                      # @game/core: deterministic levelgen, sim, PRNG, replays
 │   │   ├── src/version.ts         # GEN_VERSION, SIM_VERSION, TICK_HZ, ANALYSIS_SAMPLE_RATE
+│   │   ├── src/analysis-constants.ts  # the analysis pass parameters
+│   │   ├── src/level-data/        # LevelData types and binary format
+│   │   ├── src/spectrum/          # FFT, band and LED analysis, generated tables
 │   │   └── test/determinism-lint.test.ts
 │   ├── analysis/                  # @game/analysis: libopenmpt wrapper, produces LevelData
+│   │   ├── src/analyze.ts         # the analysis pass
 │   │   └── fixtures/              # golden-test modules (from S1)
 │   ├── client/                    # @game/client: the Vite app
 │   │   └── src/config/brand.ts    # the game's name, in one place
 │   └── server/                    # @game/server: leaderboard API and replay validator (M5)
 ├── tools/
 │   ├── check-docs.ts              # writing-rules check
+│   ├── gen-spectrum-tables.ts     # writes core's spectrum tables
 │   └── lint/determinism-plugin.js # Oxlint JS plugin for core
 ├── tsconfig.base.json             # shared compiler options
 └── pnpm-workspace.yaml
@@ -82,7 +88,8 @@ rules"). Lint enforces the parts a linter can see.
   `packages/core/src/**`:
   - `no-restricted-properties`: `Math.random` and the transcendental `Math` functions
   - `no-restricted-globals`: clocks, host and DOM globals, timers, `fetch`, `WebAssembly`
-  - `no-restricted-imports`: everything except `./` and `../`
+  - `no-restricted-imports`: everything except relative paths, which are `./` at any
+    depth and `../` one level up
 - **Plugin rules** in `tools/lint/determinism-plugin.js`, for what Oxlint has no built-in
   rule for:
   - `determinism/no-pow-operator`: `**` and `**=`
@@ -97,6 +104,94 @@ rules"). Lint enforces the parts a linter can see.
 
 **Adding a rule:** add it to the override (or the plugin), then add a case to `rejected` in
 the test. Check that the new case fails with the rule turned off.
+
+## LevelData
+
+`LevelData` is the output of the analysis pass: `analyze(openmpt, bytes)` in
+`packages/analysis/src/analyze.ts`. The types are in `packages/core/src/level-data/types.ts`,
+and `serializeLevelData` and `deserializeLevelData` are in
+`packages/core/src/level-data/serialize.ts`. `hashLevelData` in
+`packages/analysis/src/hash.ts` is the SHA-256 of the serialized bytes.
+
+### The analysis pass
+
+The parameters are constants in `packages/core/src/analysis-constants.ts`, and every
+LevelData records them in `params`.
+
+- **Render:** 48 000 Hz, in reads of 160 frames. Before the first read: master gain 0 mB,
+  stereo separation 100%, interpolation filter length 8, volume ramping strength 1, and
+  repeat count 0. Rendering stops when a read returns 0 or at 15 minutes
+  (`hitDurationCap`). Volume ramping is 1 rather than libopenmpt's -1 ("recommended
+  default"), because what -1 means can change between releases.
+- **Rows:** after each read, if the current (order, row) differs from the last one, a row
+  entry is recorded with the read's start sample as `timeSamples`. The row started somewhere
+  in that read, so a timestamp is up to one read (160 samples, 3.33 ms) early. Two limits:
+  a row shorter than one read can be missed (in the classic tempo mode a tick is
+  2.5 / tempo seconds, so that needs speed 1 and a tempo above 750), and a row that plays
+  twice in a row (a one-row pattern loop, E6x) is recorded once.
+- **Note events:** for each recorded row, every channel whose pattern note is 1..120 gives
+  one event with the raw libopenmpt cell values. `resolvedInstrument` is the cell's
+  instrument, or the channel's last nonzero instrument on a played row if the cell has 0.
+  Pattern breaks (Dxx), position jumps (Bxx), and loops need no special handling: only rows
+  libopenmpt plays are recorded.
+- **Analysis frames:** one every 800 samples (60 per second), taken after
+  (f + 1) x 800 samples. Each channel's most recent 2048 samples (zeros before the song
+  starts) are windowed with a periodic Hann window and transformed by one complex radix-2
+  FFT, left as the real part and right as the imaginary part. 16 bands, log-spaced from
+  40 Hz to 16 kHz, each take the mean power of their FFT bins. The LED level (0..12) is the
+  number of the band's thresholds the power meets or exceeds. VU (volume unit) values are
+  `floor(min(v, 1) * 255)`.
+
+### Spectrum tables
+
+Core can't call `Math.sin`, `Math.cos`, or `Math.pow` at runtime, so
+`tools/gen-spectrum-tables.ts` computes the FFT twiddles, the Hann window, the band bin
+ranges, and the LED thresholds and writes them as number literals to
+`packages/core/src/spectrum/tables.generated.ts`. `Number.prototype.toString` gives the
+shortest literal that reads back as the same double, so the committed values are exact.
+
+- **Band bins:** band b covers the bins whose centre frequency is in
+  [40 x 400^(b/16), 40 x 400^((b+1)/16)) Hz. A band that would be empty gets one bin, and
+  each band starts where the previous one ends. The lowest band is bin 2 alone.
+- **LED calibration:** the generator synthesizes a full-scale sine (amplitude 1, phase 0 at
+  the first sample) at the band's geometric centre frequency, windows it, and takes the
+  band's mean bin power with a direct DFT. That reference is 0 dB for the band. The
+  thresholds are the reference times 10^(dB/10) for dB = -60, -55, ..., -5, so that sine
+  reads 12 and each 5 dB quieter reads one level lower.
+
+After changing a constant in `analysis-constants.ts` or the generator, run
+`pnpm gen:tables` and commit the result. `packages/core/test/spectrum-tables.test.ts`
+re-runs the generator and fails if the committed file differs. A Node release that changes
+`Math.sin` or `Math.pow` results would also fail it; check the diff before regenerating.
+
+### Binary format
+
+Little-endian, no padding, fields in this order. `str` is a u32 byte length followed by
+UTF-8 bytes (`packages/core/src/utf8.ts`, since core can't use `TextEncoder`). An array is
+its elements back to back; its length comes from the count before it.
+
+| Field | Encoding |
+|---|---|
+| Magic | the 4 bytes `PBLD` |
+| `formatVersion` (1), `genVersion` | u32 each |
+| `libopenmptVersion` | str |
+| `params`: sampleRate, chunkFrames, hopFrames, fftSize, bandCount, bandLowHz, bandHighHz, ledLevels | u32 each |
+| `params.ledBottomDb` | i32 |
+| `params`: ledStepDb, vuScale, maxDurationSamples | u32 each |
+| `totalSamples` | u32 |
+| `hitDurationCap` | u8, 0 or 1 |
+| `meta`: title, artist, type, tracker | str each |
+| `meta`: numChannels, numOrders, numPatterns, numInstruments, numSamples | u32 each |
+| `meta.instrumentNames`, `meta.sampleNames` | u32 count, then str each |
+| `orderPatterns` | u32 count, then u16 each |
+| `rows` | u32 count R, then R x u32 timeSamples, then R x u16 each of order, pattern, row, speed, tempo |
+| `notes` | u32 count N, then N x u32 timeSamples, then N x u8 each of channel, instrument, resolvedInstrument, note, volume, volumeEffect, effect, effectParam |
+| `frames` | u32 frameCount F, then F x bandCount u8 spectrumLeft, the same for spectrumRight, then F x numChannels u8 vuLeft, the same for vuRight |
+
+Spectrum and VU arrays are frame-major: band b of frame f is at `f * bandCount + b`.
+`deserializeLevelData` throws on a wrong magic or version, on truncated data, and on
+trailing bytes. A change to the layout bumps `LEVEL_DATA_FORMAT_VERSION`; a change to the
+values bumps `GEN_VERSION`.
 
 ## Versions to bump
 

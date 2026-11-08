@@ -12,6 +12,7 @@
     "typecheck": "pnpm -r --if-present typecheck && tsc -p tools/tsconfig.json",
     "test": "pnpm -r --if-present test",
     "check:docs": "node tools/check-docs.ts",
+    "gen:tables": "node tools/gen-spectrum-tables.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm check:docs",
     "dev": "pnpm --filter @game/client dev",
     "build": "pnpm -r --if-present build"

@@ -249,7 +249,8 @@
                 "group": [
                   "*",
                   "!./*",
-                  "!../*"
+                  "!../*",
+                  "!./**"
                 ],
                 "message": "packages/core may only use relative imports: no npm, node:, or other workspace packages."
               }
