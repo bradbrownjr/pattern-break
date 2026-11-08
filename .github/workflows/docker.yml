@@ -1,0 +1,62 @@
+name: Docker image
+
+# Builds the play-test image (see Dockerfile and docs/SELF-HOSTING.md).
+#   pull request            builds, does not push
+#   push to default branch  pushes edge and sha-<short sha>
+#   release published       pushes the version tag and latest (latest only for a full release)
+#   workflow_dispatch       pushes sha-<short sha> (and edge when run on the default branch)
+# The repository's default branch is not necessarily called main, so the push case compares
+# the branch with github.event.repository.default_branch.
+
+on:
+  pull_request:
+  push:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+env:
+  IMAGE: ghcr.io/bradbrownjr/pattern-break
+
+jobs:
+  image:
+    # A push to any other branch or a tag is skipped; pull requests cover branches.
+    if: github.event_name != 'push' || github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Log in to ghcr.io
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Work out tags and labels
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=edge
+            type=sha,format=short,enable=${{ github.event_name != 'release' }}
+            type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }}
+            type=raw,value=latest,enable=${{ github.event_name == 'release' && !github.event.release.prerelease }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
