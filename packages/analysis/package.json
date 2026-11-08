@@ -13,6 +13,7 @@
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
     "test": "vitest run --project node",
     "analyze": "node scripts/analyze.ts",
+    "bench:sim": "node scripts/bench-sim.ts",
     "test:browser": "vitest run --project browser"
   },
   "dependencies": {

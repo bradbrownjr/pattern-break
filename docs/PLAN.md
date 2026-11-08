@@ -109,23 +109,42 @@ Input: module bytes. Output: `LevelData` (serializable, cached in IndexedDB unde
 6. **Song length:** stop at song end. Detect infinite loops with libopenmpt's own song-end
    handling, plus a hard cap (for example, 15 minutes).
 
-## 6. Level generation (`packages/core/levelgen`)
+## 6. Level generation (`packages/core/src/levelgen`)
 
-A pure function: `generateLevel(levelData, difficulty, seed) -> Level`.
+A pure function: `generateLevel(levelData, difficulty) -> Level`. The seeded PRNG argument
+comes back with enemies, which are the only part that needs one.
 
-- **Scroll:** a constant number of pixels per *row*, so tempo changes visibly speed the
-  tunnel up or slow it down. Scroll position is derived from song time.
-- **Terrain:**
-  - Ceiling columns come from left-channel band levels, hanging down. Floor columns come
-    from right-channel band levels, rising up.
-  - Each screen column of terrain is one analysis frame. Bands map across the vertical
-    extent as LED segments.
-  - **Fairness clamp:** after quantization, guarantee a minimum passable gap (scaled by
-    difficulty). If ceiling and floor would close the gap, scale both down proportionally
-    for that column, then smooth the gap's position so it can't move faster than the ship's
-    top vertical speed.
-  - Peak-hold caps: each column keeps a peak dot that holds briefly and then falls. The dot
-    is solid (collidable) on Hard only.
+The aim: the player should feel they are playing the beat, and there is always a path for
+the ship, even when it is hard to fly. The path is a hard guarantee, checked by tests on
+every bar of every generated level.
+
+- **One bar per played row.** The terrain is a row of LED bars, one for each row
+  libopenmpt played, in play order. Bars are 10 px apart (8 px lit, 2 px open), so bar i
+  sits at world x i * 10.
+- **Scroll follows the rows.** Between the starts of consecutive rows the scroll position
+  moves linearly from one bar to the next; the last row ends at the song's end. A faster
+  tempo scrolls faster, and every bar sits on the music's grid. A bar reaches the playhead
+  (screen x 64) when its row starts.
+- **Ceiling and floor:**
+  - Bar i's ceiling comes from the left channel's band (i mod 16), and its floor from the
+    right channel's band (15 - i mod 16), so lows and highs alternate top and bottom like
+    a sliding stereo spectrum display.
+  - A bar's level is the highest LED level of its band over the analysis frames inside the
+    row. A row shorter than a frame uses the frame nearest its start.
+  - The playfield is 384 x 216 px. LED segments are 7 px apart (6 px lit), so 12 levels
+    reach 84 px from each edge.
+- **Always a path:**
+  - Each difficulty has a minimum gap between ceiling and floor: 96 px on easy, 72 on
+    normal, 56 on hard. A bar that would close it has both sides cut in proportion.
+  - From one bar to the next the gap's centre moves no further than the ship can travel
+    vertically in the earlier bar's row, and consecutive gaps always overlap by more than
+    the ship's height. Levels are cut further where needed. A gap that grows to contain
+    the previous one needs no cut, since the ship can stay where it is.
+- **Peak hold:** each side keeps a peak level that holds for 6 bars and then falls one
+  segment per bar. The peak dot is solid on hard only, and on hard the path rules apply to
+  the peaks too.
+- **Difficulty** is a constant object (`easy`, `normal`, `hard`). The numbers and the
+  exact rounding rules are in `docs/DEVELOPMENT.md`, "Level and sim".
 - **Enemies (from note events):**
   - Map instrument to enemy archetype. The default heuristic, overridable per song in a
     sidecar JSON later: low-pitched or percussive samples (short, low note) become heavy,
@@ -143,9 +162,10 @@ A pure function: `generateLevel(levelData, difficulty, seed) -> Level`.
 - **Boss (after M6; see the roadmap):** the last pattern, or the most-repeated one, becomes a boss
   whose weak points pulse on the lead channel.
 
-## 7. Simulation (`packages/core/sim`)
+## 7. Simulation (`packages/core/src/sim`)
 
-- Fixed 120 Hz tick. `tick(state, inputBits) -> state`.
+- Fixed 120 Hz tick, so 400 song samples per tick. `tick(level, state, inputBits)` updates
+  a preallocated state in place and allocates nothing. Positions are Q24.8 fixed-point.
 - Sim time is derived from the audio clock (see "Audio and timing"). If the render loop hitches, run several
   ticks to catch up. Never skip ticks.
 - Player ship: 8-way movement, a fire button (hold for auto-fire), one special or bomb

@@ -2,7 +2,8 @@
 
 How to work on the code: setup, layout, conventions, checks, and how the changelog and
 roadmap are kept. The design itself is in [`PLAN.md`](PLAN.md); the writing rules are in
-[`DOC-STYLE.md`](DOC-STYLE.md).
+[`DOC-STYLE.md`](DOC-STYLE.md). A module (or mod) is a song file made in a music tracker,
+a program that sequences short samples in rows of notes; every level is built from one.
 
 ## Requirements
 
@@ -23,9 +24,10 @@ pnpm install
 | `pnpm lint` | Oxlint over the repo, including the core determinism rules. |
 | `pnpm typecheck` | `tsc` (TypeScript 7) in each package, then in `tools/`. |
 | `pnpm test` | Vitest in each package, in Node. |
-| `pnpm test:browser` | The golden LevelData test and the client's audio tests in real browsers (see "Tests"). |
+| `pnpm test:browser` | The golden LevelData, level and sim tests and the client's audio tests in real browsers (see "Tests"). |
 | `pnpm --filter @game/analysis analyze <file>` | Analyzes one module (a song file made in a music tracker) and prints its LevelData hash and a summary. |
 | `pnpm screenshots` | Regenerates every figure in `docs/img/` (see "Screenshots"). |
+| `pnpm --filter @game/analysis bench:sim [file]` | Builds each difficulty's level, flies it with the autopilot, and prints sim ticks per second. |
 | `pnpm check:docs` | The writing-rules check (`tools/check-docs.ts`). |
 | `pnpm gen:tables` | Regenerates `packages/core/src/spectrum/tables.generated.ts`. |
 | `pnpm check` | Lint, type-check, tests, and the docs check, in that order. |
@@ -52,12 +54,16 @@ pattern-break/
 │   │   ├── src/analysis-constants.ts  # the analysis pass parameters
 │   │   ├── src/level-data/        # LevelData types and binary format
 │   │   ├── src/spectrum/          # FFT, band and LED analysis, generated tables
+│   │   ├── src/playfield.ts       # playfield geometry and tick timing
+│   │   ├── src/levelgen/          # generateLevel, the path check, Level bytes
+│   │   ├── src/sim/               # tick, collision, the autopilot
 │   │   └── test/determinism-lint.test.ts
 │   ├── analysis/                  # @game/analysis: libopenmpt wrapper, produces LevelData
 │   │   ├── src/analyze.ts         # the analysis pass
 │   │   ├── src/openmpt.ts         # the libopenmpt binding
 │   │   ├── scripts/analyze.ts     # prints a module's LevelData hash
 │   │   ├── vendor/libopenmpt/     # the pinned WASM build (see "libopenmpt build")
+│   │   ├── scripts/bench-sim.ts   # sim ticks per second on a module
 │   │   ├── fixtures/              # test modules and golden.json, their pinned hashes
 │   │   └── vitest.config.ts       # the node and browser test projects
 │   ├── client/                    # @game/client: the Vite app
@@ -215,6 +221,91 @@ Spectrum and VU arrays are frame-major: band b of frame f is at `f * bandCount +
 trailing bytes. A change to the layout bumps `LEVEL_DATA_FORMAT_VERSION`; a change to the
 values bumps `GEN_VERSION`.
 
+## Level and sim
+
+`generateLevel(levelData, difficulty)` in `packages/core/src/levelgen/generate.ts` builds a
+`Level` (`levelgen/types.ts`). `tick(level, state, input)` in `packages/core/src/sim/sim.ts`
+advances a `SimState` by one 120 Hz tick. The design is in `PLAN.md`, "Level generation"
+and "Simulation"; this section has the exact rules.
+
+### Coordinates
+
+- **Screen:** 384 x 216 px, origin top left, y down. Geometry constants are in
+  `packages/core/src/playfield.ts`.
+- **Fixed point:** sim positions and the scroll table are Q24.8: px * 256 (`Q8`).
+- **World x:** bar i's left edge is at world x `i * 10` px. It is solid for 8 px
+  (`[10i, 10i + 8)`); the other 2 px are open.
+- **Segments:** ceiling segment k (from 0) is solid for y in `[7k, 7k + 6)`. Floor segment
+  k is the mirror image: `[216 - 7k - 6, 216 - 7k)`. A side with level n has segments
+  0 to n - 1 lit. A peak p above the level lights segment p - 1 as a peak dot.
+- **Scroll table:** `level.scroll[t]`, for t from 0 to `level.tickCount`, is the world x in
+  Q8 of the screen's left edge at sim tick t (song sample `400 t`). It is
+  `playheadAtSample(400 t) - 64 * 256`. The playhead's world x is
+  `i * 2560 + floor(2560 * (s - start[i]) / (end[i] - start[i]))` for the row i playing at
+  sample s (0 before the first row, `barCount * 2560` from the song's end on). So a bar's
+  left edge is at screen x 64 (`PLAYHEAD_X`) when its row starts. To draw at tick t, a
+  world x w goes to screen x `w - scroll[t] / 256`. Between ticks the renderer may
+  interpolate the table; the sim only reads whole ticks.
+- **Ship:** `state.shipX` and `state.shipY` are the sprite centre in screen coordinates,
+  Q8. The hitbox is the half-open box `[x - 5, x + 5) x [y - 3, y + 3)` px. Its world x is
+  `scroll[state.tick] + shipX`.
+
+### Level generation
+
+For each bar in order, with the previous bar's final values:
+
+1. **Band value:** the ceiling reads left band `i mod 16`, the floor right band
+   `15 - (i mod 16)`. A frame f belongs to the row spanning `[start, end)` if its window
+   centre `(f + 1) * 800 - 1024` is in it; the value is the maximum over those frames.
+   With none, the frame whose centre is nearest `start` is used (the earlier on a tie).
+2. **Minimum gap:** the ceiling and floor together may light at most
+   `floor((216 - minGap) / 7)` segments: 17 on easy (96 px), 20 on normal (72 px), 22 on
+   hard (56 px). Above that, the ceiling becomes `floor((2 c M + (c + f)) / (2 (c + f)))`,
+   which is `c M / (c + f)` rounded half up, and the floor gets `M - ceiling`.
+3. **Gap movement:** twice the gap centre is `7 (c - f) + 216`. It may move from the
+   previous bar's by at most twice `gapShiftLimitPx(previous row length)`: the ship's
+   straight travel in that time, `floor(384 * samples / (400 * 256))` px, but never more
+   than the minimum gap minus 10 px (`MIN_GAP_OVERLAP_PX`, the hitbox height plus 4), so
+   consecutive gaps overlap by at least 10 px. If the gap moved down too far, the ceiling
+   loses segments until it fits or reaches 0; if up, the floor does. A side that reaches 0
+   leaves a gap that contains the previous one.
+4. **Peak hold:** a level at or above the peak sets the peak and a 6-bar hold
+   (`PEAK_HOLD_BARS`). Otherwise the hold counts down, and once it is 0 the peak drops one
+   segment per bar. Peaks are never below their levels.
+5. **Peak gap:** if the two peaks together exceed the segment budget of step 2, the
+   ceiling peak is lowered first (down to its level), then the floor peak.
+6. **Hard only:** peaks are solid, so step 3 runs again on the peaks. A peak is lowered
+   first; once it equals its level, both go down together.
+
+`findPathViolation(level)` in `levelgen/path-check.ts` checks the guarantee: every bar's
+solid gap (peaks on hard, levels otherwise) is at least the minimum, and every centre move
+is within the limit unless the new gap contains the old one. Tests run it on random loud
+songs at every difficulty and on each fixture.
+
+### Simulation
+
+- **Ticks:** `level.tickCount` is `ceil(totalSamples / 400)`. `state.tick` counts the ticks
+  run, so the state shows song sample `400 * state.tick`. `tick()` moves the ship, clamps
+  it, increments `state.tick`, then tests collision at the new tick. It does nothing once
+  `state.dead` or `state.finished` is set.
+- **Input bits** (`InputBit`, one byte per tick): up 1, down 2, left 4, right 8, fire 16,
+  bomb 32, buy 64. Only movement does anything in M1. Opposite directions cancel.
+- **Ship:** 384 Q8 (1.5 px) per tick straight. Diagonals move 272 Q8 on each axis
+  (384 / sqrt 2, rounded), about 1.503 px per tick in total. The centre stays within
+  x 16 to 160 and y 3 to 213, so the hitbox never leaves the screen. It starts at (64, 108).
+- **Collision:** the hitbox against the solid part of every bar it overlaps horizontally:
+  lit segments, plus peak dots on hard. Integer comparisons only.
+- **Death:** `state.dead` and `state.deathTick` (the value of `state.tick` after the fatal
+  tick). M1 restarts the song on death; `state.lives` is there for later.
+- **Running a log:** `runInputLog(level, inputs, state?)` runs from the state's current
+  tick until the log ends, the ship dies, or the song ends. `resetSimState` reuses a state.
+- **Autopilot:** `autopilotInputs(level)` in `sim/autopilot.ts` flies a level by looking
+  24 ticks ahead and records its input log. Tests use it to show the path exists; it never
+  moves horizontally.
+- **Speed:** `pnpm --filter @game/analysis bench:sim` on the fixture ran 12.5 to 13.7
+  million ticks per second in Node 26 in the cloud development container (checked
+  2026-11-08), about 100 000 times real time.
+
 ## Versions to bump
 
 `packages/core/src/version.ts`:
@@ -234,6 +325,11 @@ flag when a package gets its first test.
 serialized LevelData for each fixture, with the `GEN_VERSION` and libopenmpt version it was
 made with. `test/golden.test.ts` analyzes each fixture and compares. Change a hash only in
 the same commit as a `GEN_VERSION` bump.
+`packages/analysis/fixtures/golden-levelgen.json` pins, for each fixture and difficulty,
+the SHA-256 of `serializeLevel(level)` and of `serializeSimState` after two scripted runs:
+the autopilot (which must survive) and a fixed zigzag log (which crashes, at the recorded
+`zigzagDeathTick`). The same test checks them in Node and in the browsers. A Level hash
+changes only with a `GEN_VERSION` bump, a sim hash only with a `SIM_VERSION` bump.
 
 **Browsers.** The analysis package's `vitest.config.ts` has two projects. `node` runs every
 test in Node and is what `pnpm test` runs. `browser` runs the golden test in real browsers
