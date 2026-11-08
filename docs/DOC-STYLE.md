@@ -31,6 +31,12 @@ practical, specific, never breathless. It has to read like a person wrote it.
 - **Expand a term on first use per document**, then use it freely. Assume a developer
   knows TypeScript and the web platform. Don't assume they know tracker internals: "pattern
   break (Dxx)", "position jump (Bxx)", "VU (volume unit) meter".
+- **Say what a module is.** Many players read "mod" as a game modification, not music.
+  The first time a document, page, or screen mentions a module, mod, or tracker, say what it
+  is: a song file made in a music tracker, a program that arranges short samples into
+  patterns of notes and beats. Use the terms freely after that. In player-facing text the
+  default word is "song"; the file types appear next to it where they help ("Import songs:
+  MOD, XM, S3M, or IT files").
 - **Be honest about limits** where the reader will hit them, not in a footnote.
 
 ### Plain wording

@@ -1,6 +1,7 @@
 # CLAUDE.md
 
-A tracker-module-driven tunnel shooter. The docs, each with one job:
+A tunnel shooter whose levels are built from tracker modules: song files made in a music
+tracker. The docs, each with one job:
 
 - **`docs/PLAN.md`**: the design, the determinism rules, and the tech choices. Read the
   section for a package before working on it.
@@ -66,6 +67,9 @@ something, add it here as a clear, testable rule. A rule that isn't written here
 forgotten next session.
 
 - Completed roadmap items move to the changelog (Brad, 2026-11-08).
+- The first mention of a module, mod, or tracker in anything a person reads says what it is:
+  a song file made in a music tracker. Player-facing text calls them songs (Brad,
+  2026-11-08; see `docs/DOC-STYLE.md`, "Say what a module is").
 
 ## Open decisions
 

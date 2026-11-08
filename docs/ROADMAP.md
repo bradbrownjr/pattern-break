@@ -11,11 +11,11 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 
 | Item | What it delivers | Stage |
 |---|---|---|
-| [S1: libopenmpt access](#s1-libopenmpt-access) | Proof that the game can read a module's pattern data and audio levels the same way in Node and in a browser. | Checks pass; waiting for Brad |
+| [S1: libopenmpt access](#s1-libopenmpt-access) | Proof that the game can read a song file's (a tracker module's) pattern data and audio levels the same way in Node and in a browser. | Checks pass; waiting for Brad |
 | [M1: vertical slice](#m1-vertical-slice) | One song, LED terrain scrolling in time with it, a ship you can fly and crash. | Next |
 | [M2: enemies and scoring](#m2-enemies-and-scoring) | Notes become enemies; shooting, scoring, lives, power-ups, and replays that give the same score in every browser. | Planned |
 | [M3: effects and look](#m3-effects-and-look) | Particles, copper bars, starfield, CRT filter, title and results screens, accessibility options. | Planned |
-| [M4: library, offline, music pack](#m4-library-offline-music-pack) | Import your own modules, install the game, and play with no connection; a bundled, credited music pack. | Planned |
+| [M4: library, offline, music pack](#m4-library-offline-music-pack) | Import your own songs, install the game, and play with no connection; a bundled, credited music pack. | Planned |
 | [M5: leaderboards](#m5-leaderboards) | A global board per song, with scores checked by replaying them on the server. | Planned |
 | [M6: mobile and polish](#m6-mobile-and-polish) | Touch and gamepad controls, latency calibration, phone performance, tuned difficulty. | Planned |
 | [Boss patterns](#later) | A song's last or most-repeated pattern becomes a boss fight. | Later |
@@ -159,6 +159,11 @@ These need Brad's answer before the work that depends on them. Don't guess.
   own licenses.
 - **Hosting:** Docker on Brad's Unraid server, with images published to GitHub Container
   Registry (2026-11-08).
+- **Terrain:** one LED bar per row of the song, ceiling from the left channel and floor from
+  the right. What matters is that it feels like playing the beat and that there is always a
+  path for the ship, even a hard one (2026-11-08).
+- **Wording:** player-facing text calls modules songs and says what a module is on first
+  mention (2026-11-08).
 - **Server-side replay checks** stay, measured before they're turned on (2026-11-08; see
   M5).
 

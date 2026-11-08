@@ -9,7 +9,9 @@
 ## 1. Pitch
 
 A horizontal-scrolling tunnel shooter in the Gradius mould, with more neon. **Every level is
-generated from a tracker music module (MOD/XM/S3M/IT).** The ceiling is drawn from the left
+generated from a tracker module (MOD/XM/S3M/IT): a song file made in a music tracker, a
+program that arranges short samples into patterns of notes and beats.** Modules are often
+called mods; in player-facing text they are songs (see `DOC-STYLE.md`). The ceiling is drawn from the left
 audio channel and the floor from the right, both as segmented LED spectrum bars like an old
 stereo's visualizer. Notes in the song's pattern data spawn enemies. A given module file
 always produces the same level, so each song has its own global leaderboard.
@@ -210,7 +212,7 @@ A pure function: `generateLevel(levelData, difficulty, seed) -> Level`.
 
 - Title screen: chrome logo, and an attract mode that plays a bundled song's level with an
   AI ship.
-- Library: bundled songs plus "Import modules" (file picker or drag and drop; directory
+- Library: bundled songs plus "Import songs" (file picker or drag and drop; directory
   import through the File System Access API on Chromium as an extra). Imported files are
   stored in IndexedDB.
 - Song select: metadata, difficulty, personal best, the global top 10 when online, and
