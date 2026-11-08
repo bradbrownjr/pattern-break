@@ -8,13 +8,17 @@ import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
-import { DEFAULT_VIEWPORT, shots, type Shot } from './shots.ts';
+import { chromium, type Page } from 'playwright';
+import { encodeGif } from './gif.ts';
+import { decodePng, type Rgba } from './png.ts';
+import { DEFAULT_CLIP_VIEWPORT, DEFAULT_VIEWPORT, shots, type Shot } from './shots.ts';
 
 const ROOT = resolve(fileURLToPath(import.meta.url), '..', '..', '..');
 const DIST = join(ROOT, 'packages', 'client', 'dist');
 const OUT = join(ROOT, 'docs', 'img');
 const READY_TIMEOUT_MS = 15_000;
+/** A clip over this size fails the run: the README loads it on every visit. */
+const CLIP_MAX_BYTES = 5 * 1024 * 1024;
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -23,6 +27,7 @@ const MIME: Record<string, string> = {
   '.json': 'application/json; charset=utf-8',
   '.wasm': 'application/wasm',
   '.png': 'image/png',
+  '.gif': 'image/gif',
   '.svg': 'image/svg+xml',
   '.mod': 'application/octet-stream',
   '.xm': 'application/octet-stream',
@@ -59,6 +64,13 @@ function validate(): void {
     if (seen.has(s.id)) fail(`duplicate shot id "${s.id}"`);
     seen.add(s.id);
     if (!s.alt.trim() || !s.caption.trim()) fail(`shot "${s.id}" needs alt text and a caption`);
+    if (s.clip) {
+      const { from, to, fps } = s.clip;
+      if (!(to > from) || !Number.isInteger(fps) || fps <= 0 || 100 % fps !== 0) {
+        fail(`shot "${s.id}": a clip needs to > from and a whole fps that divides 100`);
+      }
+      if ('t' in s.query) fail(`shot "${s.id}": a clip sets t itself; remove it from query`);
+    }
   }
 }
 
@@ -85,8 +97,48 @@ function startServer(): Promise<{ origin: string; close: () => Promise<void> }> 
 }
 
 function shotUrl(origin: string, shot: Shot): string {
-  const q = new URLSearchParams({ capture: '1', ...shot.query });
+  const q = new URLSearchParams({ capture: '1', ...shot.query, ...(shot.clip ? { t: String(shot.clip.from) } : {}) });
   return `${origin}/?${q.toString()}`;
+}
+
+function shotFile(shot: Shot): string {
+  return `docs/img/${shot.id}.${shot.clip ? 'gif' : 'png'}`;
+}
+
+/** The song time of each frame of a clip: from, from + 1/fps, ..., up to but not including to. */
+function clipTimes(clip: NonNullable<Shot['clip']>): number[] {
+  const count = Math.round((clip.to - clip.from) * clip.fps);
+  const times: number[] = [];
+  // Whole frames times a whole frame length, so each time is the same on every run.
+  for (let i = 0; i < count; i++) times.push(clip.from + i / clip.fps);
+  return times;
+}
+
+const SCREENSHOT = { type: 'png' as const, animations: 'disabled' as const, caret: 'hide' as const };
+
+async function screenshot(page: Page, shot: Shot): Promise<Buffer> {
+  return shot.element ? page.locator(shot.element).screenshot(SCREENSHOT) : page.screenshot(SCREENSHOT);
+}
+
+/**
+ * Captures each frame of a clip at its own song time. The page is loaded at the first
+ * time; later frames are drawn by window.__pbCaptureSeek, which resolves once the frame
+ * is on screen.
+ */
+async function captureClip(page: Page, shot: Shot): Promise<{ bytes: Uint8Array; frames: number; colors: number; quantized: boolean }> {
+  const clip = shot.clip!;
+  const times = clipTimes(clip);
+  const frames: Rgba[] = [];
+  for (let i = 0; i < times.length; i++) {
+    if (i > 0) {
+      const t = JSON.stringify(times[i]);
+      const ok = await page.evaluate(`window.__pbCaptureSeek ? window.__pbCaptureSeek(${t}).then(() => true) : false`);
+      if (!ok) throw new Error('the page has no window.__pbCaptureSeek, which clips need');
+    }
+    frames.push(decodePng(await screenshot(page, shot)));
+  }
+  const gif = encodeGif(frames, clip.fps);
+  return { bytes: gif.bytes, frames: frames.length, colors: gif.colors, quantized: gif.quantized };
 }
 
 /** Writes only when the bytes differ, so unchanged figures never show up as modified. */
@@ -123,15 +175,24 @@ const executablePath = process.env['PB_CHROMIUM'];
 const browser = await chromium.launch({
   headless: true,
   ...(executablePath ? { executablePath } : {}),
-  // Keep text rendering identical from run to run and machine to machine.
-  args: ['--font-render-hinting=none', '--disable-lcd-text', '--force-color-profile=srgb', '--hide-scrollbars'],
+  // Keep text rendering identical from run to run and machine to machine. WebGL always runs
+  // on SwiftShader, Chromium's CPU renderer, so a machine's GPU never changes the pixels and
+  // capture mode has WebGL even where Chromium would not fall back to SwiftShader itself.
+  args: [
+    '--font-render-hinting=none',
+    '--disable-lcd-text',
+    '--force-color-profile=srgb',
+    '--hide-scrollbars',
+    '--use-angle=swiftshader',
+    '--enable-unsafe-swiftshader',
+  ],
 });
 
 let failed = false;
 try {
   for (const shot of selected) {
     const context = await browser.newContext({
-      viewport: shot.viewport ?? DEFAULT_VIEWPORT,
+      viewport: shot.viewport ?? (shot.clip ? DEFAULT_CLIP_VIEWPORT : DEFAULT_VIEWPORT),
       deviceScaleFactor: 1,
       reducedMotion: 'reduce',
       colorScheme: 'dark',
@@ -149,10 +210,19 @@ try {
             'Does the page implement capture mode (docs/DEVELOPMENT.md, "Screenshots")?',
         );
       }
-      const options = { type: 'png' as const, animations: 'disabled' as const, caret: 'hide' as const };
-      const png = shot.element ? await page.locator(shot.element).screenshot(options) : await page.screenshot(options);
-      const changed = writeIfChanged(join(OUT, `${shot.id}.png`), png);
-      console.log(`${changed ? 'wrote' : 'same '} docs/img/${shot.id}.png`);
+      if (shot.clip) {
+        const clip = await captureClip(page, shot);
+        if (clip.bytes.length > CLIP_MAX_BYTES) {
+          throw new Error(`the clip is ${clip.bytes.length} bytes, over the ${CLIP_MAX_BYTES} limit; shorten it or lower fps`);
+        }
+        const changed = writeIfChanged(join(ROOT, shotFile(shot)), Buffer.from(clip.bytes));
+        const colors = clip.quantized ? 'quantized to 256 colours' : `${clip.colors} colours`;
+        const size = `${(clip.bytes.length / 1024 / 1024).toFixed(2)} MB`;
+        console.log(`${changed ? 'wrote' : 'same '} ${shotFile(shot)} (${clip.frames} frames, ${colors}, ${size})`);
+      } else {
+        const changed = writeIfChanged(join(ROOT, shotFile(shot)), await screenshot(page, shot));
+        console.log(`${changed ? 'wrote' : 'same '} ${shotFile(shot)}`);
+      }
     } catch (e) {
       failed = true;
       console.error(`screenshots: shot "${shot.id}" failed: ${e instanceof Error ? e.message : String(e)}`);
@@ -168,5 +238,5 @@ if (failed) process.exit(1);
 
 // figures.json lists every shot in the manifest, not only the ones captured this run.
 const figures: Record<string, { path: string; alt: string; caption: string; usedIn: string[] }> = {};
-for (const s of shots) figures[s.id] = { path: `docs/img/${s.id}.png`, alt: s.alt, caption: s.caption, usedIn: s.usedIn };
+for (const s of shots) figures[s.id] = { path: shotFile(s), alt: s.alt, caption: s.caption, usedIn: s.usedIn };
 writeIfChanged(join(OUT, 'figures.json'), `${JSON.stringify(figures, null, 2)}\n`);

@@ -24,7 +24,7 @@ pnpm install
 | `pnpm lint` | Oxlint over the repo, including the core determinism rules. |
 | `pnpm typecheck` | `tsc` (TypeScript 7) in each package, then in `tools/`. |
 | `pnpm test` | Vitest in each package, in Node. |
-| `pnpm test:browser` | The golden LevelData, level and sim tests and the client's audio tests in real browsers (see "Tests"). |
+| `pnpm test:browser` | The golden LevelData, level and sim tests and the client's audio and renderer tests in real browsers (see "Tests"). |
 | `pnpm --filter @game/analysis analyze <file>` | Analyzes one module (a song file made in a music tracker) and prints its LevelData hash and a summary. |
 | `pnpm screenshots` | Regenerates every figure in `docs/img/` (see "Screenshots"). |
 | `pnpm --filter @game/analysis bench:sim [file]` | Builds each difficulty's level, flies it with the autopilot, and prints sim ticks per second. |
@@ -69,11 +69,14 @@ pattern-break/
 │   ├── client/                    # @game/client: the Vite app
 │   │   ├── src/config/brand.ts    # the game's name, in one place
 │   │   ├── src/audio/             # the libopenmpt AudioWorklet player and the song clock
+│   │   ├── src/render/            # PixiJS renderer: terrain, ship, starfield, pixel font, effects
+│   │   ├── src/game/              # game flow, frame loop, input, analysis worker, capture mode
 │   │   ├── audio-debug.html       # dev-server page that plays the fixture and shows the clock
 │   │   └── vitest.config.ts       # the node and browser test projects
 │   └── server/                    # @game/server: leaderboard API and replay validator (M5)
 ├── tools/
 │   ├── check-docs.ts              # writing-rules check
+│   ├── screenshots/               # pnpm screenshots: the shot manifest, PNG reader, GIF writer
 │   ├── build-libopenmpt.sh        # rebuilds the vendored libopenmpt WASM
 │   ├── libopenmpt/*.patch         # our patches to libopenmpt (see "libopenmpt build")
 │   ├── make-fixture-mod.ts        # writes the test modules in packages/analysis/fixtures
@@ -338,7 +341,9 @@ engine has to produce the committed hash, which is how we know Node and the brow
 identical levels.
 
 The client's `vitest.config.ts` has the same two projects. Its `browser` project runs
-`test/browser/audio.test.ts`, the worklet and clock tests in "Audio and clock". Each engine
+`test/browser/audio.test.ts`, the worklet and clock tests in "Audio and clock", and
+`test/browser/render.test.ts`, which draws a hand-made level with WebGL and checks canvas
+pixels against the terrain rules and the palette. Each engine
 is launched with audio allowed to start without a click: Chromium with
 `--autoplay-policy=no-user-gesture-required`, Firefox with the `media.autoplay.default` and
 `media.autoplay.block-webaudio` preferences, WebKit with Playwright's defaults.
@@ -401,23 +406,26 @@ regenerates all of them from a manifest, so they stay current with the latest re
 
 ```sh
 pnpm screenshots                      # build the client, capture every shot
-pnpm screenshots --only smoke-placeholder,other-id
+pnpm screenshots --only gameplay,title-screen
 pnpm screenshots --list               # print the manifest
 pnpm screenshots --no-build           # reuse packages/client/dist
 ```
 
 The script builds the client, serves `packages/client/dist` on a free local port, opens each
 shot in headless Chromium at a device scale factor of 1, waits for `window.__pbCaptureReady`
-(15 s, then it fails and names the shot), and writes `docs/img/<id>.png`. It also writes
-`docs/img/figures.json`, which maps each id to its path, alt text, caption, and where it is
-used. Set `PB_CHROMIUM` to a Chromium binary when Playwright's own download is not available
-(the same variable the browser tests use).
+(15 s, then it fails and names the shot), and writes `docs/img/<id>.png`, or
+`docs/img/<id>.gif` for a clip (see "Clips"). It also writes `docs/img/figures.json`, which
+maps each id to its path, alt text, caption, and where it is used. Set `PB_CHROMIUM` to a
+Chromium binary when Playwright's own download is not available (the same variable the
+browser tests use).
 
-**Output is byte-stable.** Two runs on the same machine give identical PNG bytes. Chromium is
-started with fixed font hinting, no LCD text, and an sRGB profile, and the script writes a file
-only when its bytes differ, so an unchanged screen never shows up as a modified file. Different
-Chromium builds or fonts can still change pixels, which is why CI regenerates the figures
-rather than people.
+**Output is byte-stable.** Two runs on the same machine give identical PNG and GIF bytes.
+Chromium is started with fixed font hinting, no LCD text, an sRGB profile, and WebGL on
+SwiftShader (`--use-angle=swiftshader --enable-unsafe-swiftshader`), Chromium's CPU renderer,
+so a GPU never changes the pixels. The game draws text with its own pixel font, so installed
+fonts don't either. The script writes a file only when its bytes differ, so an unchanged
+screen never shows up as a modified file. A different Chromium build can still change pixels,
+which is why CI regenerates the figures rather than people.
 
 ### The manifest
 
@@ -425,9 +433,10 @@ rather than people.
 
 | Field | Meaning |
 |---|---|
-| `id` | File name stem, lowercase letters, digits, and hyphens. The image is `docs/img/<id>.png`. |
-| `query` | The capture-mode parameters below. The script adds `capture=1`. |
-| `viewport` | Optional, default 1152x648: an exact 3x of the 384x216 internal resolution, so pixels stay square. |
+| `id` | File name stem, lowercase letters, digits, and hyphens. The image is `docs/img/<id>.png`, or `docs/img/<id>.gif` for a clip. |
+| `query` | The capture-mode parameters below. The script adds `capture=1`, and `t` for a clip. |
+| `clip` | Optional `{ from, to, fps }`: makes the shot an animated GIF (see "Clips"). |
+| `viewport` | Optional. Default 1152x648 for a still and 768x432 for a clip: exact multiples (3x, 2x) of the 384x216 internal resolution, so pixels stay square. |
 | `element` | Optional CSS selector to crop to. Default is the whole viewport. |
 | `alt` | Alt text. Describe what is on screen (the scene, the shapes, the colors, any text), not what the figure is for. |
 | `caption` | One plain sentence for the README or docs. |
@@ -442,7 +451,7 @@ The client reads query parameters; `packages/client/src/capture.ts` parses them
 | Parameter | Meaning |
 |---|---|
 | `capture` | `1` turns capture mode on. Without it the page behaves normally. |
-| `scene` | Which screen to show (`play`, a menu, and so on). |
+| `scene` | Which screen to show: `title` or `play`. |
 | `song` | Song id from the bundled manifest. |
 | `t` | Song clock in seconds. |
 | `difficulty` | Difficulty name. |
@@ -460,8 +469,47 @@ In capture mode the renderer must:
 - **Set `window.__pbCaptureReady = true`** (call `markCaptureReady()`) once, after the frame
   on screen is final: assets loaded, fonts ready, and the last draw done.
 
-The placeholder page calls `markCaptureReady()` today, which is what the smoke shot
-(`docs/img/smoke-placeholder.png`, not used in the README) exercises.
+`packages/client/src/game/capture-scene.ts` implements it:
+
+- **`scene=title`** draws the title screen with the song and difficulty, and the prompt
+  steady instead of blinking. The stars sit where `t` puts them.
+- **`scene=play`** analyzes the song in the analysis worker, builds the level for
+  `difficulty`, records `autopilotInputs(level)`, and runs the sim from tick 0 to
+  `floor(round(t * 48000) / 400)` with that log, through the same `catchUp` the game loop
+  uses. It then draws the frame at song sample `round(t * 48000)`, the scroll interpolated
+  between ticks as in play. If the autopilot crashed before `t`, the frame shows the crash,
+  timed from the crash tick in song time.
+- The renderer is created with `preserveDrawingBuffer`, so the screenshot reads the frame
+  that was drawn, and the page waits two animation frames after the draw before it calls
+  `markCaptureReady()`. Capture mode needs WebGL and throws if PixiJS picks another
+  renderer.
+- **`window.__pbCaptureSeek(t)`** redraws the play scene at another song time and returns
+  a promise that resolves once the frame is on screen. It runs the sim forward from where it
+  is, or from tick 0 when `t` is earlier. A seeked frame has the same bytes as a fresh load
+  at that `t`: checked with seeks from 29 to 30.4 s and from 30.4 back to 12.5 s
+  (2026-11-08).
+
+### Clips
+
+A shot with `clip: { from, to, fps }` (song seconds) becomes an animated GIF. The script
+loads the page at `t = from`, then for frame i calls `window.__pbCaptureSeek(from + i / fps)`
+and screenshots the viewport, until `to`. The default clip viewport is 768x432 (2x), so each
+game pixel is a 2x2 block.
+
+- `tools/screenshots/png.ts` decodes each screenshot to RGBA. It reads only the PNGs Chromium
+  writes (8-bit RGB or RGBA, not interlaced).
+- `tools/screenshots/gif.ts` encodes the frames with gifenc 1.0.3 (MIT, pure JavaScript,
+  checked 2026-11-08), so there is no ffmpeg. Every frame shares one palette. When the frames
+  use 256 colours or fewer, the palette is exactly those colours, sorted, and no pixel
+  changes; past 256, gifenc's quantizer builds one from all the frames. The game's flat
+  colours keep it exact: `gameplay-clip` uses 28.
+- GIF frame delays are whole hundredths of a second, so `fps` must divide 100; the script
+  rejects other values.
+- The script fails a clip over 5 MB. Keep clips a few seconds long: `gameplay-clip` is 4 s at
+  25 fps, 100 frames, about 1.9 MB.
+
+Clip bytes are stable like the stills: two runs gave the same SHA-256 for
+`docs/img/gameplay-clip.gif` (2026-11-08).
 
 ### The release workflow
 
@@ -555,6 +603,111 @@ playing at a rate the analysis didn't time.
 
 Firefox and WebKit run the same tests in CI only; their latency reporting and
 `currentTime` step size are not measured here.
+
+## Renderer and game loop
+
+`packages/client/src/render/` draws the game with PixiJS 8.22.0 (MIT, checked 2026-11-08),
+and `packages/client/src/game/` runs the screens and the frame loop. The design is in
+`PLAN.md`, "Visual spec" and "Client UI"; the coordinates are in "Level and sim" above.
+
+### Playing it
+
+Run `pnpm dev` and open the URL it prints. The title screen shows the one bundled song, the
+generated test module `pb-fixture-01.mod`. Keys 1, 2 and 3 pick easy, normal or hard (normal
+to start with); any other key, or a click, starts. Arrows or WASD move, and Esc pauses and
+resumes. After a crash, any key restarts the song; at the song's end, any key goes back to
+the title. Both screens ignore keys for 0.7 s, so a key still held from play doesn't skip
+them. The game pauses when the window loses focus or the tab is hidden.
+
+Two query parameters help in development:
+
+| Parameter | Effect |
+|---|---|
+| `autopilot=1` | `autopilotInputs(level)` flies the ship; the keyboard doesn't move it. |
+| `perf=1` | Records the cost of each frame. `window.__pbPerf()` in the console returns the mean, p50, p95, p99 and maximum in ms. |
+
+### Renderer
+
+- **Setup:** `createGameRenderer()` in `render/renderer.ts` asks PixiJS for WebGL
+  (`preference: 'webgl'`) at 384x216, resolution 1, no antialiasing, `roundPixels` on, and
+  nearest-neighbour texture sampling. The canvas's CSS size is the largest whole multiple of
+  384x216 that fits the window (`integerScale()`), with `image-rendering: pixelated`, centred
+  on black by `index.html`.
+- **Layers,** back to front: the starfield, the world (terrain, ship, explosion), the death
+  flash, and the UI (title screen and messages).
+- **Terrain** (`terrain.ts`, geometry in `terrain-layout.ts`): 41 columns
+  (`MAX_VISIBLE_BARS`) of 24 sprites each, one per segment, made once. Each frame moves the
+  columns to the bars `visibleBars()` lists and tints each sprite: lit segment k is
+  `LED_LIT[k]` (green at the screen edge, through amber, to red towards the gap), unlit is
+  `LED_DIM[k]`, and a peak dot is white. The scroll is rounded to a whole pixel once per
+  frame, so bars never shift against each other.
+- **Ship** (`ship.ts`): a 16x8 sprite built from a character map, centred on the sim's
+  `shipX` and `shipY`. The engine flame changes length every 1440 song samples (30 ms).
+- **Starfield** (`starfield.ts`): 112 stars in three layers placed by `seededRandom(seed)`,
+  scrolling at 0.12, 0.25 and 0.5 of the terrain's speed.
+- **Text** (`font.ts`, `text.ts`): a 5x7 pixel font for printable ASCII, with descenders,
+  in one atlas texture. A character outside printable ASCII draws as `?`. `PixelText`
+  reuses its sprites when its text changes.
+- **Crash** (`effects.ts`, `flash.ts`): 48 particles in a seeded burst, and one white flash
+  that fades from 25% opacity over 220 ms. "Reduce flashing" is on by default (`PLAN.md`,
+  "Visual spec") and M1 has no settings screen, so this reduced flash is the only one.
+- **Allocation:** display objects are made at startup or when a screen changes. The
+  per-frame path in play only writes positions and tints and allocates nothing in our code;
+  PixiJS's own render call has not been audited.
+
+### The frame loop
+
+Each animation frame in play (`game.ts`; the pure parts are in `loop.ts` and tested in
+Node):
+
+1. Read `player.songTimeSamples()` once.
+2. `targetTick(samples, level.tickCount)` is `floor(samples / 400)`, clamped to 0 before the
+   song starts and to `tickCount` after it ends.
+3. `catchUp()` runs `tick()` until the sim reaches that tick, the ship crashes, or the song
+   ends. It never skips a tick. Each tick takes one input byte from `InputSampler.sample()`
+   and appends it to the run's `InputLog`, a buffer of one byte per tick of the song, made
+   when play starts from the title screen and reused by retries.
+4. `DisplayClock` gives the song position to draw. The clock moves in steps of one audio
+   callback (see "Audio and clock"), so it predicts from the frame time and eases towards
+   each reading, snaps when they differ by more than 50 ms, and stays within 3 ticks ahead of
+   and 2 behind the sim. `scrollPxAt()` interpolates the scroll table at that position. This
+   is cosmetic; the sim only reads whole ticks.
+5. Draw and render.
+
+**Input.** `keyToBit()` maps arrows and WASD to `InputBit`. A key held during a frame sets
+its bit on every tick that frame runs, and a key pressed and released between two ticks
+still sets its bit for one tick.
+
+**Pause.** Esc calls `player.pause()`, which suspends the audio context. The clock stops, so
+the sim stops with it; resuming continues both from where they were.
+
+**Crash and song end.** When `state.dead` is set, the song stops, the picture holds the
+crash tick, and the explosion and flash play on the wall clock. A retry calls
+`resetSimState()` and `player.start()`, which plays the song from its start. When
+`state.finished` is set, the "Song complete" message shows. Either way the run's difficulty,
+input log and crash tick are kept in `Game.lastRun` for the replays in M2.
+
+**Analysis.** `analyzeInWorker(bytes)` (`analysis.ts`) sends the song file's bytes to
+`analysis-worker.ts`, a module worker that runs `loadOpenMpt()` and `analyze()` and sends
+back the serialized LevelData as a transferred buffer. The main thread deserializes it and
+calls `generateLevel()` for the chosen difficulty. The screen reads "Analyzing song..." until
+both the analysis and the audio player are ready. LevelData and each difficulty's level are
+kept for the session. The AudioContext is created inside the key press that leaves the title
+screen, because browsers only let audio start from a key press or click.
+
+### Performance
+
+Measured on 2026-11-08 in headless Chromium 153 in the cloud development container, with
+`?autopilot=1&perf=1` over the whole fixture song on normal (2965 frames). The per-frame
+JavaScript cost (sim catch-up, drawing, and PixiJS's render call) was 0.52 ms on average,
+0.5 ms at p50, 0.9 ms at p95 and 1.2 ms at p99. The slowest frame took 5.2 to 7.5 ms over
+three runs; which frames those were has not been traced. `performance.now()` is rounded to
+0.1 ms in a page that isn't cross-origin isolated, so these values are coarse.
+
+Headless Chromium renders WebGL with SwiftShader on the CPU, and that GPU-side time is not
+in the number, so the headless frame rate says nothing about real hardware. M1's 60 fps check
+is done by hand in desktop Chrome. `PLAN.md` sets a target of 2 ms or less per frame of sim
+and render work on desktop.
 
 ## The docs check
 
