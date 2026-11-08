@@ -1,8 +1,8 @@
 /**
  * Single source of truth for the game's name (docs/PLAN.md, "Pitch").
- * The final title is an open decision; change it here only.
+ * Change it here only.
  */
 export const BRAND = {
-  name: 'PATTERN BREAK',
-  shortName: 'PATTERN BREAK',
+  name: 'Pattern Break',
+  shortName: 'Pattern Break',
 } as const;

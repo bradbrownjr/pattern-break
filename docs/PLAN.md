@@ -1,7 +1,6 @@
-# PATTERN BREAK build plan
+# Pattern Break build plan
 
-> Working title; the final name isn't chosen. The name lives in one constant
-> (`packages/client/src/config/brand.ts`) so it can be swapped.
+> The game's name is written in one place, `packages/client/src/config/brand.ts`.
 >
 > This is the design. What gets built next is in [`ROADMAP.md`](ROADMAP.md), what is
 > finished is in [`CHANGELOG.md`](CHANGELOG.md), and how to work on the code is in
@@ -49,8 +48,9 @@ milestone.
 | Local storage | IndexedDB via `idb` 8 | User library, level cache, personal bests, replays. |
 | Tests | Vitest 5 | Unit tests in Node. Cross-engine determinism tests use Vitest browser mode with the Playwright provider (Chromium, Firefox, WebKit), so one test file runs in Node and in all three engines. |
 | End-to-end | Playwright 1.65 | PWA install and offline play, UI flows. |
-| Server | Fastify 5 and SQLite through the built-in `node:sqlite` | `node:sqlite` is stability 1.2 (release candidate) in the Node 26 docs and needs no native build. If it causes trouble, `better-sqlite3` is a drop-in fallback. Dockerized and self-hostable. |
-| License | MIT | Code only. Bundled music keeps its own licenses (see "Bundled music"). |
+| Server | Fastify 5 and SQLite through the built-in `node:sqlite` | `node:sqlite` is stability 1.2 (release candidate) in the Node 26 docs and needs no native build. If it causes trouble, `better-sqlite3` is a drop-in fallback. |
+| Hosting | Docker, images on GitHub Container Registry (ghcr.io) | One image serves the API and the built client. It runs on Brad's Unraid server; anyone can self-host the same image. |
+| License | MIT | The game is free and open source. Bundled music keeps its own licenses (see "Bundled music"). |
 
 ## 4. Determinism rules
 

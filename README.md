@@ -1,4 +1,4 @@
-# PATTERN BREAK
+# Pattern Break
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -6,8 +6,6 @@ A side-scrolling neon tunnel shooter where every level is built from a tracker m
 (MOD, XM, S3M, or IT). The ceiling and floor are the song's left and right spectrum, drawn as
 LED meter bars, and the notes in its patterns spawn the enemies. The same file always makes
 the same level, so every song gets its own leaderboard.
-
-PATTERN BREAK is a working title.
 
 ## Status
 
@@ -36,5 +34,5 @@ player reads, read the [writing guide](docs/DOC-STYLE.md).
 
 ## License
 
-The code is [MIT](LICENSE). Bundled music will keep its own licenses, listed in
+Pattern Break is free and open source. The code is [MIT](LICENSE). Bundled music will keep its own licenses, listed in
 `music/manifest.json` and on the in-game credits screen.

@@ -4,7 +4,7 @@
 
 ## At a glance
 
-What comes next for PATTERN BREAK, in build order. It's a list of intentions, not a
+What comes next for Pattern Break, in build order. It's a list of intentions, not a
 schedule; nothing here has a promised date. Finished items leave this page and are
 recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 [`PLAN.md`](PLAN.md).
@@ -110,7 +110,10 @@ and Node.
       heavy, check only runs that reach a board's top 10 instead of every run; the client
       doesn't change either way (decided 2026-11-08).
 - [ ] Per-song boards, nicknames, and the optional profile link.
-- [ ] Rate limiting, and a Docker Compose file.
+- [ ] Rate limiting.
+- [ ] One Docker image that serves the API and the built client, published to ghcr.io by a
+      GitHub Actions workflow, with a Compose file and the settings needed to run it on
+      Unraid (port, data volume for the SQLite database and stored replays).
 
 **Acceptance:** a tampered score is rejected; a legitimate run appears on the board.
 
@@ -140,15 +143,20 @@ Ideas that come after M6. Each gets its own section here, with tasks, once it's 
 
 These need Brad's answer before the work that depends on them. Don't guess.
 
-1. **Final game title.** The placeholder is PATTERN BREAK. Needed before M4 (PWA name and
-   icons).
-2. **Free or paid.** The code is MIT either way. This affects distribution and which music
-   licenses are worth reviewing; NC is excluded regardless. Needed before M4.
-3. **Platform priority:** desktop web first or mobile first. Affects how early M6 work
+1. **Platform priority:** desktop web first or mobile first. Affects how early M6 work
    starts.
-4. **Leaderboard hosting:** self-hosted homelab or a VPS. Needed before M5.
-5. **User-imported modules on leaderboards** from day one, or bundled songs only at first.
+2. **User-imported modules on leaderboards** from day one, or bundled songs only at first.
    Needed before M5.
+
+## Decided
+
+- **Title:** Pattern Break (2026-11-08).
+- **Free and open source,** with the code under MIT (2026-11-08). Bundled music keeps its
+  own licenses.
+- **Hosting:** Docker on Brad's Unraid server, with images published to GitHub Container
+  Registry (2026-11-08).
+- **Server-side replay checks** stay, measured before they're turned on (2026-11-08; see
+  M5).
 
 ## Out of scope (decided)
 
