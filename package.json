@@ -16,11 +16,13 @@
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm check:docs",
     "dev": "pnpm --filter @game/client dev",
     "build": "pnpm -r --if-present build",
+    "screenshots": "node tools/screenshots/capture.ts",
     "test:browser": "pnpm --filter @game/analysis test:browser"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
     "oxlint": "^1.92.0",
+    "playwright": "1.65.0",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"
   }
