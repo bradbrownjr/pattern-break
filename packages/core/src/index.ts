@@ -13,3 +13,26 @@ export type {
   LevelDataRows,
 } from './level-data/types.ts';
 export { serializeLevelData, deserializeLevelData } from './level-data/serialize.ts';
+export * from './playfield.ts';
+export { Difficulty, PEAK_HOLD_BARS } from './levelgen/types.ts';
+export type { DifficultyName, Level } from './levelgen/types.ts';
+export {
+  generateLevel,
+  gapShiftLimitPx,
+  maxCombinedSegments,
+  playheadAtSample,
+  MIN_GAP_OVERLAP_PX,
+} from './levelgen/generate.ts';
+export { findPathViolation } from './levelgen/path-check.ts';
+export { serializeLevel, LEVEL_FORMAT_VERSION } from './levelgen/serialize.ts';
+export * from './sim/constants.ts';
+export {
+  createSimState,
+  resetSimState,
+  runInputLog,
+  serializeSimState,
+  shipCollides,
+  tick,
+} from './sim/sim.ts';
+export type { SimState } from './sim/sim.ts';
+export { autopilotInputs } from './sim/autopilot.ts';
