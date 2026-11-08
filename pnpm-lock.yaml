@@ -194,10 +194,19 @@ importers:
 
   packages/client:
     dependencies:
+      '@game/analysis':
+        specifier: workspace:*
+        version: link:../analysis
       '@game/core':
         specifier: workspace:*
         version: link:../core
     devDependencies:
+      '@vitest/browser-playwright':
+        specifier: 5.1.0
+        version: 5.1.0(playwright@1.65.0)(vite@8.3.6(@types/node@26.6.6))(vitest@5.1.0)
+      playwright:
+        specifier: 1.65.0
+        version: 1.65.0
       vite:
         specifier: ^8.3.6
         version: 8.3.6(@types/node@26.6.6)
