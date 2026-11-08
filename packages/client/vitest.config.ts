@@ -2,8 +2,8 @@ import { playwright } from '@vitest/browser-playwright';
 import { defineConfig, mergeConfig } from 'vitest/config';
 import viteConfig from './vite.config.ts';
 
-// `node` runs the Node tests (test/**/*.test.ts). `browser` runs the audio tests
-// (test/browser/**) in real browsers, as in packages/analysis: PB_BROWSERS picks them
+// `node` runs the Node tests (test/**/*.test.ts). `browser` runs the audio and renderer
+// tests (test/browser/**) in real browsers, as in packages/analysis: PB_BROWSERS picks them
 // (default chromium; CI sets chromium,firefox,webkit), and PB_CHROMIUM points at a
 // Chromium binary when Playwright's own download isn't available. Each engine gets the
 // launch settings that let a page start audio without a click.
@@ -18,7 +18,8 @@ function providerFor(browser: Engine) {
       return playwright({
         launchOptions: {
           ...(chromiumPath ? { executablePath: chromiumPath } : {}),
-          args: ['--autoplay-policy=no-user-gesture-required'],
+          // SwiftShader gives the renderer test WebGL on machines without a GPU.
+          args: ['--autoplay-policy=no-user-gesture-required', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
         },
       });
     case 'firefox':
