@@ -9,3 +9,6 @@ test-results/
 .env
 .env.*
 __lint_probe__/
+
+# Agent worktrees (temporary, managed by Claude Code)
+.claude/worktrees/
