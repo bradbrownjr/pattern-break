@@ -15,6 +15,7 @@
     "gen:tables": "node tools/gen-spectrum-tables.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm check:docs",
     "dev": "pnpm --filter @game/client dev",
+    "serve": "pnpm --filter @game/server start",
     "build": "pnpm -r --if-present build",
     "screenshots": "node tools/screenshots/capture.ts",
     "test:browser": "pnpm --filter @game/analysis --filter @game/client test:browser"

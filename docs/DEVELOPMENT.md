@@ -2,7 +2,8 @@
 
 How to work on the code: setup, layout, conventions, checks, and how the changelog and
 roadmap are kept. The design itself is in [`PLAN.md`](PLAN.md); the writing rules are in
-[`DOC-STYLE.md`](DOC-STYLE.md). A module (or mod) is a song file made in a music tracker,
+[`DOC-STYLE.md`](DOC-STYLE.md); running the Docker image is in
+[`SELF-HOSTING.md`](SELF-HOSTING.md). A module (or mod) is a song file made in a music tracker,
 a program that sequences short samples in rows of notes; every level is built from one.
 
 ## Requirements
@@ -21,6 +22,7 @@ pnpm install
 |---|---|
 | `pnpm dev` | Starts the client dev server (Vite). |
 | `pnpm build` | Builds every package that has a build step (the client). |
+| `pnpm serve` | Serves the built client (`packages/client/dist`) on port 8080 with the static server in `packages/server`. Run `pnpm build` first. `PORT` and `CLIENT_DIST` override the defaults. |
 | `pnpm lint` | Oxlint over the repo, including the core determinism rules. |
 | `pnpm typecheck` | `tsc` (TypeScript 7) in each package, then in `tools/`. |
 | `pnpm test` | Vitest in each package, in Node. |
@@ -40,12 +42,16 @@ One package: `pnpm --filter @game/core test`. One test file:
 ```
 pattern-break/
 ├── .github/workflows/ci.yml       # checks, build, and the golden test in three browser engines
+├── .github/workflows/docker.yml   # builds the image, pushes it to ghcr.io (see SELF-HOSTING.md)
+├── Dockerfile                     # the play-test image: built client plus the static server
+├── deploy/                        # docker-compose.yml and the Unraid template
 ├── .oxlintrc.json                 # lint config; the core determinism rules are its override
 ├── docs/
 │   ├── PLAN.md                    # design, rules, tech choices
 │   ├── ROADMAP.md                 # what comes next
 │   ├── CHANGELOG.md               # what is finished
 │   ├── DEVELOPMENT.md             # this file
+│   ├── SELF-HOSTING.md            # running the Docker image: Docker, Compose, Unraid, HTTPS
 │   └── DOC-STYLE.md               # writing and voice
 ├── music/manifest.json            # bundled modules and their licenses (empty until M4)
 ├── packages/
@@ -73,7 +79,10 @@ pattern-break/
 │   │   ├── src/game/              # game flow, frame loop, input, analysis worker, capture mode
 │   │   ├── audio-debug.html       # dev-server page that plays the fixture and shows the clock
 │   │   └── vitest.config.ts       # the node and browser test projects
-│   └── server/                    # @game/server: leaderboard API and replay validator (M5)
+│   └── server/                    # @game/server: static file server now; leaderboard API and replay validator (M5)
+│       ├── src/static.ts          # serves the built client: MIME types, cache headers, /healthz
+│       ├── src/main.ts            # entry point (PORT, CLIENT_DIST)
+│       └── test/static.test.ts
 ├── tools/
 │   ├── check-docs.ts              # writing-rules check
 │   ├── screenshots/               # pnpm screenshots: the shot manifest, PNG reader, GIF writer

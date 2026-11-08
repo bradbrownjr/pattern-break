@@ -3,13 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Leaderboard API and replay validator (milestone M5).",
+  "description": "Static file server for the built client today; leaderboard API and replay validator in milestone M5.",
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
+    "start": "node src/main.ts",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "dependencies": {
     "@game/core": "workspace:*"
