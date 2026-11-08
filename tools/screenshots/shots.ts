@@ -56,7 +56,7 @@ export const shots: Shot[] = [
     alt:
       'A frame of play in a tunnel of LED meter columns. Columns of small square segments hang from the top edge ' +
       'and rise from the bottom edge, lit bright green at the edges and yellow to orange further in, with unlit ' +
-      'segments in dim brown and dark red and a white peak dot on many columns. Near the left, a few columns ' +
+      'segments in dim brown and dark red. Near the left, a few columns ' +
       'have almost nothing lit. A small cyan ship with a magenta and amber engine flame flies left of centre in ' +
       'the dark open band through the middle, with faint blue stars behind.',
     caption: 'Pattern Break at 21.5 seconds into the test song on normal, with the ship flown by the autopilot.',
@@ -68,7 +68,7 @@ export const shots: Shot[] = [
     clip: { from: 29, to: 33, fps: 25 },
     alt:
       'Four seconds of play. The ceiling and floor, columns of square LED segments lit green, yellow and orange ' +
-      'with dim unlit segments and white peak dots, scroll from right to left, one column per row of the song, ' +
+      'with dim unlit segments, scroll from right to left, one column per row of the song, ' +
       'their heights changing with the music. A small cyan ship with a flickering engine flame steers up and ' +
       'down a little in the dark band through the middle, and faint blue stars drift more slowly behind.',
     caption: 'Four seconds of the test song on normal, flown by the autopilot through the sim.',

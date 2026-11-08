@@ -249,7 +249,8 @@ and "Simulation"; this section has the exact rules.
   (`[10i, 10i + 8)`); the other 2 px are open.
 - **Segments:** ceiling segment k (from 0) is solid for y in `[7k, 7k + 6)`. Floor segment
   k is the mirror image: `[216 - 7k - 6, 216 - 7k)`. A side with level n has segments
-  0 to n - 1 lit. A peak p above the level lights segment p - 1 as a peak dot.
+  0 to n - 1 lit. A peak p above the level makes segment p - 1 a peak dot, which is drawn
+  and solid only on a difficulty with `solidPeaks`. No difficulty sets it (2026-11-08).
 - **Scroll table:** `level.scroll[t]`, for t from 0 to `level.tickCount`, is the world x in
   Q8 of the screen's left edge at sim tick t (song sample `400 t`). It is
   `playheadAtSample(400 t) - 64 * 256`. The playhead's world x is
@@ -286,11 +287,11 @@ For each bar in order, with the previous bar's final values:
    segment per bar. Peaks are never below their levels.
 5. **Peak gap:** if the two peaks together exceed the segment budget of step 2, the
    ceiling peak is lowered first (down to its level), then the floor peak.
-6. **Hard only:** peaks are solid, so step 3 runs again on the peaks. A peak is lowered
+6. **Solid peaks only** (no difficulty, for now): step 3 runs again on the peaks. A peak is lowered
    first; once it equals its level, both go down together.
 
 `findPathViolation(level)` in `levelgen/path-check.ts` checks the guarantee: every bar's
-solid gap (peaks on hard, levels otherwise) is at least the minimum, and every centre move
+solid gap (peaks where they are solid, levels otherwise) is at least the minimum, and every centre move
 is within the limit unless the new gap contains the old one. Tests run it on random loud
 songs at every difficulty and on each fixture.
 
@@ -306,7 +307,7 @@ songs at every difficulty and on each fixture.
   (384 / sqrt 2, rounded), about 1.503 px per tick in total. The centre stays within
   x 16 to 160 and y 3 to 213, so the hitbox never leaves the screen. It starts at (64, 108).
 - **Collision:** the hitbox against the solid part of every bar it overlaps horizontally:
-  lit segments, plus peak dots on hard. Integer comparisons only.
+  lit segments, plus peak dots where they are solid. Integer comparisons only.
 - **Death:** `state.dead` and `state.deathTick` (the value of `state.tick` after the fatal
   tick). M1 restarts the song on death; `state.lives` is there for later.
 - **Running a log:** `runInputLog(level, inputs, state?)` runs from the state's current
@@ -648,7 +649,7 @@ Two query parameters help in development:
   (`MAX_VISIBLE_BARS`) of 24 sprites each, one per segment, made once. Each frame moves the
   columns to the bars `visibleBars()` lists and tints each sprite: lit segment k is
   `LED_LIT[k]` (green at the screen edge, through amber, to red towards the gap), unlit is
-  `LED_DIM[k]`, and a peak dot is white. The scroll is rounded to a whole pixel once per
+  `LED_DIM[k]`, and a peak dot, drawn only where peaks are solid, is white. The scroll is rounded to a whole pixel once per
   frame, so bars never shift against each other.
 - **Ship** (`ship.ts`): a 16x8 sprite built from a character map, centred on the sim's
   `shipX` and `shipY`. The engine flame changes length every 1440 song samples (30 ms).

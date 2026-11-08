@@ -111,18 +111,15 @@ describe('collision', () => {
     expect(shipCollides(scrolled, 0, 4 * Q, 10 * Q)).toBe(false);
   });
 
-  it('peak dots are solid on hard only', () => {
-    // Ceiling level 1, peak 5: the dot is segment 4, lit y 28..34.
-    for (const [d, solid] of [
-      ['easy', false],
-      ['normal', false],
-      ['hard', true],
-    ] as const) {
+  it('peak dots are not solid on any difficulty', () => {
+    // Ceiling level 1, peak 5: the dot would be segment 4, lit y 28..34.
+    for (const d of ['easy', 'normal', 'hard'] as const) {
       const l = handLevel(d, [[1, 0, 5, 0]]);
-      expect(shipCollides(l, 0, 4 * Q, 31 * Q), d).toBe(solid);
-      // Between the level and the dot (segments 1 to 3) is open everywhere.
+      expect(shipCollides(l, 0, 4 * Q, 31 * Q), d).toBe(false);
       expect(shipCollides(l, 0, 4 * Q, 17 * Q), d).toBe(false);
-      expect(Difficulty[d].solidPeaks).toBe(solid);
+      // The level itself is still solid.
+      expect(shipCollides(l, 0, 4 * Q, 6 * Q), d).toBe(true);
+      expect(Difficulty[d].solidPeaks).toBe(false);
     }
   });
 });

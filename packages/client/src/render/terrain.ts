@@ -2,7 +2,7 @@
 // meters (docs/DEVELOPMENT.md, "Level and sim"). Every sprite is made once; draw() only
 // moves and recolours them.
 
-import { BAR_LIT_WIDTH, BAR_PITCH, SEGMENT_LIT_HEIGHT, type Level } from '@game/core';
+import { BAR_LIT_WIDTH, BAR_PITCH, Difficulty, SEGMENT_LIT_HEIGHT, type Level } from '@game/core';
 import { Container, Sprite, Texture } from 'pixi.js';
 import { LED_DIM, LED_LIT, LED_PEAK } from './palette.ts';
 import {
@@ -55,6 +55,7 @@ export class TerrainView {
   readonly container = new Container();
   #columns: BarColumn[] = [];
   #level: Level | null = null;
+  #showPeaks = false;
   #range: BarRange = { first: 0, end: 0 };
 
   constructor() {
@@ -64,6 +65,9 @@ export class TerrainView {
 
   setLevel(level: Level | null): void {
     this.#level = level;
+    // Peak dots are drawn only where they are solid: a dot the ship could fly through
+    // would look like terrain.
+    this.#showPeaks = level !== null && Difficulty[level.difficulty].solidPeaks;
     if (!level) for (const c of this.#columns) c.visible = false;
   }
 
@@ -79,9 +83,10 @@ export class TerrainView {
       const column = this.#columns[n]!;
       const x = i * BAR_PITCH - offset;
       const c = level.ceiling[i]!;
-      const cp = level.ceilingPeak[i]!;
       const f = level.floor[i]!;
-      const fp = level.floorPeak[i]!;
+      // A peak equal to the level draws no dot.
+      const cp = this.#showPeaks ? level.ceilingPeak[i]! : c;
+      const fp = this.#showPeaks ? level.floorPeak[i]! : f;
       for (let k = 0; k < SEGMENTS_PER_SIDE; k++) {
         const top = column.ceiling[k]!;
         top.visible = true;

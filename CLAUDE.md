@@ -70,6 +70,11 @@ forgotten next session.
 - The first mention of a module, mod, or tracker in anything a person reads says what it is:
   a song file made in a music tracker. Player-facing text calls them songs (Brad,
   2026-11-08; see `docs/DOC-STYLE.md`, "Say what a module is").
+- When a change is ready for Brad to play-test, push it, wait for the "Docker image" workflow
+  to publish `edge`, then update the `pattern-break` container on Unraid (10.6.26.2, host
+  port 8380, served at https://patternbreak.lynwood.us) and confirm the new build is the
+  one served. The container doesn't update itself (Brad, 2026-11-08; see
+  `docs/SELF-HOSTING.md`).
 
 ## Open decisions
 

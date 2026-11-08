@@ -2,11 +2,15 @@
 // draws it and the sim collides with it. docs/DEVELOPMENT.md, "Level and sim", has the
 // coordinate conventions.
 
-/** Per-difficulty level generation settings. */
+/**
+ * Per-difficulty level generation settings. `solidPeaks` makes peak dots solid and visible;
+ * it is off on every difficulty (2026-11-08). Peaks are still computed, so a display
+ * option or solid peaks on hard can return (docs/ROADMAP.md, "Open decisions").
+ */
 export const Difficulty = {
   easy: { id: 0, minGapPx: 96, solidPeaks: false },
   normal: { id: 1, minGapPx: 72, solidPeaks: false },
-  hard: { id: 2, minGapPx: 56, solidPeaks: true },
+  hard: { id: 2, minGapPx: 56, solidPeaks: false },
 } as const;
 export type DifficultyName = keyof typeof Difficulty;
 
@@ -31,7 +35,8 @@ export interface Level {
   floor: Uint8Array;
   /**
    * Peak-hold level per bar, 0..12. When it is above the bar's level, segment
-   * (peak - 1) shows a peak dot; solid on hard only. Never below the bar's level.
+   * (peak - 1) is a peak dot, drawn and solid only where `solidPeaks` is set. Never below
+   * the bar's level.
    */
   ceilingPeak: Uint8Array;
   floorPeak: Uint8Array;

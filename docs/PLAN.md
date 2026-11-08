@@ -141,8 +141,9 @@ every bar of every generated level.
     the ship's height. Levels are cut further where needed. A gap that grows to contain
     the previous one needs no cut, since the ship can stay where it is.
 - **Peak hold:** each side keeps a peak level that holds for 6 bars and then falls one
-  segment per bar. The peak dot is solid on hard only, and on hard the path rules apply to
-  the peaks too.
+  segment per bar. Peak dots are off on every difficulty (2026-11-08): the peaks are
+  computed but not drawn or solid. A difficulty can turn them on with `solidPeaks`, which
+  makes them solid and visible and applies the path rules to them too.
 - **Difficulty** is a constant object (`easy`, `normal`, `hard`). The numbers and the
   exact rounding rules are in `docs/DEVELOPMENT.md`, "Level and sim".
 - **Enemies (from note events):**
@@ -214,8 +215,8 @@ every bar of every generated level.
 - Internal resolution **384x216** (16:9), integer-scaled with nearest-neighbour filtering
   and letterboxed. An optional 320x256 "Amiga PAL" mode later.
 - Palette: near-black background with neon cyan, magenta, lime, and amber accents. LED
-  segments go green to amber to red with height, with lit and unlit (dim) segments and
-  white peak-hold dots.
+  segments go green to amber to red with height, with lit and unlit (dim) segments.
+  White peak-hold dots are drawn only on a difficulty with solid peaks (none, for now).
 - Backgrounds: animated copper-bar gradients (horizontal colour bands) and a parallax
   starfield. The bars can pulse with the bass channel's VU.
 - Effects: pooled particle emitters on note hits and kills, hit-stop (cosmetic only),

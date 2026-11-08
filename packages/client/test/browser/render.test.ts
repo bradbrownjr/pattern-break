@@ -4,7 +4,7 @@
 import { PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH, Q8, createSimState } from '@game/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { drawPlay } from '../../src/game/play-view.ts';
-import { BACKGROUND, CYAN, LED_DIM, LED_LIT, LED_PEAK } from '../../src/render/palette.ts';
+import { BACKGROUND, CYAN, LED_DIM, LED_LIT } from '../../src/render/palette.ts';
 import { createGameRenderer, type GameRenderer } from '../../src/render/renderer.ts';
 import { makeLevel } from '../make-level.ts';
 
@@ -53,8 +53,9 @@ describe.skipIf(!hasWebGl)('renderer', () => {
     expect(r.renderer.height).toBe(PLAYFIELD_HEIGHT);
   });
 
-  it('draws lit, dim and peak segments, the ship, and the background', () => {
-    // Ceiling 3 lit with a peak at 6; floor 5 lit.
+  it('draws lit and dim segments, no peak dot, the ship, and the background', () => {
+    // Ceiling 3 lit with a peak at 6; floor 5 lit. No difficulty has solid peaks, so the
+    // peak segment draws dim.
     const level = makeLevel({
       ceiling: Array.from({ length: 100 }, () => 3),
       ceilingPeak: Array.from({ length: 100 }, () => 6),
@@ -73,7 +74,7 @@ describe.skipIf(!hasWebGl)('renderer', () => {
     expect(rgbAt(px, x, 2)).toBe(LED_LIT[0]);
     expect(rgbAt(px, x, 7 * 2 + 2)).toBe(LED_LIT[2]);
     expect(rgbAt(px, x, 7 * 3 + 2)).toBe(LED_DIM[3]);
-    expect(rgbAt(px, x, 7 * 5 + 2)).toBe(LED_PEAK);
+    expect(rgbAt(px, x, 7 * 5 + 2)).toBe(LED_DIM[5]);
     expect(rgbAt(px, x, 7 * 6 + 2)).toBe(LED_DIM[6]);
     // Floor segment 4 (lit) and 5 (dim), counted up from the bottom edge.
     expect(rgbAt(px, x, PLAYFIELD_HEIGHT - 7 * 4 - 3)).toBe(LED_LIT[4]);

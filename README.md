@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-<img src="docs/img/gameplay-clip.gif" width="768" alt="Four seconds of play. The ceiling and floor, columns of square LED segments lit green, yellow and orange with dim unlit segments and white peak dots, scroll from right to left, one column per row of the song, their heights changing with the music. A small cyan ship with a flickering engine flame steers up and down a little in the dark band through the middle, and faint blue stars drift more slowly behind.">
+<img src="docs/img/gameplay-clip.gif" width="768" alt="Four seconds of play. The ceiling and floor, columns of square LED segments lit green, yellow and orange with dim unlit segments, scroll from right to left, one column per row of the song, their heights changing with the music. A small cyan ship with a flickering engine flame steers up and down a little in the dark band through the middle, and faint blue stars drift more slowly behind.">
 
 A side-scrolling neon tunnel shooter where every level is built from a song. The songs are
 tracker modules, often called mods: music files made in a tracker, a program that arranges

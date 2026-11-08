@@ -3,10 +3,10 @@
  * Bump SIM_VERSION whenever simulation output changes for any input.
  * Leaderboard key is (moduleHash, difficulty, GEN_VERSION); see docs/PLAN.md, "Determinism rules".
  *
- * 0 = pre-release; nothing is stable yet.
+ * 1 = peak dots off on hard (2026-11-08). Pre-release: no scores are kept yet.
  */
-export const GEN_VERSION = 0;
-export const SIM_VERSION = 0;
+export const GEN_VERSION = 1;
+export const SIM_VERSION = 1;
 
 /** Fixed simulation tick rate (docs/PLAN.md, "Simulation"). */
 export const TICK_HZ = 120;

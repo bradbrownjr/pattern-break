@@ -156,6 +156,8 @@ These need Brad's answer before the work that depends on them. Don't guess.
    starts.
 2. **User-imported modules on leaderboards** from day one, or bundled songs only at first.
    Needed before M5.
+3. **Peak dots:** they are off on every difficulty (2026-11-08). They could come back as a
+   display option, as solid obstacles on hard, or not at all.
 
 ## Decided
 
