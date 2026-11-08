@@ -20,6 +20,7 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 | [M6: mobile and polish](#m6-mobile-and-polish) | Touch and gamepad controls, latency calibration, phone performance, tuned difficulty. | Planned |
 | [Boss patterns](#later) | A song's last or most-repeated pattern becomes a boss fight. | Later |
 | [Per-song enemy overrides](#later) | A sidecar file that changes which instrument spawns which enemy for one song. | Later |
+| [Warm-up song](#later) | An easy first song for new players. | Later |
 | [Amiga PAL mode](#later) | An optional 320x256 display mode. | Later |
 | [Player accounts](#later) | Sign-in by magic link in place of the anonymous device key. | Later |
 
@@ -152,6 +153,8 @@ Ideas that come after M6. Each gets its own section here, with tasks, once it's 
   points pulse on the lead channel.
 - **Per-song enemy overrides:** a sidecar JSON that overrides the instrument-to-enemy
   heuristic for one song.
+- **Warm-up song:** an easy bundled song, such as the generated test song, offered first to
+  new players as a warm-up round.
 - **Amiga PAL mode:** an optional 320x256 internal resolution.
 - **Player accounts:** magic-link login, replacing or linking the anonymous device keypair.
 
@@ -174,6 +177,8 @@ These need Brad's answer before the work that depends on them. Don't guess.
 - **Terrain:** one LED bar per row of the song, ceiling from the left channel and floor from
   the right. What matters is that it feels like playing the beat and that there is always a
   path for the ship, even a hard one (2026-11-08).
+- **Terrain height comes from the song as it is,** with no per-song normalization. A quiet
+  song makes an easy level; enemies still make it a challenge (2026-11-08).
 - **Wording:** player-facing text calls modules songs and says what a module is on first
   mention (2026-11-08).
 - **Server-side replay checks** stay, measured before they're turned on (2026-11-08; see
