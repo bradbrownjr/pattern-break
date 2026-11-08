@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Audio debug</title>
+    <style>
+      body { font-family: monospace; background: #111; color: #ddd; padding: 1rem; }
+      button, input { font-family: inherit; }
+      table { border-collapse: collapse; margin-top: 1rem; }
+      td { padding: 0.1rem 1rem 0.1rem 0; }
+      td:first-child { color: #888; }
+    </style>
+  </head>
+  <body>
+    <h1>Audio debug</h1>
+    <p>
+      Plays the test module (a song file made in a music tracker) pb-fixture-01.mod through
+      the libopenmpt audio worklet and shows the song clock.
+    </p>
+    <p>
+      <button id="play">Play from start</button>
+      <button id="pause">Pause</button>
+      <button id="resume">Resume</button>
+      <button id="stop">Stop</button>
+      <label>User offset (ms) <input id="offset" type="number" value="0" step="5" /></label>
+    </p>
+    <table id="readout"></table>
+    <script type="module" src="/src/audio/debug.ts"></script>
+  </body>
+</html>

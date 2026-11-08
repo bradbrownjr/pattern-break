@@ -17,7 +17,7 @@
     "dev": "pnpm --filter @game/client dev",
     "build": "pnpm -r --if-present build",
     "screenshots": "node tools/screenshots/capture.ts",
-    "test:browser": "pnpm --filter @game/analysis test:browser"
+    "test:browser": "pnpm --filter @game/analysis --filter @game/client test:browser"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

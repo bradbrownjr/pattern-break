@@ -5,7 +5,9 @@
   "type": "module",
   "description": "libopenmpt WASM wrapper: load module, offline render pass, pattern data extraction -> LevelData.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./libopenmpt.wasm": "./vendor/libopenmpt/libopenmpt.wasm",
+    "./fixtures/*": "./fixtures/*"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",

@@ -23,8 +23,8 @@ pnpm install
 | `pnpm lint` | Oxlint over the repo, including the core determinism rules. |
 | `pnpm typecheck` | `tsc` (TypeScript 7) in each package, then in `tools/`. |
 | `pnpm test` | Vitest in each package, in Node. |
-| `pnpm test:browser` | The golden LevelData test in real browsers (see "Tests"). |
-| `pnpm --filter @game/analysis analyze <file>` | Analyzes one module and prints its LevelData hash and a summary. |
+| `pnpm test:browser` | The golden LevelData test and the client's audio tests in real browsers (see "Tests"). |
+| `pnpm --filter @game/analysis analyze <file>` | Analyzes one module (a song file made in a music tracker) and prints its LevelData hash and a summary. |
 | `pnpm screenshots` | Regenerates every figure in `docs/img/` (see "Screenshots"). |
 | `pnpm check:docs` | The writing-rules check (`tools/check-docs.ts`). |
 | `pnpm gen:tables` | Regenerates `packages/core/src/spectrum/tables.generated.ts`. |
@@ -61,7 +61,10 @@ pattern-break/
 │   │   ├── fixtures/              # test modules and golden.json, their pinned hashes
 │   │   └── vitest.config.ts       # the node and browser test projects
 │   ├── client/                    # @game/client: the Vite app
-│   │   └── src/config/brand.ts    # the game's name, in one place
+│   │   ├── src/config/brand.ts    # the game's name, in one place
+│   │   ├── src/audio/             # the libopenmpt AudioWorklet player and the song clock
+│   │   ├── audio-debug.html       # dev-server page that plays the fixture and shows the clock
+│   │   └── vitest.config.ts       # the node and browser test projects
 │   └── server/                    # @game/server: leaderboard API and replay validator (M5)
 ├── tools/
 │   ├── check-docs.ts              # writing-rules check
@@ -75,7 +78,8 @@ pattern-break/
 ```
 
 Each workspace package's `exports` points at `./src/index.ts`; other packages and Node
-import the source directly.
+import the source directly. `@game/analysis` also exports `./libopenmpt.wasm` and
+`./fixtures/*`, so the client can import those files with Vite's `?url`.
 
 ## TypeScript
 
@@ -237,6 +241,12 @@ through Vitest browser mode and Playwright, and is what `pnpm test:browser` runs
 engine has to produce the committed hash, which is how we know Node and the browsers build
 identical levels.
 
+The client's `vitest.config.ts` has the same two projects. Its `browser` project runs
+`test/browser/audio.test.ts`, the worklet and clock tests in "Audio and clock". Each engine
+is launched with audio allowed to start without a click: Chromium with
+`--autoplay-policy=no-user-gesture-required`, Firefox with the `media.autoplay.default` and
+`media.autoplay.block-webaudio` preferences, WebKit with Playwright's defaults.
+
 - `PB_BROWSERS` picks the engines: `chromium` by default; CI sets
   `chromium,firefox,webkit`.
 - `PB_CHROMIUM` points at a Chromium binary when Playwright can't download its own. In
@@ -367,6 +377,88 @@ branch and opens a pull request with `gh pr create` using `GITHUB_TOKEN` (permis
 to create and approve pull requests** (Settings, Actions, General) must be on for that step.
 A person reviews the changed images and merges the pull request; nothing is pushed to `main`
 directly.
+
+## Audio and clock
+
+`packages/client/src/audio/` plays a module through the same libopenmpt build the analysis
+uses, in an AudioWorklet, and keeps the song clock the sim and renderer follow (PLAN.md,
+"Audio and timing").
+
+- `worklet.ts` is the AudioWorkletProcessor. Vite bundles it on its own: `player.ts`
+  imports it as `./worklet.ts?worker&url`, and `vite.config.ts` sets `worker.format` to
+  `'es'` because `addModule` loads an ES module.
+- `player.ts` has `createAudioPlayer()`, which returns `load(bytes)`, `start()`,
+  `pause()`, `resume()`, `stop()`, `onEnded`, `onPosition`, `userOffsetMs`, and
+  `songTimeSamples()`.
+- `clock.ts` is the clock arithmetic (`SongClock`), tested in Node.
+- `audio-debug.html` (open `/audio-debug.html` on the dev server) plays the fixture on a
+  click and shows song time, order, row, and how far the clock is from the worklet's
+  reports.
+
+**The wasm.** An AudioWorklet can't fetch, so `createAudioPlayer()` fetches
+`libopenmpt.wasm` on the main thread (imported as `@game/analysis/libopenmpt.wasm?url`)
+and passes the bytes to the processor in `processorOptions`. The processor calls
+`loadOpenMpt({ wasmBinary })`.
+
+**What the worklet plays.** Each `load` and each restart opens a fresh libopenmpt module
+from the bytes and applies `RENDER_CTLS`, `RENDER_PARAMS`, and repeat count 0 from
+`@game/analysis`, the same settings as the analysis pass. It renders one 128-frame quantum
+per `process()` call and, every 50 ms of song time, posts its position: the context frame,
+the song frames rendered, the order and row, and every row change since the last message.
+It posts `ended` when libopenmpt reaches the song's end.
+
+**The clock.**
+
+```
+songTime = (currentTime - startTime) - outputLatency + userOffset
+```
+
+- `startTime` is the context time of the song's first frame: the `currentFrame` of the
+  render quantum in which the worklet rendered it, divided by 48 000. The worklet reports it
+  in its `started` message. It is later than the `start()` call, because the worklet starts
+  at the first quantum after the message reaches it.
+- `currentTime` is the context's time. The graph rendered the song frame at context time
+  `t` exactly `(t - startTime) * 48000` frames into the song, as long as no quantum is lost;
+  the browser test checks that.
+- `outputLatency` is the time from the graph to the speakers. It is read when the clock
+  anchors, replaced while it reads 0 (some browsers report 0 until the device runs), and
+  then kept until the next `start()`, so the clock doesn't jump during a song. Where a
+  browser doesn't provide `outputLatency`, the clock uses `baseLatency`, and 0 if that is
+  missing too; the user offset has to cover the rest.
+- `userOffset` is `userOffsetMs`, added as is. Audio that arrives later than the browser
+  reports (Bluetooth headphones) needs a negative offset.
+- The arithmetic is in whole 48 kHz frames. `songTimeSamples()` can be negative right after
+  a start: the first frame hasn't reached the speakers yet. Between `start()` and the
+  `started` message it reads `-outputLatency + userOffset`. While stopped it reads 0.
+
+**Pause and resume** suspend and resume the context. A suspended context's `currentTime`
+stops and the worklet renders nothing, so the clock holds its value and continues from it
+on resume.
+
+**Song end.** The worklet posts `ended` with the song's length in frames, the player calls
+`onEnded`, and its state becomes `ended`. The clock keeps running past the end; compare it
+with `endedAtSongFrames` (or LevelData's `totalSamples`). `start()` always plays from the
+beginning: it reopens the module, so a restart renders exactly what analysis rendered.
+
+**48 kHz only.** The context is created at 48 000 Hz with the `'interactive'` latency hint.
+If it runs at another rate, `createAudioPlayer()` throws `SampleRateError` instead of
+playing at a rate the analysis didn't time.
+
+**Measured in headless Chromium** (2026-11-08):
+
+- Row changes the worklet reports are at most 128 frames from LevelData's row times over all
+  449 rows of `pb-fixture-01.mod`, within the allowed 160 + 128 frames (one analysis chunk
+  plus one quantum).
+- A position message arrives 128 to 256 frames (2.7 to 5.3 ms) of context time after the
+  quantum it describes, and the context frame minus the song frame equals the anchor in
+  every message, so the clock and the worklet don't drift apart.
+- `outputLatency` reads 32 ms, `baseLatency` 10 ms.
+- `currentTime` advances in steps of 384 or 512 frames (8 to 10.7 ms), one audio callback at
+  a time, not smoothly. Read the clock once per animation frame and smooth the display if a
+  step shows; the sim can consume the steps as they come.
+
+Firefox and WebKit run the same tests in CI only; their latency reporting and
+`currentTime` step size are not measured here.
 
 ## The docs check
 
