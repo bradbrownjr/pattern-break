@@ -12,3 +12,4 @@ __lint_probe__/
 
 # Agent worktrees (temporary, managed by Claude Code)
 .claude/worktrees/
+.vitest/
