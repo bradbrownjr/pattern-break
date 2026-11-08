@@ -161,7 +161,8 @@ every bar of every generated level.
     one or two channels; Hard keeps all of them. The seeded PRNG is used only for
     tie-breaking which events to drop.
 - **Boss (after M6; see the roadmap):** the last pattern, or the most-repeated one, becomes a boss
-  whose weak points pulse on the lead channel.
+  whose weak points pulse on the lead channel. In the arcade run, a mini boss ends level 4
+  and the final boss ends level 8.
 
 ## 7. Simulation (`packages/core/src/sim`)
 
@@ -239,9 +240,15 @@ every bar of every generated level.
 
 ## 11. Client UI (`packages/client/ui`)
 
-- Title screen: chrome logo, a menu driven by up, down, left, right, confirm and back (the
-  same actions on keyboard and gamepad), and an attract mode that plays a bundled song's
-  level with an AI ship.
+- Start screen: "Press any key", since browsers start audio only after a key press or
+  click. The first press starts the title music.
+- Title screen: chrome logo, the title song (The_Epic_Chip), a menu driven by up, down,
+  left, right, confirm and back (the same actions on keyboard and gamepad), and an attract
+  mode: on the song's change, the title song's level flown by the autopilot.
+- Arcade run: levels in a fixed order, eight planned (Numen in Da Chip first, the full
+  Keygen 9000 last), each opening with a card that credits its song. Practice plays any one
+  song. A mini boss ends level 4 and the final boss ends level 8 (see "Level generation").
+- Game over plays the sparse opening of Keygen 9000 and fades out.
 - Jukebox: plays the bundled songs, with an LED spectrum and each song's title, author and
   license.
 - Library: bundled songs plus "Import songs" (file picker or drag and drop; directory

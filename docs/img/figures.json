@@ -1,8 +1,8 @@
 {
   "title-screen": {
     "path": "docs/img/title-screen.png",
-    "alt": "The title screen on a near-black background with faint blue stars. \"Pattern Break\" in large cyan pixel letters with a magenta shadow, over a row of small LED segments shading from green to red. Below it, a menu in small pixel type: \"Play\" in amber with an amber \">\" before it, then \"Song\" with \"Numen in Da Chip\", \"Difficulty\" with \"Normal\", and \"Jukebox\", in grey. Under the menu, \"by JAM. Public Domain.\", and at the bottom two lines of help: \"Up and down choose. Left and right change. Enter selects.\" and \"In play: arrows or WASD fly, Esc pauses.\"",
-    "caption": "The title menu, on the first bundled song. Not used in the README.",
+    "alt": "The title screen on a near-black background with faint blue stars. \"Pattern Break\" in large cyan pixel letters with a magenta shadow, over a row of small LED segments shading from green to red. Below it, a menu in small pixel type: \"Play\" in amber with an amber \">\" before it, then \"Practice\" with \"The_Epic_Chip\", \"Difficulty\" with \"Normal\", and \"Jukebox\", in grey. Under the menu, \"Music: The_Epic_Chip by Drozerix. Public Domain.\", and at the bottom two lines of help: \"Up and down choose. Left and right change. Enter selects.\" and \"In play: arrows or WASD fly, Esc pauses.\"",
+    "caption": "The title menu. Not used in the README.",
     "usedIn": []
   },
   "gameplay": {

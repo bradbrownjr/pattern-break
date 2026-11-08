@@ -21,7 +21,7 @@ import { analyzeInWorker } from './analysis.ts';
 import { catchUp, targetTick } from './loop.ts';
 import { drawPlay } from './play-view.ts';
 import { TitleScreen } from './screens.ts';
-import { fetchSongBytes, findSong } from './songs.ts';
+import { TITLE_SONG_ID, fetchSongBytes, findSong, songById } from './songs.ts';
 
 declare global {
   interface Window {
@@ -51,7 +51,7 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
     const title = new TitleScreen();
     r.ui.addChild(title.container);
     r.world.visible = false;
-    title.update({ cursor: 0, song, difficulty }, true);
+    title.update({ cursor: 0, practice: song, difficulty, music: songById(TITLE_SONG_ID) }, true);
     r.starfield.draw(params.t * TITLE_DRIFT_PX_PER_S);
     r.render();
     await afterPresent();

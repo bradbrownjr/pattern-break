@@ -13,14 +13,15 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 |---|---|---|
 | [M1: vertical slice](#m1-vertical-slice) | One song, LED terrain scrolling in time with it, a ship you can fly and crash. | Built; Brad to play-test |
 | [Songs and jukebox](#songs-and-jukebox) | Three bundled songs to pick from on a title menu, and a jukebox to listen to them. | Built; Brad to play-test |
+| [Title music, demo, and levels](#title-music-demo-and-levels) | Title music, an attract demo, menu sounds, an arcade run of levels, and game-over music. | Built; Brad to play-test |
+| [Eight levels](#eight-levels) | Six more songs, so the arcade run has eight levels. | Next |
 | [M2: enemies and scoring](#m2-enemies-and-scoring) | Notes become enemies; shooting, scoring, lives, power-ups, gamepad support, and replays that give the same score in every browser. | Planned |
 | [M3: effects and look](#m3-effects-and-look) | Particles, big explosions, sound effects, copper bars, starfield, CRT filter, title and results screens, accessibility options. | Planned |
 | [M4: library, offline, music pack](#m4-library-offline-music-pack) | Import your own songs, install the game, and play with no connection; a bundled, credited music pack. | Planned |
 | [M5: leaderboards](#m5-leaderboards) | A global board per song, with scores checked by replaying them on the server. | Planned |
 | [M6: mobile and polish](#m6-mobile-and-polish) | Touch controls, latency calibration, phone performance, tuned difficulty. | Planned |
-| [Boss patterns](#later) | A song's last or most-repeated pattern becomes a boss fight. | Later |
+| [Boss patterns](#later) | A mini boss at the end of level 4 and the final boss at the end of level 8, from the song's patterns. | Later |
 | [Per-song enemy overrides](#later) | A sidecar file that changes which instrument spawns which enemy for one song. | Later |
-| [Warm-up song](#later) | An easy first song for new players. | Later |
 | [Amiga PAL mode](#later) | An optional 320x256 display mode. | Later |
 | [Player accounts](#later) | Sign-in by magic link in place of the anonymous device key. | Later |
 
@@ -86,6 +87,45 @@ stops and moves between songs with the arrows and Enter; `pnpm check` passes.
 **Docs:** `DEVELOPMENT.md` ("Playing it", "Bundled songs", "Menus and the jukebox", the
 commands and tests), `PLAN.md` ("Client UI"), the README status and music credits.
 
+## Title music, demo, and levels
+
+**Goal:** an arcade front end. Added 2026-11-08 at Brad's request; it pulls attract mode and
+the menu sounds forward from M3.
+
+- [x] A start screen ("Press any key"), whose first key press starts the title music, The_Epic_Chip, which loops.
+- [x] An attract demo: the title song's level flown by the autopilot, starting on the song's
+      change at 18 s (or after 20 s with no key press), joined where the music is. Any key
+      returns to the menu.
+- [x] Menu sounds synthesized as square-wave chip notes: coin, move, change, select, back,
+      start.
+- [x] An arcade run: Play starts level 1 (Numen in Da Chip) and goes through the levels in
+      order; Keygen 9000 is the last. Practice plays one song, The_Epic_Chip first. Each
+      level opens with a card crediting its song.
+- [x] Game over on any crash, with Keygen 9000's first 8 s fading out. Any key retries the
+      level.
+
+**Acceptance:** Brad plays the arcade run, practice, and the demo, and is happy with the
+title music, the demo's timing, the menu sounds, and the game-over music; `pnpm check`
+passes.
+
+**Docs:** `DEVELOPMENT.md` ("Playing it", "Bundled songs", "Menus and the jukebox"),
+`PLAN.md` ("Client UI"), the README status.
+
+## Eight levels
+
+**Goal:** the arcade run Brad wants to begin with: the practice and demo song plus levels 1
+to 8 (2026-11-08).
+
+- [ ] Find six songs for levels 2 to 7: PD, CC0 or CC BY, checked on their Mod Archive pages,
+      no covers. Brad listens and picks.
+- [ ] Order the levels by difficulty (gap sizes, tight bars, rows per second), with Numen in
+      Da Chip first and the full Keygen 9000 last.
+- [ ] Each song passes the bundled-songs test and gets complete `manifest.json` entries.
+
+**Acceptance:** the arcade run has eight levels, each playable on every difficulty.
+
+**Docs:** `DEVELOPMENT.md` ("Bundled songs"), the README music credits.
+
 ## M2: enemies and scoring
 
 **Goal:** a complete, deterministic run.
@@ -114,7 +154,8 @@ and Node.
 - [ ] Sound effects, made in the browser with Web Audio (no sound files to license): shots,
       hits, power-ups, and an explosion with a deep boom, echo, and reverb. Mixed under the
       music, with their own volume and an off switch.
-- [ ] Title screen with attract mode, and the results screen.
+- [ ] The results screen. (The title screen's attract mode and menu sounds came earlier,
+      in "Title music, demo, and levels".)
 - [ ] Accessibility toggles: reduce flashing (on by default), shake, colour-blind-safe LED
       palette, remappable controls.
 
@@ -167,11 +208,10 @@ and Node.
 Ideas that come after M6. Each gets its own section here, with tasks, once it's planned.
 
 - **Boss patterns:** the last pattern, or the most-repeated one, becomes a boss whose weak
-  points pulse on the lead channel.
+  points pulse on the lead channel. Brad wants a mini boss at the end of level 4 and the
+  final boss at the end of level 8 (2026-11-08); both need M2's enemies first.
 - **Per-song enemy overrides:** a sidecar JSON that overrides the instrument-to-enemy
   heuristic for one song.
-- **Warm-up song:** an easy bundled song, such as the generated test song, offered first to
-  new players as a warm-up round.
 - **Amiga PAL mode:** an optional 320x256 internal resolution.
 - **Player accounts:** magic-link login, replacing or linking the anonymous device keypair.
 

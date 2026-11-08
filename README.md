@@ -15,9 +15,9 @@ leaderboard.
 
 ## Status
 
-An early playable slice: three bundled songs to pick from, the LED tunnel scrolling in time
-with the music, a ship you fly through it, crashes and retries, and a jukebox for listening
-to the songs. There are no enemies, shooting, or scores yet;
+An early playable slice: title music with an attract demo, an arcade run of levels and a
+practice mode, the LED tunnel scrolling in time with the music, a ship you fly through it,
+game over and retry, and a jukebox for listening to the songs. There are no enemies, shooting, or scores yet;
 those come next, in M2. Level data comes out byte-for-byte the same in Node, Chromium,
 Firefox, and WebKit, which is what lets one song have one leaderboard.
 

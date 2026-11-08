@@ -1,7 +1,7 @@
 // The songs bundled with the client (song files made in a music tracker), in the order of
 // music/manifest.json, which holds their credits and licenses (docs/PLAN.md, "Bundled
-// music"). The generated test song is not offered to players; capture mode and the
-// screenshots can still name it.
+// music"), and the part each plays in the game. The generated test song is not offered to
+// players; capture mode and the screenshots can still name it.
 
 import testSongUrl from '@game/analysis/fixtures/pb-fixture-01.mod?url';
 import manifest from '../../../../music/manifest.json';
@@ -35,6 +35,25 @@ export const SONGS: readonly BundledSong[] = manifest.map((entry) => {
     credit: `by ${entry.author}. ${entry.license}.`,
   };
 });
+
+/** The song on the title screen and in the demo, and the one Practice starts on. */
+export const TITLE_SONG_ID = 'the_epic_chip';
+
+/**
+ * The arcade run's levels, first to last. Eight are planned (docs/ROADMAP.md); levels go
+ * in between as songs are found, and the last song stays last.
+ */
+export const LEVEL_SONG_IDS: readonly string[] = ['numenchip', 'keygen_9000'];
+
+/** Game over plays the opening of a song, fading out at the end. */
+export const GAME_OVER_MUSIC = { songId: 'keygen_9000', seconds: 8, fadeSeconds: 1.5 } as const;
+
+/** The bundled song with this id; throws if there is none, since the ids above are fixed. */
+export function songById(id: string): BundledSong {
+  const song = SONGS.find((s) => s.id === id);
+  if (!song) throw new Error(`no bundled song ${id}`);
+  return song;
+}
 
 /** The generated test song (tools/make-fixture-mod.ts). */
 export const TEST_SONG: BundledSong = {

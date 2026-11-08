@@ -7,8 +7,11 @@ import type { MenuAction } from './input.ts';
 export const DIFFICULTY_LABELS: Record<DifficultyName, string> = { easy: 'Easy', normal: 'Normal', hard: 'Hard' };
 export const DIFFICULTY_ORDER = Object.keys(Difficulty) as DifficultyName[];
 
-export const TITLE_ITEMS = ['play', 'song', 'difficulty', 'jukebox'] as const;
+export const TITLE_ITEMS = ['play', 'practice', 'difficulty', 'jukebox'] as const;
 export type TitleItem = (typeof TITLE_ITEMS)[number];
+
+/** What one action did on the title menu: what the game plays a sound for or opens. */
+export type TitleEvent = 'moved' | 'changed' | 'play' | 'practice' | 'jukebox' | null;
 
 /** Steps `i` by `step` through `count` values, wrapping at both ends. */
 function wrap(i: number, step: number, count: number): number {
@@ -16,12 +19,13 @@ function wrap(i: number, step: number, count: number): number {
 }
 
 /**
- * Play, Song, Difficulty, Jukebox. Up and down move the cursor; left and right change the
- * song or difficulty under it. Confirm on Song or Difficulty steps it forward, so a single
- * button or a click can reach every choice.
+ * Play, Practice, Difficulty, Jukebox. Up and down move the cursor; left and right change
+ * Practice's song or the difficulty under it. Confirm on Difficulty steps it forward, so a
+ * single button or a click can reach every choice.
  */
 export class TitleMenu {
   cursor = 0;
+  /** Practice's song, an index into the song list. */
   song: number;
   #songCount: number;
   #difficulty: number;
@@ -40,33 +44,38 @@ export class TitleMenu {
     return DIFFICULTY_ORDER[this.#difficulty]!;
   }
 
-  /** Applies one action and returns what to open, if it opens something. */
-  apply(action: MenuAction): 'play' | 'jukebox' | null {
+  apply(action: MenuAction): TitleEvent {
     switch (action) {
       case 'up':
       case 'down':
         this.cursor = wrap(this.cursor, action === 'up' ? -1 : 1, TITLE_ITEMS.length);
-        return null;
+        return 'moved';
       case 'left':
       case 'right':
-        this.#change(action === 'left' ? -1 : 1);
-        return null;
+        return this.#change(action === 'left' ? -1 : 1);
       case 'confirm':
-        if (this.item === 'play' || this.item === 'jukebox') return this.item;
-        this.#change(1);
-        return null;
+        if (this.item === 'difficulty') return this.#change(1);
+        return this.item;
       case 'back':
         return null;
     }
   }
 
-  #change(step: number): void {
-    if (this.item === 'song') this.song = wrap(this.song, step, this.#songCount);
-    else if (this.item === 'difficulty') this.#difficulty = wrap(this.#difficulty, step, DIFFICULTY_ORDER.length);
+  #change(step: number): TitleEvent {
+    if (this.item === 'practice') {
+      if (this.#songCount < 2) return null;
+      this.song = wrap(this.song, step, this.#songCount);
+      return 'changed';
+    }
+    if (this.item === 'difficulty') {
+      this.#difficulty = wrap(this.#difficulty, step, DIFFICULTY_ORDER.length);
+      return 'changed';
+    }
+    return null;
   }
 }
 
-export type JukeboxCommand = { type: 'play'; song: number } | { type: 'stop' } | { type: 'back' };
+export type JukeboxCommand = { type: 'moved' } | { type: 'play'; song: number } | { type: 'stop' } | { type: 'back' };
 
 /**
  * The bundled songs, then Back. Confirm plays the song under the cursor, or stops it if it
@@ -92,7 +101,7 @@ export class JukeboxMenu {
       case 'up':
       case 'down':
         this.cursor = wrap(this.cursor, action === 'up' ? -1 : 1, this.songCount + 1);
-        return null;
+        return { type: 'moved' };
       case 'confirm':
         if (this.onBack) return { type: 'back' };
         return this.playing === this.cursor ? { type: 'stop' } : { type: 'play', song: this.cursor };

@@ -14,11 +14,19 @@ const CENTER = PLAYFIELD_WIDTH / 2;
 /** What the title screen shows: the menu cursor and the current choices. */
 export interface TitleView {
   cursor: number;
-  song: BundledSong;
+  /** Practice's song. */
+  practice: BundledSong;
   difficulty: DifficultyName;
+  /** The song playing on the title screen, credited under the menu. */
+  music: BundledSong;
 }
 
-const TITLE_LABELS: Record<TitleItem, string> = { play: 'Play', song: 'Song', difficulty: 'Difficulty', jukebox: 'Jukebox' };
+const TITLE_LABELS: Record<TitleItem, string> = {
+  play: 'Play',
+  practice: 'Practice',
+  difficulty: 'Difficulty',
+  jukebox: 'Jukebox',
+};
 const MENU_TOP = 78;
 const MENU_ROW = 13;
 const LABEL_X = 112;
@@ -42,14 +50,24 @@ function addLogo(container: Container): void {
   }
 }
 
+/**
+ * The logo, then either "Press any key" (the start screen, before audio may play) or the
+ * menu with the credit for what is selected or playing.
+ */
 export class TitleScreen {
   readonly container = new Container();
+  #menu = new Container();
+  #press = new PixelText('Press any key', CYAN).place(CENTER, 120, 'center');
   #marker = new PixelText('>', AMBER);
   #labels: PixelText[] = [];
   #values: PixelText[] = [];
   #credit = new PixelText('', GREY);
   /** What the last update() drew, so an unchanged frame does no work. */
-  #drawn = { cursor: -1, song: null as BundledSong | null, difficulty: null as DifficultyName | null };
+  #drawn: { cursor: number; practice: BundledSong | null; difficulty: DifficultyName | null } = {
+    cursor: -1,
+    practice: null,
+    difficulty: null,
+  };
 
   constructor() {
     addLogo(this.container);
@@ -59,36 +77,79 @@ export class TitleScreen {
       const value = new PixelText('').place(VALUE_X - 12, y);
       this.#labels.push(label);
       this.#values.push(value);
-      this.container.addChild(label, value);
+      this.#menu.addChild(label, value);
     }
-    this.container.addChild(
+    this.#menu.addChild(
       this.#marker,
       this.#credit,
       new PixelText('Up and down choose. Left and right change. Enter selects.', GREY).place(CENTER, 172, 'center'),
       new PixelText('In play: arrows or WASD fly, Esc pauses.', DIM_GREY).place(CENTER, 186, 'center'),
     );
+    this.container.addChild(this.#menu, this.#press);
   }
 
-  update(view: TitleView, blinkBright: boolean): void {
+  /** `view` null shows the start screen. */
+  update(view: TitleView | null, blinkBright: boolean): void {
+    this.#menu.visible = view !== null;
+    this.#press.visible = view === null && blinkBright;
+    if (!view) return;
     this.#marker.visible = blinkBright;
     const d = this.#drawn;
-    if (d.cursor === view.cursor && d.song === view.song && d.difficulty === view.difficulty) return;
+    if (d.cursor === view.cursor && d.practice === view.practice && d.difficulty === view.difficulty) return;
     d.cursor = view.cursor;
-    d.song = view.song;
+    d.practice = view.practice;
     d.difficulty = view.difficulty;
     for (let i = 0; i < TITLE_ITEMS.length; i++) {
       const item = TITLE_ITEMS[i]!;
       const selected = i === view.cursor;
       this.#labels[i]!.color = selected ? AMBER : GREY;
-      const value = item === 'song' ? view.song.title : item === 'difficulty' ? DIFFICULTY_LABELS[view.difficulty] : '';
+      const value =
+        item === 'practice' ? view.practice.title : item === 'difficulty' ? DIFFICULTY_LABELS[view.difficulty] : '';
       // "< Normal >" on the selected row: left and right change it.
       const v = this.#values[i]!;
       v.text = value === '' ? '' : selected ? `< ${value} >` : `  ${value}`;
       v.color = selected ? WHITE : GREY;
     }
     this.#marker.place(LABEL_X - 10, MENU_TOP + view.cursor * MENU_ROW);
-    this.#credit.text = view.song.credit;
+    const credited = TITLE_ITEMS[view.cursor] === 'practice' ? view.practice : view.music;
+    this.#credit.text = `${credited === view.music ? 'Music: ' : ''}${credited.title} ${credited.credit}`;
     this.#credit.place(CENTER, MENU_TOP + TITLE_ITEMS.length * MENU_ROW + 8, 'center');
+  }
+}
+
+/** Drawn over the demo: "Demo" at the top and the way back at the bottom. */
+export class DemoBanner {
+  readonly container = new Container();
+  #press = new PixelText('Press any key', CYAN).place(CENTER, 196, 'center');
+
+  constructor() {
+    const shadow = new PixelText('Demo', MAGENTA, 2).place(CENTER + 1, 10 + 1, 'center');
+    const label = new PixelText('Demo', WHITE, 2).place(CENTER, 10, 'center');
+    this.container.addChild(shadow, label, this.#press);
+  }
+
+  update(blinkBright: boolean): void {
+    this.#press.visible = blinkBright;
+  }
+}
+
+/** A black screen over everything, for fades between screens. */
+export class FadeOverlay {
+  readonly container = new Container();
+  #sprite = new Sprite(Texture.WHITE);
+
+  constructor() {
+    this.#sprite.tint = 0x000000;
+    this.#sprite.width = PLAYFIELD_WIDTH;
+    this.#sprite.height = PLAYFIELD_HEIGHT;
+    this.container.addChild(this.#sprite);
+    this.set(0);
+  }
+
+  /** 0 is clear, 1 is black. */
+  set(amount: number): void {
+    this.container.visible = amount > 0;
+    this.#sprite.alpha = Math.min(1, Math.max(0, amount));
   }
 }
 

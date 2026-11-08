@@ -44,8 +44,8 @@ export interface LoadedSong {
 export interface AudioPlayer {
   readonly context: BaseAudioContext;
   /**
-   * The node the song plays from, already connected to the destination. Connect taps such as
-   * an AnalyserNode to it; they don't change what is heard or the clock.
+   * The node the song plays from, ahead of the volume. Connect taps such as an AnalyserNode
+   * to it; they don't change what is heard or the clock, and fades don't change what they read.
    */
   readonly output: AudioNode;
   readonly libraryVersion: string;
@@ -65,6 +65,13 @@ export interface AudioPlayer {
   resume(): Promise<void>;
   /** Stops playback and rewinds; the clock reads 0 until the next start(). */
   stop(): void;
+  /**
+   * Ramps the volume (0 to 1, after the output tap) to `value` over `seconds`, starting
+   * `delaySeconds` from now. Cancels earlier ramps. Cosmetic: the clock doesn't change.
+   */
+  fade(value: number, seconds: number, delaySeconds?: number): void;
+  /** Sets the volume at once, cancelling any ramp. */
+  setVolume(value: number): void;
 
   /** Called when libopenmpt reaches the song's end, with the song's length in frames. */
   onEnded: ((songFrames: number) => void) | null;
@@ -121,8 +128,10 @@ export async function createAudioPlayer(options: AudioPlayerOptions = {}): Promi
       outputChannelCount: [2],
       processorOptions,
     });
-    node.connect(context.destination);
-    const player = new Player(context, node, ownsContext);
+    const gain = context.createGain();
+    node.connect(gain);
+    gain.connect(context.destination);
+    const player = new Player(context, node, gain, ownsContext);
     await player.ready;
     return player;
   } catch (err) {
@@ -153,6 +162,7 @@ class Player implements AudioPlayer {
   onError: ((message: string) => void) | null = null;
 
   #node: AudioWorkletNode;
+  #gain: GainNode;
   #ownsContext: boolean;
   #clock = new SongClock();
   #state: PlayerState = 'empty';
@@ -161,9 +171,10 @@ class Player implements AudioPlayer {
   #endedAt: number | null = null;
   #lastPosition: PositionMessage | null = null;
 
-  constructor(context: BaseAudioContext, node: AudioWorkletNode, ownsContext: boolean) {
+  constructor(context: BaseAudioContext, node: AudioWorkletNode, gain: GainNode, ownsContext: boolean) {
     this.context = context;
     this.#node = node;
+    this.#gain = gain;
     this.#ownsContext = ownsContext;
     this.ready = new Promise((resolve, reject) => {
       node.port.onmessage = (e: MessageEvent<FromProcessor>) => {
@@ -312,8 +323,24 @@ class Player implements AudioPlayer {
     this.#state = 'loaded';
   }
 
+  fade(value: number, seconds: number, delaySeconds = 0): void {
+    const g = this.#gain.gain;
+    const at = this.context.currentTime + delaySeconds;
+    g.cancelScheduledValues(this.context.currentTime);
+    g.setValueAtTime(g.value, this.context.currentTime);
+    g.setValueAtTime(g.value, at);
+    g.linearRampToValueAtTime(value, at + Math.max(seconds, 0.001));
+  }
+
+  setVolume(value: number): void {
+    const g = this.#gain.gain;
+    g.cancelScheduledValues(this.context.currentTime);
+    g.setValueAtTime(value, this.context.currentTime);
+  }
+
   async close(): Promise<void> {
     this.#node.disconnect();
+    this.#gain.disconnect();
     this.#node.port.onmessage = null;
     if (this.#ownsContext && this.context instanceof AudioContext) await this.context.close();
   }

@@ -5,19 +5,19 @@ describe('TitleMenu', () => {
   it('moves the cursor with up and down, wrapping at both ends', () => {
     const m = new TitleMenu(3);
     expect(m.item).toBe('play');
-    m.apply('up');
+    expect(m.apply('up')).toBe('moved');
     expect(m.item).toBe('jukebox');
     m.apply('down');
     m.apply('down');
-    expect(m.item).toBe('song');
+    expect(m.item).toBe('practice');
   });
 
-  it('changes the song and difficulty under the cursor with left and right', () => {
+  it("changes Practice's song and the difficulty with left and right", () => {
     const m = new TitleMenu(3, 0, 'normal');
-    m.apply('left');
+    expect(m.apply('left')).toBeNull();
     expect(m.song).toBe(0);
     m.apply('down');
-    m.apply('left');
+    expect(m.apply('left')).toBe('changed');
     expect(m.song).toBe(2);
     m.apply('right');
     expect(m.song).toBe(0);
@@ -28,25 +28,30 @@ describe('TitleMenu', () => {
     expect(m.difficulty).toBe('easy');
   });
 
-  it('opens play or the jukebox on confirm, and steps a choice forward otherwise', () => {
+  it('opens play, practice or the jukebox on confirm, and steps the difficulty forward', () => {
     const m = new TitleMenu(3, 1, 'easy');
     expect(m.apply('confirm')).toBe('play');
     m.apply('down');
-    expect(m.apply('confirm')).toBeNull();
-    expect(m.song).toBe(2);
+    expect(m.apply('confirm')).toBe('practice');
     m.apply('down');
-    m.apply('confirm');
+    expect(m.apply('confirm')).toBe('changed');
     expect(m.difficulty).toBe('normal');
     m.apply('down');
     expect(m.apply('confirm')).toBe('jukebox');
     expect(m.apply('back')).toBeNull();
+  });
+
+  it('has nothing to change with one song', () => {
+    const m = new TitleMenu(1);
+    m.apply('down');
+    expect(m.apply('right')).toBeNull();
   });
 });
 
 describe('JukeboxMenu', () => {
   it('plays the song under the cursor, and stops it if it is the one playing', () => {
     const j = new JukeboxMenu(3);
-    j.apply('down');
+    expect(j.apply('down')).toEqual({ type: 'moved' });
     expect(j.apply('confirm')).toEqual({ type: 'play', song: 1 });
     j.playing = 1;
     expect(j.apply('confirm')).toEqual({ type: 'stop' });

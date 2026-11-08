@@ -629,18 +629,28 @@ and `packages/client/src/game/` runs the screens and the frame loop. The design 
 
 ### Playing it
 
-Run `pnpm dev` and open the URL it prints. The title screen is a menu: Play, Song,
-Difficulty, Jukebox. Up and down (arrows or W and S) move the cursor, left and right change
-the song or difficulty under it, and Enter or Space selects. A click selects too, and Enter
-on Song or Difficulty steps it forward, so one button reaches every choice. In play, arrows
-or WASD move, and Esc pauses and resumes; Q while paused goes back to the title. After a
-crash, any key restarts the song and Esc goes to the title; at the song's end, any key goes
-back to the title. Both screens ignore keys for 0.7 s, so a key still held from play doesn't
-skip them. The game pauses when the window loses focus or the tab is hidden.
+Run `pnpm dev` and open the URL it prints.
 
-The jukebox lists the bundled songs. Enter plays the one under the cursor or stops it if it
-is playing, a song that ends hands over to the next, and Esc or Back returns to the title
-and stops the music.
+- **Start screen:** the logo and "Press any key". Browsers let a page play sound only after
+  a key press or click, so the first press starts the title music and opens the menu.
+- **Title menu:** Play, Practice, Difficulty, Jukebox, over the title song. Up and down
+  (arrows or W and S) move the cursor, left and right change Practice's song or the
+  difficulty, and Enter or Space selects. A click selects too, and Enter on Difficulty steps
+  it forward, so one button reaches every choice.
+- **Demo:** left alone, the menu fades into the title song's level flown by the autopilot,
+  joined where the music is, so the music carries on. Any key or click returns to the menu
+  and does nothing else. The demo fades back to the menu after 30 s.
+- **Play** starts the arcade run at level 1; finishing a level offers the next, and the
+  last ends the run. **Practice** plays one song. Each level opens with a 2 s card: the
+  level number ("Final level" for the last), the song's title and credit, and the
+  difficulty.
+- **In play,** arrows or WASD move, and Esc pauses and resumes; Q while paused goes back to
+  the title. A crash is game over until M2 adds lives: any key retries the level, Esc goes
+  to the title. Game over and level complete ignore keys for 0.7 s, so a key still held from
+  play doesn't skip them. The game pauses when the window loses focus or the tab is hidden.
+- **Jukebox:** Enter plays the song under the cursor or stops it if it is playing, a song
+  that ends hands over to the next, and Esc or Back returns to the title, where the title
+  music starts again.
 
 Two query parameters help in development:
 
@@ -648,7 +658,7 @@ Two query parameters help in development:
 |---|---|
 | `autopilot=1` | `autopilotInputs(level)` flies the ship; the keyboard doesn't move it. |
 | `perf=1` | Records the cost of each frame. `window.__pbPerf()` in the console returns the mean, p50, p95, p99 and maximum in ms. |
-| `song=<id>` | Starts the menu on that song (ids as in capture mode). `song=pb-fixture-01` adds the test song to the menu. |
+| `song=<id>` | Starts Practice on that song (ids as in capture mode). `song=pb-fixture-01` adds the test song to Practice and the jukebox. |
 
 ### Bundled songs
 
@@ -657,6 +667,15 @@ The songs live in `music/`, each with an entry in `music/manifest.json` (fields 
 its order, and finds each file's URL with Vite's `import.meta.glob`, so adding a song is
 adding the file and its entry. The generated test song (`pb-fixture-01.mod`) stays in
 `packages/analysis/fixtures` for the tests and screenshots and is not in the menu.
+
+The part each song plays is set in `songs.ts`, not the manifest:
+
+- `TITLE_SONG_ID`: the title and demo music, and Practice's first song (The_Epic_Chip).
+- `LEVEL_SONG_IDS`: the arcade levels in order (Numen in Da Chip, then Keygen 9000). Eight
+  are planned; new levels go in between, and the last song stays last.
+- `GAME_OVER_MUSIC`: game over plays Keygen 9000's first 8 s, its two sparse opening
+  patterns (about 3 to 5 notes per second; the third pattern jumps to 17), fading out over
+  the last 1.5 s.
 
 `tools/validate-manifest.ts` (`pnpm check:music`, run by `pnpm check` and CI) fails when a
 song file in `music/` has no entry or an entry has no file, a SHA-256 doesn't match, a
@@ -680,12 +699,31 @@ the file's MD5 matching the one the page lists:
   `keyToMenuAction()` in `input.ts` maps the keyboard; M2's gamepad support maps the D-pad,
   A, B and Start to the same actions. A held arrow repeats in a menu; a held Enter or Esc
   does not.
-- **Screens:** `TitleScreen` and `JukeboxScreen` in `screens.ts` draw from a view of that
-  state and redo their text only when it changes.
-- **Playback:** the jukebox uses the game's one `AudioPlayer`. The player keeps one song
-  loaded; `Game` remembers which, and loads another before it starts play or a jukebox song.
-  Each jukebox request carries a number, so a slow load that a later key press has replaced
-  doesn't start.
+- **Screens:** `TitleScreen` (with the start screen), `JukeboxScreen`, `DemoBanner` and
+  `FadeOverlay` in `screens.ts` draw from a view of that state and redo their text only when
+  it changes.
+- **One player, one song at a time.** Title music, jukebox songs, runs and the game-over
+  music all go through the game's one `AudioPlayer`. `Game` remembers which song is loaded
+  and loads another only when it changes, and records what is playing (`title`, `jukebox`,
+  `run`, `gameover`), which decides what happens when a song ends: the title song starts
+  again, the jukebox moves to the next song. Every change of music bumps a request number,
+  so a slow load that a later key press replaced doesn't start.
+- **Volume:** the player has a `GainNode` after its output tap. `fade(value, seconds,
+  delay)` ramps it and `setVolume()` sets it; the title music fades in over 1 s and the
+  game-over music fades out. The song clock doesn't change.
+- **Demo cue:** the demo starts on The_Epic_Chip's change at 18.0 s (its fourth pattern, where
+  the notes go from 12 to 28 per second), timed so the fade is black on the change, if the
+  menu has had no key press for 5 s. Otherwise it starts after 20 s without one.
+  `#prepareDemo()` analyzes the title song and records the autopilot's run on normal as soon
+  as the music starts, then analyzes level 1, so Play doesn't wait. In the demo the sim
+  catches up to the music's position each frame and starts over when the song does.
+- **Menu sounds:** `audio/sfx.ts` plays short square-wave notes through an `OscillatorNode`
+  and a gain envelope, at 0.1 of the music's volume, in the same AudioContext as the music:
+  `coin` for the first key, `move`, `change`, `select`, `back`, and `start` for a run or a
+  level. Each is a list of MIDI notes and lengths in `MENU_SOUNDS`. M3 adds the volume
+  setting and off switch. `Game` creates the AudioContext itself, inside the first key
+  press, and passes it to `createAudioPlayer()`, so the coin sound plays while the player is
+  still loading.
 - **Spectrum:** an `AnalyserNode` (FFT size 1024, -90 to -25 dB, smoothing 0.7) tapped off
   `player.output`, the worklet node. It only reads, so what is heard and the song clock don't
   change. `render/spectrum.ts` groups the bins into 24 bars spaced on a log scale from 60 Hz
@@ -700,7 +738,7 @@ the file's MD5 matching the one the page lists:
   384x216 that fits the window (`integerScale()`), with `image-rendering: pixelated`, centred
   on black by `index.html`.
 - **Layers,** back to front: the starfield, the world (terrain, ship, explosion), the death
-  flash, and the UI (title screen, jukebox, and messages).
+  flash, and the UI (title screen, jukebox, demo banner, messages, and the fade).
 - **Terrain** (`terrain.ts`, geometry in `terrain-layout.ts`): 41 columns
   (`MAX_VISIBLE_BARS`) of 24 sprites each, one per segment, made once. Each frame moves the
   columns to the bars `visibleBars()` lists and tints each sprite: lit segment k is
