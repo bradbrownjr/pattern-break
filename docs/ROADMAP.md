@@ -12,7 +12,7 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 | Item | What it delivers | Stage |
 |---|---|---|
 | [S1: libopenmpt access](#s1-libopenmpt-access) | Proof that the game can read a song file's (a tracker module's) pattern data and audio levels the same way in Node and in a browser. | Checks pass; waiting for Brad |
-| [M1: vertical slice](#m1-vertical-slice) | One song, LED terrain scrolling in time with it, a ship you can fly and crash. | Next |
+| [M1: vertical slice](#m1-vertical-slice) | One song, LED terrain scrolling in time with it, a ship you can fly and crash. | Built; Brad to play-test |
 | [M2: enemies and scoring](#m2-enemies-and-scoring) | Notes become enemies; shooting, scoring, lives, power-ups, and replays that give the same score in every browser. | Planned |
 | [M3: effects and look](#m3-effects-and-look) | Particles, copper bars, starfield, CRT filter, title and results screens, accessibility options. | Planned |
 | [M4: library, offline, music pack](#m4-library-offline-music-pack) | Import your own songs, install the game, and play with no connection; a bundled, credited music pack. | Planned |
@@ -61,23 +61,28 @@ Chromium both give `68dae3ce...` for `pb-fixture-01.mod`. Firefox and WebKit run
 
 **Goal:** the core loop on one song.
 
-- [ ] One bundled song, analyzed and played back.
-- [ ] LED terrain (ceiling and floor) scrolling in sync with playback.
-- [ ] The player ship, terrain collision, death and restart.
-- [ ] Capture mode in the renderer (the contract in `DEVELOPMENT.md`, "Screenshots"), with
+- [x] One bundled song, analyzed and played back.
+- [x] LED terrain (ceiling and floor) scrolling in sync with playback.
+- [x] The player ship, terrain collision, death and restart.
+- [x] Capture mode in the renderer (the contract in `DEVELOPMENT.md`, "Screenshots"), with
       the ship flown by a scripted input log replayed through the sim, so captures show
       real play.
-- [ ] Animated clips in the screenshot pipeline: a shot can give a song-time range and a
+- [x] Animated clips in the screenshot pipeline: a shot can give a song-time range and a
       frame rate, each frame is captured at its own song time, and the frames are encoded
       as a GIF with a small JavaScript encoder (no ffmpeg). Captured at 2x (768x432) so the
       pixels stay sharp, a few seconds long, a few MB at most.
-- [ ] A gameplay clip at the top of the README, with alt text, and refreshed by the release
+- [x] A gameplay clip at the top of the README, with alt text, and refreshed by the release
       workflow like the stills.
 
 **Acceptance:** 60 fps in desktop Chrome; the terrain is audibly in time with the music;
 `pnpm screenshots` produces the same clip bytes twice in a row.
 
 **Docs:** `DEVELOPMENT.md` (renderer, capture mode, clips), the README clip and status.
+
+**Result (2026-11-08):** all tasks done. `pnpm screenshots` gives identical clip bytes run
+after run. JavaScript cost per frame in headless Chromium is 0.5 ms on average and 1.2 ms
+at the 99th percentile. Two checks need Brad: 60 fps in desktop Chrome, and whether the
+terrain sounds in time with the music.
 
 ## M2: enemies and scoring
 
