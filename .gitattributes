@@ -1,0 +1,9 @@
+* text=auto eol=lf
+
+# Hashed inputs: never let git touch these bytes (song identity = SHA-256 of raw bytes).
+*.mod binary
+*.xm  binary
+*.s3m binary
+*.it  binary
+*.mptm binary
+*.wasm binary

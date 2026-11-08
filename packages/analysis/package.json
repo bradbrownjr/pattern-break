@@ -1,0 +1,17 @@
+{
+  "name": "@game/analysis",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "libopenmpt WASM wrapper: load module, offline render pass, pattern data extraction -> LevelData.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@game/core": "workspace:*"
+  }
+}

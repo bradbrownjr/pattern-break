@@ -1,0 +1,17 @@
+{
+  "name": "@game/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Leaderboard API and replay validator (milestone M5).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@game/core": "workspace:*"
+  }
+}
