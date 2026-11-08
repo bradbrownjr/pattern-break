@@ -1,0 +1,34 @@
+Seed each module's playback PRNG with a fixed value.
+
+Upstream seeds CSoundFile::m_PRNG and LFOPlugin::m_PRNG from the process-wide PRNG, which
+is seeded from the system random device or the clock. Playback features that use it (for
+example IT random volume, panning, cutoff and resonance swing, the random waveform for
+vibrato, tremolo, panbrello and sample auto-vibrato, and the LFO plugin's random waveform)
+then render differently on every run, and differently for the second module loaded in the
+same instance. This patch seeds
+each one from mpt::deterministic_random_device, the fixed-seed device that libopenmpt's
+own playback test uses (soundlib/PlaybackTest.cpp), so the same module renders the same
+bytes every time.
+
+--- a/soundlib/Sndfile.cpp
++++ b/soundlib/Sndfile.cpp
+@@ -118,7 +118,7 @@
+ 	m_nType(MOD_TYPE_NONE),
+ 	Patterns(*this),
+ 	Order(*this),
+-	m_PRNG(mpt::make_prng<mpt::fast_prng>(mpt::global_prng())),
++	m_PRNG([]() { mpt::deterministic_random_device rd; return mpt::make_prng<mpt::fast_prng>(rd); }()),
+ 	m_visitedRows(*this)
+ #ifdef MODPLUG_TRACKER
+ 	, m_MIDIMapper(*this)
+--- a/soundlib/plugins/LFOPlugin.cpp
++++ b/soundlib/plugins/LFOPlugin.cpp
+@@ -30,7 +30,7 @@
+
+ LFOPlugin::LFOPlugin(VSTPluginLib &factory, CSoundFile &sndFile, SNDMIXPLUGIN &mixStruct)
+ 	: IMixPlugin(factory, sndFile, mixStruct)
+-	, m_PRNG(mpt::make_prng<mpt::fast_prng>(mpt::global_prng()))
++	, m_PRNG([]() { mpt::deterministic_random_device rd; return mpt::make_prng<mpt::fast_prng>(rd); }())
+ {
+ 	RecalculateFrequency();
+ 	RecalculateIncrement();

@@ -114,6 +114,50 @@ Vitest runs per package. Packages with no tests yet run with `--passWithNoTests`
 flag when a package gets its first test. Cross-engine tests (Vitest browser mode with the
 Playwright provider) arrive with M2.
 
+## libopenmpt build
+
+The analysis package plays modules with our own WebAssembly build of libopenmpt, committed in
+`packages/analysis/vendor/libopenmpt/`: `libopenmpt.wasm`, the Emscripten loader
+`libopenmpt.js`, a hand-written `libopenmpt.d.ts`, libopenmpt's `LICENSE`, and `BUILD.md`,
+which records the versions, every compiler and linker flag, the exported functions, and the
+SHA-256 of the wasm. `packages/analysis/src/openmpt.ts` wraps it (`loadOpenMpt()`), and
+`src/effects.ts` names libopenmpt's effect numbers.
+
+**Pinned** (checked 2026-11-08): libopenmpt 0.8.10 (tag `libopenmpt-0.8.10`) and emsdk
+6.0.13. The exact commits are at the top of `tools/build-libopenmpt.sh`.
+
+**Rebuild:**
+
+```sh
+tools/build-libopenmpt.sh /path/outside/the/repo
+```
+
+The script clones both repositories at their pinned commits, installs emsdk, applies the
+patches in `tools/libopenmpt/`, compiles, and rewrites the vendored files and `BUILD.md`. It
+needs git, python3, `patch`, and network access to github.com and storage.googleapis.com.
+The work dir takes about 1.5 GB. A rebuild from the same inputs gives the same wasm bytes;
+check the SHA-256 in `BUILD.md` after a rebuild. A rebuild that changes the wasm changes how
+songs mix, so it goes with a `GEN_VERSION` bump.
+
+**What the build leaves out or changes:**
+
+- No zlib, mpg123, ogg, or vorbis, and none of the bundled decoders that replace them
+  (miniz, minimp3, stb_vorbis). Tracker formats don't need them.
+- No `-ffast-math`, no SIMD (so no relaxed SIMD), no threads, `FILESYSTEM=0`, memory growth
+  on.
+- `tools/libopenmpt/deterministic-prng.patch` seeds each module's playback PRNG (pseudorandom
+  number generator) with a fixed value. Upstream seeds it from the clock, so IT modules with
+  random volume swing or a random vibrato waveform render differently on every load.
+
+**Loading:** the wasm is a separate file. Node and Vite (dev and build) find it next to the
+loader. An AudioWorklet can't fetch, so the main thread fetches the same file and passes the
+bytes to `loadOpenMpt({ wasmBinary })` inside the worklet. Vite warns that `node:module` was
+externalized; the loader imports it only under Node.
+
+**Render the same way everywhere.** With volume ramping on, the output depends on the frame
+counts passed to `readFloatStereo` (by under 1e-6), so the analysis pass uses one fixed chunk
+size in every environment.
+
 ## The docs check
 
 `tools/check-docs.ts` reads every file git tracks or would track, except
