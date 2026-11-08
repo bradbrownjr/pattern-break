@@ -63,8 +63,20 @@ Chromium both give `68dae3ce...` for `pb-fixture-01.mod`. Firefox and WebKit run
 - [ ] One bundled song, analyzed and played back.
 - [ ] LED terrain (ceiling and floor) scrolling in sync with playback.
 - [ ] The player ship, terrain collision, death and restart.
+- [ ] Capture mode in the renderer (the contract in `DEVELOPMENT.md`, "Screenshots"), with
+      the ship flown by a scripted input log replayed through the sim, so captures show
+      real play.
+- [ ] Animated clips in the screenshot pipeline: a shot can give a song-time range and a
+      frame rate, each frame is captured at its own song time, and the frames are encoded
+      as a GIF with a small JavaScript encoder (no ffmpeg). Captured at 2x (768x432) so the
+      pixels stay sharp, a few seconds long, a few MB at most.
+- [ ] A gameplay clip at the top of the README, with alt text, and refreshed by the release
+      workflow like the stills.
 
-**Acceptance:** 60 fps in desktop Chrome; the terrain is audibly in time with the music.
+**Acceptance:** 60 fps in desktop Chrome; the terrain is audibly in time with the music;
+`pnpm screenshots` produces the same clip bytes twice in a row.
+
+**Docs:** `DEVELOPMENT.md` (renderer, capture mode, clips), the README clip and status.
 
 ## M2: enemies and scoring
 
