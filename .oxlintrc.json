@@ -241,25 +241,10 @@
             "message": "Atomics is not allowed in packages/core. Pass the value in from the caller."
           }
         ],
-        "no-restricted-imports": [
-          "error",
-          {
-            "patterns": [
-              {
-                "group": [
-                  "*",
-                  "!./*",
-                  "!../*",
-                  "!./**"
-                ],
-                "message": "packages/core may only use relative imports: no npm, node:, or other workspace packages."
-              }
-            ]
-          }
-        ],
         "determinism/no-pow-operator": "error",
         "determinism/no-computed-math": "error",
-        "determinism/no-math-alias": "error"
+        "determinism/no-math-alias": "error",
+        "determinism/imports-stay-in-core": "error"
       }
     }
   ]

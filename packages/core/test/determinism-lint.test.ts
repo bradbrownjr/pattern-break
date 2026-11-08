@@ -21,10 +21,12 @@ const rejected: Array<[name: string, code: string, rule: string]> = [
   ['Temporal', 'export const x = Temporal.Now.instant();', 'no-restricted-globals'],
   ['performance', 'export const x = performance.now();', 'no-restricted-globals'],
   ['globalThis', 'export const x = globalThis;', 'no-restricted-globals'],
-  ['npm import', "import 'pixi.js';", 'no-restricted-imports'],
-  ['node import', "import 'node:crypto';", 'no-restricted-imports'],
-  ['workspace import', "import '@game/analysis';", 'no-restricted-imports'],
-  ['import two levels up', "import '../../../analysis/src/index.ts';", 'no-restricted-imports'],
+  ['npm import', "import 'pixi.js';", 'imports-stay-in-core'],
+  ['node import', "import 'node:crypto';", 'imports-stay-in-core'],
+  ['workspace import', "import '@game/analysis';", 'imports-stay-in-core'],
+  ['relative import out of core', "import '../../../analysis/src/index.ts';", 'imports-stay-in-core'],
+  ['re-export from npm', "export * from 'pixi.js';", 'imports-stay-in-core'],
+  ['dynamic import', "export const m = import('node:fs');", 'imports-stay-in-core'],
 ];
 
 const allowed = [
@@ -43,7 +45,8 @@ beforeAll(() => {
   const files = new Map<string, string>([
     ...rejected.map(([, code], i) => [`${coreProbe}case${i}.ts`, code] as const),
     [`${coreProbe}allowed.ts`, allowed],
-    [`${coreProbe}sub/nested.ts`, 'export const NESTED = 1;'],
+    // Two levels up from sub/ is still inside packages/core/src.
+    [`${coreProbe}sub/nested.ts`, "import { TICK_HZ } from '../../version.ts';\nexport const NESTED = TICK_HZ;"],
     [`${clientProbe}random.ts`, 'export const x = Math.random();'],
   ]);
   for (const [file, code] of files) writeFileSync(file, code);
@@ -80,6 +83,7 @@ describe('core determinism lint', () => {
 
   it('allows the deterministic subset', () => {
     expect(byFile.get('__lint_probe__/allowed.ts') ?? []).toEqual([]);
+    expect(byFile.get('sub/nested.ts') ?? []).toEqual([]);
   });
 
   it('does not apply core rules outside core', () => {

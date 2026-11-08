@@ -88,10 +88,12 @@ rules"). Lint enforces the parts a linter can see.
   `packages/core/src/**`:
   - `no-restricted-properties`: `Math.random` and the transcendental `Math` functions
   - `no-restricted-globals`: clocks, host and DOM globals, timers, `fetch`, `WebAssembly`
-  - `no-restricted-imports`: everything except relative paths, which are `./` at any
-    depth and `../` one level up
 - **Plugin rules** in `tools/lint/determinism-plugin.js`, for what Oxlint has no built-in
   rule for:
+  - `determinism/imports-stay-in-core`: every import, re-export and dynamic import must be
+    relative and must resolve to a file inside `packages/core/src`. That rules out npm
+    packages, `node:` modules, other workspace packages, and relative paths that climb out
+    of core.
   - `determinism/no-pow-operator`: `**` and `**=`
   - `determinism/no-computed-math`: `Math['sin']`
   - `determinism/no-math-alias`: `const M = Math` and `const { sin } = Math`
