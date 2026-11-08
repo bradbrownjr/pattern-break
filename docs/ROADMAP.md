@@ -11,8 +11,8 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 
 | Item | What it delivers | Stage |
 |---|---|---|
-| [S1: libopenmpt access](#s1-libopenmpt-access) | Proof that the game can read a module's pattern data and audio levels the same way in Node and in a browser. | Next |
-| [M1: vertical slice](#m1-vertical-slice) | One song, LED terrain scrolling in time with it, a ship you can fly and crash. | Planned |
+| [S1: libopenmpt access](#s1-libopenmpt-access) | Proof that the game can read a module's pattern data and audio levels the same way in Node and in a browser. | Checks pass; waiting for Brad |
+| [M1: vertical slice](#m1-vertical-slice) | One song, LED terrain scrolling in time with it, a ship you can fly and crash. | Next |
 | [M2: enemies and scoring](#m2-enemies-and-scoring) | Notes become enemies; shooting, scoring, lives, power-ups, and replays that give the same score in every browser. | Planned |
 | [M3: effects and look](#m3-effects-and-look) | Particles, copper bars, starfield, CRT filter, title and results screens, accessibility options. | Planned |
 | [M4: library, offline, music pack](#m4-library-offline-music-pack) | Import your own modules, install the game, and play with no connection; a bundled, credited music pack. | Planned |
@@ -23,7 +23,8 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 | [Amiga PAL mode](#later) | An optional 320x256 display mode. | Later |
 | [Player accounts](#later) | Sign-in by magic link in place of the anonymous device key. | Later |
 
-**Stages:** *Next* is being worked on or starts as soon as the current item is finished.
+**Stages:** *Next* is being worked on or starts as soon as the current item is finished. *Waiting for
+Brad* means its checks pass and it moves to the changelog once Brad confirms it.
 *Planned* is settled and waiting its turn. *Later* comes after M6 and has no plan of its own
 yet.
 
@@ -37,20 +38,23 @@ start the next until the current one is done.
 **Goal:** confirm the game can get everything it needs out of libopenmpt, and settle how
 libopenmpt is built and loaded.
 
-- [ ] Find out whether chiptune3.js exposes pattern, row, and channel command data; the
-      current order and row; per-channel VU; offline rendering to a buffer; and loading in
-      Node.
-- [ ] If it doesn't, build libopenmpt with Emscripten from the newest upstream release and
-      export the needed C API functions. Commit the `.wasm` and record its version.
-- [ ] Load one `.mod` in a Node script and in a browser page, and produce `LevelData` from
-      each.
-- [ ] Add the first golden fixture to `packages/analysis/fixtures`.
+- [x] Find out whether chiptune3.js exposes what we need. Its build of libopenmpt 0.8.10
+      exports the whole C API, but it was built for an AudioWorklet and its playback random
+      number generator is seeded from the clock.
+- [x] Build libopenmpt with Emscripten from the newest upstream release (0.8.10), with a
+      patch that makes playback deterministic. The `.wasm` is committed and its version and
+      hash are recorded in `vendor/libopenmpt/BUILD.md`.
+- [x] Load one `.mod` in a Node script and in a browser, and produce `LevelData` from each.
+- [x] Add the first golden fixture to `packages/analysis/fixtures`.
 
 **Acceptance:** the Node script and the browser page print the same SHA-256 of the
 serialized `LevelData`.
 
 **Docs:** `DEVELOPMENT.md` (how libopenmpt is built and loaded), the tech table in
 `PLAN.md`, the README status.
+
+**Result (2026-11-08):** `pnpm --filter @game/analysis analyze` and the golden test in
+Chromium both give `68dae3ce...` for `pb-fixture-01.mod`. Firefox and WebKit run in CI.
 
 ## M1: vertical slice
 

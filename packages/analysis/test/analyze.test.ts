@@ -8,7 +8,7 @@ import {
   serializeLevelData,
 } from '@game/core';
 import { describe, expect, it } from 'vitest';
-import { RENDER_PARAMS, analyze } from '../src/analyze.ts';
+import { RENDER_CTLS, RENDER_PARAMS, analyze } from '../src/analyze.ts';
 import { hashLevelData, sha256Hex } from '../src/hash.ts';
 import { RenderParam } from '../src/openmpt-types.ts';
 import { EMPTY, FakeOpenMpt, fakeVu, type FakeCell, type FakeSong } from './fake-openmpt.ts';
@@ -67,6 +67,16 @@ describe('analyze', () => {
     expect(new Set(RENDER_PARAMS.map(([p]) => p))).toEqual(new Set(Object.values(RenderParam)));
     expect(before.filter((c) => c.name === 'setRepeatCount').map((c) => c.args)).toEqual([[0]]);
     expect(mod.calls.slice(firstRead).every((c) => c.name !== 'setRenderParam')).toBe(true);
+  });
+
+  it('sets every playback ctl before the first read, and never after', () => {
+    const { mod } = run();
+    const firstRead = mod.calls.findIndex((c) => c.name === 'readFloatStereo');
+    const before = mod.calls.slice(0, firstRead);
+    expect(before.filter((c) => c.name === 'ctlSet').map((c) => c.args)).toEqual(
+      RENDER_CTLS.map(([k, v]) => [k, v]),
+    );
+    expect(mod.calls.slice(firstRead).every((c) => c.name !== 'ctlSet')).toBe(true);
   });
 
   it('reads at 48 kHz in chunks of at most 160 frames and frees the module', () => {

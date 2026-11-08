@@ -20,3 +20,19 @@ jobs:
       - run: pnpm test
       - run: pnpm check:docs
       - run: pnpm build
+
+  # The golden LevelData hashes must come out the same in every browser engine as in Node.
+  browsers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @game/analysis exec playwright install --with-deps chromium firefox webkit
+      - run: pnpm test:browser
+        env:
+          PB_BROWSERS: chromium,firefox,webkit

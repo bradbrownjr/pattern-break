@@ -37,6 +37,25 @@ export const RENDER_PARAMS: ReadonlyArray<readonly [RenderParam, number]> = [
   [RenderParam.volumeRampingStrength, 1],
 ];
 
+/**
+ * Every playback ctl libopenmpt 0.8.10 can change after loading, set explicitly so a new
+ * libopenmpt default can't change the output silently. `play.at_end` is `stop` because the
+ * default, `fadeout`, renders a fade after the song ends. Amiga resampler emulation stays
+ * on, as upstream ships it, so MODs sound like an Amiga. `subsong` 0 plays the first
+ * subsong only. `dither` only affects integer output, which analysis doesn't use; it is set
+ * for completeness.
+ */
+export const RENDER_CTLS: ReadonlyArray<readonly [key: string, value: string]> = [
+  ['subsong', '0'],
+  ['play.at_end', 'stop'],
+  ['play.tempo_factor', '1'],
+  ['play.pitch_factor', '1'],
+  ['render.resampler.emulate_amiga', '1'],
+  ['render.resampler.emulate_amiga_type', 'auto'],
+  ['render.opl.volume_factor', '1'],
+  ['dither', '0'],
+];
+
 /** Appends floor(v) to `out`; throws if that is outside 0..max, so a bad value never wraps. */
 function pushInt(out: number[], v: number, max: number, name: string): void {
   const x = Math.floor(v);
@@ -89,6 +108,7 @@ export function analyze(openmpt: OpenMpt, bytes: Uint8Array): LevelData {
  * keeps ownership of `mod`.
  */
 export function analyzeModule(mod: OpenMptModule, libopenmptVersion: string): LevelData {
+  for (const [key, value] of RENDER_CTLS) mod.ctlSet(key, value);
   for (const [param, value] of RENDER_PARAMS) mod.setRenderParam(param, value);
   mod.setRepeatCount(0);
 

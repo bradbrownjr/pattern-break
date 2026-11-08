@@ -8,10 +8,16 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
+    "test": "vitest run --project node",
+    "analyze": "node scripts/analyze.ts",
+    "test:browser": "vitest run --project browser"
   },
   "dependencies": {
     "@game/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@vitest/browser-playwright": "5.1.0",
+    "playwright": "1.65.0"
   }
 }

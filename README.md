@@ -9,9 +9,10 @@ the same level, so every song gets its own leaderboard.
 
 ## Status
 
-Nothing is playable yet. The repository has the workspace layout, the tooling, and the lint
-rules that keep the level generator and simulation deterministic. The next step is S1, a
-spike to confirm how the game reads pattern data and audio levels out of libopenmpt.
+Nothing is playable yet. The game can read a module and turn it into level data: the
+stereo spectrum as LED levels, per-channel volume, row timing, and every note. That data
+comes out byte-for-byte the same in Node and in the browser, which is what lets one song
+have one leaderboard. The next step is M1, a playable slice on one song.
 
 - [Roadmap](docs/ROADMAP.md): what comes next
 - [Changelog](docs/CHANGELOG.md): what is finished

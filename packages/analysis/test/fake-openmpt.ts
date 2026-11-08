@@ -34,7 +34,7 @@ export interface FakeSong {
 
 export interface FakeCall {
   name: string;
-  args: number[];
+  args: Array<number | string>;
 }
 
 /** VU for a channel at a sample position; values above 1 test the clamp. */
@@ -93,8 +93,8 @@ export class FakeModule implements OpenMptModule {
   setRenderParam(param: RenderParam, value: number): void {
     this.calls.push({ name: 'setRenderParam', args: [param, value] });
   }
-  ctlSet(_key: string, _value: string): void {
-    this.calls.push({ name: 'ctlSet', args: [] });
+  ctlSet(key: string, value: string): void {
+    this.calls.push({ name: 'ctlSet', args: [key, value] });
   }
   setRepeatCount(count: number): void {
     this.calls.push({ name: 'setRepeatCount', args: [count] });

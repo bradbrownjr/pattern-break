@@ -22,7 +22,9 @@ pnpm install
 | `pnpm build` | Builds every package that has a build step (the client). |
 | `pnpm lint` | Oxlint over the repo, including the core determinism rules. |
 | `pnpm typecheck` | `tsc` (TypeScript 7) in each package, then in `tools/`. |
-| `pnpm test` | Vitest in each package. |
+| `pnpm test` | Vitest in each package, in Node. |
+| `pnpm test:browser` | The golden LevelData test in real browsers (see "Tests"). |
+| `pnpm --filter @game/analysis analyze <file>` | Analyzes one module and prints its LevelData hash and a summary. |
 | `pnpm check:docs` | The writing-rules check (`tools/check-docs.ts`). |
 | `pnpm gen:tables` | Regenerates `packages/core/src/spectrum/tables.generated.ts`. |
 | `pnpm check` | Lint, type-check, tests, and the docs check, in that order. |
@@ -34,7 +36,7 @@ One package: `pnpm --filter @game/core test`. One test file:
 
 ```
 pattern-break/
-├── .github/workflows/ci.yml       # install, lint, typecheck, test, check:docs, build
+├── .github/workflows/ci.yml       # checks, build, and the golden test in three browser engines
 ├── .oxlintrc.json                 # lint config; the core determinism rules are its override
 ├── docs/
 │   ├── PLAN.md                    # design, rules, tech choices
@@ -52,12 +54,19 @@ pattern-break/
 │   │   └── test/determinism-lint.test.ts
 │   ├── analysis/                  # @game/analysis: libopenmpt wrapper, produces LevelData
 │   │   ├── src/analyze.ts         # the analysis pass
-│   │   └── fixtures/              # golden-test modules (from S1)
+│   │   ├── src/openmpt.ts         # the libopenmpt binding
+│   │   ├── scripts/analyze.ts     # prints a module's LevelData hash
+│   │   ├── vendor/libopenmpt/     # the pinned WASM build (see "libopenmpt build")
+│   │   ├── fixtures/              # test modules and golden.json, their pinned hashes
+│   │   └── vitest.config.ts       # the node and browser test projects
 │   ├── client/                    # @game/client: the Vite app
 │   │   └── src/config/brand.ts    # the game's name, in one place
 │   └── server/                    # @game/server: leaderboard API and replay validator (M5)
 ├── tools/
 │   ├── check-docs.ts              # writing-rules check
+│   ├── build-libopenmpt.sh        # rebuilds the vendored libopenmpt WASM
+│   ├── libopenmpt/*.patch         # our patches to libopenmpt (see "libopenmpt build")
+│   ├── make-fixture-mod.ts        # writes the test modules in packages/analysis/fixtures
 │   ├── gen-spectrum-tables.ts     # writes core's spectrum tables
 │   └── lint/determinism-plugin.js # Oxlint JS plugin for core
 ├── tsconfig.base.json             # shared compiler options
@@ -74,8 +83,11 @@ import the source directly.
   `enum`, `namespace`, or constructor parameter properties. Use `as const` objects and union
   types.
 - `strict`, `noUncheckedIndexedAccess`, and `noPropertyAccessFromIndexSignature` are on.
-- Each package's `tsconfig.json` sets its own `lib` and `types`. Core gets ES2022 only (no
-  DOM, no Node); the client gets DOM and `vite/client`; the server gets Node.
+- Each package's `tsconfig.json` sets its own `lib` and `types`. Core and analysis get
+  ES2022 only (no DOM, no Node), because both run in browsers as well as Node; the client
+  gets DOM and `vite/client`; the server gets Node. Core and analysis type-check their
+  tests separately (`tsconfig.test.json`, with Node types), so test code can use `node:fs`
+  without letting `src` use it.
 - TypeScript 7 has no compiler API yet (the package exports only its version), so no tool in
   the repo may depend on one. That rules out typescript-eslint and ts-morph for now.
 
@@ -124,7 +136,10 @@ LevelData records them in `params`.
   stereo separation 100%, interpolation filter length 8, volume ramping strength 1, and
   repeat count 0. Rendering stops when a read returns 0 or at 15 minutes
   (`hitDurationCap`). Volume ramping is 1 rather than libopenmpt's -1 ("recommended
-  default"), because what -1 means can change between releases.
+  default"), because what -1 means can change between releases. Every playback ctl is set
+  explicitly too (`RENDER_CTLS` in `analyze.ts`): `play.at_end` is `stop`, because the
+  default `fadeout` renders a fade after the song ends; Amiga resampler emulation is on;
+  subsong 0 only.
 - **Rows:** after each read, if the current (order, row) differs from the last one, a row
   entry is recorded with the read's start sample as `timeSamples`. The row started somewhere
   in that read, so a timestamp is up to one read (160 samples, 3.33 ms) early. Two limits:
@@ -208,8 +223,25 @@ snapshots in the same commit as the bump. Both are 0 until the first release.
 ## Tests
 
 Vitest runs per package. Packages with no tests yet run with `--passWithNoTests`; drop the
-flag when a package gets its first test. Cross-engine tests (Vitest browser mode with the
-Playwright provider) arrive with M2.
+flag when a package gets its first test.
+
+**Golden hashes.** `packages/analysis/fixtures/golden.json` pins the SHA-256 of the
+serialized LevelData for each fixture, with the `GEN_VERSION` and libopenmpt version it was
+made with. `test/golden.test.ts` analyzes each fixture and compares. Change a hash only in
+the same commit as a `GEN_VERSION` bump.
+
+**Browsers.** The analysis package's `vitest.config.ts` has two projects. `node` runs every
+test in Node and is what `pnpm test` runs. `browser` runs the golden test in real browsers
+through Vitest browser mode and Playwright, and is what `pnpm test:browser` runs. Every
+engine has to produce the committed hash, which is how we know Node and the browsers build
+identical levels.
+
+- `PB_BROWSERS` picks the engines: `chromium` by default; CI sets
+  `chromium,firefox,webkit`.
+- `PB_CHROMIUM` points at a Chromium binary when Playwright can't download its own. In
+  the cloud development container, Playwright's download hosts are blocked, so run
+  `PB_CHROMIUM=/opt/pw-browsers/chromium-1243/chrome-linux64/chrome pnpm test:browser`.
+  Firefox and WebKit run only in CI there.
 
 ## libopenmpt build
 

@@ -15,7 +15,8 @@
     "gen:tables": "node tools/gen-spectrum-tables.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm check:docs",
     "dev": "pnpm --filter @game/client dev",
-    "build": "pnpm -r --if-present build"
+    "build": "pnpm -r --if-present build",
+    "test:browser": "pnpm --filter @game/analysis test:browser"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
