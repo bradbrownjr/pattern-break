@@ -13,12 +13,13 @@
     "test": "pnpm -r --if-present test",
     "check:docs": "node tools/check-docs.ts",
     "gen:tables": "node tools/gen-spectrum-tables.ts",
-    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm check:docs",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm check:docs && pnpm check:music",
     "dev": "pnpm --filter @game/client dev",
     "serve": "pnpm --filter @game/server start",
     "build": "pnpm -r --if-present build",
     "screenshots": "node tools/screenshots/capture.ts",
-    "test:browser": "pnpm --filter @game/analysis --filter @game/client test:browser"
+    "test:browser": "pnpm --filter @game/analysis --filter @game/client test:browser",
+    "check:music": "node tools/validate-manifest.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

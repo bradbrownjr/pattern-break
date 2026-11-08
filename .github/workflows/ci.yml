@@ -19,6 +19,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm check:docs
+      - run: pnpm check:music
       - run: pnpm build
 
   # The golden LevelData hashes must come out the same in every browser engine as in Node.

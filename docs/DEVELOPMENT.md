@@ -31,8 +31,9 @@ pnpm install
 | `pnpm screenshots` | Regenerates every figure in `docs/img/` (see "Screenshots"). |
 | `pnpm --filter @game/analysis bench:sim [file]` | Builds each difficulty's level, flies it with the autopilot, and prints sim ticks per second. |
 | `pnpm check:docs` | The writing-rules check (`tools/check-docs.ts`). |
+| `pnpm check:music` | Checks `music/manifest.json` against the files in `music/` (`tools/validate-manifest.ts`; see "Bundled songs"). |
 | `pnpm gen:tables` | Regenerates `packages/core/src/spectrum/tables.generated.ts`. |
-| `pnpm check` | Lint, type-check, tests, and the docs check, in that order. |
+| `pnpm check` | Lint, type-check, tests, the docs check, and the music check, in that order. |
 
 One package: `pnpm --filter @game/core test`. One test file:
 `pnpm --filter @game/core exec vitest run test/determinism-lint.test.ts`.
@@ -53,7 +54,7 @@ pattern-break/
 │   ├── DEVELOPMENT.md             # this file
 │   ├── SELF-HOSTING.md            # running the Docker image: Docker, Compose, Unraid, HTTPS
 │   └── DOC-STYLE.md               # writing and voice
-├── music/manifest.json            # bundled modules and their licenses (empty until M4)
+├── music/                         # the bundled songs, and manifest.json with their credits and licenses
 ├── packages/
 │   ├── core/                      # @game/core: deterministic levelgen, sim, PRNG, replays
 │   │   ├── src/version.ts         # GEN_VERSION, SIM_VERSION, TICK_HZ, ANALYSIS_SAMPLE_RATE
@@ -85,6 +86,7 @@ pattern-break/
 │       └── test/static.test.ts
 ├── tools/
 │   ├── check-docs.ts              # writing-rules check
+│   ├── validate-manifest.ts       # music check: files listed, hashes, licenses, credits
 │   ├── screenshots/               # pnpm screenshots: the shot manifest, PNG reader, GIF writer
 │   ├── build-libopenmpt.sh        # rebuilds the vendored libopenmpt WASM
 │   ├── libopenmpt/*.patch         # our patches to libopenmpt (see "libopenmpt build")
@@ -344,6 +346,11 @@ the autopilot (which must survive) and a fixed zigzag log (which crashes, at the
 `zigzagDeathTick`). The same test checks them in Node and in the browsers. A Level hash
 changes only with a `GEN_VERSION` bump, a sim hash only with a `SIM_VERSION` bump.
 
+**Bundled songs.** `packages/analysis/test/music.test.ts` analyzes every song in
+`music/manifest.json`, builds its level on each difficulty, and checks that the path check
+passes and the autopilot reaches the end. It runs in Node only and takes about 30 s for
+the three songs, so a levelgen change that makes a real song unplayable fails `pnpm test`.
+
 **Browsers.** The analysis package's `vitest.config.ts` has two projects. `node` runs every
 test in Node and is what `pnpm test` runs. `browser` runs the golden test in real browsers
 through Vitest browser mode and Playwright, and is what `pnpm test:browser` runs. Every
@@ -462,7 +469,7 @@ The client reads query parameters; `packages/client/src/capture.ts` parses them
 |---|---|
 | `capture` | `1` turns capture mode on. Without it the page behaves normally. |
 | `scene` | Which screen to show: `title` or `play`. |
-| `song` | Song id from the bundled manifest. |
+| `song` | Song id: a bundled song's file name without its extension (`numenchip`), or `pb-fixture-01` for the test song. |
 | `t` | Song clock in seconds. |
 | `difficulty` | Difficulty name. |
 | `seed` | Integer seed for cosmetic randomness. Default 1. |
@@ -481,8 +488,8 @@ In capture mode the renderer must:
 
 `packages/client/src/game/capture-scene.ts` implements it:
 
-- **`scene=title`** draws the title screen with the song and difficulty, and the prompt
-  steady instead of blinking. The stars sit where `t` puts them.
+- **`scene=title`** draws the title screen with the cursor on Play, the song and
+  difficulty chosen, and the cursor steady instead of blinking. The stars sit where `t` puts them.
 - **`scene=play`** analyzes the song in the analysis worker, builds the level for
   `difficulty`, records `autopilotInputs(level)`, and runs the sim from tick 0 to
   `floor(round(t * 48000) / 400)` with that log, through the same `catchUp` the game loop
@@ -622,12 +629,18 @@ and `packages/client/src/game/` runs the screens and the frame loop. The design 
 
 ### Playing it
 
-Run `pnpm dev` and open the URL it prints. The title screen shows the one bundled song, the
-generated test module `pb-fixture-01.mod`. Keys 1, 2 and 3 pick easy, normal or hard (normal
-to start with); any other key, or a click, starts. Arrows or WASD move, and Esc pauses and
-resumes. After a crash, any key restarts the song; at the song's end, any key goes back to
-the title. Both screens ignore keys for 0.7 s, so a key still held from play doesn't skip
-them. The game pauses when the window loses focus or the tab is hidden.
+Run `pnpm dev` and open the URL it prints. The title screen is a menu: Play, Song,
+Difficulty, Jukebox. Up and down (arrows or W and S) move the cursor, left and right change
+the song or difficulty under it, and Enter or Space selects. A click selects too, and Enter
+on Song or Difficulty steps it forward, so one button reaches every choice. In play, arrows
+or WASD move, and Esc pauses and resumes; Q while paused goes back to the title. After a
+crash, any key restarts the song and Esc goes to the title; at the song's end, any key goes
+back to the title. Both screens ignore keys for 0.7 s, so a key still held from play doesn't
+skip them. The game pauses when the window loses focus or the tab is hidden.
+
+The jukebox lists the bundled songs. Enter plays the one under the cursor or stops it if it
+is playing, a song that ends hands over to the next, and Esc or Back returns to the title
+and stops the music.
 
 Two query parameters help in development:
 
@@ -635,6 +648,49 @@ Two query parameters help in development:
 |---|---|
 | `autopilot=1` | `autopilotInputs(level)` flies the ship; the keyboard doesn't move it. |
 | `perf=1` | Records the cost of each frame. `window.__pbPerf()` in the console returns the mean, p50, p95, p99 and maximum in ms. |
+| `song=<id>` | Starts the menu on that song (ids as in capture mode). `song=pb-fixture-01` adds the test song to the menu. |
+
+### Bundled songs
+
+The songs live in `music/`, each with an entry in `music/manifest.json` (fields in
+`PLAN.md`, "Bundled music"). `game/songs.ts` builds the menu's list from the manifest, in
+its order, and finds each file's URL with Vite's `import.meta.glob`, so adding a song is
+adding the file and its entry. The generated test song (`pb-fixture-01.mod`) stays in
+`packages/analysis/fixtures` for the tests and screenshots and is not in the menu.
+
+`tools/validate-manifest.ts` (`pnpm check:music`, run by `pnpm check` and CI) fails when a
+song file in `music/` has no entry or an entry has no file, a SHA-256 doesn't match, a
+credit field is empty or a link isn't https, or a license is off the allowlist (Public
+Domain, CC0, CC BY). A CC BY-SA entry fails until it has a `"reviewed"` field saying who
+reviewed it and when.
+
+The three songs so far (2026-11-08), each marked Public Domain on its Mod Archive page, with
+the file's MD5 matching the one the page lists:
+
+| Song | File | Author | Length | Rows per second |
+|---|---|---|---|---|
+| Numen in Da Chip | `numenchip.xm` | JAM | 1:48 | 8.3 |
+| The_Epic_Chip | `the_epic_chip.xm` | Drozerix | 3:48 | 10.7 |
+| Keygen 9000 | `keygen_9000.xm` | Drozerix | 3:20 | 16.0 |
+
+### Menus and the jukebox
+
+- **Menu state** is in `game/menu.ts`, apart from drawing, and tested in Node. `TitleMenu`
+  and `JukeboxMenu` take a `MenuAction` (up, down, left, right, confirm, back), not a key.
+  `keyToMenuAction()` in `input.ts` maps the keyboard; M2's gamepad support maps the D-pad,
+  A, B and Start to the same actions. A held arrow repeats in a menu; a held Enter or Esc
+  does not.
+- **Screens:** `TitleScreen` and `JukeboxScreen` in `screens.ts` draw from a view of that
+  state and redo their text only when it changes.
+- **Playback:** the jukebox uses the game's one `AudioPlayer`. The player keeps one song
+  loaded; `Game` remembers which, and loads another before it starts play or a jukebox song.
+  Each jukebox request carries a number, so a slow load that a later key press has replaced
+  doesn't start.
+- **Spectrum:** an `AnalyserNode` (FFT size 1024, -90 to -25 dB, smoothing 0.7) tapped off
+  `player.output`, the worklet node. It only reads, so what is heard and the song clock don't
+  change. `render/spectrum.ts` groups the bins into 24 bars spaced on a log scale from 60 Hz
+  to 14 kHz, and each bar lights up to 12 LED segments from its loudest bin, in the terrain's
+  colours.
 
 ### Renderer
 
@@ -644,7 +700,7 @@ Two query parameters help in development:
   384x216 that fits the window (`integerScale()`), with `image-rendering: pixelated`, centred
   on black by `index.html`.
 - **Layers,** back to front: the starfield, the world (terrain, ship, explosion), the death
-  flash, and the UI (title screen and messages).
+  flash, and the UI (title screen, jukebox, and messages).
 - **Terrain** (`terrain.ts`, geometry in `terrain-layout.ts`): 41 columns
   (`MAX_VISIBLE_BARS`) of 24 sprites each, one per segment, made once. Each frame moves the
   columns to the bars `visibleBars()` lists and tints each sprite: lit segment k is
@@ -684,7 +740,8 @@ Node):
    is cosmetic; the sim only reads whole ticks.
 5. Draw and render.
 
-**Input.** `keyToBit()` maps arrows and WASD to `InputBit`. A key held during a frame sets
+**Input.** `keyToBit()` maps arrows and WASD to `InputBit` in play (menus use
+`keyToMenuAction()`, above). A key held during a frame sets
 its bit on every tick that frame runs, and a key pressed and released between two ticks
 still sets its bit for one tick.
 
@@ -701,9 +758,10 @@ input log and crash tick are kept in `Game.lastRun` for the replays in M2.
 `analysis-worker.ts`, a module worker that runs `loadOpenMpt()` and `analyze()` and sends
 back the serialized LevelData as a transferred buffer. The main thread deserializes it and
 calls `generateLevel()` for the chosen difficulty. The screen reads "Analyzing song..." until
-both the analysis and the audio player are ready. LevelData and each difficulty's level are
-kept for the session. The AudioContext is created inside the key press that leaves the title
-screen, because browsers only let audio start from a key press or click.
+both the analysis and the audio player are ready. Each song's bytes, LevelData and levels
+are kept for the session, so a second run of a song starts at once. The AudioContext is
+created inside the key press that starts play or opens the jukebox, because browsers only
+let audio start from a key press or click.
 
 ### Performance
 

@@ -1,87 +1,194 @@
-// The title screen and the messages drawn over play (analyzing, paused, crashed, song
-// complete, errors). Layout is in 384x216 screen px.
+// The title screen, the jukebox, and the messages drawn over play (analyzing, paused,
+// crashed, song complete, errors). Layout is in 384x216 screen px.
 
-import { Difficulty, PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH, type DifficultyName } from '@game/core';
+import { PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH, type DifficultyName } from '@game/core';
 import { Container, Sprite, Texture } from 'pixi.js';
 import { BRAND } from '../config/brand.ts';
-import { AMBER, BACKGROUND, CYAN, DIM_GREY, GREY, LED_LIT, MAGENTA, WHITE, mix } from '../render/palette.ts';
+import { AMBER, BACKGROUND, CYAN, DIM_GREY, GREY, LED_DIM, LED_LIT, LIME, MAGENTA, WHITE } from '../render/palette.ts';
 import { PixelText } from '../render/text.ts';
+import { DIFFICULTY_LABELS, TITLE_ITEMS, type TitleItem } from './menu.ts';
 import type { BundledSong } from './songs.ts';
 
 const CENTER = PLAYFIELD_WIDTH / 2;
-const PROMPT_DIM = mix(BACKGROUND, CYAN, 120);
 
-export const DIFFICULTY_LABELS: Record<DifficultyName, string> = { easy: 'Easy', normal: 'Normal', hard: 'Hard' };
-export const DIFFICULTY_ORDER = Object.keys(Difficulty) as DifficultyName[];
+/** What the title screen shows: the menu cursor and the current choices. */
+export interface TitleView {
+  cursor: number;
+  song: BundledSong;
+  difficulty: DifficultyName;
+}
+
+const TITLE_LABELS: Record<TitleItem, string> = { play: 'Play', song: 'Song', difficulty: 'Difficulty', jukebox: 'Jukebox' };
+const MENU_TOP = 78;
+const MENU_ROW = 13;
+const LABEL_X = 112;
+const VALUE_X = 188;
+
+/** The logo with its shadow, and the LED meter under it. */
+function addLogo(container: Container): void {
+  const shadow = new PixelText(BRAND.name, MAGENTA, 3).place(CENTER + 2, 30 + 2, 'center');
+  const logo = new PixelText(BRAND.name, CYAN, 3).place(CENTER, 30, 'center');
+  container.addChild(shadow, logo);
+  // An LED meter under the logo, green to red.
+  const segments = 24;
+  const left = CENTER - (segments * 10 - 2) / 2;
+  for (let i = 0; i < segments; i++) {
+    const s = new Sprite(Texture.WHITE);
+    s.tint = LED_LIT[Math.floor(i / 2)]!;
+    s.position.set(left + i * 10, 60);
+    s.width = 8;
+    s.height = 3;
+    container.addChild(s);
+  }
+}
 
 export class TitleScreen {
   readonly container = new Container();
-  #song = new PixelText('', WHITE);
+  #marker = new PixelText('>', AMBER);
+  #labels: PixelText[] = [];
+  #values: PixelText[] = [];
   #credit = new PixelText('', GREY);
-  #options: PixelText[] = [];
-  #prompt = new PixelText('Press any key', CYAN);
   /** What the last update() drew, so an unchanged frame does no work. */
-  #drawnSong: BundledSong | null = null;
-  #drawnDifficulty: DifficultyName | null = null;
+  #drawn = { cursor: -1, song: null as BundledSong | null, difficulty: null as DifficultyName | null };
 
   constructor() {
-    const shadow = new PixelText(BRAND.name, MAGENTA, 3).place(CENTER + 2, 30 + 2, 'center');
-    const logo = new PixelText(BRAND.name, CYAN, 3).place(CENTER, 30, 'center');
-    this.container.addChild(shadow, logo);
-
-    // An LED meter under the logo, green to red.
-    const segments = 24;
-    const left = CENTER - (segments * 10 - 2) / 2;
-    for (let i = 0; i < segments; i++) {
-      const s = new Sprite(Texture.WHITE);
-      s.tint = LED_LIT[Math.floor(i / 2)]!;
-      s.position.set(left + i * 10, 60);
-      s.width = 8;
-      s.height = 3;
-      this.container.addChild(s);
-    }
-
-    this.container.addChild(this.#song, this.#credit);
-    this.container.addChild(new PixelText('Difficulty', GREY).place(CENTER, 114, 'center'));
-    for (let i = 0; i < DIFFICULTY_ORDER.length; i++) {
-      const option = new PixelText('');
-      this.#options.push(option);
-      this.container.addChild(option);
+    addLogo(this.container);
+    for (let i = 0; i < TITLE_ITEMS.length; i++) {
+      const y = MENU_TOP + i * MENU_ROW;
+      const label = new PixelText(TITLE_LABELS[TITLE_ITEMS[i]!]).place(LABEL_X, y);
+      const value = new PixelText('').place(VALUE_X - 12, y);
+      this.#labels.push(label);
+      this.#values.push(value);
+      this.container.addChild(label, value);
     }
     this.container.addChild(
-      new PixelText('Arrows or WASD to move. Esc pauses.', GREY).place(CENTER, 150, 'center'),
-      this.#prompt,
+      this.#marker,
+      this.#credit,
+      new PixelText('Up and down choose. Left and right change. Enter selects.', GREY).place(CENTER, 172, 'center'),
+      new PixelText('In play: arrows or WASD fly, Esc pauses.', DIM_GREY).place(CENTER, 186, 'center'),
     );
-    this.#prompt.place(CENTER, 178, 'center');
   }
 
-  update(song: BundledSong, difficulty: DifficultyName, promptBright: boolean): void {
-    this.#prompt.color = promptBright ? CYAN : PROMPT_DIM;
-    if (this.#drawnSong === song && this.#drawnDifficulty === difficulty) return;
-    this.#drawnSong = song;
-    this.#drawnDifficulty = difficulty;
-    this.#song.text = song.title;
-    this.#song.place(CENTER, 80, 'center');
-    this.#credit.text = song.credit;
-    this.#credit.place(CENTER, 92, 'center');
-    // "1 Easy   2 Normal   3 Hard", with the chosen one in brackets and amber.
-    const labels = DIFFICULTY_ORDER.map((d, i) => {
-      const label = `${i + 1} ${DIFFICULTY_LABELS[d]}`;
-      return d === difficulty ? `[${label}]` : ` ${label} `;
-    });
-    const gap = 12;
-    let total = gap * (labels.length - 1);
-    for (let i = 0; i < labels.length; i++) {
-      this.#options[i]!.text = labels[i]!;
-      total += this.#options[i]!.textWidth;
+  update(view: TitleView, blinkBright: boolean): void {
+    this.#marker.visible = blinkBright;
+    const d = this.#drawn;
+    if (d.cursor === view.cursor && d.song === view.song && d.difficulty === view.difficulty) return;
+    d.cursor = view.cursor;
+    d.song = view.song;
+    d.difficulty = view.difficulty;
+    for (let i = 0; i < TITLE_ITEMS.length; i++) {
+      const item = TITLE_ITEMS[i]!;
+      const selected = i === view.cursor;
+      this.#labels[i]!.color = selected ? AMBER : GREY;
+      const value = item === 'song' ? view.song.title : item === 'difficulty' ? DIFFICULTY_LABELS[view.difficulty] : '';
+      // "< Normal >" on the selected row: left and right change it.
+      const v = this.#values[i]!;
+      v.text = value === '' ? '' : selected ? `< ${value} >` : `  ${value}`;
+      v.color = selected ? WHITE : GREY;
     }
-    let x = CENTER - Math.floor(total / 2);
-    for (let i = 0; i < labels.length; i++) {
-      const option = this.#options[i]!;
-      option.color = DIFFICULTY_ORDER[i] === difficulty ? AMBER : DIM_GREY;
-      option.place(x, 126);
-      x += option.textWidth + gap;
+    this.#marker.place(LABEL_X - 10, MENU_TOP + view.cursor * MENU_ROW);
+    this.#credit.text = view.song.credit;
+    this.#credit.place(CENTER, MENU_TOP + TITLE_ITEMS.length * MENU_ROW + 8, 'center');
+  }
+}
+
+/** What the jukebox shows. `levels` holds one height (0 to SPECTRUM_SEGMENTS) per bar. */
+export interface JukeboxView {
+  cursor: number;
+  playing: number | null;
+  seconds: number;
+  durationSeconds: number;
+  levels: Uint8Array;
+}
+
+export const SPECTRUM_BARS = 24;
+export const SPECTRUM_SEGMENTS = LED_LIT.length;
+const LIST_TOP = 40;
+const LIST_ROW = 12;
+const LIST_LEFT = 88;
+const LIST_RIGHT = 296;
+const SPECTRUM_BOTTOM = 150;
+
+/** m:ss */
+function clockText(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/** The bundled songs with their authors, a spectrum of what is playing, and its credit. */
+export class JukeboxScreen {
+  readonly container = new Container();
+  readonly #songs: readonly BundledSong[];
+  #marker = new PixelText('>', AMBER);
+  #titles: PixelText[] = [];
+  #authors: PixelText[] = [];
+  #segments: Sprite[] = [];
+  #nowTitle = new PixelText('', WHITE);
+  #nowCredit = new PixelText('', GREY);
+  #nowTime = new PixelText('', CYAN);
+  #drawn = { cursor: -1, playing: -2 };
+
+  constructor(songs: readonly BundledSong[]) {
+    this.#songs = songs;
+    const shadow = new PixelText('Jukebox', MAGENTA, 2).place(CENTER + 1, 12 + 1, 'center');
+    const heading = new PixelText('Jukebox', CYAN, 2).place(CENTER, 12, 'center');
+    this.container.addChild(shadow, heading, this.#marker);
+    for (let i = 0; i <= songs.length; i++) {
+      const y = LIST_TOP + i * LIST_ROW;
+      const song = songs[i];
+      const title = new PixelText(song ? song.title : 'Back').place(LIST_LEFT, y);
+      const author = new PixelText(song ? song.author : '', DIM_GREY).place(LIST_RIGHT, y, 'right');
+      this.#titles.push(title);
+      this.#authors.push(author);
+      this.container.addChild(title, author);
     }
+    const left = CENTER - (SPECTRUM_BARS * 10 - 2) / 2;
+    for (let b = 0; b < SPECTRUM_BARS; b++) {
+      for (let k = 0; k < SPECTRUM_SEGMENTS; k++) {
+        const seg = new Sprite(Texture.WHITE);
+        seg.position.set(left + b * 10, SPECTRUM_BOTTOM - (k + 1) * 4);
+        seg.width = 8;
+        seg.height = 3;
+        seg.tint = LED_DIM[k]!;
+        this.#segments.push(seg);
+        this.container.addChild(seg);
+      }
+    }
+    this.container.addChild(
+      this.#nowTitle,
+      this.#nowCredit,
+      this.#nowTime,
+      new PixelText('Up and down choose. Enter plays or stops. Esc goes back.', DIM_GREY).place(CENTER, 200, 'center'),
+    );
+  }
+
+  update(view: JukeboxView): void {
+    for (let b = 0; b < SPECTRUM_BARS; b++) {
+      const lit = view.levels[b] ?? 0;
+      for (let k = 0; k < SPECTRUM_SEGMENTS; k++) {
+        this.#segments[b * SPECTRUM_SEGMENTS + k]!.tint = k < lit ? LED_LIT[k]! : LED_DIM[k]!;
+      }
+    }
+    const song = view.playing === null ? null : this.#songs[view.playing]!;
+    if (song) {
+      this.#nowTime.text = `${clockText(view.seconds)} / ${clockText(view.durationSeconds)}`;
+      this.#nowTime.place(CENTER, 184, 'center');
+    }
+    const d = this.#drawn;
+    const playing = view.playing ?? -1;
+    if (d.cursor === view.cursor && d.playing === playing) return;
+    d.cursor = view.cursor;
+    d.playing = playing;
+    for (let i = 0; i < this.#titles.length; i++) {
+      this.#titles[i]!.color = i === view.playing ? LIME : i === view.cursor ? AMBER : GREY;
+    }
+    this.#marker.place(LIST_LEFT - 10, LIST_TOP + view.cursor * LIST_ROW);
+    this.#nowTime.visible = song !== null;
+    this.#nowTitle.text = song ? song.title : 'Choose a song and press Enter.';
+    this.#nowTitle.color = song ? WHITE : GREY;
+    this.#nowTitle.place(CENTER, song ? 160 : 166, 'center');
+    this.#nowCredit.text = song ? song.credit : '';
+    this.#nowCredit.place(CENTER, 172, 'center');
   }
 }
 

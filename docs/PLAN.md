@@ -239,8 +239,11 @@ every bar of every generated level.
 
 ## 11. Client UI (`packages/client/ui`)
 
-- Title screen: chrome logo, and an attract mode that plays a bundled song's level with an
-  AI ship.
+- Title screen: chrome logo, a menu driven by up, down, left, right, confirm and back (the
+  same actions on keyboard and gamepad), and an attract mode that plays a bundled song's
+  level with an AI ship.
+- Jukebox: plays the bundled songs, with an LED spectrum and each song's title, author and
+  license.
 - Library: bundled songs plus "Import songs" (file picker or drag and drop; directory
   import through the File System Access API on Chromium as an extra). Imported files are
   stored in IndexedDB.

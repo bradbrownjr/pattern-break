@@ -51,7 +51,7 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
     const title = new TitleScreen();
     r.ui.addChild(title.container);
     r.world.visible = false;
-    title.update(song, difficulty, true);
+    title.update({ cursor: 0, song, difficulty }, true);
     r.starfield.draw(params.t * TITLE_DRIFT_PX_PER_S);
     r.render();
     await afterPresent();

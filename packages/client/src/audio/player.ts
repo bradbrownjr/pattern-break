@@ -43,6 +43,11 @@ export interface LoadedSong {
 
 export interface AudioPlayer {
   readonly context: BaseAudioContext;
+  /**
+   * The node the song plays from, already connected to the destination. Connect taps such as
+   * an AnalyserNode to it; they don't change what is heard or the clock.
+   */
+  readonly output: AudioNode;
   readonly libraryVersion: string;
   readonly state: PlayerState;
 
@@ -176,6 +181,10 @@ class Player implements AudioPlayer {
 
   get state(): PlayerState {
     return this.#state;
+  }
+
+  get output(): AudioNode {
+    return this.#node;
   }
 
   get userOffsetMs(): number {

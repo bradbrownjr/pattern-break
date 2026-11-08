@@ -12,6 +12,7 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 | Item | What it delivers | Stage |
 |---|---|---|
 | [M1: vertical slice](#m1-vertical-slice) | One song, LED terrain scrolling in time with it, a ship you can fly and crash. | Built; Brad to play-test |
+| [Songs and jukebox](#songs-and-jukebox) | Three bundled songs to pick from on a title menu, and a jukebox to listen to them. | Built; Brad to play-test |
 | [M2: enemies and scoring](#m2-enemies-and-scoring) | Notes become enemies; shooting, scoring, lives, power-ups, gamepad support, and replays that give the same score in every browser. | Planned |
 | [M3: effects and look](#m3-effects-and-look) | Particles, big explosions, sound effects, copper bars, starfield, CRT filter, title and results screens, accessibility options. | Planned |
 | [M4: library, offline, music pack](#m4-library-offline-music-pack) | Import your own songs, install the game, and play with no connection; a bundled, credited music pack. | Planned |
@@ -60,6 +61,31 @@ after run. JavaScript cost per frame in headless Chromium is 0.5 ms on average a
 at the 99th percentile. Two checks need Brad: 60 fps in desktop Chrome, and whether the
 terrain sounds in time with the music.
 
+## Songs and jukebox
+
+**Goal:** songs worth playing, and a way to hear them before picking one. Added 2026-11-08,
+after the test song proved dull to play to. It pulls the first songs and the manifest check
+forward from M4.
+
+- [x] Three Public Domain songs from The Mod Archive in `music/`, each checked on its page
+      (license, and an MD5 matching the file), with complete `manifest.json` entries.
+- [x] `tools/validate-manifest.ts`, run by `pnpm check` and CI (`pnpm check:music`).
+- [x] A Node test that every bundled song makes a level whose path check passes and that
+      the autopilot finishes on every difficulty.
+- [x] The title screen as a menu (Play, Song, Difficulty, Jukebox) driven by up, down,
+      left, right, confirm and back, so M2's gamepad maps onto it.
+- [x] The jukebox: the song list with authors, play and stop, play on to the next song, an
+      LED spectrum of what is playing, and the playing song's title, author, license and
+      time.
+- [x] Q while paused, and Esc after a crash, go back to the title, so a run can end without
+      finishing the song.
+
+**Acceptance:** Brad picks each song from the title menu and plays it; the jukebox plays,
+stops and moves between songs with the arrows and Enter; `pnpm check` passes.
+
+**Docs:** `DEVELOPMENT.md` ("Playing it", "Bundled songs", "Menus and the jukebox", the
+commands and tests), `PLAN.md` ("Client UI"), the README status and music credits.
+
 ## M2: enemies and scoring
 
 **Goal:** a complete, deterministic run.
@@ -100,8 +126,9 @@ and Node.
       IndexedDB storage.
 - [ ] Level caching by hash and `GEN_VERSION`.
 - [ ] PWA install and full offline play.
-- [ ] The bundled music pack, `tools/validate-manifest.ts` in CI, attribution on song cards
-      and level intros, and a credits screen.
+- [ ] The bundled music pack (more songs after the first three), attribution with author
+      and source links on song cards and level intros, and a credits screen.
+      `tools/validate-manifest.ts` is already in CI (see "Songs and jukebox").
 
 **Acceptance:** install as a PWA, turn on airplane mode, import a new module, and play it.
 

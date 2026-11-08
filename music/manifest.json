@@ -1,1 +1,32 @@
-[]
+[
+  {
+    "file": "numenchip.xm",
+    "title": "Numen in Da Chip",
+    "author": "JAM",
+    "authorUrl": "https://modarchive.org/member.php?81691",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=169046",
+    "license": "Public Domain",
+    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
+    "sha256": "94416b54f724debfd2393756d4ac70fe4c904da1688325ec377514f9bf41976d"
+  },
+  {
+    "file": "the_epic_chip.xm",
+    "title": "The_Epic_Chip",
+    "author": "Drozerix",
+    "authorUrl": "https://modarchive.org/member.php?84702",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=172424",
+    "license": "Public Domain",
+    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
+    "sha256": "7cd184c5f9c6962c3d37df0b3e94709695c824a4ea17ed8b195d2fe3b9231882"
+  },
+  {
+    "file": "keygen_9000.xm",
+    "title": "Keygen 9000",
+    "author": "Drozerix",
+    "authorUrl": "https://modarchive.org/member.php?84702",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=173938",
+    "license": "Public Domain",
+    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
+    "sha256": "ebf28394b14fe4fece4a5ff174ab57c5388f48e3a6ebcf3fecb701f13c829027"
+  }
+]

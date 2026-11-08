@@ -15,8 +15,9 @@ leaderboard.
 
 ## Status
 
-An early playable slice: one test song, the LED tunnel scrolling in time with the music, a
-ship you fly through it, crashes and retries. There are no enemies, shooting, or scores yet;
+An early playable slice: three bundled songs to pick from, the LED tunnel scrolling in time
+with the music, a ship you fly through it, crashes and retries, and a jukebox for listening
+to the songs. There are no enemies, shooting, or scores yet;
 those come next, in M2. Level data comes out byte-for-byte the same in Node, Chromium,
 Firefox, and WebKit, which is what lets one song have one leaderboard.
 
@@ -32,7 +33,7 @@ browser client has a build step.
 ```sh
 pnpm install
 pnpm dev          # play it: open the printed address
-pnpm check        # lint, type-check, tests, and the docs check
+pnpm check        # lint, type-check, tests, and the docs and music checks
 ```
 
 Setup, the project layout, and the checks are in the
@@ -41,5 +42,10 @@ player reads, read the [writing guide](docs/DOC-STYLE.md).
 
 ## License
 
-Pattern Break is free and open source. The code is [MIT](LICENSE). Bundled music will keep its own licenses, listed in
-`music/manifest.json` and on the in-game credits screen.
+Pattern Break is free and open source. The code is [MIT](LICENSE). Bundled music keeps its
+own licenses, listed in `music/manifest.json` and shown in the game. The three songs so far
+are Public Domain:
+
+- [Numen in Da Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=169046) by [JAM](https://modarchive.org/member.php?81691)
+- [The_Epic_Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=172424) by [Drozerix](https://modarchive.org/member.php?84702)
+- [Keygen 9000](https://modarchive.org/index.php?request=view_by_moduleid&query=173938) by [Drozerix](https://modarchive.org/member.php?84702)

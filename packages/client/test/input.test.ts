@@ -1,6 +1,6 @@
 import { InputBit } from '@game/core';
 import { describe, expect, it } from 'vitest';
-import { InputSampler, keyToBit } from '../src/game/input.ts';
+import { InputSampler, keyToBit, keyToMenuAction } from '../src/game/input.ts';
 
 describe('keyToBit', () => {
   it('maps arrows and WASD to the movement bits', () => {
@@ -18,6 +18,21 @@ describe('keyToBit', () => {
     expect(keyToBit('Escape')).toBe(0);
     expect(keyToBit('Space')).toBe(0);
     expect(keyToBit('KeyQ')).toBe(0);
+  });
+});
+
+describe('keyToMenuAction', () => {
+  it('maps arrows and WASD to directions, Enter and Space to confirm, Esc and Backspace to back', () => {
+    expect(['ArrowUp', 'KeyW', 'ArrowDown', 'KeyS', 'ArrowLeft', 'KeyA', 'ArrowRight', 'KeyD'].map(keyToMenuAction)).toEqual([
+      'up', 'up', 'down', 'down', 'left', 'left', 'right', 'right',
+    ]);
+    expect(['Enter', 'NumpadEnter', 'Space'].map(keyToMenuAction)).toEqual(['confirm', 'confirm', 'confirm']);
+    expect(['Escape', 'Backspace'].map(keyToMenuAction)).toEqual(['back', 'back']);
+  });
+
+  it('ignores other keys', () => {
+    expect(keyToMenuAction('KeyQ')).toBeNull();
+    expect(keyToMenuAction('ShiftLeft')).toBeNull();
   });
 });
 

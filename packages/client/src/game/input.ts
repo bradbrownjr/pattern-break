@@ -1,6 +1,6 @@
-// Keyboard to sim input bits. Arrows and WASD move. The sampler is read once per sim tick;
-// a key pressed and released between two reads still counts for one tick, so a quick tap
-// is never lost.
+// Keyboard to sim input bits, and to menu actions. Arrows and WASD move. The sampler is
+// read once per sim tick; a key pressed and released between two reads still counts for one
+// tick, so a quick tap is never lost.
 
 import { InputBit } from '@game/core';
 
@@ -21,6 +21,37 @@ export function keyToBit(code: string): number {
       return InputBit.right;
     default:
       return 0;
+  }
+}
+
+/**
+ * What a menu does with one press. Menus take actions, not keys, so a gamepad's D-pad,
+ * A, B and Start (M2) can map to the same actions as the keyboard.
+ */
+export type MenuAction = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back';
+
+/** The MenuAction a key (KeyboardEvent.code) gives, or null. */
+export function keyToMenuAction(code: string): MenuAction | null {
+  switch (keyToBit(code)) {
+    case InputBit.up:
+      return 'up';
+    case InputBit.down:
+      return 'down';
+    case InputBit.left:
+      return 'left';
+    case InputBit.right:
+      return 'right';
+  }
+  switch (code) {
+    case 'Enter':
+    case 'NumpadEnter':
+    case 'Space':
+      return 'confirm';
+    case 'Escape':
+    case 'Backspace':
+      return 'back';
+    default:
+      return null;
   }
 }
 
