@@ -70,6 +70,8 @@ serialized `LevelData`.
 - [ ] Shooting, the on-beat bonus, score, lives, and the power-up meter.
 - [ ] Replay recording and playback.
 - [ ] Cross-engine determinism tests in Vitest browser mode.
+- [ ] The headless sim benchmark (10 000 ticks, maximum entities), which also gives the
+      first number for what a server-side replay check costs.
 
 **Acceptance:** a replay recorded in Chromium reproduces the same score in Firefox, WebKit,
 and Node.
@@ -102,7 +104,11 @@ and Node.
 
 - [ ] The Fastify server with `POST /runs`, `GET /leaderboards/:hash`, and
       `GET /songs/:hash`.
-- [ ] Replay validation in a worker thread, and module upload for unknown songs.
+- [ ] Replay validation in a worker thread, and module upload for unknown songs. Level data
+      is built once per song and cached, so a check re-runs only the sim.
+- [ ] Measure the cost of one check on the target server before turning it on. If it's too
+      heavy, check only runs that reach a board's top 10 instead of every run; the client
+      doesn't change either way (decided 2026-11-08).
 - [ ] Per-song boards, nicknames, and the optional profile link.
 - [ ] Rate limiting, and a Docker Compose file.
 
