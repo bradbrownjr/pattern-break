@@ -221,9 +221,17 @@ every bar of every generated level.
 - Effects: pooled particle emitters on note hits and kills, hit-stop (cosmetic only),
   screen shake, a flash on downbeats, and a CRT filter (scanlines, slight bloom, vignette)
   as a toggle.
+- Explosions: a destroyed ship breaks apart pixel by pixel; every pixel of its sprite
+  becomes a particle in its own colour and flies outward, with an expanding colourful
+  shockwave ring and a short shake.
+- Sound effects: synthesized with Web Audio in the client (no sample files, nothing to
+  license), mixed under the music with their own volume and an off switch. The explosion is
+  a deep boom with echo (a feedback delay) and reverb (a generated impulse response).
+  Cosmetic, like every effect: never part of sim state.
 - **Accessibility:** a "reduce flashing" option (caps flash intensity and frequency; on by
   default until the player changes it), a shake toggle, a colour-blind-safe LED palette
-  option, and remappable controls.
+  option, and remappable controls, for the keyboard and for gamepads and arcade sticks
+  (Gamepad API, from M2).
 - **Performance:** object pools for bullets, enemies, and particles. No allocations in the
   per-frame loop. Particles use a ParticleContainer. Target 2 ms or less per frame of sim
   and render work on desktop.

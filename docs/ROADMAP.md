@@ -13,11 +13,11 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 |---|---|---|
 | [S1: libopenmpt access](#s1-libopenmpt-access) | Proof that the game can read a song file's (a tracker module's) pattern data and audio levels the same way in Node and in a browser. | Checks pass; waiting for Brad |
 | [M1: vertical slice](#m1-vertical-slice) | One song, LED terrain scrolling in time with it, a ship you can fly and crash. | Built; Brad to play-test |
-| [M2: enemies and scoring](#m2-enemies-and-scoring) | Notes become enemies; shooting, scoring, lives, power-ups, and replays that give the same score in every browser. | Planned |
-| [M3: effects and look](#m3-effects-and-look) | Particles, copper bars, starfield, CRT filter, title and results screens, accessibility options. | Planned |
+| [M2: enemies and scoring](#m2-enemies-and-scoring) | Notes become enemies; shooting, scoring, lives, power-ups, gamepad support, and replays that give the same score in every browser. | Planned |
+| [M3: effects and look](#m3-effects-and-look) | Particles, big explosions, sound effects, copper bars, starfield, CRT filter, title and results screens, accessibility options. | Planned |
 | [M4: library, offline, music pack](#m4-library-offline-music-pack) | Import your own songs, install the game, and play with no connection; a bundled, credited music pack. | Planned |
 | [M5: leaderboards](#m5-leaderboards) | A global board per song, with scores checked by replaying them on the server. | Planned |
-| [M6: mobile and polish](#m6-mobile-and-polish) | Touch and gamepad controls, latency calibration, phone performance, tuned difficulty. | Planned |
+| [M6: mobile and polish](#m6-mobile-and-polish) | Touch controls, latency calibration, phone performance, tuned difficulty. | Planned |
 | [Boss patterns](#later) | A song's last or most-repeated pattern becomes a boss fight. | Later |
 | [Per-song enemy overrides](#later) | A sidecar file that changes which instrument spawns which enemy for one song. | Later |
 | [Warm-up song](#later) | An easy first song for new players. | Later |
@@ -89,7 +89,10 @@ terrain sounds in time with the music.
 **Goal:** a complete, deterministic run.
 
 - [ ] Note events become enemies, with motion from their effects.
-- [ ] Shooting, the on-beat bonus, score, lives, and the power-up meter.
+- [ ] Shooting (hold fire for auto-fire), the bomb, the on-beat bonus, score, lives, and
+      the power-up meter.
+- [ ] Gamepad and arcade-stick support through the Gamepad API, next to the keyboard
+      (moved up from M6, 2026-11-08: a shooter wants a pad from the start).
 - [ ] Replay recording and playback.
 - [ ] Cross-engine determinism tests in Vitest browser mode.
 - [ ] The headless sim benchmark (10 000 ticks, maximum entities), which also gives the
@@ -103,6 +106,12 @@ and Node.
 **Goal:** it looks and feels like the pitch.
 
 - [ ] Particles, copper bars, parallax starfield, CRT filter, hit flashes.
+- [ ] Big explosions: a destroyed ship breaks apart pixel by pixel, each pixel of its sprite
+      flying off as its own particle in its own colour, with a colourful shockwave ring and
+      a short screen shake. With "reduce flashing" on, the ring's brightness is capped.
+- [ ] Sound effects, made in the browser with Web Audio (no sound files to license): shots,
+      hits, power-ups, and an explosion with a deep boom, echo, and reverb. Mixed under the
+      music, with their own volume and an off switch.
 - [ ] Title screen with attract mode, and the results screen.
 - [ ] Accessibility toggles: reduce flashing (on by default), shake, colour-blind-safe LED
       palette, remappable controls.
@@ -143,7 +152,7 @@ and Node.
 
 **Goal:** good on a phone.
 
-- [ ] Touch controls and gamepad support.
+- [ ] Touch controls.
 - [ ] The latency calibration screen.
 - [ ] A performance pass on a mid-range Android phone.
 - [ ] Difficulty tuning across about 20 varied modules.
