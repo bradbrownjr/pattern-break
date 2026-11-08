@@ -15,7 +15,9 @@ Nothing is playable yet. The repository has the workspace layout, the tooling, a
 rules that keep the level generator and simulation deterministic. The next step is S1, a
 spike to confirm how the game reads pattern data and audio levels out of libopenmpt.
 
-The design, the tech choices, and the milestones are in [`docs/PLAN.md`](docs/PLAN.md).
+- [Roadmap](docs/ROADMAP.md): what comes next
+- [Changelog](docs/CHANGELOG.md): what is finished
+- [Plan](docs/PLAN.md): the design and the tech choices
 
 ## Development
 
@@ -28,8 +30,9 @@ pnpm dev          # client dev server
 pnpm check        # lint, type-check, tests, and the docs check
 ```
 
-Before writing docs, comments, or anything a player reads, read
-[`docs/DOC-STYLE.md`](docs/DOC-STYLE.md).
+Setup, the project layout, and the checks are in the
+[development guide](docs/DEVELOPMENT.md). Before writing docs, comments, or anything a
+player reads, read the [writing guide](docs/DOC-STYLE.md).
 
 ## License
 

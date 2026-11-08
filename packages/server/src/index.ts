@@ -1,2 +1,2 @@
-// Placeholder. Fastify API + replay validation arrive in milestone M5 (docs/PLAN.md §13).
+// Placeholder. Fastify API + replay validation arrive in M5 (docs/ROADMAP.md).
 export { GEN_VERSION, SIM_VERSION } from '@game/core';

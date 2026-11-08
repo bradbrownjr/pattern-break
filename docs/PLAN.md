@@ -3,7 +3,9 @@
 > Working title; the final name isn't chosen. The name lives in one constant
 > (`packages/client/src/config/brand.ts`) so it can be swapped.
 >
-> This is a plan. Nothing in it is built unless the README says so.
+> This is the design. What gets built next is in [`ROADMAP.md`](ROADMAP.md), what is
+> finished is in [`CHANGELOG.md`](CHANGELOG.md), and how to work on the code is in
+> [`DEVELOPMENT.md`](DEVELOPMENT.md). Nothing here is built unless the changelog says so.
 
 ## 1. Pitch
 
@@ -39,7 +41,7 @@ milestone.
 | Runtime | Node 26 LTS | Entered LTS on 2026-10-28. Runs the workspace's TypeScript directly (type stripping), so `core`, `analysis` and `server` have no build step and the server imports `core` source as-is. |
 | Package manager | pnpm 12 | Workspaces. Version pinned in `packageManager`. |
 | Language | TypeScript 7, strict | The native compiler. Type-check only (`noEmit`). `erasableSyntaxOnly` is on so Node can run every file: no `enum`, `namespace`, or constructor parameter properties. |
-| Lint | Oxlint, plus a local JS plugin | typescript-eslint's peer range stops below TypeScript 6.1, so it can't run beside TypeScript 7. Oxlint parses TypeScript itself. Its built-in `no-restricted-*` rules and `tools/lint/determinism-plugin.js` enforce §5. |
+| Lint | Oxlint, plus a local JS plugin | typescript-eslint's peer range stops below TypeScript 6.1, so it can't run beside TypeScript 7. Oxlint parses TypeScript itself. Its built-in `no-restricted-*` rules and `tools/lint/determinism-plugin.js` enforce the determinism rules. |
 | Build | Vite 8 | Client only. |
 | Rendering | PixiJS 8 (WebGL, WebGPU when available) | Nearest-neighbour scaling, integer zoom. |
 | Module playback and analysis | libopenmpt, compiled to WebAssembly | The latest upstream release I could confirm is 0.8.8 (2026-08-15). chiptune3.js 0.8.10 bundles 0.8.7 per its README and is an AudioWorklet player; its README lists metadata and pattern data, and doesn't mention per-channel VU, offline rendering, or Node. Spike S1 decides between chiptune3.js and our own Emscripten build. The leaning is our own build: one pinned `.wasm` used by Node, the analysis worker, and the AudioWorklet. |
@@ -48,37 +50,15 @@ milestone.
 | Tests | Vitest 5 | Unit tests in Node. Cross-engine determinism tests use Vitest browser mode with the Playwright provider (Chromium, Firefox, WebKit), so one test file runs in Node and in all three engines. |
 | End-to-end | Playwright 1.65 | PWA install and offline play, UI flows. |
 | Server | Fastify 5 and SQLite through the built-in `node:sqlite` | `node:sqlite` is stability 1.2 (release candidate) in the Node 26 docs and needs no native build. If it causes trouble, `better-sqlite3` is a drop-in fallback. Dockerized and self-hostable. |
-| License | MIT | Code only. Bundled music keeps its own licenses (§10). |
+| License | MIT | Code only. Bundled music keeps its own licenses (see "Bundled music"). |
 
-## 4. Repo layout
-
-```
-/packages
-  /core        # Pure deterministic code: levelgen, sim, PRNG, fixed-point math, replay format. No DOM, no Pixi.
-  /analysis    # libopenmpt WASM wrapper: load module, offline render pass, pattern data extraction -> LevelData
-  /client      # Vite app: Pixi renderer, audio playback, input, UI, storage, PWA
-  /server      # Fastify API and replay validator (imports @game/core)
-/music         # bundled modules and manifest.json (see §10)
-/tools         # scripts: twiddle and threshold table generator, manifest validator, determinism checker, docs checker
-/docs          # this plan and the writing guide
-```
-
-`core` never imports anything non-deterministic. In `packages/core/src` the lint config bans:
-
-- `Math.random` and every transcendental `Math` function (`sin`, `cos`, `tan`, their
-  inverses and hyperbolics, `exp`, `expm1`, `log` and its variants, `pow`, `cbrt`, `hypot`)
-- the `**` operator, computed `Math[...]` access, and aliasing or destructuring `Math`
-- clocks and host globals: `Date`, `Temporal`, `performance`, `Intl`, `crypto`, `process`,
-  `globalThis`, DOM globals, timers, `fetch`, `WebAssembly`
-- every non-relative import
-
-Its tsconfig also leaves out DOM and Node types. `packages/core/test/determinism-lint.test.ts`
-checks that each banned case is rejected.
-
-## 5. Determinism rules
+## 4. Determinism rules
 
 Read before writing core code.
 
+- **`packages/core` is pure.** No clocks, no randomness, no host or DOM globals, no
+  transcendental `Math`, and only relative imports. Lint enforces this; the rule list and
+  how it's tested are in `DEVELOPMENT.md`, "The determinism lint".
 - **Song identity:** SHA-256 of the raw file bytes (`crypto.subtle` in the browser,
   `node:crypto` on the server). `.gitattributes` marks module and WASM files binary so git
   never rewrites their bytes.
@@ -100,7 +80,7 @@ Read before writing core code.
 - **Cosmetics are exempt.** Particles, screen shake, CRT effects, and background animation
   live in `client` and may use anything. They never affect sim state.
 
-## 6. Analysis pipeline (`packages/analysis`, runs in a Web Worker)
+## 5. Analysis pipeline (`packages/analysis`, runs in a Web Worker)
 
 Input: module bytes. Output: `LevelData` (serializable, cached in IndexedDB under
 `hash + GEN_VERSION`).
@@ -127,7 +107,7 @@ Input: module bytes. Output: `LevelData` (serializable, cached in IndexedDB unde
 6. **Song length:** stop at song end. Detect infinite loops with libopenmpt's own song-end
    handling, plus a hard cap (for example, 15 minutes).
 
-## 7. Level generation (`packages/core/levelgen`)
+## 6. Level generation (`packages/core/levelgen`)
 
 A pure function: `generateLevel(levelData, difficulty, seed) -> Level`.
 
@@ -158,13 +138,13 @@ A pure function: `generateLevel(levelData, difficulty, seed) -> Level`.
   - **Density control:** per difficulty, cap events per second and per channel. Easy keeps
     one or two channels; Hard keeps all of them. The seeded PRNG is used only for
     tie-breaking which events to drop.
-- **Boss (later milestone):** the last pattern, or the most-repeated one, becomes a boss
+- **Boss (after M6; see the roadmap):** the last pattern, or the most-repeated one, becomes a boss
   whose weak points pulse on the lead channel.
 
-## 8. Simulation (`packages/core/sim`)
+## 7. Simulation (`packages/core/sim`)
 
 - Fixed 120 Hz tick. `tick(state, inputBits) -> state`.
-- Sim time is derived from the audio clock (§9). If the render loop hitches, run several
+- Sim time is derived from the audio clock (see "Audio and timing"). If the render loop hitches, run several
   ticks to catch up. Never skip ticks.
 - Player ship: 8-way movement, a fire button (hold for auto-fire), one special or bomb
   button.
@@ -179,7 +159,7 @@ A pure function: `generateLevel(levelData, difficulty, seed) -> Level`.
 - **Replay format:** a header `{ moduleHash, difficulty, GEN_VERSION, SIM_VERSION }` plus
   run-length-encoded input bits per tick. That is all the server needs.
 
-## 9. Audio and timing (`packages/client/audio`)
+## 8. Audio and timing (`packages/client/audio`)
 
 - Playback through the libopenmpt AudioWorklet, from the same module bytes.
 - **The master clock is the audio clock.** Song time is
@@ -189,7 +169,7 @@ A pure function: `generateLevel(levelData, difficulty, seed) -> Level`.
   device. A manual slider too; Bluetooth headphones can add 150 to 250 ms.
 - Pause and resume suspend the audio context and the sim together.
 
-## 10. Bundled music (`/music`)
+## 9. Bundled music (`/music`)
 
 - `manifest.json` entries: `{ file, title, author, authorUrl, sourceUrl, license, licenseUrl, sha256 }`.
 - **License allowlist: Public Domain, CC0, CC BY.** Exclude NC and ND. Flag **CC BY-SA for
@@ -207,7 +187,7 @@ A pure function: `generateLevel(levelData, difficulty, seed) -> Level`.
   and license, with links to the author and the source. A Credits screen lists everything,
   including libopenmpt (BSD) and, if used, chiptune3.js (MIT).
 
-## 11. Visual spec (`packages/client/render`)
+## 10. Visual spec (`packages/client/render`)
 
 - Internal resolution **384x216** (16:9), integer-scaled with nearest-neighbour filtering
   and letterboxed. An optional 320x256 "Amiga PAL" mode later.
@@ -226,7 +206,7 @@ A pure function: `generateLevel(levelData, difficulty, seed) -> Level`.
   per-frame loop. Particles use a ParticleContainer. Target 2 ms or less per frame of sim
   and render work on desktop.
 
-## 12. Client UI (`packages/client/ui`)
+## 11. Client UI (`packages/client/ui`)
 
 - Title screen: chrome logo, and an attract mode that plays a bundled song's level with an
   AI ship.
@@ -240,7 +220,7 @@ A pure function: `generateLevel(levelData, difficulty, seed) -> Level`.
 - Results screen: score breakdown, personal best, submit to the leaderboard, save the
   replay.
 
-## 13. Server (`packages/server`)
+## 12. Server (`packages/server`)
 
 - `POST /runs`: `{ replay, claimedScore, playerId }`. The server needs the module file to
   re-run the level:
@@ -259,56 +239,7 @@ A pure function: `generateLevel(levelData, difficulty, seed) -> Level`.
 - Module storage: uploaded modules are stored only for hash lookup and validation. They
   aren't served publicly unless their license allows it.
 
-## 14. Milestones
-
-Do these in order and commit at the end of each one. Don't start the next until the
-current milestone's acceptance checks pass.
-
-**S1: libopenmpt access spike (do first)**
-
-- Find out whether chiptune3.js exposes the libopenmpt calls needed: pattern, row, and
-  channel command data; current order and row; per-channel VU; offline render to a buffer;
-  and loading in Node. If it doesn't, build libopenmpt with Emscripten and export the
-  needed C API functions directly. Use the newest upstream libopenmpt release at the time.
-- Acceptance: a Node script and a browser page both load the same `.mod`, produce
-  `LevelData`, and print the same SHA-256 of the serialized `LevelData`.
-
-**M1: vertical slice**
-
-- One bundled song, LED terrain (ceiling and floor) scrolling in sync with playback, the
-  player ship, terrain collision, death and restart.
-- Acceptance: 60 fps in desktop Chrome; the terrain is audibly in time with the music.
-
-**M2: enemies and scoring**
-
-- Note events become enemies; shooting, the on-beat bonus, score, lives, the power-up
-  meter.
-- Acceptance: a replay recorded in Chromium reproduces the same score in Firefox, WebKit,
-  and Node (Vitest browser mode test).
-
-**M3: effects and look**
-
-- Particles, copper bars, starfield, CRT filter, hit flashes, title screen, results screen,
-  accessibility toggles.
-
-**M4: library, offline, music pack**
-
-- Module import, IndexedDB caching, PWA install and full offline play, the bundled pack
-  with manifest validation, attribution and credits screens.
-- Acceptance: install as a PWA, turn on airplane mode, import a new module, and play it.
-
-**M5: leaderboards**
-
-- Fastify server, replay validation, per-song boards, the player profile link, a Docker
-  Compose file.
-- Acceptance: a tampered score is rejected; a legitimate run appears on the board.
-
-**M6: mobile and polish**
-
-- Touch controls, gamepad, latency calibration, a performance pass on a mid-range Android
-  phone, difficulty tuning across about 20 varied modules.
-
-## 15. Testing
+## 13. Testing
 
 - **Golden tests:** for the fixture modules in `packages/analysis/fixtures`, assert the
   SHA-256 of `LevelData` and `Level` against committed snapshots. Any change to them
@@ -319,23 +250,3 @@ current milestone's acceptance checks pass.
 - **Performance check:** a headless benchmark of 10 000 sim ticks with the maximum entity
   count.
 - **Docs check:** `pnpm check:docs` enforces the writing rules in `docs/DOC-STYLE.md`.
-
-## 16. Open decisions
-
-Ask the owner; don't guess.
-
-1. Final game title (placeholder: PATTERN BREAK).
-2. Free or paid. The code is MIT either way (decided 2026-11-08). This still affects how
-   the game is distributed and which music licenses are worth reviewing; NC is excluded
-   regardless.
-3. Platform priority: desktop web first, or mobile first?
-4. Where the leaderboard server is hosted (self-hosted homelab or a VPS).
-5. Whether leaderboards accept user-imported modules from day one, or bundled songs only
-   at first.
-
-## Revisions
-
-- **2026-11-08**: Moved to Node 26 LTS, pnpm 12, TypeScript 7, Oxlint (in place of ESLint),
-  Vitest browser mode for cross-engine tests, and the built-in `node:sqlite` (in place of
-  better-sqlite3). Added the MIT license and the writing guide. Rewrote the text to match
-  `docs/DOC-STYLE.md`.

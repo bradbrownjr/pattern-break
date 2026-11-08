@@ -1,5 +1,5 @@
 /**
- * Single source of truth for the game's name (docs/PLAN.md §1).
+ * Single source of truth for the game's name (docs/PLAN.md, "Pitch").
  * The final title is an open decision; change it here only.
  */
 export const BRAND = {

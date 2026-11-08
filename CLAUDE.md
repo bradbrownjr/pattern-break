@@ -1,8 +1,14 @@
 # CLAUDE.md
 
-A tracker-module-driven tunnel shooter. **`docs/PLAN.md` is the source of truth** for the
-design, the determinism rules, the tech choices, and the milestones. Read the section for a
-package before working on it.
+A tracker-module-driven tunnel shooter. The docs, each with one job:
+
+- **`docs/PLAN.md`**: the design, the determinism rules, and the tech choices. Read the
+  section for a package before working on it.
+- **`docs/ROADMAP.md`**: what comes next, in order, with acceptance checks.
+- **`docs/CHANGELOG.md`**: what is finished.
+- **`docs/DEVELOPMENT.md`**: setup, commands, layout, TypeScript conventions, the
+  determinism lint, and how the changelog and roadmap are kept.
+- **`docs/DOC-STYLE.md`**: the writing rules.
 
 ## Writing
 
@@ -11,62 +17,32 @@ comments, commit messages, UI text. In short: no em-dashes, no emoji, no filler 
 sentence case headings, and verify every claim before writing it. `pnpm check:docs` fails on
 the parts a script can catch.
 
-## Status
+## Before you commit
 
-Scaffold only. Current milestone: **S1, the libopenmpt access spike** (PLAN §14). Work the
-milestones in order. A milestone is done only when its acceptance checks pass; ask Brad
-before calling one complete, then commit.
+Run `pnpm check` (lint, type-check, tests, docs check). Commands and what each one does are
+in `docs/DEVELOPMENT.md`.
 
-## Commands
+## Roadmap and changelog
 
-```sh
-pnpm install
-pnpm lint          # Oxlint, including the core determinism rules
-pnpm typecheck     # tsc (TypeScript 7) per package, plus tools/
-pnpm test          # Vitest per package
-pnpm check:docs    # writing rules (tools/check-docs.ts)
-pnpm check         # all four
-pnpm dev           # client (Vite)
-pnpm build
-```
-
-One package: `pnpm --filter @game/core test`. One file:
-`pnpm --filter @game/core exec vitest run test/foo.test.ts`.
-
-## Layout
-
-- `packages/core` (`@game/core`): pure deterministic code: levelgen, sim, PRNG, fixed-point
-  math, replay format. `src/version.ts` holds `GEN_VERSION` and `SIM_VERSION`.
-- `packages/analysis` (`@game/analysis`): libopenmpt WASM wrapper that produces
-  `LevelData`. Golden fixtures go in `fixtures/`.
-- `packages/client` (`@game/client`): the Vite app (Pixi, audio, UI, storage, PWA). The game
-  name lives only in `src/config/brand.ts`.
-- `packages/server` (`@game/server`): Fastify and SQLite leaderboard and replay validator
-  (M5).
-- `music/`: bundled modules and `manifest.json`. `tools/`: build-time generators, checkers,
-  and the Oxlint determinism plugin (`tools/lint/`).
-
-## TypeScript
-
-- Node 26 runs the workspace packages' `.ts` source directly; `exports` points at
-  `./src/index.ts`. Only the client is built (Vite).
-- Relative imports carry the `.ts` extension: `import { x } from './x.ts'`.
-- `erasableSyntaxOnly` is on: no `enum`, `namespace`, or constructor parameter properties.
-  Use `as const` objects and union types.
-- `strict` and `noUncheckedIndexedAccess` are on. Use typed arrays for hot data.
-- TypeScript 7 has no compiler API yet, so nothing in the repo may depend on one
-  (typescript-eslint, ts-morph and the like). Lint is Oxlint.
+- Work the roadmap in order. A milestone is finished only when its acceptance checks pass.
+  **Ask Brad before marking one finished.**
+- A finished item leaves `docs/ROADMAP.md` (its "At a glance" row and its section together)
+  and becomes an entry in `docs/CHANGELOG.md`. Format and dating rules are in
+  `docs/DEVELOPMENT.md`, "Changelog and roadmap".
+- **Show Brad the changelog wording before it reaches `main`.**
+- A new roadmap item gets an "At a glance" row, and once planned, a section with tasks,
+  acceptance checks, and a **Docs:** line.
+- Technical facts and patterns that a future change needs go in `docs/DEVELOPMENT.md`.
 
 ## Hard rules
 
-1. **`packages/core/src` is deterministic.** Lint bans `Math.random`, transcendental
-   `Math` functions, `**`, computed or aliased `Math`, `Date`, `Temporal`, `performance`,
-   host and DOM globals, and every non-relative import. Its tsconfig has no DOM or Node
-   types. Don't disable these rules. If something seems to need one, the value belongs in a
-   precomputed table (`/tools`) or must be passed in by the caller. When you add a rule, add
-   a case to `packages/core/test/determinism-lint.test.ts`.
+1. **`packages/core/src` is deterministic.** Lint bans randomness, transcendental `Math`,
+   `**`, clocks, host and DOM globals, and non-relative imports there. Don't disable these
+   rules. If something seems to need one, the value belongs in a precomputed table
+   (`/tools`) or must be passed in by the caller. When you add a rule, add a case to
+   `packages/core/test/determinism-lint.test.ts`.
 2. **The sim uses integer fixed-point** at a fixed 120 Hz tick. Collision is integer-only.
-   The PRNG is seeded and called in a fixed order (PLAN §5, §8).
+   The PRNG is seeded and called in a fixed order.
 3. **Any change to levelgen or sim output bumps `GEN_VERSION` or `SIM_VERSION`** and
    updates the golden snapshots in the same commit.
 4. **Cosmetics stay in `client`** (particles, shake, CRT, flashes) and never feed back into
@@ -80,6 +56,8 @@ One package: `pnpm --filter @game/core test`. One file:
    `manifest.json` entry.
 9. Module and WASM files are `binary` in `.gitattributes` so their hashes never change.
    Keep it that way.
+10. **TypeScript 7 has no compiler API yet.** Don't add tools that need one
+    (typescript-eslint, ts-morph). Lint is Oxlint.
 
 ## Always and never
 
@@ -87,8 +65,8 @@ This file is the project's memory for agents. When Brad says to always or never 
 something, add it here as a clear, testable rule. A rule that isn't written here may be
 forgotten next session.
 
+- Completed roadmap items move to the changelog (Brad, 2026-11-08).
+
 ## Open decisions
 
-Ask Brad; don't guess (PLAN §16): the final title, free or paid distribution, desktop-first
-or mobile-first, leaderboard hosting, and whether boards accept user-imported modules at
-launch. The code license is decided: MIT.
+The list is in `docs/ROADMAP.md`, "Open decisions". Ask Brad; don't guess.

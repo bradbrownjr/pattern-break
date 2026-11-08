@@ -89,8 +89,9 @@ and, for attribution, wrong.
   upstream source. If you can't confirm something, leave it out and say so.
 - **A confident sentence in an existing document is not evidence.** Check the code, not
   the last document that mentioned it.
-- **Describe what exists.** The README and anything a player reads never describe a
-  feature that isn't built. Planned work lives in `docs/PLAN.md`, which says it is a plan.
+- **Describe what exists.** The README, the changelog, and anything a player reads never
+  describe a feature that isn't built. Unbuilt work lives in `docs/ROADMAP.md` and
+  `docs/PLAN.md`.
 - **Versions carry a date.** When a document names a dependency version or a release, it
   says when that was checked.
 
@@ -100,10 +101,13 @@ and, for attribution, wrong.
 
 | File | Reader | What it holds |
 |---|---|---|
-| `README.md` | Someone who just found the repo | What it is, its status, how to run it, the license |
-| `docs/PLAN.md` | Anyone building the game | Design, rules, tech choices, milestones |
+| `README.md` | Someone who just found the repo | What it is, its status, the license, links to the rest |
+| `docs/PLAN.md` | Anyone building the game | Design, determinism rules, tech choices |
+| `docs/ROADMAP.md` | Anyone asking what's next | Unfinished work in order, stages, open decisions |
+| `docs/CHANGELOG.md` | Anyone asking what's done | Finished work, newest first |
+| `docs/DEVELOPMENT.md` | Anyone changing the code | Setup, commands, layout, conventions, checks, process |
 | `docs/DOC-STYLE.md` | Anyone writing | This file |
-| `CLAUDE.md` | Coding agents | Working rules and commands; points here for writing |
+| `CLAUDE.md` | Coding agents | Working rules; points to the files above |
 
 A topic gets one home. Other files link to it instead of repeating it.
 
@@ -113,6 +117,6 @@ A topic gets one home. Other files link to it instead of repeating it.
 
 - Never use an em-dash or an emoji.
 - Never ship filler phrasing (see "Plain wording").
-- Never describe an unbuilt feature outside `docs/PLAN.md`.
+- Never describe an unbuilt feature outside `docs/ROADMAP.md` and `docs/PLAN.md`.
 - Never restyle quoted text or attribution.
 - Never state a version without the date it was checked.
