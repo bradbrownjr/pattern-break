@@ -1,19 +1,37 @@
-# PATTERN BREAK (working title)
+# PATTERN BREAK
 
-A horizontal-scrolling neon tunnel shooter where every level is generated from a tracker module
-(MOD/XM/S3M/IT). Same file → same level → one global leaderboard per song.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Status: repository scaffold. Next milestone is **S1** (libopenmpt access spike).
+A side-scrolling neon tunnel shooter where every level is built from a tracker module
+(MOD, XM, S3M, or IT). The ceiling and floor are the song's left and right spectrum, drawn as
+LED meter bars, and the notes in its patterns spawn the enemies. The same file always makes
+the same level, so every song gets its own leaderboard.
 
-- Design and milestones: [`docs/PLAN.md`](docs/PLAN.md)
-- Contributor/agent notes: [`CLAUDE.md`](CLAUDE.md)
+PATTERN BREAK is a working title.
+
+## Status
+
+Nothing is playable yet. The repository has the workspace layout, the tooling, and the lint
+rules that keep the level generator and simulation deterministic. The next step is S1, a
+spike to confirm how the game reads pattern data and audio levels out of libopenmpt.
+
+The design, the tech choices, and the milestones are in [`docs/PLAN.md`](docs/PLAN.md).
 
 ## Development
 
-Requires Node ≥ 22.18 (runs TypeScript directly) and pnpm 10.
+You need Node 26 and pnpm 12. Node runs the TypeScript packages directly, so only the
+browser client has a build step.
 
 ```sh
 pnpm install
-pnpm dev        # client dev server
-pnpm check      # lint + typecheck + test
+pnpm dev          # client dev server
+pnpm check        # lint, type-check, tests, and the docs check
 ```
+
+Before writing docs, comments, or anything a player reads, read
+[`docs/DOC-STYLE.md`](docs/DOC-STYLE.md).
+
+## License
+
+The code is [MIT](LICENSE). Bundled music will keep its own licenses, listed in
+`music/manifest.json` and on the in-game credits screen.

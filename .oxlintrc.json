@@ -1,0 +1,265 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "unicorn",
+    "oxc",
+    "import"
+  ],
+  "jsPlugins": [
+    "./tools/lint/determinism-plugin.js"
+  ],
+  "categories": {
+    "correctness": "error"
+  },
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/coverage/**",
+    "**/vendor/**",
+    "**/*.wasm"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "packages/core/src/**"
+      ],
+      "rules": {
+        "no-restricted-properties": [
+          "error",
+          {
+            "object": "Math",
+            "property": "random",
+            "message": "Math.random is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "sin",
+            "message": "Math.sin is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "cos",
+            "message": "Math.cos is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "tan",
+            "message": "Math.tan is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "asin",
+            "message": "Math.asin is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "acos",
+            "message": "Math.acos is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "atan",
+            "message": "Math.atan is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "atan2",
+            "message": "Math.atan2 is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "sinh",
+            "message": "Math.sinh is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "cosh",
+            "message": "Math.cosh is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "tanh",
+            "message": "Math.tanh is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "asinh",
+            "message": "Math.asinh is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "acosh",
+            "message": "Math.acosh is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "atanh",
+            "message": "Math.atanh is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "exp",
+            "message": "Math.exp is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "expm1",
+            "message": "Math.expm1 is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "log",
+            "message": "Math.log is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "log1p",
+            "message": "Math.log1p is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "log2",
+            "message": "Math.log2 is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "log10",
+            "message": "Math.log10 is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "pow",
+            "message": "Math.pow is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "cbrt",
+            "message": "Math.cbrt is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          },
+          {
+            "object": "Math",
+            "property": "hypot",
+            "message": "Math.hypot is banned in core: it can differ between engines or is random. Use a precomputed table from /tools or integer math."
+          }
+        ],
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "Date",
+            "message": "Date is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "Temporal",
+            "message": "Temporal is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "performance",
+            "message": "performance is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "Intl",
+            "message": "Intl is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "crypto",
+            "message": "crypto is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "process",
+            "message": "process is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "Buffer",
+            "message": "Buffer is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "require",
+            "message": "require is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "module",
+            "message": "module is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "globalThis",
+            "message": "globalThis is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "window",
+            "message": "window is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "self",
+            "message": "self is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "document",
+            "message": "document is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "navigator",
+            "message": "navigator is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "location",
+            "message": "location is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "setTimeout",
+            "message": "setTimeout is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "setInterval",
+            "message": "setInterval is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "setImmediate",
+            "message": "setImmediate is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "requestAnimationFrame",
+            "message": "requestAnimationFrame is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "queueMicrotask",
+            "message": "queueMicrotask is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "fetch",
+            "message": "fetch is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "WebAssembly",
+            "message": "WebAssembly is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "SharedArrayBuffer",
+            "message": "SharedArrayBuffer is not allowed in packages/core. Pass the value in from the caller."
+          },
+          {
+            "name": "Atomics",
+            "message": "Atomics is not allowed in packages/core. Pass the value in from the caller."
+          }
+        ],
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "*",
+                  "!./*",
+                  "!../*"
+                ],
+                "message": "packages/core may only use relative imports: no npm, node:, or other workspace packages."
+              }
+            ]
+          }
+        ],
+        "determinism/no-pow-operator": "error",
+        "determinism/no-computed-math": "error",
+        "determinism/no-math-alias": "error"
+      }
+    }
+  ]
+}

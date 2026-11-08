@@ -1,186 +1,341 @@
-# PATTERN BREAK — Build Plan
+# PATTERN BREAK build plan
 
-> Working title. Final name not chosen yet. Keep the name in one config constant (`src/config/brand.ts`) so it can be swapped.
+> Working title; the final name isn't chosen. The name lives in one constant
+> (`packages/client/src/config/brand.ts`) so it can be swapped.
+>
+> This is a plan. Nothing in it is built unless the README says so.
 
 ## 1. Pitch
 
-A horizontal-scrolling tunnel shooter, Gradius-style but more neon. **Every level is generated from a tracker music module (MOD/XM/S3M/IT).** The ceiling is drawn from the left audio channel and the floor from the right, both as segmented LED spectrum bars like an old stereo's visualizer. Notes in the song's pattern data spawn enemies. A given module file always produces the exact same level, so each song has its own global leaderboard.
+A horizontal-scrolling tunnel shooter in the Gradius mould, with more neon. **Every level is
+generated from a tracker music module (MOD/XM/S3M/IT).** The ceiling is drawn from the left
+audio channel and the floor from the right, both as segmented LED spectrum bars like an old
+stereo's visualizer. Notes in the song's pattern data spawn enemies. A given module file
+always produces the same level, so each song has its own global leaderboard.
 
-Aesthetic: Amiga and arcade. Low-res pixel art, copper-bar gradients, chunky LED meters, lots of particles, optional CRT filter.
+Aesthetic: Amiga and arcade. Low-res pixel art, copper-bar gradients, chunky LED meters,
+lots of particles, an optional CRT filter.
 
-## 2. Non-negotiable principles
+## 2. Principles
 
-1. **Tracker files only.** No MP3/streaming support. Inputs are `.mod .xm .s3m .it` (anything libopenmpt plays is a bonus).
-2. **Deterministic level generation.** Same file bytes + same generator version → bit-identical level data, in every browser and in Node.
-3. **Deterministic simulation.** Same level + same input log → identical score, in every browser and in Node. The server validates scores by replaying input logs.
-4. **Offline-first.** The game is fully playable with no network. Only leaderboards need a connection.
-5. **Smooth.** Hold 60fps on a mid-range phone and support high-refresh displays. No GC stutter during play.
+1. **Tracker files only.** No MP3 or streaming. Inputs are `.mod .xm .s3m .it`; anything
+   else libopenmpt plays is a bonus.
+2. **Deterministic level generation.** Same file bytes and same generator version give
+   bit-identical level data, in every browser and in Node.
+3. **Deterministic simulation.** Same level and same input log give the same score, in
+   every browser and in Node. The server validates scores by replaying input logs.
+4. **Offline-first.** The game is fully playable with no network. Only leaderboards need a
+   connection.
+5. **Smooth.** Hold 60 fps on a mid-range phone and support high-refresh displays. No
+   garbage-collection stutter during play.
 
 ## 3. Tech stack
 
+Versions checked 2026-11-08. Pin exact versions in the lockfile; recheck before each
+milestone.
+
 | Concern | Choice | Notes |
 |---|---|---|
-| Language | TypeScript (strict) | Monorepo with pnpm workspaces |
-| Build | Vite | |
-| Rendering | PixiJS v8 (WebGL, WebGPU when available) | Nearest-neighbour scaling, integer zoom |
-| Module playback + analysis | libopenmpt compiled to WebAssembly | Start from chiptune3.js (DrSnuggles/chiptune, AudioWorklet). See Spike S1 |
-| Offline/PWA | vite-plugin-pwa (Workbox) | Precache app shell + bundled modules |
-| Local storage | IndexedDB (via `idb`) | User library, level cache, PBs, replays |
-| Tests | Vitest + Playwright (Chromium, Firefox, WebKit) | Cross-engine determinism tests |
-| Server | Node + Fastify + SQLite (better-sqlite3) | Node so the server can import the exact same sim package for replay validation. Dockerized and self-hostable |
+| Runtime | Node 26 LTS | Entered LTS on 2026-10-28. Runs the workspace's TypeScript directly (type stripping), so `core`, `analysis` and `server` have no build step and the server imports `core` source as-is. |
+| Package manager | pnpm 12 | Workspaces. Version pinned in `packageManager`. |
+| Language | TypeScript 7, strict | The native compiler. Type-check only (`noEmit`). `erasableSyntaxOnly` is on so Node can run every file: no `enum`, `namespace`, or constructor parameter properties. |
+| Lint | Oxlint, plus a local JS plugin | typescript-eslint's peer range stops below TypeScript 6.1, so it can't run beside TypeScript 7. Oxlint parses TypeScript itself. Its built-in `no-restricted-*` rules and `tools/lint/determinism-plugin.js` enforce §5. |
+| Build | Vite 8 | Client only. |
+| Rendering | PixiJS 8 (WebGL, WebGPU when available) | Nearest-neighbour scaling, integer zoom. |
+| Module playback and analysis | libopenmpt, compiled to WebAssembly | The latest upstream release I could confirm is 0.8.8 (2026-08-15). chiptune3.js 0.8.10 bundles 0.8.7 per its README and is an AudioWorklet player; its README lists metadata and pattern data, and doesn't mention per-channel VU, offline rendering, or Node. Spike S1 decides between chiptune3.js and our own Emscripten build. The leaning is our own build: one pinned `.wasm` used by Node, the analysis worker, and the AudioWorklet. |
+| Offline / PWA | vite-plugin-pwa 2 (Workbox 7) | Precache the app shell and bundled modules. |
+| Local storage | IndexedDB via `idb` 8 | User library, level cache, personal bests, replays. |
+| Tests | Vitest 5 | Unit tests in Node. Cross-engine determinism tests use Vitest browser mode with the Playwright provider (Chromium, Firefox, WebKit), so one test file runs in Node and in all three engines. |
+| End-to-end | Playwright 1.65 | PWA install and offline play, UI flows. |
+| Server | Fastify 5 and SQLite through the built-in `node:sqlite` | `node:sqlite` is stability 1.2 (release candidate) in the Node 26 docs and needs no native build. If it causes trouble, `better-sqlite3` is a drop-in fallback. Dockerized and self-hostable. |
+| License | MIT | Code only. Bundled music keeps its own licenses (§10). |
 
 ## 4. Repo layout
 
 ```
 /packages
-  /core        # PURE deterministic code: levelgen, sim, PRNG, fixed-point math, replay format. No DOM, no Pixi.
+  /core        # Pure deterministic code: levelgen, sim, PRNG, fixed-point math, replay format. No DOM, no Pixi.
   /analysis    # libopenmpt WASM wrapper: load module, offline render pass, pattern data extraction -> LevelData
   /client      # Vite app: Pixi renderer, audio playback, input, UI, storage, PWA
-  /server      # Fastify API + replay validator (imports @game/core)
-/music         # bundled modules + manifest.json (see §10)
-/tools         # scripts: twiddle/threshold table generator, manifest validator, determinism checker
+  /server      # Fastify API and replay validator (imports @game/core)
+/music         # bundled modules and manifest.json (see §10)
+/tools         # scripts: twiddle and threshold table generator, manifest validator, determinism checker, docs checker
+/docs          # this plan and the writing guide
 ```
 
-`core` must never import anything non-deterministic. Enforce this with an ESLint rule that bans `Math.random`, `Date`, `performance`, `Math.sin/cos/tan/exp/log/pow/atan2` and any DOM globals in `packages/core`.
+`core` never imports anything non-deterministic. In `packages/core/src` the lint config bans:
 
-## 5. Determinism rules (read before writing core code)
+- `Math.random` and every transcendental `Math` function (`sin`, `cos`, `tan`, their
+  inverses and hyperbolics, `exp`, `expm1`, `log` and its variants, `pow`, `cbrt`, `hypot`)
+- the `**` operator, computed `Math[...]` access, and aliasing or destructuring `Math`
+- clocks and host globals: `Date`, `Temporal`, `performance`, `Intl`, `crypto`, `process`,
+  `globalThis`, DOM globals, timers, `fetch`, `WebAssembly`
+- every non-relative import
 
-- **Song identity:** SHA-256 of the raw file bytes (`crypto.subtle`, or `node:crypto` on the server).
-- **Leaderboard key:** `(moduleHash, difficulty, GEN_VERSION)`. Bump `GEN_VERSION` whenever levelgen or sim output changes, so old scores land on a separate board.
-- **Pin the libopenmpt WASM build.** Commit the binary and record its version in `GEN_VERSION` metadata. WASM float math is deterministic across engines, but different libopenmpt versions can mix differently.
-- **Offline render at a fixed 48 000 Hz**, with fixed render params (stereo separation, interpolation filter, volume ramping). Set them explicitly and don't rely on defaults.
-- **No transcendental JS Math in core.** Precompute FFT twiddle factors and dB→LED-segment thresholds at build time with `/tools`, and commit them as constant typed-array data. At runtime use only `+ - * /`, `Math.sqrt`, `Math.floor`, comparisons and integer ops.
-- **Simulation uses integer fixed-point** (e.g. positions in 1/256 px, Q24.8) with a fixed tick rate (120 Hz). Collision checks are integer-only.
-- **Seeded PRNG** (sfc32 or mulberry32), seeded from the module hash plus difficulty. The PRNG is only called in a fixed order.
-- **Cosmetics are exempt.** Particles, screen shake, CRT effects and background animation live in `client` and may use anything. They must never affect sim state.
+Its tsconfig also leaves out DOM and Node types. `packages/core/test/determinism-lint.test.ts`
+checks that each banned case is rejected.
+
+## 5. Determinism rules
+
+Read before writing core code.
+
+- **Song identity:** SHA-256 of the raw file bytes (`crypto.subtle` in the browser,
+  `node:crypto` on the server). `.gitattributes` marks module and WASM files binary so git
+  never rewrites their bytes.
+- **Leaderboard key:** `(moduleHash, difficulty, GEN_VERSION)`. Bump `GEN_VERSION` whenever
+  levelgen or sim output changes, so old scores land on a separate board.
+- **Pin the libopenmpt WASM build.** Commit the binary and record its version in
+  `GEN_VERSION` metadata. WebAssembly float arithmetic gives the same results in every
+  engine (NaN bit patterns aside), but different libopenmpt versions can mix differently.
+  Don't build with relaxed SIMD, whose results may vary by engine.
+- **Offline render at a fixed 48 000 Hz**, with fixed render parameters (stereo separation,
+  interpolation filter, volume ramping). Set them explicitly; don't rely on defaults.
+- **No transcendental JS Math in core.** Precompute FFT twiddle factors and dB-to-LED-segment
+  thresholds at build time with `/tools` and commit them as constant typed-array data. At
+  runtime use only `+ - * /`, `Math.sqrt`, `Math.floor`, comparisons, and integer ops.
+- **The simulation uses integer fixed-point** (for example, positions in 1/256 px, Q24.8) at
+  a fixed tick rate of 120 Hz. Collision checks are integer-only.
+- **Seeded PRNG** (sfc32 or mulberry32), seeded from the module hash plus difficulty, and
+  called in a fixed order.
+- **Cosmetics are exempt.** Particles, screen shake, CRT effects, and background animation
+  live in `client` and may use anything. They never affect sim state.
 
 ## 6. Analysis pipeline (`packages/analysis`, runs in a Web Worker)
 
-Input: module bytes. Output: `LevelData` (serializable, cached in IndexedDB under `hash + GEN_VERSION`).
+Input: module bytes. Output: `LevelData` (serializable, cached in IndexedDB under
+`hash + GEN_VERSION`).
 
-1. Load module into libopenmpt. Read metadata: title, artist (if present), channel count, orders, patterns, instruments/samples.
-2. **Offline render pass:** render the whole song at 48 kHz in fixed-size chunks (e.g. 256 frames). After each chunk, record:
-   - current order, pattern, row, speed, tempo (→ exact row timestamps in samples)
-   - per-channel VU left/right (reflects panning; classic 4-ch MODs are hard-panned L R R L)
-   - rendered stereo PCM for that chunk → feed into the FFT step below
-3. **Spectrum frames:** for each analysis frame (e.g. every 1/60 s of song time), FFT the left and right channels separately (Hann window via precomputed table). Collapse them into N bands (start with 16 log-spaced bands) and quantize each band to an LED segment level 0..S (start S = 12) using the precomputed threshold table. Store as `Uint8Array`s.
-4. **Note events:** walk the order list and pattern data and emit an event for every note-on: `{ timeSamples, channel, instrument, note, volume, effect, effectParam }`. Use the row timestamps from step 2 so tempo/speed changes and pattern breaks (Dxx), position jumps (Bxx) and loops are handled by libopenmpt itself, not re-implemented.
-5. **Structure:** record order boundaries and which pattern each order plays. Repeated patterns mean repeated level sections.
-6. Song length: stop at song end. Detect infinite loops via libopenmpt's own song-end handling, with a hard cap (e.g. 15 min).
+1. Load the module into libopenmpt. Read metadata: title, artist (if present), channel
+   count, orders, patterns, instruments and samples.
+2. **Offline render pass:** render the whole song at 48 kHz in fixed-size chunks (for
+   example, 256 frames). After each chunk, record:
+   - current order, pattern, row, speed, and tempo, which give row timestamps in samples
+   - per-channel VU (volume unit) left and right, which reflects panning; classic 4-channel
+     MODs are hard-panned L R R L
+   - the rendered stereo PCM for that chunk, which feeds the FFT step below
+3. **Spectrum frames:** for each analysis frame (for example, every 1/60 s of song time),
+   FFT the left and right channels separately (Hann window from a precomputed table).
+   Collapse them into N bands (start with 16 log-spaced bands) and quantize each band to an
+   LED segment level 0..S (start with S = 12) using the precomputed threshold table. Store as
+   `Uint8Array`s.
+4. **Note events:** walk the order list and pattern data and emit an event for every
+   note-on: `{ timeSamples, channel, instrument, note, volume, effect, effectParam }`. Use
+   the row timestamps from step 2, so libopenmpt itself handles tempo and speed changes,
+   pattern breaks (Dxx), position jumps (Bxx), and loops. Don't re-implement them.
+5. **Structure:** record order boundaries and which pattern each order plays. Repeated
+   patterns mean repeated level sections.
+6. **Song length:** stop at song end. Detect infinite loops with libopenmpt's own song-end
+   handling, plus a hard cap (for example, 15 minutes).
 
 ## 7. Level generation (`packages/core/levelgen`)
 
-Pure function: `generateLevel(levelData, difficulty, seed) → Level`.
+A pure function: `generateLevel(levelData, difficulty, seed) -> Level`.
 
-- **Scroll:** constant pixels per *row*, so tempo changes visibly speed the tunnel up or slow it down. Scroll position is derived from song time.
+- **Scroll:** a constant number of pixels per *row*, so tempo changes visibly speed the
+  tunnel up or slow it down. Scroll position is derived from song time.
 - **Terrain:**
-  - Ceiling columns from left-channel band levels, hanging down. Floor columns from right-channel band levels, rising up.
-  - Each screen column of the terrain is one analysis frame. Bands are mapped across the vertical extent as LED segments.
-  - **Fairness clamp:** after quantization, guarantee a minimum passable gap (scaled by difficulty). If ceiling + floor would close the gap, scale both down proportionally for that column, then smooth the gap's position so it can't teleport faster than the ship's max vertical speed.
-  - Peak-hold caps: each column keeps a "peak dot" that holds briefly and then falls. The dot is solid (collidable) on Hard only.
+  - Ceiling columns come from left-channel band levels, hanging down. Floor columns come
+    from right-channel band levels, rising up.
+  - Each screen column of terrain is one analysis frame. Bands map across the vertical
+    extent as LED segments.
+  - **Fairness clamp:** after quantization, guarantee a minimum passable gap (scaled by
+    difficulty). If ceiling and floor would close the gap, scale both down proportionally
+    for that column, then smooth the gap's position so it can't move faster than the ship's
+    top vertical speed.
+  - Peak-hold caps: each column keeps a peak dot that holds briefly and then falls. The dot
+    is solid (collidable) on Hard only.
 - **Enemies (from note events):**
-  - Map instrument → enemy archetype. Default heuristic, overridable per song in a sidecar JSON later: low-pitched/percussive samples (short, low note) → heavy, slow ships; high short samples (hats) → small, fast swarmers; the instrument with the most melodic notes → "lead" enemies; sustained pads → hazards/mines.
-  - Note pitch → spawn Y (within the open gap at that time).
-  - Effects → motion: vibrato (4xy) → sine weave (from a lookup table), arpeggio (0xy) → 3-position flicker-hop, portamento up/down (1xx/2xx) → dive/climb, volume slide → fade-in shield.
-  - **Spawn so enemies arrive at the player's firing line exactly on their note's timestamp.** The music hit and the kill moment line up.
-  - **Density control:** per difficulty, cap events per second and per channel. Easy keeps one or two channels, Hard keeps all. Use the seeded PRNG only for tie-breaking which events to drop.
-- **Boss (later milestone):** the last pattern (or the most-repeated pattern) becomes a boss whose weak points pulse on the lead channel.
+  - Map instrument to enemy archetype. The default heuristic, overridable per song in a
+    sidecar JSON later: low-pitched or percussive samples (short, low note) become heavy,
+    slow ships; high short samples (hats) become small, fast swarmers; the instrument with
+    the most melodic notes becomes "lead" enemies; sustained pads become hazards or mines.
+  - Note pitch sets spawn Y, within the open gap at that time.
+  - Effects set motion: vibrato (4xy) is a sine weave (from a lookup table), arpeggio (0xy)
+    a three-position flicker-hop, portamento up and down (1xx, 2xx) a dive or climb, volume
+    slide a fade-in shield.
+  - **Spawn enemies so they reach the player's firing line on their note's timestamp.** The
+    music hit and the kill moment line up.
+  - **Density control:** per difficulty, cap events per second and per channel. Easy keeps
+    one or two channels; Hard keeps all of them. The seeded PRNG is used only for
+    tie-breaking which events to drop.
+- **Boss (later milestone):** the last pattern, or the most-repeated one, becomes a boss
+  whose weak points pulse on the lead channel.
 
 ## 8. Simulation (`packages/core/sim`)
 
-- Fixed 120 Hz tick. `tick(state, inputBits) → state`.
-- Sim time is derived from the audio clock (§9). If the render loop hitches, run multiple ticks to catch up. Never skip ticks.
-- Player ship: 8-way movement, fire button (hold = auto-fire), one special/bomb button.
-- Collision: ship vs lit LED segments, enemies, enemy bullets. Integer AABB or small hitboxes.
-- Gradius-style power-up meter, drawn as a VU meter. Collected capsules advance the meter, and a button press buys the highlighted upgrade (speed, double shot, laser, option pod, shield).
-- Scoring: kills, **on-beat bonus** (kill within ±N ms of a note event on that enemy's channel), no-hit streak multiplier, end-of-song survival bonus. Death = lose lives; game over before song end keeps the partial score.
-- **Replay format:** header `{ moduleHash, difficulty, GEN_VERSION, simVersion }` + run-length-encoded input bits per tick. This is all the server needs.
+- Fixed 120 Hz tick. `tick(state, inputBits) -> state`.
+- Sim time is derived from the audio clock (§9). If the render loop hitches, run several
+  ticks to catch up. Never skip ticks.
+- Player ship: 8-way movement, a fire button (hold for auto-fire), one special or bomb
+  button.
+- Collision: ship against lit LED segments, enemies, and enemy bullets. Integer AABB
+  (axis-aligned bounding box) or small hitboxes.
+- A Gradius-style power-up meter, drawn as a VU meter. Collected capsules advance the meter,
+  and a button press buys the highlighted upgrade (speed, double shot, laser, option pod,
+  shield).
+- Scoring: kills; an **on-beat bonus** for a kill within plus or minus N ms of a note event
+  on that enemy's channel; a no-hit streak multiplier; an end-of-song survival bonus. Death
+  costs a life; game over before the song ends keeps the partial score.
+- **Replay format:** a header `{ moduleHash, difficulty, GEN_VERSION, SIM_VERSION }` plus
+  run-length-encoded input bits per tick. That is all the server needs.
 
 ## 9. Audio and timing (`packages/client/audio`)
 
 - Playback through the libopenmpt AudioWorklet, from the same module bytes.
-- **Master clock = audio clock.** Song time = `(audioContext.currentTime − startTime) − outputLatency + userOffset`. The sim follows this clock. Never use frame time.
-- **Latency calibration screen:** tap along to a click track and store the offset per device. Expose a manual slider too (Bluetooth headphones can add 150–250 ms).
-- Pause/resume must suspend the context and the sim together.
+- **The master clock is the audio clock.** Song time is
+  `(audioContext.currentTime - startTime) - outputLatency + userOffset`. The sim follows
+  this clock, never frame time.
+- **Latency calibration screen:** tap along to a click track and store the offset per
+  device. A manual slider too; Bluetooth headphones can add 150 to 250 ms.
+- Pause and resume suspend the audio context and the sim together.
 
 ## 10. Bundled music (`/music`)
 
 - `manifest.json` entries: `{ file, title, author, authorUrl, sourceUrl, license, licenseUrl, sha256 }`.
-- **License allowlist: Public Domain, CC0, CC BY.** Exclude NC and ND. Flag **CC BY-SA for manual review** rather than auto-accepting it: CC 3.0/4.0 licenses treat syncing music to moving images as creating an adaptation, and ShareAlike would then apply to that adaptation.
-- `tools/validate-manifest.ts` runs in CI: every file is listed, the hash matches, the license is in the allowlist, and attribution fields are non-empty.
-- Source candidates: The Mod Archive (only modules whose page states a PD/CC license) and the "Big Mod Music Pack" on itch.io (permissive subset of Mod Archive). Verify each file's license on its original Mod Archive page. Some uploads are mislabeled (e.g. covers of commercial songs tagged PD), so exclude covers and remixes of commercial music.
-- **On-screen attribution:** a song-select card and level intro show title, author and license, with links to the author and source. A Credits screen lists everything, including libopenmpt (BSD) and chiptune.js (MIT).
+- **License allowlist: Public Domain, CC0, CC BY.** Exclude NC and ND. Flag **CC BY-SA for
+  manual review** instead of accepting it automatically: the CC 3.0 and 4.0 licenses treat
+  syncing music to moving images as creating an adaptation, and ShareAlike would then apply
+  to that adaptation.
+- `tools/validate-manifest.ts` runs in CI: every file is listed, every hash matches, every
+  license is on the allowlist, and the attribution fields aren't empty.
+- Sources: The Mod Archive (only modules whose page states a PD or CC license) and the "Big
+  Mod Music Pack" on itch.io (a permissive subset of The Mod Archive). Verify each file's
+  license on its original Mod Archive page. Some uploads are mislabeled (covers of
+  commercial songs tagged PD, for example), so exclude covers and remixes of commercial
+  music.
+- **On-screen attribution:** the song-select card and the level intro show title, author,
+  and license, with links to the author and the source. A Credits screen lists everything,
+  including libopenmpt (BSD) and, if used, chiptune3.js (MIT).
 
 ## 11. Visual spec (`packages/client/render`)
 
-- Internal resolution **384×216** (16:9), integer-scaled with nearest-neighbour filtering and letterboxed. Optional 320×256 "Amiga PAL" mode later.
-- Palette: near-black background, neon cyan/magenta/lime/amber accents. LED segments go green → amber → red with height, lit vs unlit (dim) segments, and peak-hold dots in white.
-- Backgrounds: animated copper-bar gradients (horizontal colour bands) and a parallax starfield. Bars can pulse with the bass channel VU.
-- Juice: pooled particle emitters on note hits and kills, hit-stop (cosmetic only), screen shake, flash on downbeats, CRT filter (scanlines + slight bloom + vignette) as a toggle.
-- **Accessibility:** "reduce flashing" option (caps flash intensity and frequency, default ON until the player changes it), shake toggle, colour-blind-safe LED palette option, and remappable controls.
-- **Performance:** object pools for bullets, enemies and particles. No allocations in the per-frame loop. Use a ParticleContainer for particles. Target ≤ 2 ms/frame of sim+render work on desktop.
+- Internal resolution **384x216** (16:9), integer-scaled with nearest-neighbour filtering
+  and letterboxed. An optional 320x256 "Amiga PAL" mode later.
+- Palette: near-black background with neon cyan, magenta, lime, and amber accents. LED
+  segments go green to amber to red with height, with lit and unlit (dim) segments and
+  white peak-hold dots.
+- Backgrounds: animated copper-bar gradients (horizontal colour bands) and a parallax
+  starfield. The bars can pulse with the bass channel's VU.
+- Effects: pooled particle emitters on note hits and kills, hit-stop (cosmetic only),
+  screen shake, a flash on downbeats, and a CRT filter (scanlines, slight bloom, vignette)
+  as a toggle.
+- **Accessibility:** a "reduce flashing" option (caps flash intensity and frequency; on by
+  default until the player changes it), a shake toggle, a colour-blind-safe LED palette
+  option, and remappable controls.
+- **Performance:** object pools for bullets, enemies, and particles. No allocations in the
+  per-frame loop. Particles use a ParticleContainer. Target 2 ms or less per frame of sim
+  and render work on desktop.
 
 ## 12. Client UI (`packages/client/ui`)
 
-- Title screen (chrome logo, attract mode playing a bundled song's level with an AI ship).
-- Library: bundled songs + "Import modules" (file picker / drag-drop; File System Access API directory import on Chromium as an enhancement). Imported files are stored in IndexedDB.
-- Song select: metadata, difficulty, personal best, top-10 global (when online), attribution.
-- Settings: audio latency calibration, volume, controls (keyboard, gamepad via Gamepad API, touch overlay for mobile), visual options, accessibility.
-- Results screen: score breakdown, PB, submit to leaderboard, save replay.
+- Title screen: chrome logo, and an attract mode that plays a bundled song's level with an
+  AI ship.
+- Library: bundled songs plus "Import modules" (file picker or drag and drop; directory
+  import through the File System Access API on Chromium as an extra). Imported files are
+  stored in IndexedDB.
+- Song select: metadata, difficulty, personal best, the global top 10 when online, and
+  attribution.
+- Settings: audio latency calibration, volume, controls (keyboard, gamepad through the
+  Gamepad API, a touch overlay on mobile), visual options, accessibility.
+- Results screen: score breakdown, personal best, submit to the leaderboard, save the
+  replay.
 
 ## 13. Server (`packages/server`)
 
-- `POST /runs`: `{ replay, claimedScore, playerId }`. The server needs the module file to re-run the level. Flow:
-  1. If the hash is a bundled song or already known, load it from server storage.
-  2. If unknown, respond `needModule` and the client uploads the module bytes (size cap ~4 MB; verify the hash on receipt).
-  3. Run `@game/core` levelgen + sim on the replay in a worker thread. Accept only if the computed score equals the claimed score.
+- `POST /runs`: `{ replay, claimedScore, playerId }`. The server needs the module file to
+  re-run the level:
+  1. If the hash is a bundled song or already known, load the module from server storage.
+  2. If it's unknown, respond `needModule`, and the client uploads the module bytes (size
+     cap about 4 MB; the server checks the hash on receipt).
+  3. Run `@game/core` levelgen and sim on the replay in a worker thread. Accept the run only
+     if the computed score equals the claimed score.
 - `GET /leaderboards/:hash?difficulty=` returns the top N plus the caller's rank.
-- `GET /songs/:hash` returns metadata, author/source links and the player count.
-- **Players:** v1 uses an anonymous device keypair plus a chosen nickname, and the player can add one optional profile link (their music page: Mod Archive, Bandcamp, SoundCloud, etc.) shown on leaderboard entries. Add accounts/magic-link login later.
-- Rate limiting per IP and per player. Replays are stored so top runs can be watched.
-- Module storage: only store uploaded modules for hash lookup and validation. Don't serve user-uploaded modules publicly unless their license allows it.
+- `GET /songs/:hash` returns metadata, author and source links, and the player count.
+- **Players:** v1 uses an anonymous device keypair plus a chosen nickname. A player can add
+  one profile link (their music page: Mod Archive, Bandcamp, SoundCloud, and so on), shown
+  on their leaderboard entries. Accounts and magic-link login come later.
+- Rate limiting per IP and per player (`@fastify/rate-limit`). Replays are stored so top
+  runs can be watched.
+- Module storage: uploaded modules are stored only for hash lookup and validation. They
+  aren't served publicly unless their license allows it.
 
 ## 14. Milestones
 
-Do these in order and commit at the end of each one. Don't start the next until the current milestone's acceptance checks pass.
+Do these in order and commit at the end of each one. Don't start the next until the
+current milestone's acceptance checks pass.
 
-**S1 — Spike: libopenmpt access (do first)**
-- Confirm whether chiptune3.js exposes the libopenmpt calls needed: pattern/row/channel command data, current order/row, per-channel VU, offline render to a buffer. If it doesn't, build libopenmpt with Emscripten and export the needed C API functions directly.
-- Acceptance: a Node script and a browser page both load the same `.mod`, produce `LevelData`, and print an identical SHA-256 of the serialized `LevelData`.
+**S1: libopenmpt access spike (do first)**
 
-**M1 — Vertical slice**
-- One bundled song, LED terrain (ceiling/floor) scrolling in sync with playback, player ship, terrain collision, death/restart.
-- Acceptance: 60fps on desktop Chrome; terrain visibly in time with the music by ear.
+- Find out whether chiptune3.js exposes the libopenmpt calls needed: pattern, row, and
+  channel command data; current order and row; per-channel VU; offline render to a buffer;
+  and loading in Node. If it doesn't, build libopenmpt with Emscripten and export the
+  needed C API functions directly. Use the newest upstream libopenmpt release at the time.
+- Acceptance: a Node script and a browser page both load the same `.mod`, produce
+  `LevelData`, and print the same SHA-256 of the serialized `LevelData`.
 
-**M2 — Enemies and scoring**
-- Note events → enemies, shooting, on-beat bonus, score, lives, power-up meter.
-- Acceptance: a replay recorded in Chromium reproduces the identical score in Firefox, WebKit and Node (Playwright test).
+**M1: vertical slice**
 
-**M3 — Juice and look**
-- Particles, copper bars, starfield, CRT filter, hit flashes, title screen, results screen, accessibility toggles.
+- One bundled song, LED terrain (ceiling and floor) scrolling in sync with playback, the
+  player ship, terrain collision, death and restart.
+- Acceptance: 60 fps in desktop Chrome; the terrain is audibly in time with the music.
 
-**M4 — Library, offline, music pack**
-- Module import, IndexedDB caching, PWA install + full offline play, bundled pack with manifest validation, attribution and credits screens.
+**M2: enemies and scoring**
+
+- Note events become enemies; shooting, the on-beat bonus, score, lives, the power-up
+  meter.
+- Acceptance: a replay recorded in Chromium reproduces the same score in Firefox, WebKit,
+  and Node (Vitest browser mode test).
+
+**M3: effects and look**
+
+- Particles, copper bars, starfield, CRT filter, hit flashes, title screen, results screen,
+  accessibility toggles.
+
+**M4: library, offline, music pack**
+
+- Module import, IndexedDB caching, PWA install and full offline play, the bundled pack
+  with manifest validation, attribution and credits screens.
 - Acceptance: install as a PWA, turn on airplane mode, import a new module, and play it.
 
-**M5 — Leaderboards**
-- Fastify server, replay validation, per-song boards, player profile link, Docker compose file.
-- Acceptance: a tampered score is rejected; a legit run appears on the board.
+**M5: leaderboards**
 
-**M6 — Mobile and polish**
-- Touch controls, gamepad, latency calibration, performance pass on a mid-range Android phone, difficulty tuning across ~20 varied modules.
+- Fastify server, replay validation, per-song boards, the player profile link, a Docker
+  Compose file.
+- Acceptance: a tampered score is rejected; a legitimate run appears on the board.
+
+**M6: mobile and polish**
+
+- Touch controls, gamepad, latency calibration, a performance pass on a mid-range Android
+  phone, difficulty tuning across about 20 varied modules.
 
 ## 15. Testing
 
-- **Golden tests:** for fixture modules in `/packages/analysis/fixtures`, assert the SHA-256 of `LevelData` and `Level` against committed snapshots. Any change requires a `GEN_VERSION` bump.
-- **Cross-engine determinism:** a Playwright job runs fixtures + recorded replays in Chromium, Firefox and WebKit and compares against Node.
-- **Sim unit tests:** collision, scoring, power-ups, replay encode/decode.
-- **Performance check:** a headless benchmark of 10 000 sim ticks with max entities.
+- **Golden tests:** for the fixture modules in `packages/analysis/fixtures`, assert the
+  SHA-256 of `LevelData` and `Level` against committed snapshots. Any change to them
+  requires a `GEN_VERSION` bump.
+- **Cross-engine determinism:** Vitest browser mode runs the fixtures and recorded replays
+  in Chromium, Firefox, and WebKit and compares against the Node run.
+- **Sim unit tests:** collision, scoring, power-ups, replay encode and decode.
+- **Performance check:** a headless benchmark of 10 000 sim ticks with the maximum entity
+  count.
+- **Docs check:** `pnpm check:docs` enforces the writing rules in `docs/DOC-STYLE.md`.
 
-## 16. Open decisions (ask the owner, don't guess)
+## 16. Open decisions
+
+Ask the owner; don't guess.
 
 1. Final game title (placeholder: PATTERN BREAK).
-2. Free vs paid. This affects which licenses are acceptable (NC is already excluded).
+2. Free or paid. The code is MIT either way (decided 2026-11-08). This still affects how
+   the game is distributed and which music licenses are worth reviewing; NC is excluded
+   regardless.
 3. Platform priority: desktop web first, or mobile first?
-4. Where the leaderboard server is hosted (self-hosted homelab vs a VPS).
-5. Whether leaderboards accept user-imported modules from day one, or bundled songs only at first.
+4. Where the leaderboard server is hosted (self-hosted homelab or a VPS).
+5. Whether leaderboards accept user-imported modules from day one, or bundled songs only
+   at first.
+
+## Revisions
+
+- **2026-11-08**: Moved to Node 26 LTS, pnpm 12, TypeScript 7, Oxlint (in place of ESLint),
+  Vitest browser mode for cross-engine tests, and the built-in `node:sqlite` (in place of
+  better-sqlite3). Added the MIT license and the writing guide. Rewrote the text to match
+  `docs/DOC-STYLE.md`.
