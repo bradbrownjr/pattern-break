@@ -25,6 +25,7 @@ pnpm install
 | `pnpm test` | Vitest in each package, in Node. |
 | `pnpm test:browser` | The golden LevelData test in real browsers (see "Tests"). |
 | `pnpm --filter @game/analysis analyze <file>` | Analyzes one module and prints its LevelData hash and a summary. |
+| `pnpm screenshots` | Regenerates every figure in `docs/img/` (see "Screenshots"). |
 | `pnpm check:docs` | The writing-rules check (`tools/check-docs.ts`). |
 | `pnpm gen:tables` | Regenerates `packages/core/src/spectrum/tables.generated.ts`. |
 | `pnpm check` | Lint, type-check, tests, and the docs check, in that order. |
@@ -286,6 +287,86 @@ externalized; the loader imports it only under Node.
 **Render the same way everywhere.** With volume ramping on, the output depends on the frame
 counts passed to `readFloatStereo` (by under 1e-6), so the analysis pass uses one fixed chunk
 size in every environment.
+
+## Screenshots
+
+Every figure in the README and docs is generated, never hand-made or hand-edited. One command
+regenerates all of them from a manifest, so they stay current with the latest release.
+
+```sh
+pnpm screenshots                      # build the client, capture every shot
+pnpm screenshots --only smoke-placeholder,other-id
+pnpm screenshots --list               # print the manifest
+pnpm screenshots --no-build           # reuse packages/client/dist
+```
+
+The script builds the client, serves `packages/client/dist` on a free local port, opens each
+shot in headless Chromium at a device scale factor of 1, waits for `window.__pbCaptureReady`
+(15 s, then it fails and names the shot), and writes `docs/img/<id>.png`. It also writes
+`docs/img/figures.json`, which maps each id to its path, alt text, caption, and where it is
+used. Set `PB_CHROMIUM` to a Chromium binary when Playwright's own download is not available
+(the same variable the browser tests use).
+
+**Output is byte-stable.** Two runs on the same machine give identical PNG bytes. Chromium is
+started with fixed font hinting, no LCD text, and an sRGB profile, and the script writes a file
+only when its bytes differ, so an unchanged screen never shows up as a modified file. Different
+Chromium builds or fonts can still change pixels, which is why CI regenerates the figures
+rather than people.
+
+### The manifest
+
+`tools/screenshots/shots.ts` is a typed list. Each shot has:
+
+| Field | Meaning |
+|---|---|
+| `id` | File name stem, lowercase letters, digits, and hyphens. The image is `docs/img/<id>.png`. |
+| `query` | The capture-mode parameters below. The script adds `capture=1`. |
+| `viewport` | Optional, default 1152x648: an exact 3x of the 384x216 internal resolution, so pixels stay square. |
+| `element` | Optional CSS selector to crop to. Default is the whole viewport. |
+| `alt` | Alt text. Describe what is on screen (the scene, the shapes, the colors, any text), not what the figure is for. |
+| `caption` | One plain sentence for the README or docs. |
+| `usedIn` | `readme`, `docs`, or both. Empty means a test sample that no page shows. |
+
+### Capture mode
+
+The client reads query parameters; `packages/client/src/capture.ts` parses them
+(`readCaptureParams()`) and provides `markCaptureReady()`. For example:
+`/?capture=1&scene=play&song=pb-fixture-01&t=12.5&difficulty=normal&seed=1`.
+
+| Parameter | Meaning |
+|---|---|
+| `capture` | `1` turns capture mode on. Without it the page behaves normally. |
+| `scene` | Which screen to show (`play`, a menu, and so on). |
+| `song` | Song id from the bundled manifest. |
+| `t` | Song clock in seconds. |
+| `difficulty` | Difficulty name. |
+| `seed` | Integer seed for cosmetic randomness. Default 1. |
+
+In capture mode the renderer must:
+
+- **Not start audio.** No audio context, no song playback.
+- **Pin the song clock to `t`.** The clock does not advance; the frame is what the sim and
+  levelgen produce at `t` for that song and difficulty.
+- **Seed cosmetic randomness from `seed`** (particles, shake) with a seeded generator in
+  `client`, never `Math.random`. Cosmetics still never feed back into sim state.
+- **Disable anything time-varying that `t` does not drive:** idle animations, blinking
+  cursors, CRT flicker, intro fades, and anything that reads the wall clock.
+- **Set `window.__pbCaptureReady = true`** (call `markCaptureReady()`) once, after the frame
+  on screen is final: assets loaded, fonts ready, and the last draw done.
+
+The placeholder page calls `markCaptureReady()` today, which is what the smoke shot
+(`docs/img/smoke-placeholder.png`, not used in the README) exercises.
+
+### The release workflow
+
+`.github/workflows/screenshots.yml` runs on `release: published` and on manual dispatch
+(`workflow_dispatch`). It installs, runs `playwright install --with-deps chromium`, runs
+`pnpm screenshots`, and, if anything under `docs/img/` changed, pushes a `screenshots/run-<id>`
+branch and opens a pull request with `gh pr create` using `GITHUB_TOKEN` (permissions
+`contents: write` and `pull-requests: write`). The repository setting **Allow GitHub Actions
+to create and approve pull requests** (Settings, Actions, General) must be on for that step.
+A person reviews the changed images and merges the pull request; nothing is pushed to `main`
+directly.
 
 ## The docs check
 

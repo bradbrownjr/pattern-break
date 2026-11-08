@@ -1,0 +1,8 @@
+{
+  "smoke-placeholder": {
+    "path": "docs/img/smoke-placeholder.png",
+    "alt": "A white page with the text \"Pattern Break\" and the generator version in small black type in its top left corner.",
+    "caption": "Smoke test of the screenshot pipeline: the placeholder page. Not used in the README.",
+    "usedIn": []
+  }
+}
