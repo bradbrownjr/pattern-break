@@ -11,7 +11,6 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 
 | Item | What it delivers | Stage |
 |---|---|---|
-| [S1: libopenmpt access](#s1-libopenmpt-access) | Proof that the game can read a song file's (a tracker module's) pattern data and audio levels the same way in Node and in a browser. | Checks pass; waiting for Brad |
 | [M1: vertical slice](#m1-vertical-slice) | One song, LED terrain scrolling in time with it, a ship you can fly and crash. | Built; Brad to play-test |
 | [M2: enemies and scoring](#m2-enemies-and-scoring) | Notes become enemies; shooting, scoring, lives, power-ups, gamepad support, and replays that give the same score in every browser. | Planned |
 | [M3: effects and look](#m3-effects-and-look) | Particles, big explosions, sound effects, copper bars, starfield, CRT filter, title and results screens, accessibility options. | Planned |
@@ -33,29 +32,6 @@ Each milestone is finished only when its acceptance checks pass. Work them in or
 start the next until the current one is done.
 
 ---
-
-## S1: libopenmpt access
-
-**Goal:** confirm the game can get everything it needs out of libopenmpt, and settle how
-libopenmpt is built and loaded.
-
-- [x] Find out whether chiptune3.js exposes what we need. Its build of libopenmpt 0.8.10
-      exports the whole C API, but it was built for an AudioWorklet and its playback random
-      number generator is seeded from the clock.
-- [x] Build libopenmpt with Emscripten from the newest upstream release (0.8.10), with a
-      patch that makes playback deterministic. The `.wasm` is committed and its version and
-      hash are recorded in `vendor/libopenmpt/BUILD.md`.
-- [x] Load one `.mod` in a Node script and in a browser, and produce `LevelData` from each.
-- [x] Add the first golden fixture to `packages/analysis/fixtures`.
-
-**Acceptance:** the Node script and the browser page print the same SHA-256 of the
-serialized `LevelData`.
-
-**Docs:** `DEVELOPMENT.md` (how libopenmpt is built and loaded), the tech table in
-`PLAN.md`, the README status.
-
-**Result (2026-11-08):** `pnpm --filter @game/analysis analyze` and the golden test in
-Chromium both give `68dae3ce...` for `pb-fixture-01.mod`. Firefox and WebKit run in CI.
 
 ## M1: vertical slice
 
@@ -195,6 +171,9 @@ These need Brad's answer before the work that depends on them. Don't guess.
   song makes an easy level; enemies still make it a challenge (2026-11-08).
 - **Wording:** player-facing text calls modules songs and says what a module is on first
   mention (2026-11-08).
+- **libopenmpt patch:** we carry `tools/libopenmpt/deterministic-prng.patch`, which seeds
+  playback randomness with a fixed value so a song renders the same on every load
+  (2026-11-08).
 - **Server-side replay checks** stay, measured before they're turned on (2026-11-08; see
   M5).
 
