@@ -13,7 +13,14 @@ import {
   SEGMENT_PITCH,
 } from '../playfield.ts';
 import {
+  BOMB_BLAST_PX,
+  BOMB_GRAVITY_Q8,
+  BOMB_MAX_VY_Q8,
+  BOMB_SIZE,
+  BOMB_VX_Q8,
   DRIFT_Q8,
+  MAX_NUKES,
+  NUKE_CHARGE_KILLS,
   KILL_POINTS,
   MAX_MULTIPLIER,
   ON_BEAT_TICKS,
@@ -68,6 +75,8 @@ const WIDTH_Q8 = PLAYFIELD_WIDTH * Q8;
 const SHOT_HW = (SHOT_WIDTH * Q8) / 2;
 const SHOT_HH = (SHOT_HEIGHT * Q8) / 2;
 const BULLET_H = (ENEMY_BULLET_SIZE * Q8) / 2;
+const BOMB_H = (BOMB_SIZE * Q8) / 2;
+const BLAST_H = BOMB_BLAST_PX * Q8;
 /** Half sizes of each enemy kind's hitbox, indexed by EnemyKind. */
 const ENEMY_HW = [(TURRET_WIDTH * Q8) / 2, (TANK_WIDTH * Q8) / 2, (ENEMY_SHIP_WIDTH * Q8) / 2] as const;
 const ENEMY_HH = [(TURRET_HEIGHT * Q8) / 2, (TANK_HEIGHT * Q8) / 2, (ENEMY_SHIP_HEIGHT * Q8) / 2] as const;
@@ -132,6 +141,21 @@ export interface SimState {
   bulletVX: Int32Array;
   bulletVY: Int32Array;
   bulletCount: number;
+  /** The concussive bomb: in the air or not, screen centre and fall speed, Q8. */
+  bombActive: boolean;
+  bombX: number;
+  bombY: number;
+  bombVY: number;
+  /** The last bomb's burst: its tick (-1 before the first) and screen centre, Q8. */
+  blastTick: number;
+  blastX: number;
+  blastY: number;
+  /** Nukes held, kills on the beat towards the next, and the tick of the last one (-1). */
+  nukes: number;
+  nukeCharge: number;
+  nukeTick: number;
+  /** The previous tick's input, so a press of the nuke button acts once. */
+  prevInput: number;
 }
 
 export function createSimState(): SimState {
@@ -170,6 +194,17 @@ export function createSimState(): SimState {
     bulletVX: new Int32Array(BULLET_SLOTS),
     bulletVY: new Int32Array(BULLET_SLOTS),
     bulletCount: 0,
+    bombActive: false,
+    bombX: 0,
+    bombY: 0,
+    bombVY: 0,
+    blastTick: -1,
+    blastX: 0,
+    blastY: 0,
+    nukes: 0,
+    nukeCharge: 0,
+    nukeTick: -1,
+    prevInput: 0,
   };
   resetSimState(state);
   return state;
@@ -205,6 +240,17 @@ export function resetSimState(state: SimState): void {
   state.shotActive.fill(0);
   state.bulletActive.fill(0);
   state.bulletCount = 0;
+  state.bombActive = false;
+  state.bombX = 0;
+  state.bombY = 0;
+  state.bombVY = 0;
+  state.blastTick = -1;
+  state.blastX = 0;
+  state.blastY = 0;
+  state.nukes = 0;
+  state.nukeCharge = 0;
+  state.nukeTick = -1;
+  state.prevInput = 0;
 }
 
 function sizeEnemies(state: SimState, level: Level): void {
@@ -364,15 +410,74 @@ export function onBeat(level: Level, inst: number, t: number): boolean {
   return lo < level.noteStart[inst + 1]! && level.noteTick[lo]! <= t + ON_BEAT_TICKS;
 }
 
-/** Scores enemy i, shot down at tick t: its kind's points, doubled on the beat, times the multiplier. */
-function scoreKill(level: Level, state: SimState, i: number, t: number): void {
-  const beat = onBeat(level, level.enemies.instrument[i]!, t);
+/**
+ * Destroys enemy i at tick t and scores it: its kind's points, doubled on the beat (unless
+ * `nuked`), times the multiplier. A kill on the beat charges the nuke.
+ */
+function scoreKill(level: Level, state: SimState, i: number, t: number, nuked = false): void {
+  endEnemy(state, i, t, EnemyStatus.destroyed);
+  state.kills++;
+  const beat = !nuked && onBeat(level, level.enemies.instrument[i]!, t);
   const points = KILL_POINTS[level.enemies.kind[i]!]! * (beat ? 2 : 1) * scoreMultiplier(state.streak);
   state.score += points;
   state.enemyPoints[i] = points;
   state.enemyOnBeat[i] = beat ? 1 : 0;
   state.streak++;
-  if (beat) state.onBeatKills++;
+  if (beat) {
+    state.onBeatKills++;
+    if (state.nukes < MAX_NUKES && ++state.nukeCharge >= NUKE_CHARGE_KILLS) {
+      state.nukes++;
+      state.nukeCharge = 0;
+    }
+  }
+}
+
+/** The bomb bursts at (x, y) at tick t, destroying every live enemy its blast overlaps. */
+function burstBomb(level: Level, state: SimState, x: number, y: number, t: number): void {
+  const e = level.enemies;
+  state.bombActive = false;
+  state.blastTick = t;
+  state.blastX = x;
+  state.blastY = y;
+  for (let i = state.firstLive; i < state.nextSpawn; i++) {
+    if (state.enemyStatus[i] !== EnemyStatus.alive) continue;
+    const k = e.kind[i]!;
+    if (overlaps(x, y, BLAST_H, BLAST_H, state.enemyX[i]!, state.enemyY[i]!, ENEMY_HW[k]!, ENEMY_HH[k]!)) {
+      scoreKill(level, state, i, t);
+    }
+  }
+}
+
+/** Moves the bomb one tick and bursts it if it reaches the terrain, an enemy, or the screen's edge. */
+function moveBomb(level: Level, state: SimState, t: number): void {
+  const e = level.enemies;
+  let vy = state.bombVY + BOMB_GRAVITY_Q8;
+  if (vy > BOMB_MAX_VY_Q8) vy = BOMB_MAX_VY_Q8;
+  state.bombVY = vy;
+  const x = state.bombX + BOMB_VX_Q8;
+  const y = state.bombY + vy;
+  state.bombX = x;
+  state.bombY = y;
+  let burst = x + BOMB_H >= WIDTH_Q8 || y + BOMB_H >= HEIGHT_Q8 || boxHitsTerrain(level, t, x, y, BOMB_H, BOMB_H);
+  for (let i = state.firstLive; i < state.nextSpawn && !burst; i++) {
+    if (state.enemyStatus[i] !== EnemyStatus.alive) continue;
+    const k = e.kind[i]!;
+    burst = overlaps(x, y, BOMB_H, BOMB_H, state.enemyX[i]!, state.enemyY[i]!, ENEMY_HW[k]!, ENEMY_HH[k]!);
+  }
+  if (burst) burstBomb(level, state, x, y, t);
+}
+
+/** The nuke at tick t: every live enemy on screen is destroyed and every enemy bullet cleared. */
+function nuke(level: Level, state: SimState, t: number): void {
+  state.nukes--;
+  state.nukeTick = t;
+  for (let i = state.firstLive; i < state.nextSpawn; i++) {
+    if (state.enemyStatus[i] !== EnemyStatus.alive) continue;
+    const x = state.enemyX[i]!;
+    if (x >= 0 && x < WIDTH_Q8) scoreKill(level, state, i, t, true);
+  }
+  state.bulletActive.fill(0);
+  state.bulletCount = 0;
 }
 
 /** Fires an enemy bullet from (x, y) at the ship, if the difficulty's cap allows one more. */
@@ -431,8 +536,11 @@ function loseLife(level: Level, state: SimState, t: number): void {
  * 1. Move the ship (opposite directions cancel; diagonals use SHIP_DIAGONAL_SPEED_Q8 per
  *    axis) and keep it in bounds, then advance the tick.
  * 2. Spawn enemies whose time has come, move every live one, and drop those off screen.
- * 3. Fire if the fire bit is held and the gun is ready; move shots, which pass through the
- *    LED walls (so turrets on the bar tips can be hit) and stop on the first enemy they hit.
+ * 3. A new press of the nuke button with a nuke held destroys every enemy on screen and
+ *    clears the bullets. Fire if the fire bit is held and the gun is ready; move shots,
+ *    which pass through the LED walls (so turrets on the bar tips can be hit) and stop on
+ *    the first enemy they hit. Move the bomb, or drop one if the bomb bit is held and none
+ *    is in the air; it bursts on the terrain or an enemy, destroying all within its blast.
  * 4. Enemies fire on their scheduled ticks; move enemy bullets, which stop on the terrain.
  * 5. Unless the ship is in its safe time after a respawn, test it against the terrain,
  *    live enemies (which are destroyed too) and enemy bullets; a hit costs a life and the
@@ -476,7 +584,8 @@ export function tick(level: Level, state: SimState, input: number): void {
     state.firstLive++;
   }
 
-  // 3. Shots.
+  // 3. The nuke, shots and the bomb.
+  if ((input & ~state.prevInput & InputBit.nuke) !== 0 && state.nukes > 0) nuke(level, state, t);
   if (state.shotCooldown > 0) state.shotCooldown--;
   if ((input & InputBit.fire) !== 0 && state.shotCooldown === 0) {
     let slot = 0;
@@ -503,13 +612,17 @@ export function tick(level: Level, state: SimState, input: number): void {
       if (!overlaps(sx, sy, SHOT_HW, SHOT_HH, state.enemyX[i]!, state.enemyY[i]!, ENEMY_HW[k]!, ENEMY_HH[k]!)) continue;
       state.shotActive[s] = 0;
       state.enemyHp[i]!--;
-      if (state.enemyHp[i] === 0) {
-        endEnemy(state, i, t, EnemyStatus.destroyed);
-        state.kills++;
-        scoreKill(level, state, i, t);
-      }
+      if (state.enemyHp[i] === 0) scoreKill(level, state, i, t);
       break;
     }
+  }
+  if (state.bombActive) {
+    moveBomb(level, state, t);
+  } else if ((input & InputBit.bomb) !== 0) {
+    state.bombActive = true;
+    state.bombX = x;
+    state.bombY = y + HALF_H + BOMB_H;
+    state.bombVY = 0;
   }
 
   // 4. Enemy fire and bullets.
@@ -555,6 +668,7 @@ export function tick(level: Level, state: SimState, input: number): void {
     }
     if (hit) loseLife(level, state, t);
   }
+  state.prevInput = input;
   if (state.tick >= level.tickCount && !state.dead) {
     state.finished = true;
     state.survivalBonus = state.lives * SURVIVAL_POINTS_PER_LIFE;
@@ -572,12 +686,13 @@ export function runInputLog(level: Level, inputs: Uint8Array, state: SimState = 
 }
 
 /**
- * A deterministic byte form of the state, for golden hashes: 14 little-endian i32s (tick,
+ * A deterministic byte form of the state, for golden hashes: 17 little-endian i32s (tick,
  * shipX, shipY, dead, deathTick, lives, finished, safeUntil, hitTick, kills, score,
- * streak, onBeatKills, survivalBonus), then each enemy's status byte.
+ * streak, onBeatKills, survivalBonus, nukes, nukeCharge, blastTick), then each enemy's
+ * status byte.
  */
 export function serializeSimState(state: SimState): Uint8Array {
-  const out = new Uint8Array(56 + state.enemyStatus.length);
+  const out = new Uint8Array(68 + state.enemyStatus.length);
   const view = new DataView(out.buffer);
   const fields = [
     state.tick,
@@ -594,8 +709,11 @@ export function serializeSimState(state: SimState): Uint8Array {
     state.streak,
     state.onBeatKills,
     state.survivalBonus,
+    state.nukes,
+    state.nukeCharge,
+    state.blastTick,
   ];
   for (let i = 0; i < fields.length; i++) view.setInt32(i * 4, fields[i]!, true);
-  out.set(state.enemyStatus, 56);
+  out.set(state.enemyStatus, 68);
   return out;
 }

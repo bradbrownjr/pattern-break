@@ -200,7 +200,7 @@ every bar of every generated level.
 - Sim time is derived from the audio clock (see "Audio and timing"). If the render loop hitches, run several
   ticks to catch up. Never skip ticks.
 - Player ship: 8-way movement, a fire button (hold for auto-fire: 15 shots a second, up to 6
-  in flight), one special or bomb button. Shots pass through the LED walls, so turrets on
+  in flight), a bomb button and a nuke button. Shots pass through the LED walls, so turrets on
   the bar tips can be hit, and stop on the first enemy they hit. Turrets and ships take one
   hit, tanks three.
 - Collision: ship against lit LED segments, enemies, and enemy bullets. Integer AABB
@@ -209,9 +209,17 @@ every bar of every generated level.
 - **Lives (2026-11-09):** three. A hit costs one; ramming an enemy destroys it too. The
   music can't rewind, so the ship comes back at the playhead, in the middle of the cave
   there, can't be hit for 2 s, and the enemy bullets in flight are cleared.
-- A Gradius-style power-up meter, drawn as a VU meter. Collected capsules advance the meter,
-  and a button press buys the highlighted upgrade (speed, double shot, laser, option pod,
-  shield).
+- **Bomb (2026-11-09):** held, the bomb button drops a concussive bomb whenever none is in
+  the air. It falls in an arc and bursts on the terrain or an enemy, destroying every enemy
+  within 24 px, tanks included. Its kills score like shots.
+- **Nuke (2026-11-09):** a last resort. A press destroys every enemy on screen and clears
+  the enemy bullets. One charges per 10 kills on the beat, up to 3 held, kept when a life
+  is lost; a level starts with none. Its kills score their points times the multiplier,
+  never doubled.
+- A Gradius-style power-up meter, drawn as a VU meter. Shooting down a whole formation
+  drops a capsule, capsules advance the meter, and a button press buys the highlighted
+  upgrade: boost (an afterburner on its own button, more fuel with each buy), double shot,
+  laser, option pod, shield. Losing a life loses every upgrade bought (2026-11-09).
 - **Scoring (2026-11-09):** a shot-down ship is 100, a turret 200, a tank 300; ramming scores
   nothing. The **on-beat bonus** doubles a kill within 25 ms of a note of that enemy's
   instrument. A **streak multiplier** adds 1 for every 10 kills without losing a life, up

@@ -16,7 +16,7 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 | [Title music, demo, and levels](#title-music-demo-and-levels) | Title music, an attract demo, menu sounds, an arcade run of levels, and game-over music. | Built; Brad to play-test |
 | [Cavern terrain](#cavern-terrain) | A cave that squeezes on every hit and winds with the melody; difficulty sets the song's speed and the cave's width. | Built; Brad to play-test |
 | [Eight levels](#eight-levels) | Six more songs, so the arcade run has eight levels. | Built; Brad to play-test |
-| [M2: enemies and scoring](#m2-enemies-and-scoring) | Notes become enemies; shooting, scoring, lives, power-ups, gamepad support, and replays that give the same score in every browser. | Enemies, shooting, scoring and the gamepad built; Brad to play-test |
+| [M2: enemies and scoring](#m2-enemies-and-scoring) | Notes become enemies; shooting, scoring, lives, power-ups, gamepad support, and replays that give the same score in every browser. | Enemies, shooting, scoring, the gamepad, bomb and nuke built; Brad to play-test |
 | [M3: effects and look](#m3-effects-and-look) | Particles, big explosions, sound effects, copper bars, starfield, CRT filter, title and results screens, accessibility options. | Planned |
 | [M4: library, offline, music pack](#m4-library-offline-music-pack) | Import your own songs, install the game, and play with no connection; a bundled, credited music pack. | Planned |
 | [M5: leaderboards](#m5-leaderboards) | A global board per song, with scores checked by replaying them on the server. | Planned |
@@ -219,9 +219,28 @@ first key; `pnpm check` passes.
 **Docs:** `DEVELOPMENT.md` ("Playing it", "Menus and the jukebox"), the title screen's
 help.
 
+### Bomb and nuke
+
+- [x] The bomb button drops a concussive bomb that falls in an arc and bursts on the
+      floor or an enemy, destroying everything within 24 px, tanks included. One in the
+      air at a time.
+- [x] The nuke button destroys every enemy on screen and clears the bullets. One charges
+      per 10 kills on the beat, up to 3, shown after the lives.
+- [x] Keys X or K (bomb) and V or ; (nuke); pad B and X. The autopilot bombs, and nukes
+      when it can't dodge.
+- [x] `SIM_VERSION` 5, with the golden hashes regenerated.
+
+**Acceptance:** Brad finds the bomb useful against tanks without making shooting pointless,
+and the nuke worth earning; `pnpm check` passes.
+
+**Docs:** `PLAN.md` ("Simulation"), `DEVELOPMENT.md` ("Simulation", "Playing it",
+"Renderer").
+
 ### Still to come
 
-- [ ] The bomb and the power-up meter.
+- [ ] Capsules from whole formations and the power-up meter: boost (an afterburner on its
+      own button), double shot, laser, option pod, shield. Input grows to 16 bits for the
+      boost button.
 - [ ] Pads and arcade sticks without the Gamepad API's standard mapping, which need a
       way to assign their buttons.
 - [ ] Replay recording and playback.
@@ -334,6 +353,15 @@ These need Brad's answer before the work that depends on them. Don't guess.
   instrument (2026-11-09).
 - **Lives:** three; a hit costs one and the ship comes back at the playhead (2026-11-09).
 - **M2 comes in slices,** enemies and shooting first, each play-tested (2026-11-09).
+- **Power-ups:** shooting down a whole formation of ships drops a capsule. The meter is
+  boost, double shot, laser, option pod, shield. Boost is an afterburner on its own button:
+  the first buy unlocks it and more buys add fuel, since a permanent speed-up made the
+  ship too hard to steer. Losing a life loses every power-up bought (2026-11-09).
+- **Bomb:** its own button from the start; a concussive bomb falls to the floor and
+  destroys the tanks and turrets near where it bursts (2026-11-09).
+- **Nuke:** a last resort on its own button that clears the screen of enemies and
+  bullets. One charges per 10 on-beat kills, up to 3 held; a level starts with none
+  (2026-11-09).
 - **Difficulty sets the song's speed and the cave's width;** the beat and the winding are
   the same on every difficulty, and enemies add the rest of the challenge (2026-11-09).
 - **Terrain height comes from the song as it is,** with no per-song normalization. A quiet

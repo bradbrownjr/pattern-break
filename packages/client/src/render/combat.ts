@@ -1,7 +1,7 @@
-// Enemies, shots and bullets drawn from the sim state, plus their cosmetics: a burst and
-// the points scored when an enemy is shot down, an explosion when the ship loses a life,
-// and the HUD: lives left, the streak multiplier and the score (docs/PLAN.md, "Enemies"
-// and "Scoring"). Turrets and tanks are placed against the terrain as drawn, so
+// Enemies, shots, bullets and the bomb drawn from the sim state, plus their cosmetics: a
+// burst and the points scored when an enemy is destroyed, the bomb's blast, the nuke's
+// flash, an explosion when the ship loses a life, and the HUD: lives left, the streak
+// multiplier, nukes held and the score (docs/PLAN.md, "Enemies" and "Scoring"). Turrets and tanks are placed against the terrain as drawn, so
 // they stay on their bars. Effect timing comes from song time, so capture mode reproduces
 // it. Sprites are pooled; drawing allocates nothing.
 
@@ -10,6 +10,7 @@ import {
   EnemyKind,
   EnemyStatus,
   MAX_SHOTS,
+  PLAYFIELD_HEIGHT,
   PLAYFIELD_WIDTH,
   Q8,
   SAMPLES_PER_TICK,
@@ -23,6 +24,7 @@ import {
 } from '@game/core';
 import { Container, Sprite, Texture } from 'pixi.js';
 import { Explosion, SHIP_EXPLOSION, type ExplosionStyle } from './effects.ts';
+import { flashAlpha } from './flash.ts';
 import { AMBER, BACKGROUND, CYAN, LIME, MAGENTA, WHITE } from './palette.ts';
 import { flipRows, mapTexture } from './pixels.ts';
 import { seededRandom } from './random.ts';
@@ -61,6 +63,19 @@ const ENEMY_SHIP_MAP = [
 
 const BULLET_MAP = ['.mm.', 'mwwm', 'mwwm', '.mm.'];
 
+const BOMB_MAP = ['.aa.', 'awwa', 'aaaa', '.aa.'];
+
+/** A nuke held, in the HUD. */
+const NUKE_MAP = [
+  '..aaa..',
+  '.a...a.',
+  'a.w.w.a',
+  'a..w..a',
+  'a.w.w.a',
+  '.a...a.',
+  '..aaa..',
+];
+
 const COLORS: Record<string, number> = { m: MAGENTA, w: WHITE, a: AMBER, l: LIME, g: 0x3c7a1a };
 
 /** Enemy sprites on screen at once; enemies beyond this are not drawn. */
@@ -68,6 +83,8 @@ const ENEMY_SPRITES = 64;
 /** Enemy bursts that can play at once; the oldest is reused. */
 const BURSTS = 8;
 const ENEMY_BURST: ExplosionStyle = { particles: 16, ms: 450, colors: [WHITE, MAGENTA, AMBER, LIME], speed: 70 };
+const BLAST: ExplosionStyle = { particles: 40, ms: 600, colors: [WHITE, AMBER, AMBER, MAGENTA], speed: 130 };
+const NUKE_ICONS = 3;
 /** The ship blinks every 6 ticks (20 ms on, 20 ms off) while it can't be hit. */
 const BLINK_TICKS = 6;
 const LIFE_ICON_GAP = 2;
@@ -85,6 +102,8 @@ interface Textures {
   tank: Texture;
   ship: Texture;
   bullet: Texture;
+  bomb: Texture;
+  nuke: Texture;
 }
 
 let textures: Textures | null = null;
@@ -96,6 +115,8 @@ function getTextures(): Textures {
     tank: mapTexture(TANK_MAP, COLORS, 'tank'),
     ship: mapTexture(ENEMY_SHIP_MAP, COLORS, 'enemy-ship'),
     bullet: mapTexture(BULLET_MAP, COLORS, 'bullet'),
+    bomb: mapTexture(BOMB_MAP, COLORS, 'bomb'),
+    nuke: mapTexture(NUKE_MAP, COLORS, 'nuke'),
   };
   return textures;
 }
@@ -131,6 +152,15 @@ export class CombatView {
   #score = new PixelText('', WHITE);
   #scoreBacking = new Sprite(Texture.WHITE);
   #shownScore = -1;
+  #bomb = new Sprite();
+  #blast = new Explosion(BLAST);
+  #blastSample = -1;
+  #seenBlast = -1;
+  /** The nuke's flash over the playfield, under the HUD. */
+  #nukeFlash = new Sprite(Texture.WHITE);
+  #nukeSample = -1;
+  #seenNuke = -1;
+  #nukes: Sprite[] = [];
   #lifeLost = new Explosion(SHIP_EXPLOSION);
   #lifeLostSample = -1;
   /** Sim tick and first possibly live enemy at the last draw, to find what changed since. */
@@ -156,7 +186,13 @@ export class CombatView {
       this.#bursts.push(b);
       this.#burstSample.push(-1);
     }
-    this.container.addChild(this.#lifeLost.container);
+    this.#bomb.texture = getTextures().bomb;
+    this.#add(this.#bomb);
+    this.container.addChild(this.#blast.container, this.#lifeLost.container);
+    this.#nukeFlash.width = PLAYFIELD_WIDTH;
+    this.#nukeFlash.height = PLAYFIELD_HEIGHT;
+    this.#nukeFlash.visible = false;
+    this.hud.addChild(this.#nukeFlash);
     this.#livesBacking.tint = BACKGROUND;
     this.#livesBacking.alpha = 0.85;
     this.#livesBacking.position.set(2, 2);
@@ -170,6 +206,12 @@ export class CombatView {
       this.#lives.push(icon);
     }
     this.hud.addChild(this.#multiplier);
+    for (let i = 0; i < NUKE_ICONS; i++) {
+      const icon = new Sprite(getTextures().nuke);
+      icon.visible = false;
+      this.hud.addChild(icon);
+      this.#nukes.push(icon);
+    }
     this.#scoreBacking.tint = BACKGROUND;
     this.#scoreBacking.alpha = 0.85;
     this.#scoreBacking.height = SHIP_SPRITE_HEIGHT + 4;
@@ -198,6 +240,12 @@ export class CombatView {
     this.#seenHit = -1;
     this.#lifeLostSample = -1;
     this.#lifeLost.hide();
+    this.#blastSample = -1;
+    this.#seenBlast = -1;
+    this.#blast.hide();
+    this.#nukeSample = -1;
+    this.#seenNuke = -1;
+    this.#nukeFlash.visible = false;
     for (let i = 0; i < BURSTS; i++) {
       this.#burstSample[i] = -1;
       this.#bursts[i]!.hide();
@@ -257,6 +305,21 @@ export class CombatView {
       placeCentred(sprite, state.bulletX[b]! / Q8, state.bulletY[b]! / Q8);
     }
 
+    // The bomb, its blast, and the nuke's flash.
+    this.#bomb.visible = state.bombActive;
+    if (state.bombActive) placeCentred(this.#bomb, state.bombX / Q8, state.bombY / Q8);
+    if (state.blastTick !== this.#seenBlast && state.blastTick > 0) {
+      this.#blast.start(state.blastX / Q8, state.blastY / Q8, seededRandom(state.blastTick));
+      this.#blastSample = state.blastTick * SAMPLES_PER_TICK;
+    }
+    this.#seenBlast = state.blastTick;
+    if (this.#blastSample >= 0) this.#blast.draw(Math.max(0, samplesToMs(displaySamples - this.#blastSample)));
+    if (state.nukeTick !== this.#seenNuke && state.nukeTick > 0) this.#nukeSample = state.nukeTick * SAMPLES_PER_TICK;
+    this.#seenNuke = state.nukeTick;
+    const nukeAlpha = this.#nukeSample < 0 ? 0 : flashAlpha(samplesToMs(displaySamples - this.#nukeSample));
+    this.#nukeFlash.visible = nukeAlpha > 0;
+    this.#nukeFlash.alpha = nukeAlpha;
+
     // Bursts for enemies destroyed since the last draw. They sit at or after the first
     // live enemy of the last draw.
     for (let i = this.#scanFrom; i < state.nextSpawn; i++) {
@@ -303,8 +366,17 @@ export class CombatView {
     this.#multiplier.visible = multiplier > 1;
     this.#multiplier.text = `x${multiplier}`;
     this.#multiplier.place(2 + iconsWidth + HUD_PAD, 4 + Math.floor((SHIP_SPRITE_HEIGHT - 7) / 2));
-    this.#livesBacking.visible = lives > 0 || multiplier > 1;
-    this.#livesBacking.width = iconsWidth + (multiplier > 1 ? this.#multiplier.textWidth + 2 * HUD_PAD : 0);
+    let right = 2 + iconsWidth + (multiplier > 1 ? this.#multiplier.textWidth + 2 * HUD_PAD : 0);
+    const nukes = state.nukes < NUKE_ICONS ? state.nukes : NUKE_ICONS;
+    for (let i = 0; i < NUKE_ICONS; i++) {
+      const icon = this.#nukes[i]!;
+      icon.visible = i < nukes;
+      if (!icon.visible) continue;
+      icon.position.set(right + (i === 0 ? HUD_PAD : 0), 4 + Math.floor((SHIP_SPRITE_HEIGHT - NUKE_MAP.length) / 2));
+      right = icon.x + NUKE_MAP.length + LIFE_ICON_GAP;
+    }
+    this.#livesBacking.visible = right > 2 + LIFE_ICON_GAP;
+    this.#livesBacking.width = right - 2;
 
     // Score, in the top right corner.
     if (state.score !== this.#shownScore) {

@@ -47,8 +47,8 @@ export const shots: Shot[] = [
       'menu in small pixel type: "Play" in amber with an amber ">" before it, then "Practice" with ' +
       '"The_Epic_Chip", "Difficulty" with "Normal", and "Jukebox", in grey. Under the menu, "Music: ' +
       'The_Epic_Chip by Drozerix. Public Domain.", and at the bottom three lines of help: "Up and down choose. ' +
-      'Left and right change. Enter selects.", "In play: arrows or WASD fly, Space or Z fires, Esc pauses." ' +
-      'and "Gamepad: stick or D-pad flies, A fires, Start pauses."',
+      'Left and right change. Enter selects.", "Keys: arrows fly, Z fires, X bombs, V nukes, Esc pauses." ' +
+      'and "Pad: stick flies, A fires, B bombs, X nukes, Start pauses."',
     caption: 'The title menu. Not used in the README.',
     usedIn: [],
   },
@@ -61,9 +61,10 @@ export const shots: Shot[] = [
       'leaving a dark passage across the middle. Two small magenta and amber turrets sit upside down on the ' +
       'tips of the ceiling. A small cyan ship with a magenta engine flame flies on the left, with a row of cyan ' +
       'shots ahead of it and a scatter of coloured particles where an enemy was just destroyed, with "200" in ' +
-      'white pixel digits above it and above another kill. Three small ship icons on a dark panel in the top ' +
-      'left corner show the lives left, followed by "x2" in amber; "0002200" in white in the top right ' +
-      'corner is the score.',
+      'white pixel digits above it and above another kill. Below the ship a small amber bomb falls, and a ' +
+      'burst of particles marks where the last one hit the floor bars. Three small ship icons on a dark ' +
+      'panel in the top left corner show the lives left, followed by "x2" in amber; "0003000" in white in ' +
+      'the top right corner is the score.',
     caption: 'Pattern Break at 21.5 seconds into the test song on normal, with the ship flown by the autopilot.',
     usedIn: ['readme'],
   },
@@ -76,7 +77,8 @@ export const shots: Shot[] = [
       'through yellow and orange to red at their tips, hang from the top and rise from the bottom and scroll ' +
       'from right to left, one column per row of the song. Small magenta and amber turrets ride in on the ' +
       'tips of the floor and ceiling, and small magenta enemy ships fly in from the right and fire round ' +
-      'magenta bullets. A small cyan ship on the left keeps firing cyan shots and moves up and down to dodge. ' +
+      'magenta bullets. A small cyan ship on the left keeps firing cyan shots, drops small amber bombs that ' +
+      'burst on the floor bars, and moves up and down to dodge. ' +
       'Three ship icons in the top left corner show the lives left, followed by "x3" in amber, and the score ' +
       'in the top right corner counts up as each kill shows its points where the enemy was.',
     caption: 'Four seconds of the test song on normal, flown by the autopilot through the sim.',

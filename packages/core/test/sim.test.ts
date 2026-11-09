@@ -367,6 +367,105 @@ describe('score', () => {
   });
 });
 
+describe('bomb', () => {
+  it('falls from the ship in an arc and bursts on the floor', () => {
+    const level = enemyLevel([], 400);
+    const s = createSimState();
+    tick(level, s, InputBit.bomb);
+    // Dropped from the ship's underside: (64, 108 + 3 + 2).
+    expect([s.bombActive, s.bombX, s.bombY]).toEqual([true, 64 * Q, 113 * Q]);
+    let moves = 0;
+    while (s.blastTick < 0) {
+      tick(level, s, 0);
+      moves++;
+    }
+    // After n moves y is 113 px + 8 n (n + 1) / 2 Q8; the bomb's bottom reaches 216 px on the 80th.
+    expect(moves).toBe(80);
+    expect([s.blastX, s.blastY, s.bombActive]).toEqual([144 * Q, 113 * Q + 4 * 80 * 81, false]);
+  });
+
+  it('drops one at a time while held', () => {
+    const level = enemyLevel([], 400);
+    const s = createSimState();
+    let drops = 0;
+    for (let t = 0; t < 200; t++) {
+      const was = s.bombActive;
+      tick(level, s, InputBit.bomb);
+      if (!was && s.bombActive) drops++;
+    }
+    // 1 tick to drop, 80 to fall: a new one every 81 ticks.
+    expect(drops).toBe(3);
+  });
+
+  it('destroys a tank in one blast, and scores it like a shot', () => {
+    const level = enemyLevel([{ kind: EnemyKind.tank, spawnTick: 0, x: 170 * Q, instrument: 1 }], 400);
+    const s = createSimState();
+    tick(level, s, InputBit.bomb);
+    while (s.blastTick < 0) tick(level, s, 0);
+    expect([s.enemyStatus[0], s.kills, s.score, s.enemyPoints[0]]).toEqual([EnemyStatus.destroyed, 1, 300, 300]);
+  });
+
+  it('leaves enemies outside the blast alone', () => {
+    const level = enemyLevel([{ kind: EnemyKind.turret, spawnTick: 0, x: 250 * Q, y: 205 * Q }], 400);
+    const s = createSimState();
+    tick(level, s, InputBit.bomb);
+    while (s.blastTick < 0) tick(level, s, 0);
+    // The burst is at x 144; the turret's centre is 106 px away.
+    expect(s.enemyStatus[0]).toBe(EnemyStatus.alive);
+  });
+});
+
+describe('nuke', () => {
+  const onScreen: HandEnemy[] = [
+    { kind: EnemyKind.turret, spawnTick: 0, x: 300 * Q, y: 30 * Q, instrument: 1, fire: [5] },
+    { kind: EnemyKind.tank, spawnTick: 0, x: 200 * Q, instrument: 1 },
+    // Off the right edge: not hit.
+    { kind: EnemyKind.turret, spawnTick: 0, x: 390 * Q, y: 30 * Q, instrument: 1 },
+  ];
+
+  it('a press destroys every enemy on screen, clears bullets, and never doubles on the beat', () => {
+    // Notes on every tick, so a shot kill would be on the beat.
+    const notes = { 1: Array.from({ length: 200 }, (_, t) => t) };
+    const level = enemyLevel(onScreen, 400, 0, 60, notes);
+    const s = createSimState();
+    s.nukes = 2;
+    for (let t = 0; t < 8; t++) tick(level, s, 0);
+    expect(s.bulletCount).toBe(1);
+    tick(level, s, InputBit.nuke);
+    expect(Array.from(s.enemyStatus)).toEqual([EnemyStatus.destroyed, EnemyStatus.destroyed, EnemyStatus.alive]);
+    expect([s.nukes, s.bulletCount, s.score, s.onBeatKills, s.nukeTick]).toEqual([1, 0, 500, 0, 9]);
+    // Held, it doesn't go off again.
+    tick(level, s, InputBit.nuke);
+    expect(s.nukes).toBe(1);
+  });
+
+  it('does nothing with none held; a level starts with none', () => {
+    const s = createSimState();
+    expect(s.nukes).toBe(0);
+    tick(enemyLevel(onScreen), s, InputBit.nuke);
+    expect([s.kills, s.nukeTick]).toEqual([0, -1]);
+  });
+
+  it('charges one per 10 kills on the beat, up to 3, and is kept when a life is lost', () => {
+    const level = enemyLevel([{ kind: EnemyKind.turret, spawnTick: 0, x: 200 * Q, y: 108 * Q, instrument: 1 }], 1000, 0, 60, {
+      1: Array.from({ length: 1000 }, (_, t) => t),
+    });
+    const s = createSimState();
+    s.nukeCharge = 9;
+    while (s.kills === 0) tick(level, s, InputBit.fire);
+    expect([s.nukes, s.nukeCharge]).toEqual([1, 0]);
+    const full = createSimState();
+    full.nukes = 3;
+    while (full.kills === 0) tick(level, full, InputBit.fire);
+    expect([full.nukes, full.nukeCharge]).toEqual([3, 0]);
+    const rammed = createSimState();
+    rammed.nukes = 2;
+    const ram = enemyLevel([{ kind: EnemyKind.ship, spawnTick: 1, x: 392 * Q }]);
+    while (rammed.lives === 3) tick(ram, rammed, 0);
+    expect(rammed.nukes).toBe(2);
+  });
+});
+
 describe('autopilot', () => {
   it.each(Object.keys(Difficulty) as DifficultyName[])('flies the terrain of random loud songs (%s)', (d) => {
     for (let seed = 1; seed <= 10; seed++) {

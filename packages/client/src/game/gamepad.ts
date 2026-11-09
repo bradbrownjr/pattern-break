@@ -21,7 +21,7 @@ export const PadBit = {
   fire: InputBit.fire,
   /** A: fire in play, confirm in menus. */
   a: 1 << 8,
-  /** B: back in menus. Kept free in play for the bomb. */
+  /** B: back in menus; in play it drops bombs (InputBit.bomb). */
   b: 1 << 9,
   select: 1 << 10,
   start: 1 << 11,
@@ -29,7 +29,7 @@ export const PadBit = {
 
 /** How far the stick must lean on an axis to count as that direction. */
 export const STICK_THRESHOLD = 0.5;
-const FIRE_BUTTONS = [0, 2, 5, 7];
+const FIRE_BUTTONS = [0, 5, 7];
 const DPAD: ReadonlyArray<[number, number]> = [
   [12, PadBit.up],
   [13, PadBit.down],
@@ -58,7 +58,8 @@ export function padBits(pad: PadSnapshot): number {
   if (y >= STICK_THRESHOLD) bits |= PadBit.down;
   for (const button of FIRE_BUTTONS) if (down(button)) bits |= PadBit.fire;
   if (down(0)) bits |= PadBit.a;
-  if (down(1)) bits |= PadBit.b;
+  if (down(1)) bits |= PadBit.b | InputBit.bomb;
+  if (down(2)) bits |= InputBit.nuke;
   if (down(8)) bits |= PadBit.select;
   if (down(9)) bits |= PadBit.start;
   return bits;

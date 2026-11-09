@@ -20,7 +20,7 @@ export const SHIP_START_Y = 108;
 export const SHIP_HITBOX_WIDTH = 10;
 export const SHIP_HITBOX_HEIGHT = 6;
 
-/** Input bits, one byte per tick. Movement and fire do something; bomb and buy come later. */
+/** Input bits, one byte per tick. Buy does nothing yet (the power-up meter is to come). */
 export const InputBit = {
   up: 1,
   down: 2,
@@ -29,6 +29,7 @@ export const InputBit = {
   fire: 16,
   bomb: 32,
   buy: 64,
+  nuke: 128,
 } as const;
 export type InputBit = (typeof InputBit)[keyof typeof InputBit];
 
@@ -94,3 +95,25 @@ export const STREAK_STEP = 10;
 export const MAX_MULTIPLIER = 4;
 /** Reaching the end of the song scores this much per life left. */
 export const SURVIVAL_POINTS_PER_LIFE = 1000;
+
+/**
+ * The concussive bomb (Brad, 2026-11-09): held, the bomb button drops one whenever none is in
+ * the air. It leaves the ship's underside carrying forward 1 px per tick, falls with
+ * gravity, and bursts on the terrain, on an enemy, or off screen. The blast destroys every
+ * enemy within 24 px of the burst, tanks included, whatever their hits left.
+ */
+export const BOMB_SIZE = 4;
+export const BOMB_VX_Q8 = 256;
+/** Added to the bomb's fall speed each tick, up to BOMB_MAX_VY_Q8 (3 px per tick). */
+export const BOMB_GRAVITY_Q8 = 8;
+export const BOMB_MAX_VY_Q8 = 768;
+/** Half the side of the blast's square. */
+export const BOMB_BLAST_PX = 24;
+
+/**
+ * The nuke (Brad, 2026-11-09): a press destroys every enemy on screen and clears the enemy
+ * bullets. One charges per 10 kills on the beat, up to 3 held; a level starts with none.
+ * Nuke kills score their kind's points times the multiplier, never the on-beat double.
+ */
+export const NUKE_CHARGE_KILLS = 10;
+export const MAX_NUKES = 3;

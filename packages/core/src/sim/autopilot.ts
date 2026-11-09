@@ -24,6 +24,8 @@ const LOOKAHEAD = 24;
 const DODGE_TICKS = 16;
 /** Bullets closer than this to the hitbox, in Q8, count as a hit. */
 const DODGE_MARGIN = 3 * Q8;
+/** The autopilot nukes when the best move is hit this soon. */
+const NUKE_TICKS = 2;
 const BULLET_HALF = (ENEMY_BULLET_SIZE * Q8) / 2;
 
 /**
@@ -119,7 +121,9 @@ export function autopilotInputs(level: Level): Uint8Array {
         best = dy;
       }
     }
-    const input = (best < 0 ? InputBit.up : best > 0 ? InputBit.down : 0) | InputBit.fire;
+    // Fire and drop bombs all the time; nuke when every move is hit within NUKE_TICKS.
+    let input = (best < 0 ? InputBit.up : best > 0 ? InputBit.down : 0) | InputBit.fire | InputBit.bomb;
+    if (bestHit <= NUKE_TICKS && state.nukes > 0) input |= InputBit.nuke;
     inputs[t] = input;
     tick(level, state, input);
   }

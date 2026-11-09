@@ -85,8 +85,8 @@ export class TitleScreen {
       this.#marker,
       this.#credit,
       new PixelText('Up and down choose. Left and right change. Enter selects.', GREY).place(CENTER, 172, 'center'),
-      new PixelText('In play: arrows or WASD fly, Space or Z fires, Esc pauses.', DIM_GREY).place(CENTER, 186, 'center'),
-      new PixelText('Gamepad: stick or D-pad flies, A fires, Start pauses.', DIM_GREY).place(CENTER, 198, 'center'),
+      new PixelText('Keys: arrows fly, Z fires, X bombs, V nukes, Esc pauses.', DIM_GREY).place(CENTER, 186, 'center'),
+      new PixelText('Pad: stick flies, A fires, B bombs, X nukes, Start pauses.', DIM_GREY).place(CENTER, 198, 'center'),
     );
     this.#padHint.visible = false;
     this.container.addChild(this.#menu, this.#press, this.#padHint);
