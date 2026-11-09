@@ -20,7 +20,6 @@ import {
   BOOST_SPEED_Q8,
   CAPSULE_SIZE,
   CAPSULE_SLOTS,
-  CAPSULE_SPEED_Q8,
   DOUBLE_SPEED_Q8,
   LASER_SPEED_Q8,
   LASER_WIDTH,
@@ -225,10 +224,12 @@ export interface SimState {
   missileBlastTick: Int32Array;
   missileBlastX: Int32Array;
   missileBlastY: Int32Array;
-  /** Capsules: screen centre, Q8. */
+  /** Capsules: screen centre, Q8, the world x of the centre, and the fall speed. */
   capsuleActive: Uint8Array;
   capsuleX: Int32Array;
   capsuleY: Int32Array;
+  capsuleWX: Int32Array;
+  capsuleVY: Int32Array;
   /** Per formation: ships shot down, and 1 once one got away or was rammed (no capsule then). */
   formationShot: Uint8Array;
   formationSpoiled: Uint8Array;
@@ -310,6 +311,8 @@ export function createSimState(): SimState {
     capsuleActive: new Uint8Array(CAPSULE_SLOTS),
     capsuleX: new Int32Array(CAPSULE_SLOTS),
     capsuleY: new Int32Array(CAPSULE_SLOTS),
+    capsuleWX: new Int32Array(CAPSULE_SLOTS),
+    capsuleVY: new Int32Array(CAPSULE_SLOTS),
     formationShot: new Uint8Array(0),
     formationSpoiled: new Uint8Array(0),
   };
@@ -565,7 +568,7 @@ function scoreKill(level: Level, state: SimState, i: number, t: number, nuked = 
   state.streak++;
   const f = level.enemies.formation[i]!;
   if (f >= 0 && ++state.formationShot[f]! === level.enemies.formationSize[f]! && state.formationSpoiled[f] === 0) {
-    spawnCapsule(state, state.enemyX[i]!, state.enemyY[i]!);
+    spawnCapsule(level, state, state.enemyX[i]!, state.enemyY[i]!, t);
   }
   if (beat) {
     state.onBeatKills++;
@@ -582,29 +585,49 @@ function spoilFormation(level: Level, state: SimState, i: number): void {
   if (f >= 0) state.formationSpoiled[f] = 1;
 }
 
-function spawnCapsule(state: SimState, x: number, y: number): void {
+function spawnCapsule(level: Level, state: SimState, x: number, y: number, t: number): void {
   for (let c = 0; c < CAPSULE_SLOTS; c++) {
     if (state.capsuleActive[c]) continue;
     state.capsuleActive[c] = 1;
     state.capsuleX[c] = x;
     state.capsuleY[c] = y;
+    state.capsuleWX[c] = level.scroll[t]! + x;
+    state.capsuleVY[c] = 0;
     return;
   }
 }
 
-/** Capsules drift left and steer towards the cave's centre line; they go at the left edge. */
+/** The y (Q8) of a capsule's centre resting on the highest floor under world x `wx`. */
+function capsuleRestY(level: Level, wx: number): number {
+  const a = level.floor[barAt(level, wx - CAPSULE_H)]!;
+  const b = level.floor[barAt(level, wx + CAPSULE_H - 1)]!;
+  return HEIGHT_Q8 - SEG_PITCH_Q8 * (a > b ? a : b) - CAPSULE_H;
+}
+
+/**
+ * Capsules scroll with the cave and fall with the bomb's gravity until they rest on the
+ * floor, which they then ride; they go at the left edge.
+ */
 function moveCapsules(level: Level, state: SimState, t: number): void {
   for (let c = 0; c < CAPSULE_SLOTS; c++) {
     if (!state.capsuleActive[c]) continue;
-    const x = state.capsuleX[c]! - CAPSULE_SPEED_Q8;
+    const wx = state.capsuleWX[c]!;
+    const x = wx - level.scroll[t]!;
     state.capsuleX[c] = x;
     if (x < -CAPSULE_H) {
       state.capsuleActive[c] = 0;
       continue;
     }
-    const target = caveCentre(level, barAt(level, level.scroll[t]! + x));
-    const y = state.capsuleY[c]!;
-    state.capsuleY[c] = target > y + SHIP_STEER_Q8 ? y + SHIP_STEER_Q8 : target < y - SHIP_STEER_Q8 ? y - SHIP_STEER_Q8 : target;
+    let vy = state.capsuleVY[c]! + BOMB_GRAVITY_Q8;
+    if (vy > BOMB_MAX_VY_Q8) vy = BOMB_MAX_VY_Q8;
+    let y = state.capsuleY[c]! + vy;
+    const rest = capsuleRestY(level, wx);
+    if (y >= rest) {
+      y = rest;
+      vy = 0;
+    }
+    state.capsuleY[c] = y;
+    state.capsuleVY[c] = vy;
   }
 }
 
@@ -820,7 +843,8 @@ function loseLife(level: Level, state: SimState, t: number): void {
  *    or an enemy, destroying all within its blast. Move missiles, or launch them on a new
  *    press once reloaded; they burst on the first enemy they touch.
  * 4. Enemies fire on their scheduled ticks; move enemy bullets, which stop on the terrain.
- * 5. Move capsules; the ship picks up those it touches, moving the meter's highlight.
+ * 5. Move capsules, which scroll with the cave and fall to its floor; the ship picks up
+ *    those it touches, moving the meter's highlight.
  *    Unless the ship is in its safe time after a respawn, test it against the terrain,
  *    live enemies (which are destroyed too) and enemy bullets. The shield takes a hit from
  *    an enemy or bullet; any other hit costs a life, the streak, and every upgrade.

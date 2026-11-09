@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { JukeboxMenu, TitleMenu } from '../src/game/menu.ts';
+import { ControlsPages, JukeboxMenu, PauseMenu, TitleMenu } from '../src/game/menu.ts';
 
 describe('TitleMenu', () => {
   it('moves the cursor with up and down, wrapping at both ends', () => {
     const m = new TitleMenu(3);
     expect(m.item).toBe('play');
     expect(m.apply('up')).toBe('moved');
-    expect(m.item).toBe('jukebox');
+    expect(m.item).toBe('controls');
     m.apply('down');
     m.apply('down');
     expect(m.item).toBe('practice');
@@ -28,7 +28,7 @@ describe('TitleMenu', () => {
     expect(m.difficulty).toBe('easy');
   });
 
-  it('opens play, practice or the jukebox on confirm, and steps the difficulty forward', () => {
+  it('opens play, practice, the jukebox or the controls on confirm, and steps the difficulty forward', () => {
     const m = new TitleMenu(3, 1, 'easy');
     expect(m.apply('confirm')).toBe('play');
     m.apply('down');
@@ -38,6 +38,8 @@ describe('TitleMenu', () => {
     expect(m.difficulty).toBe('normal');
     m.apply('down');
     expect(m.apply('confirm')).toBe('jukebox');
+    m.apply('down');
+    expect(m.apply('confirm')).toBe('controls');
     expect(m.apply('back')).toBeNull();
   });
 
@@ -74,5 +76,37 @@ describe('JukeboxMenu', () => {
     const j = new JukeboxMenu(3);
     expect(j.next(0)).toBe(1);
     expect(j.next(2)).toBe(0);
+  });
+});
+
+describe('PauseMenu', () => {
+  it('moves through Resume, Controls and Quit, wrapping; back resumes', () => {
+    const m = new PauseMenu();
+    expect(m.apply('confirm')).toBe('resume');
+    expect(m.apply('down')).toBe('moved');
+    expect(m.apply('confirm')).toBe('controls');
+    m.apply('down');
+    expect(m.apply('confirm')).toBe('quit');
+    m.apply('down');
+    expect(m.item).toBe('resume');
+    m.apply('up');
+    expect(m.apply('back')).toBe('resume');
+    expect(m.apply('left')).toBeNull();
+  });
+});
+
+describe('ControlsPages', () => {
+  it('switches pages with left and right; confirm steps on and leaves from the last page', () => {
+    const p = new ControlsPages();
+    expect(p.page).toBe('keyboard');
+    expect(p.apply('right')).toBe('moved');
+    expect(p.page).toBe('gamepad');
+    expect(p.apply('right')).toBe('moved');
+    expect(p.page).toBe('keyboard');
+    expect(p.apply('confirm')).toBe('moved');
+    expect(p.page).toBe('gamepad');
+    expect(p.apply('confirm')).toBe('back');
+    expect(p.apply('back')).toBe('back');
+    expect(p.apply('up')).toBeNull();
   });
 });

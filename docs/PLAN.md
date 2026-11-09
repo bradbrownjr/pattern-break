@@ -222,7 +222,9 @@ every bar of every generated level.
   never doubled.
 - **Power-ups (2026-11-09):** a Gradius-style meter, drawn as a row of VU meter LEDs along
   the bottom. Shooting down every ship of a formation, by any weapon, drops a capsule; a
-  ship that gets away or is rammed spoils it. Each capsule picked up moves the highlight
+  ship that gets away or is rammed spoils it. The capsule falls with the bomb's gravity to
+  the cave's floor and scrolls away on it, so collecting one means flying low. Each
+  capsule picked up moves the highlight
   one slot, wrapping after the last, and a buy press buys the highlighted upgrade and
   clears the highlight. In order:
   - **Boost:** an afterburner on its own button, 1.67 times the ship's speed. The first

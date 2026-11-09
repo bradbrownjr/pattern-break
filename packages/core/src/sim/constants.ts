@@ -138,8 +138,11 @@ export const PowerUp = { boost: 0, double: 1, laser: 2, missile: 3, option: 4, s
 export const POWER_UP_COUNT = 6;
 export const CAPSULE_SLOTS = 4;
 export const CAPSULE_SIZE = 8;
-/** Capsules drift left 0.5 px per tick and steer towards the cave's centre line at up to 1 px per tick. */
-export const CAPSULE_SPEED_Q8 = 128;
+/*
+ * A capsule stays at its world x, so it scrolls with the cave, and falls with the bomb's
+ * gravity (BOMB_GRAVITY_Q8, up to BOMB_MAX_VY_Q8) until it rests on the floor, which it
+ * then rides (Brad, 2026-11-09: so collecting one means flying low).
+ */
 
 /**
  * Boost: an afterburner on its own button. The first buy unlocks it, each of up to 3 buys

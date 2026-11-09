@@ -444,9 +444,13 @@ formation count and that many u8 sizes.
 - **Capsules and the meter:** each ship knows its formation. Killing one by any weapon adds
   to `state.formationShot`; a ship that leaves the screen or is rammed sets
   `state.formationSpoiled`. When the last ship of an unspoiled formation is killed, a
-  capsule (8x8 px) appears where it was, if one of the 4 slots is free. Capsules drift left
-  128 Q8 per tick and steer towards the cave's centre line at up to 256 Q8 per tick; they
-  go at the left edge. One the ship's hitbox overlaps moves `state.meter` (-1 for none) one
+  capsule (8x8 px) appears where it was, if one of the 4 slots is free. A capsule keeps its
+  world x (`state.capsuleWX`), so it scrolls with the cave, and falls with the bomb's
+  gravity (8 Q8 per tick faster each tick, to 768) until it rests on the highest floor of
+  the bars under it, which it then rides; it goes at the left edge. So collecting one
+  means flying low (Brad, 2026-11-09; until then capsules drifted along the cave's centre
+  line, and the autopilot collected 17 to 60 a level on normal). One the ship's hitbox
+  overlaps moves `state.meter` (-1 for none) one
   slot along boost 0, double 1, laser 2, missile 3, option 4, shield 5 (`PowerUp`),
   wrapping from shield to boost. A new buy press buys the highlighted upgrade and sets the
   meter to -1, unless `canBuy()` says it is at its most, when nothing happens and the
@@ -494,8 +498,8 @@ formation count and that many u8 sizes.
   turret is 60 to 140 px ahead. It doesn't steer for capsules, but buys double, missile,
   option and shield when the meter lands on them, and launches a missile at an enemy ship
   up to 240 px ahead and within 12 px of its height. On the nine songs (2026-11-09) it
-  picks up 14 to 50 capsules a level on easy and 17 to 60 on normal, since capsules drift
-  along the cave's centre line where it flies. Of its three moves (up, down, none) it takes the one
+  picks up 0 to 5 capsules a level on easy and 0 to 8 on normal, only those that fall
+  onto its path, so it rarely has an upgrade. Of its three moves (up, down, none) it takes the one
   no bullet or ship would hit soonest within 16 ticks, then the one nearest its target; if
   even that one is hit within 2 ticks and it holds a nuke, it nukes. It
   never moves horizontally. On the terrain alone (`withoutEnemies(level)`) it always
@@ -654,7 +658,7 @@ The client reads query parameters; `packages/client/src/capture.ts` parses them
 | Parameter | Meaning |
 |---|---|
 | `capture` | `1` turns capture mode on. Without it the page behaves normally. |
-| `scene` | Which screen to show: `title` or `play`. |
+| `scene` | Which screen to show: `title`, `jukebox`, `controls-keyboard`, `controls-gamepad`, `play`, or `paused`. |
 | `song` | Song id: a bundled song's file name without its extension (`numenchip`), or `pb-fixture-01` for the test song. |
 | `t` | Song clock in seconds. |
 | `difficulty` | Difficulty name. |
@@ -676,6 +680,11 @@ In capture mode the renderer must:
 
 - **`scene=title`** draws the title screen with the cursor on Play, the song and
   difficulty chosen, and the cursor steady instead of blinking. The stars sit where `t` puts them.
+- **`scene=jukebox`** draws the jukebox with the first song playing at `t`, its length from
+  an analysis of the song, and the spectrum dark. **`scene=controls-keyboard`** and
+  **`scene=controls-gamepad`** draw the two controls pages. All three show the stars as
+  the title does.
+- **`scene=paused`** is `scene=play` with the pause menu over it, the cursor on Resume.
 - **`scene=play`** analyzes the song in the analysis worker, builds the level for
   `difficulty`, records `autopilotInputs(level)`, and runs the sim from tick 0 to
   `floor(round(t * 48000) / 400)` with that log, through the same `catchUp` the game loop
@@ -820,7 +829,7 @@ Run `pnpm dev` and open the URL it prints.
 
 - **Start screen:** the logo and "Press any key". Browsers let a page play sound only after
   a key press or click, so the first press starts the title music and opens the menu.
-- **Title menu:** Play, Practice, Difficulty, Jukebox, over the title song. Up and down
+- **Title menu:** Play, Practice, Difficulty, Jukebox, Controls, over the title song. Up and down
   (arrows or W and S) move the cursor, left and right change Practice's song or the
   difficulty, and Enter or Space selects. A click selects too, and Enter on Difficulty steps
   it forward, so one button reaches every choice.
@@ -834,35 +843,45 @@ Run `pnpm dev` and open the URL it prints.
 - **In play,** arrows or WASD move, Space, Z or J fire (hold to keep firing), X or K drop
   a bomb (one per press, 1 s to reload after it bursts), C or L launch a missile once
   bought, V or ; (semicolon) nuke, F or ' (quote) buy the highlighted power-up, Shift
-  boosts once bought, and Esc pauses and resumes (a gamepad is below); the title menu
-  shows these as a table. Q while paused goes back to the title. Losing the last of three
+  boosts once bought, and Esc pauses (a gamepad is below). Losing the last of three
   lives is game over: any key retries the level, Esc goes to the title. Game over and level complete ignore keys for 0.7 s, so a key still held from
   play doesn't skip them. The game pauses when the window loses focus or the tab is hidden.
+- **Pause menu:** "Paused" over the frozen game, with Resume, Controls and Quit to title,
+  worked like the title menu. Esc (or Backspace) resumes, as does Start on a pad, from any
+  item; Q, or Select on a pad, quits to the title. The cursor starts on Resume each time.
+- **Controls** (`controls.ts`), from the title menu or the pause menu: a keyboard page and a
+  gamepad page. Each draws the keyboard or pad with the keys or buttons used filled in
+  their action's colour (fly white, fire cyan, bomb amber, missile magenta, nuke red, buy
+  lime, boost violet, pause grey), over a legend of the actions and their keys. It opens on
+  the gamepad page if the last press was on a pad. Left and right switch pages, Enter goes
+  to the next page and leaves from the last (so a click alone sees both), and Esc goes
+  back to where it was opened. The title and jukebox show no control hints of their own
+  (Brad, 2026-11-09).
 - **Score:** top right in play. Each kill shows its points where the enemy was, amber when
   on the beat. After the lives come the bomb, which empties when one drops and fills
   again over its reload, the missile the same way once bought, the multiplier in amber
-  once it is above 1, and an amber ring for each nuke held.
+  once it is above 1, and an amber ring for each nuke held. Level complete shows the score
+  and the lives bonus, and in the arcade run the total of the levels finished; game over
+  shows the score.
 - **Power-up meter:** six LED cells along the bottom, Boost to Shield, lit green to red
   from the left up to the highlighted one. A label shows the count held for boost,
   options and shield, and turns darker grey when that upgrade is at its most; a cyan bar
-  in the Boost cell shows the fuel left. Level
-  complete shows the score and the lives bonus, and in the arcade run the total of the
-  levels finished; game over shows the score.
+  in the Boost cell shows the fuel left.
 - **Gamepad:** any pad that reports the Gamepad API's "standard" mapping
   (https://w3c.github.io/gamepad/, "Remapping"), which fixes its button and axis numbers;
   other pads are ignored for now. In play the left stick (past half way) or the D-pad
   flies; A and RT (buttons 0, 7) fire; B (1) drops bombs; X (2) nukes; Y (3) buys; LB
-  and LT (4, 6) boost; RB (5) launches a missile; Start pauses and resumes; Select
-  (button 8) quits from the pause. In menus the stick or D-pad moves (held, it repeats after 400 ms, then
+  and LT (4, 6) boost; RB (5) launches a missile; Start pauses. In menus the stick or D-pad moves (held, it repeats after 400 ms, then
   every 100 ms), A or Start selects, and B or Select goes back. On game over and level
   complete B or Select is Esc and any other button is any key. A pad can't leave the start
   screen on a fresh page: browsers start sound only after a user activation, and the HTML
   spec's activation-triggering input events are keydown, mousedown, pointer and touch
   events, not gamepad presses. So unless `navigator.userActivation.hasBeenActive`, a pad
   press there shows "A key or a click turns on the sound first".
-- **Jukebox:** Enter plays the song under the cursor or stops it if it is playing, a song
-  that ends hands over to the next, and Esc or Back returns to the title, where the title
-  music starts again.
+- **Jukebox:** the nine songs and Back, with a 24-bar spectrum of what is playing under
+  them, and the song's title, credit and time below that. Enter plays the song under the
+  cursor or stops it if it is playing, a song that ends hands over to the next, and Esc or
+  Back returns to the title, where the title music starts again.
 
 Two query parameters help in development:
 
@@ -961,8 +980,9 @@ is added.
   on black by `index.html`.
 - **Layers,** back to front: the starfield, the world (terrain, capsules, enemies, shots,
   missiles, options, the shield and bullets, ship, explosion, point popups), the HUD
-  (lives, bomb and missile, multiplier, nukes, score, power-up meter), the death flash, and the UI (title screen, jukebox, demo banner,
-  messages, and the fade).
+  (lives, bomb and missile, multiplier, nukes, score, power-up meter), the death flash, and
+  the UI (title screen, jukebox, controls, demo banner, messages, the pause menu, and the
+  fade).
 - **Terrain** (`terrain.ts`, geometry in `terrain-layout.ts`): 41 columns
   (`MAX_VISIBLE_BARS`) of 50 sprites each, 25 a side (`SEGMENTS_PER_SIDE`, the most hard's
   36 px minimum gap allows), made once. Each frame moves the columns to the bars
@@ -1085,6 +1105,10 @@ lists themselves are in `DOC-STYLE.md`, "Plain wording"; keep the script and the
 step.
 
 ## Changelog and roadmap
+
+**Until the finished game is published, the changelog gets no new entries** (Brad,
+2026-11-09): a finished item stays in `ROADMAP.md` with its stage. The rules below apply
+from the release on.
 
 - **A finished roadmap item leaves `ROADMAP.md`**, its "At a glance" row and its section
   together, and becomes an entry in `CHANGELOG.md`. A milestone is finished only when its

@@ -1,6 +1,8 @@
 // Capture mode (docs/DEVELOPMENT.md, "Screenshots"): no audio, the song clock pinned to
 // `t`, and the ship flown by the autopilot's input log replayed through the sim up to `t`.
-// Everything on screen is a function of the query parameters.
+// Everything on screen is a function of the query parameters. Scenes: title, jukebox (the
+// first song playing, its spectrum dark), controls-keyboard, controls-gamepad, play, and
+// paused (play with the pause menu over it).
 
 import {
   Difficulty,
@@ -14,14 +16,16 @@ import {
   type DifficultyName,
   type SimState,
 } from '@game/core';
+import type { Container } from 'pixi.js';
 import { markCaptureReady, type CaptureParams } from '../capture.ts';
 import { seededRandom } from '../render/random.ts';
 import type { GameRenderer } from '../render/renderer.ts';
 import { analyzeInWorker } from './analysis.ts';
 import { catchUp, targetTick } from './loop.ts';
 import { drawPlay } from './play-view.ts';
-import { TitleScreen } from './screens.ts';
-import { TITLE_SONG_ID, fetchSongBytes, findSong, songById } from './songs.ts';
+import { ControlsScreen } from './controls.ts';
+import { JukeboxScreen, PauseScreen, SPECTRUM_BARS, TitleScreen } from './screens.ts';
+import { SONGS, TITLE_SONG_ID, fetchSongBytes, findSong, songById } from './songs.ts';
 
 declare global {
   interface Window {
@@ -47,19 +51,44 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
   if (!song) throw new Error(`unknown song ${params.song ?? ''}`);
   const difficulty: DifficultyName = params.difficulty in Difficulty ? (params.difficulty as DifficultyName) : 'normal';
 
-  if (params.scene === 'title') {
-    const title = new TitleScreen();
-    r.ui.addChild(title.container);
+  const menuScene = (container: Container): Promise<void> => {
+    r.ui.addChild(container);
     r.world.visible = false;
     r.combat.hud.visible = false;
-    title.update({ cursor: 0, practice: song, difficulty, music: songById(TITLE_SONG_ID) }, true);
     r.starfield.draw(params.t * TITLE_DRIFT_PX_PER_S);
     r.render();
-    await afterPresent();
-    markCaptureReady();
-    return;
+    return afterPresent().then(markCaptureReady);
+  };
+  switch (params.scene) {
+    case 'title': {
+      const title = new TitleScreen();
+      title.update({ cursor: 0, practice: song, difficulty, music: songById(TITLE_SONG_ID) }, true);
+      return menuScene(title.container);
+    }
+    case 'jukebox': {
+      const jukebox = new JukeboxScreen(SONGS);
+      const data = await analyzeInWorker(await fetchSongBytes(SONGS[0]!), 1000);
+      const durationSeconds = data.totalSamples / SAMPLE_RATE;
+      jukebox.update({ cursor: 0, playing: 0, seconds: params.t, durationSeconds, levels: new Uint8Array(SPECTRUM_BARS) });
+      return menuScene(jukebox.container);
+    }
+    case 'controls-keyboard':
+    case 'controls-gamepad': {
+      const controls = new ControlsScreen();
+      controls.show(params.scene === 'controls-keyboard' ? 'keyboard' : 'gamepad');
+      return menuScene(controls.container);
+    }
+    case 'play':
+    case 'paused':
+      break;
+    default:
+      throw new Error(`unknown scene ${params.scene}`);
   }
-  if (params.scene !== 'play') throw new Error(`unknown scene ${params.scene}`);
+  if (params.scene === 'paused') {
+    const pause = new PauseScreen();
+    pause.update(0);
+    r.ui.addChild(pause.container);
+  }
 
   const level = generateLevel(await analyzeInWorker(await fetchSongBytes(song), Difficulty[difficulty].tempoPermille), difficulty);
   const inputs = autopilotInputs(level);

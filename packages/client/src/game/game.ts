@@ -18,7 +18,7 @@ import {
 } from '@game/core';
 import { createAudioPlayer, type AudioPlayer } from '../audio/index.ts';
 import { MenuSounds, type MenuSound } from '../audio/sfx.ts';
-import { AMBER, CYAN, LIME, MAGENTA } from '../render/palette.ts';
+import { CYAN, LIME, MAGENTA } from '../render/palette.ts';
 import { seededRandom } from '../render/random.ts';
 import type { GameRenderer } from '../render/renderer.ts';
 import { barBinEdges, barLevels } from '../render/spectrum.ts';
@@ -26,7 +26,8 @@ import { analyzeInWorker } from './analysis.ts';
 import { PadBit, PadTracker, padMenuAction, readGamepads } from './gamepad.ts';
 import { InputSampler, keyToMenuAction, type MenuAction } from './input.ts';
 import { DisplayClock, InputLog, catchUp, targetTick } from './loop.ts';
-import { DIFFICULTY_LABELS, JukeboxMenu, TitleMenu, type TitleEvent } from './menu.ts';
+import { ControlsScreen } from './controls.ts';
+import { ControlsPages, DIFFICULTY_LABELS, JukeboxMenu, PauseMenu, TitleMenu, type TitleEvent } from './menu.ts';
 import type { PerfMeter } from './perf.ts';
 import { drawPlay } from './play-view.ts';
 import {
@@ -34,6 +35,7 @@ import {
   FadeOverlay,
   JukeboxScreen,
   MessageScreen,
+  PauseScreen,
   SPECTRUM_BARS,
   SPECTRUM_SEGMENTS,
   TitleScreen,
@@ -52,6 +54,7 @@ type Mode =
   | 'title'
   | 'demo'
   | 'jukebox'
+  | 'controls'
   | 'analyzing'
   | 'intro'
   | 'play'
@@ -137,6 +140,14 @@ export class Game {
   readonly #title = new TitleScreen();
   readonly #jukebox: JukeboxScreen;
   readonly #message = new MessageScreen();
+  readonly #pauseMenu = new PauseMenu();
+  readonly #pauseScreen = new PauseScreen();
+  readonly #controlsPages = new ControlsPages();
+  readonly #controls = new ControlsScreen();
+  /** Where the controls screen returns to. */
+  #controlsFrom: 'title' | 'paused' = 'title';
+  /** True when the last press was on a gamepad, so the controls open on its page. */
+  #lastPressPad = false;
   readonly #demoBanner = new DemoBanner();
   readonly #fade = new FadeOverlay();
   readonly #input = new InputSampler();
@@ -194,8 +205,10 @@ export class Game {
     r.ui.addChild(
       this.#title.container,
       this.#jukebox.container,
+      this.#controls.container,
       this.#demoBanner.container,
       this.#message.container,
+      this.#pauseScreen.container,
       this.#fade.container,
     );
     this.#setMode('start');
@@ -223,8 +236,10 @@ export class Game {
     this.#modeSince = performance.now();
     this.#title.container.visible = mode === 'start' || mode === 'title';
     this.#jukebox.container.visible = mode === 'jukebox';
+    this.#controls.container.visible = mode === 'controls';
+    this.#pauseScreen.container.visible = mode === 'paused';
     this.#demoBanner.container.visible = mode === 'demo';
-    this.#message.container.visible = mode === 'analyzing' || mode === 'paused' || mode === 'error' || mode === 'intro';
+    this.#message.container.visible = mode === 'analyzing' || mode === 'error' || mode === 'intro';
     this.#r.world.visible =
       mode === 'demo' ||
       mode === 'intro' ||
@@ -234,9 +249,8 @@ export class Game {
       mode === 'complete';
     this.#r.combat.hud.visible = this.#r.world.visible;
     if (mode === 'analyzing') this.#message.show('', 0, ['Analyzing song...']);
-    if (mode === 'paused') {
-      this.#message.show('Paused', AMBER, ['Q or Select quits to the title screen', 'Esc or Start resumes']);
-    }
+    if (mode === 'paused') this.#pauseScreen.update(this.#pauseMenu.cursor);
+    if (mode === 'controls') this.#controls.show(this.#controlsPages.page);
   }
 
   #showError(err: unknown): void {
@@ -265,6 +279,7 @@ export class Game {
   #onKeyDown(e: KeyboardEvent): void {
     if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
     this.#input.keyDown(e.code);
+    this.#lastPressPad = false;
     if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta') return;
     switch (this.#mode) {
       case 'start':
@@ -274,31 +289,38 @@ export class Game {
         // Any key leaves the demo and does nothing else.
         if (!e.repeat) this.#toTitle();
         return;
-      case 'title':
-      case 'jukebox': {
-        const action = keyToMenuAction(e.code);
-        // A held arrow repeats; a held Enter or Esc does not.
-        if (action && (!e.repeat || action === 'up' || action === 'down' || action === 'left' || action === 'right')) {
-          e.preventDefault();
-          this.#onMenu(action);
+      case 'paused':
+        // Q quits straight to the title, as before the pause menu.
+        if (e.code === 'KeyQ') {
+          if (!e.repeat) this.#toTitle();
+        } else {
+          this.#menuKey(e);
         }
         return;
-      }
+      case 'title':
+      case 'jukebox':
+      case 'controls':
+        this.#menuKey(e);
+        return;
       default:
         break;
     }
     if (e.repeat) return;
     if (e.code === 'Escape') {
       if (this.#mode === 'play') void this.#pause();
-      else if (this.#mode === 'paused') void this.#resume();
       else if (this.#mode === 'gameover' || this.#mode === 'complete') this.#toTitle();
       return;
     }
-    if (e.code === 'KeyQ' && this.#mode === 'paused') {
-      this.#toTitle();
-      return;
-    }
     this.#onAnyKey();
+  }
+
+  /** A key on a menu: a held arrow repeats; a held Enter or Esc does not. */
+  #menuKey(e: KeyboardEvent): void {
+    const action = keyToMenuAction(e.code);
+    if (action && (!e.repeat || action === 'up' || action === 'down' || action === 'left' || action === 'right')) {
+      e.preventDefault();
+      this.#onMenu(action);
+    }
   }
 
   /** Polls the gamepads: their held bits go to the sim, new presses act like keys. */
@@ -309,6 +331,7 @@ export class Game {
   }
 
   #onPadPress(bit: number): void {
+    this.#lastPressPad = true;
     switch (this.#mode) {
       case 'start':
         // Browsers start sound only after a key press or click (the HTML spec's
@@ -320,7 +343,8 @@ export class Game {
         this.#toTitle();
         return;
       case 'title':
-      case 'jukebox': {
+      case 'jukebox':
+      case 'controls': {
         const action = padMenuAction(bit);
         if (action) this.#onMenu(action);
         return;
@@ -328,10 +352,16 @@ export class Game {
       case 'play':
         if (bit === PadBit.start) void this.#pause();
         return;
-      case 'paused':
+      case 'paused': {
+        // Start resumes and Select quits, whatever the cursor is on.
         if (bit === PadBit.start) void this.#resume();
         else if (bit === PadBit.select) this.#toTitle();
+        else {
+          const action = padMenuAction(bit);
+          if (action) this.#onMenu(action);
+        }
         return;
+      }
       case 'gameover':
       case 'complete':
         // B or Select is Esc; any other button is any key. Directions don't count, so a
@@ -347,7 +377,9 @@ export class Game {
   #onPointer(): void {
     if (this.#mode === 'start') this.#leaveStart();
     else if (this.#mode === 'demo') this.#toTitle();
-    else if (this.#mode === 'title' || this.#mode === 'jukebox') this.#onMenu('confirm');
+    else if (this.#mode === 'title' || this.#mode === 'jukebox' || this.#mode === 'paused' || this.#mode === 'controls') {
+      this.#onMenu('confirm');
+    }
     else this.#onAnyKey();
   }
 
@@ -369,6 +401,25 @@ export class Game {
       this.#lastInput = performance.now();
       this.#cancelFade();
       this.#onTitleEvent(this.#menu.apply(action));
+      return;
+    }
+    if (this.#mode === 'paused') {
+      this.#onPauseMenu(action);
+      return;
+    }
+    if (this.#mode === 'controls') {
+      const event = this.#controlsPages.apply(action);
+      if (event === 'moved') {
+        this.#sound('move');
+        this.#controls.show(this.#controlsPages.page);
+      } else if (event === 'back') {
+        this.#sound('back');
+        if (this.#controlsFrom === 'paused') this.#setMode('paused');
+        else {
+          this.#lastInput = performance.now();
+          this.#setMode('title');
+        }
+      }
       return;
     }
     const command = this.#jukeboxMenu.apply(action);
@@ -416,9 +467,42 @@ export class Game {
         this.#sound('select');
         this.#openJukebox();
         break;
+      case 'controls':
+        this.#sound('select');
+        this.#openControls('title');
+        break;
       case null:
         break;
     }
+  }
+
+  #onPauseMenu(action: MenuAction): void {
+    switch (this.#pauseMenu.apply(action)) {
+      case 'moved':
+        this.#sound('move');
+        this.#pauseScreen.update(this.#pauseMenu.cursor);
+        break;
+      case 'resume':
+        void this.#resume();
+        break;
+      case 'controls':
+        this.#sound('select');
+        this.#openControls('paused');
+        break;
+      case 'quit':
+        this.#sound('back');
+        this.#toTitle();
+        break;
+      case null:
+        break;
+    }
+  }
+
+  /** Opens the controls on the page for the last thing pressed: the keyboard or a pad. */
+  #openControls(from: 'title' | 'paused'): void {
+    this.#controlsFrom = from;
+    this.#controlsPages.index = this.#lastPressPad ? 1 : 0;
+    this.#setMode('controls');
   }
 
   // Audio ---------------------------------------------------------------------------------
@@ -676,6 +760,7 @@ export class Game {
   async #pause(): Promise<void> {
     const player = this.#playerReady;
     if (this.#mode !== 'play' || !player || player.state !== 'playing') return;
+    this.#pauseMenu.cursor = 0;
     this.#setMode('paused');
     await player.pause();
   }
@@ -797,6 +882,11 @@ export class Game {
       case 'jukebox': {
         this.#drawJukebox();
         r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
+        break;
+      }
+      case 'controls': {
+        // From the title the stars drift on; from the pause the game stays frozen.
+        if (this.#controlsFrom === 'title') r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
         break;
       }
       case 'intro': {

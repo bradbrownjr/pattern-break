@@ -10,6 +10,8 @@ export const MAGENTA = 0xff3bd4;
 export const LIME = 0x9dff3a;
 export const AMBER = 0xffb000;
 export const WHITE = 0xffffff;
+/** The boost button on the controls screen, apart from the other action colours. */
+export const VIOLET = 0x8a6cff;
 export const GREY = 0x8a8fa8;
 export const DIM_GREY = 0x4a4e66;
 

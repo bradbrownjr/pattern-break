@@ -1,5 +1,6 @@
-// Power-ups (sim.ts): capsules from whole formations, the meter and buying, and each
-// upgrade: boost, double, laser, missile, option, shield. Losing a life loses them all.
+// Power-ups (sim.ts): capsules from whole formations, which fall to the cave's floor, the
+// meter and buying, and each upgrade: boost, double, laser, missile, option, shield. Losing
+// a life loses them all.
 
 import { describe, expect, it } from 'vitest';
 import { EnemyKind } from '../src/levelgen/types.ts';
@@ -20,11 +21,13 @@ import { enemyLevel, handLevel } from './level-fixtures.ts';
 const Q = 256;
 const open = enemyLevel([], 2000);
 
-/** Puts a capsule on the ship, so the next tick picks it up. */
+/** Puts a capsule on the ship, so the next tick picks it up (`open` doesn't scroll). */
 function capsuleOnShip(s: SimState): void {
   s.capsuleActive[0] = 1;
   s.capsuleX[0] = s.shipX;
+  s.capsuleWX[0] = s.shipX;
   s.capsuleY[0] = s.shipY;
+  s.capsuleVY[0] = 0;
 }
 
 /** Puts an enemy bullet on the ship. */
@@ -38,23 +41,30 @@ function bulletOnShip(s: SimState): void {
 }
 
 describe('capsules', () => {
-  it('drop when every ship of a formation is shot down, and drift to the ship', () => {
+  it('drop when every ship of a formation is shot down, scroll with the cave, and fall to its floor', () => {
+    // The cave scrolls 1 px a tick, and has no floor: capsules rest on the bottom edge.
     const level = enemyLevel(
       [
         { kind: EnemyKind.ship, spawnTick: 1, x: 392 * Q, formation: 0 },
         { kind: EnemyKind.ship, spawnTick: 30, x: 392 * Q, formation: 0 },
       ],
       2000,
+      (t) => t,
     );
     const s = createSimState();
-    let dropped = -1;
-    for (let t = 0; t < 1500 && s.capsules === 0; t++) {
-      tick(level, s, s.kills < 2 ? InputBit.fire : 0);
-      if (dropped < 0 && s.capsuleActive.some((a) => a === 1)) dropped = s.tick;
-    }
-    expect(s.kills).toBe(2);
-    expect(dropped).toBeGreaterThan(0);
-    // It drifted back along the cave's centre line to the ship, which held still.
+    while (s.kills < 2 && s.tick < 1500) tick(level, s, InputBit.fire);
+    expect(s.capsuleActive[0]).toBe(1);
+    const x = s.capsuleX[0]!;
+    const y = s.capsuleY[0]!;
+    tick(level, s, 0);
+    tick(level, s, 0);
+    // 1 px left a tick, and falling 8 Q8 a tick faster each tick (it fell 8 on its first).
+    expect([s.capsuleX[0], s.capsuleY[0]]).toEqual([x - 2 * Q, y + 16 + 24]);
+    while (s.capsuleVY[0] !== 0 && s.tick < 1500) tick(level, s, 0);
+    expect(s.capsuleY[0]).toBe((216 - 4) * Q);
+    // The ship, held still in the middle, misses it; flying down to the floor picks it up.
+    expect(s.capsules).toBe(0);
+    while (s.capsules === 0 && s.capsuleActive[0] === 1) tick(level, s, InputBit.down);
     expect([s.capsules, s.meter, s.lives]).toEqual([1, PowerUp.boost, 3]);
   });
 

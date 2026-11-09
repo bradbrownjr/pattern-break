@@ -16,10 +16,10 @@
  * concussive bomb and the nuke (2026-11-09). 6 = 3 shots in flight, not 6, and a bomb per
  * press with a 1 s reload (2026-11-09). 7 = 6 shots in flight again (2026-11-09). 8 =
  * capsules, the power-up meter, and boost, double, laser, missile, option and shield
- * (2026-11-09).
+ * (2026-11-09). 9 = capsules scroll with the cave and fall to its floor (2026-11-09).
  */
 export const GEN_VERSION = 5;
-export const SIM_VERSION = 8;
+export const SIM_VERSION = 9;
 
 /** Fixed simulation tick rate (docs/PLAN.md, "Simulation"). */
 export const TICK_HZ = 120;

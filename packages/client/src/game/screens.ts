@@ -1,12 +1,12 @@
-// The title screen, the jukebox, and the messages drawn over play (analyzing, paused,
-// crashed, song complete, errors). Layout is in 384x216 screen px.
+// The title screen, the jukebox, the pause menu, and the messages drawn over play
+// (analyzing, crashed, song complete, errors). Layout is in 384x216 screen px.
 
 import { PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH, type DifficultyName } from '@game/core';
 import { Container, Sprite, Texture } from 'pixi.js';
 import { BRAND } from '../config/brand.ts';
 import { AMBER, BACKGROUND, CYAN, DIM_GREY, GREY, LED_DIM, LED_LIT, LIME, MAGENTA, WHITE } from '../render/palette.ts';
 import { PixelText } from '../render/text.ts';
-import { DIFFICULTY_LABELS, TITLE_ITEMS, type TitleItem } from './menu.ts';
+import { DIFFICULTY_LABELS, PAUSE_ITEMS, TITLE_ITEMS, type PauseItem, type TitleItem } from './menu.ts';
 import type { BundledSong } from './songs.ts';
 
 const CENTER = PLAYFIELD_WIDTH / 2;
@@ -26,23 +26,9 @@ const TITLE_LABELS: Record<TitleItem, string> = {
   practice: 'Practice',
   difficulty: 'Difficulty',
   jukebox: 'Jukebox',
+  controls: 'Controls',
 };
 const MENU_TOP = 78;
-/** The controls, as a table under the menu: a header, then the keys, then the pad. */
-const HELP_COLUMNS = [
-  ['', 'Keys', 'Pad'],
-  ['Fly', 'Arrows', 'Stick'],
-  ['Fire', 'Z', 'A'],
-  ['Bomb', 'X', 'B'],
-  ['Missile', 'C', 'RB'],
-  ['Nuke', 'V', 'X'],
-  ['Buy', 'F', 'Y'],
-  ['Boost', 'Shift', 'LB'],
-  ['Pause', 'Esc', 'Start'],
-];
-const HELP_ROWS = [0, 1, 2].map((r) =>
-  HELP_COLUMNS.map((col) => col[r]!.padEnd(Math.max(...col.map((c) => c.length)))).join('  '),
-);
 const MENU_ROW = 13;
 const LABEL_X = 112;
 const VALUE_X = 188;
@@ -99,9 +85,7 @@ export class TitleScreen {
     this.#menu.addChild(
       this.#marker,
       this.#credit,
-      new PixelText('Up and down choose. Left and right change. Enter selects.', GREY).place(CENTER, 168, 'center'),
     );
-    HELP_ROWS.forEach((row, i) => this.#menu.addChild(new PixelText(row, i === 0 ? GREY : DIM_GREY).place(CENTER, 184 + i * 10, 'center')));
     this.#padHint.visible = false;
     this.container.addChild(this.#menu, this.#press, this.#padHint);
   }
@@ -188,11 +172,15 @@ export interface JukeboxView {
 
 export const SPECTRUM_BARS = 24;
 export const SPECTRUM_SEGMENTS = LED_LIT.length;
-const LIST_TOP = 40;
-const LIST_ROW = 12;
+// The list fits ten rows (nine songs and Back) above the spectrum; the spectrum's 12
+// segments are 2 px tall on a 3 px pitch, so it ends above the now-playing lines.
+const LIST_TOP = 34;
+const LIST_ROW = 11;
 const LIST_LEFT = 88;
 const LIST_RIGHT = 296;
-const SPECTRUM_BOTTOM = 150;
+const SPECTRUM_BOTTOM = 182;
+const SEGMENT_PITCH = 3;
+const NOW_Y = 188;
 
 /** m:ss */
 function clockText(seconds: number): string {
@@ -208,8 +196,8 @@ export class JukeboxScreen {
   #titles: PixelText[] = [];
   #authors: PixelText[] = [];
   #segments: Sprite[] = [];
-  #nowTitle = new PixelText('', WHITE);
-  #nowCredit = new PixelText('', GREY);
+  /** The song playing and its credit, on one line. */
+  #nowTitle = new PixelText('', GREY);
   #nowTime = new PixelText('', CYAN);
   #drawn = { cursor: -1, playing: -2 };
 
@@ -231,20 +219,15 @@ export class JukeboxScreen {
     for (let b = 0; b < SPECTRUM_BARS; b++) {
       for (let k = 0; k < SPECTRUM_SEGMENTS; k++) {
         const seg = new Sprite(Texture.WHITE);
-        seg.position.set(left + b * 10, SPECTRUM_BOTTOM - (k + 1) * 4);
+        seg.position.set(left + b * 10, SPECTRUM_BOTTOM - (k + 1) * SEGMENT_PITCH);
         seg.width = 8;
-        seg.height = 3;
+        seg.height = SEGMENT_PITCH - 1;
         seg.tint = LED_DIM[k]!;
         this.#segments.push(seg);
         this.container.addChild(seg);
       }
     }
-    this.container.addChild(
-      this.#nowTitle,
-      this.#nowCredit,
-      this.#nowTime,
-      new PixelText('Up and down choose. Enter plays or stops. Esc goes back.', DIM_GREY).place(CENTER, 200, 'center'),
-    );
+    this.container.addChild(this.#nowTitle, this.#nowTime);
   }
 
   update(view: JukeboxView): void {
@@ -257,7 +240,7 @@ export class JukeboxScreen {
     const song = view.playing === null ? null : this.#songs[view.playing]!;
     if (song) {
       this.#nowTime.text = `${clockText(view.seconds)} / ${clockText(view.durationSeconds)}`;
-      this.#nowTime.place(CENTER, 184, 'center');
+      this.#nowTime.place(CENTER, NOW_Y + 12, 'center');
     }
     const d = this.#drawn;
     const playing = view.playing ?? -1;
@@ -269,11 +252,8 @@ export class JukeboxScreen {
     }
     this.#marker.place(LIST_LEFT - 10, LIST_TOP + view.cursor * LIST_ROW);
     this.#nowTime.visible = song !== null;
-    this.#nowTitle.text = song ? song.title : 'Choose a song and press Enter.';
-    this.#nowTitle.color = song ? WHITE : GREY;
-    this.#nowTitle.place(CENTER, song ? 160 : 166, 'center');
-    this.#nowCredit.text = song ? song.credit : '';
-    this.#nowCredit.place(CENTER, 172, 'center');
+    this.#nowTitle.text = song ? `${song.title} ${song.credit}` : '';
+    this.#nowTitle.place(CENTER, NOW_Y, 'center');
   }
 }
 
@@ -321,5 +301,47 @@ export class MessageScreen {
     this.#panel.width = width + pad * 2;
     this.#panel.height = height + pad * 2;
     this.#panel.position.set(Math.round(CENTER - width / 2 - pad), Math.round(PLAYFIELD_HEIGHT / 2 - height / 2 - pad));
+  }
+}
+
+const PAUSE_LABELS: Record<PauseItem, string> = { resume: 'Resume', controls: 'Controls', quit: 'Quit to title' };
+const PAUSE_ROW = 13;
+
+/** "Paused" over the frozen game, with Resume, Controls and Quit to title. */
+export class PauseScreen {
+  readonly container = new Container();
+  #marker = new PixelText('>', AMBER);
+  #items: PixelText[] = [];
+  #cursor = -1;
+
+  constructor() {
+    const heading = new PixelText('Paused', AMBER, 2);
+    const labels = PAUSE_ITEMS.map((item) => new PixelText(PAUSE_LABELS[item], GREY));
+    const width = Math.max(heading.textWidth, ...labels.map((l) => l.textWidth + 10));
+    const height = 14 + 10 + PAUSE_ITEMS.length * PAUSE_ROW - 6;
+    const top = Math.round(PLAYFIELD_HEIGHT / 2 - height / 2);
+    const pad = 12;
+    const panel = new Sprite(Texture.WHITE);
+    panel.tint = BACKGROUND;
+    panel.alpha = 0.85;
+    panel.width = width + pad * 2;
+    panel.height = height + pad * 2;
+    panel.position.set(Math.round(CENTER - width / 2 - pad), top - pad);
+    heading.place(CENTER, top, 'center');
+    this.container.addChild(panel, heading, this.#marker);
+    const left = Math.round(CENTER - width / 2) + 10;
+    labels.forEach((label, i) => {
+      label.place(left, top + 24 + i * PAUSE_ROW);
+      this.#items.push(label);
+      this.container.addChild(label);
+    });
+  }
+
+  update(cursor: number): void {
+    if (cursor === this.#cursor) return;
+    this.#cursor = cursor;
+    this.#items.forEach((item, i) => (item.color = i === cursor ? AMBER : GREY));
+    const item = this.#items[cursor]!;
+    this.#marker.place(item.x - 10, item.y);
   }
 }
