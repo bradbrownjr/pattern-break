@@ -10,34 +10,16 @@ import {
   SAMPLES_PER_TICK,
   SEGMENT_PITCH,
 } from '../playfield.ts';
-import { SHIP_HITBOX_HEIGHT, SHIP_SPEED_Q8, SHIP_START_Y } from '../sim/constants.ts';
+import { SHIP_START_Y } from '../sim/constants.ts';
 import { GEN_VERSION } from '../version.ts';
 import { Difficulty, PEAK_HOLD_BARS, Terrain, type DifficultyName, type Level } from './types.ts';
 
-/**
- * Consecutive gaps must overlap by at least this many px, so the ship's hitbox fits
- * while it straddles two bars (it is wider than a bar's 2 px opening).
- */
-export const MIN_GAP_OVERLAP_PX = SHIP_HITBOX_HEIGHT + 4;
+import { placeEnemies } from './enemies.ts';
+import { MIN_GAP_OVERLAP_PX, gapShiftLimitPx, maxCombinedSegments } from './rules.ts';
+
+export { MIN_GAP_OVERLAP_PX, gapShiftLimitPx, maxCombinedSegments };
 
 const BAR_PITCH_Q8 = BAR_PITCH * Q8;
-
-/** The most lit segments ceiling and floor may have together at this difficulty. */
-export function maxCombinedSegments(difficulty: DifficultyName): number {
-  return Math.floor((PLAYFIELD_HEIGHT - Difficulty[difficulty].minGapPx) / SEGMENT_PITCH);
-}
-
-/**
- * How far, in px, the gap centre may move from one bar to the next, where the earlier
- * bar's row lasts `rowSamples`: the ship's straight vertical travel in that time
- * (SHIP_SPEED_Q8 per tick, rounded down to whole px), but no more than the minimum gap
- * minus MIN_GAP_OVERLAP_PX, so that consecutive gaps always overlap by that much.
- */
-export function gapShiftLimitPx(rowSamples: number, difficulty: DifficultyName): number {
-  const travel = Math.floor((SHIP_SPEED_Q8 * rowSamples) / (SAMPLES_PER_TICK * Q8));
-  const cap = Difficulty[difficulty].minGapPx - MIN_GAP_OVERLAP_PX;
-  return travel < cap ? travel : cap;
-}
 
 /**
  * World x in Q8 of the playhead at song sample `s`. Bar i's left edge is at world x
@@ -333,7 +315,7 @@ export function generateLevel(levelData: LevelData, difficulty: DifficultyName):
     scroll[t] = playheadAtSample(barStartSample, totalSamples, s, hint) - PLAYHEAD_X * Q8;
   }
 
-  return {
+  const terrain = {
     genVersion: GEN_VERSION,
     difficulty,
     totalSamples,
@@ -346,4 +328,5 @@ export function generateLevel(levelData: LevelData, difficulty: DifficultyName):
     tickCount,
     scroll,
   };
+  return { ...terrain, enemies: placeEnemies(levelData, terrain, drums) };
 }

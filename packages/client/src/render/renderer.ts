@@ -4,6 +4,7 @@
 
 import { PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH } from '@game/core';
 import { Container, TextureSource, autoDetectRenderer, type Renderer } from 'pixi.js';
+import { CombatView } from './combat.ts';
 import { Explosion, Flash } from './effects.ts';
 import { BACKGROUND, LETTERBOX } from './palette.ts';
 import { ShipView } from './ship.ts';
@@ -35,6 +36,8 @@ export class GameRenderer {
   readonly world = new Container();
   readonly terrain = new TerrainView();
   readonly ship = new ShipView();
+  /** Enemies, shots, bullets, their bursts, and the lives left. */
+  readonly combat = new CombatView();
   readonly explosion = new Explosion();
   readonly flash = new Flash();
   /** Screens and messages, drawn over everything. */
@@ -45,8 +48,8 @@ export class GameRenderer {
     this.renderer = renderer;
     this.#parent = options.parent;
     this.starfield = new Starfield(options.seed);
-    this.world.addChild(this.terrain.container, this.ship.container, this.explosion.container);
-    this.stage.addChild(this.starfield.container, this.world, this.flash.sprite, this.ui);
+    this.world.addChild(this.terrain.container, this.combat.container, this.ship.container, this.explosion.container);
+    this.stage.addChild(this.starfield.container, this.world, this.combat.hud, this.flash.sprite, this.ui);
     const canvas = renderer.canvas as HTMLCanvasElement;
     canvas.style.imageRendering = 'pixelated';
     canvas.style.display = 'block';

@@ -14,9 +14,13 @@ describe('keyToBit', () => {
     expect(keyToBit('KeyD')).toBe(InputBit.right);
   });
 
+  it('maps Space, Z and J to fire', () => {
+    expect(['Space', 'KeyZ', 'KeyJ'].map(keyToBit)).toEqual([InputBit.fire, InputBit.fire, InputBit.fire]);
+  });
+
   it('ignores other keys', () => {
     expect(keyToBit('Escape')).toBe(0);
-    expect(keyToBit('Space')).toBe(0);
+    expect(keyToBit('KeyX')).toBe(0);
     expect(keyToBit('KeyQ')).toBe(0);
   });
 });
@@ -30,7 +34,9 @@ describe('keyToMenuAction', () => {
     expect(['Escape', 'Backspace'].map(keyToMenuAction)).toEqual(['back', 'back']);
   });
 
-  it('ignores other keys', () => {
+  it('ignores other keys, the fire keys Z and J among them', () => {
+    expect(keyToMenuAction('KeyZ')).toBeNull();
+    expect(keyToMenuAction('KeyJ')).toBeNull();
     expect(keyToMenuAction('KeyQ')).toBeNull();
     expect(keyToMenuAction('ShiftLeft')).toBeNull();
   });

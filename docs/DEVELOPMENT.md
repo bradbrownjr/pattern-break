@@ -62,8 +62,8 @@ pattern-break/
 │   │   ├── src/level-data/        # LevelData types and binary format
 │   │   ├── src/spectrum/          # FFT, band and LED analysis, generated tables
 │   │   ├── src/playfield.ts       # playfield geometry and tick timing
-│   │   ├── src/levelgen/          # generateLevel, the path check, Level bytes
-│   │   ├── src/sim/               # tick, collision, the autopilot
+│   │   ├── src/levelgen/          # generateLevel, enemy placement, the path check, Level bytes
+│   │   ├── src/sim/               # tick, collision, shots and enemies, the autopilot
 │   │   └── test/determinism-lint.test.ts
 │   ├── analysis/                  # @game/analysis: libopenmpt wrapper, produces LevelData
 │   │   ├── src/analyze.ts         # the analysis pass
@@ -317,36 +317,114 @@ bar's final values:
 9. **Solid peaks only** (no difficulty, for now): step 5 runs again on the peaks. Step 6
    would need to apply to them too before solid peaks return.
 
-`findPathViolation(level)` in `levelgen/path-check.ts` checks the guarantee: every bar's
-solid gap (peaks where they are solid, levels otherwise) is at least the difficulty's
+`findPathViolation(level)` in `levelgen/path-check.ts` checks the guarantee on the walls
+from `solidWalls(level)`: each side's peak where peaks are solid and its level otherwise,
+plus turrets and tank tracks (next section). Every bar's gap is at least the difficulty's
 minimum, bar 0's gap is centred on the ship's start height, every later centre move is
 within the limit unless the new gap contains the old one, and every three consecutive gaps
-share 10 px. Tests run it on random loud songs at every difficulty, on each fixture, and on
-every bundled song.
+share 10 px. `barPathViolation()` checks one bar against the two before it; enemy placement
+uses it too. The shared rules (`MIN_GAP_OVERLAP_PX`, `gapShiftLimitPx`, the tank helpers)
+are in `levelgen/rules.ts`. Tests run the check on random loud songs at every difficulty,
+on each fixture, and on every bundled song.
+
+### Enemies
+
+`placeEnemies()` in `levelgen/enemies.ts` runs at the end of `generateLevel` and fills
+`level.enemies`, an `EnemyList` of parallel typed arrays in spawn order: kind (turret 0,
+tank 1, ship 2), instrument, spawn tick, world x of the centre at spawn (Q8), y, side,
+motion, and the ticks each enemy fires at (`fireStart`, `fireTick`). The sim moves enemies
+by formula, so nothing in the list depends on how the player flies.
+
+- **Roles:** drums are `findDrums()`'s. The bass is the non-drum instrument with the lowest
+  middle note (the lowest pitch at or below which half its notes fall), when there are at
+  least two non-drum instruments. Every other instrument makes ships.
+- **Walk:** notes in time order, skipping the first 240 ticks (`ENEMY_GRACE_TICKS`) and any
+  past the last tick. Each kind keeps its own spacing from `EnemyTuning`.
+- **Turret:** on the bar the drum note plays on, centred on the bar's lit part, filling the
+  segment slot past the wall's tip (y is the slot's middle). The side alternates, floor
+  first; if the preferred side breaks the path, the other is tried. It spawns on the first
+  tick its centre is at screen x 392 or less.
+- **Tank:** spawns on the bass note's tick at screen x 392 and drives left 64 Q8 per tick
+  on top of the scroll. `tankExitTick()` finds when it leaves (centre left of x -16), and
+  `tankBars()` the bars its 12 px hitbox can cover. On each, the floor counts as
+  `floorUnderTank()`: the highest floor of that bar and its two neighbours, plus one. No
+  turret or other tank may share those floor bars.
+- **Path:** a turret or tank is kept only if `barPathViolation()` passes for every bar it
+  touches and the two after, with it counted as wall; otherwise it is dropped.
+- **Ships:** a note starts a formation if `formationSpacingTicks` have passed since the last
+  one; the same instrument's next notes at least 12 ticks apart, within 120 ticks of the
+  first, add ships up to `formationSize`. A ship's y is its offset from the cave's centre
+  line: `(middle - note) * 2` px, clamped to 24. Its motion comes from libopenmpt's effect
+  number on the note (`soundlib/modcommand.h`): 5, 7 and 26 (vibrato) weave, 2 (slide up)
+  climbs, 3 (slide down) dives, 1 (arpeggio) with a nonzero parameter hops.
+- **Fire ticks:** the instrument's note ticks from the enemy's spawn (ships: 30 ticks after),
+  taken while its screen x at that tick is within 104 to 376 and at least
+  `fireIntervalTicks` after the last one taken. Ships take at most `shipShots`.
+
+| `EnemyTuning` | Easy | Normal | Hard |
+|---|---|---|---|
+| Turret spacing (ticks) | 360 | 240 | 168 |
+| Tank spacing | 720 | 480 | 336 |
+| Formation spacing | 360 | 240 | 168 |
+| Ships per formation | 2 | 3 | 4 |
+| Least ticks between one enemy's shots | 120 | 72 | 48 |
+| Bullet speed (Q8 per tick) | 224 | 288 | 352 |
+| Bullets in flight | 4 | 8 | 12 |
+| Shots per ship | 0 | 1 | 2 |
+| Ship speed (Q8 per tick) | 224 | 288 | 352 |
+
+On the nine songs (2026-11-09), normal gives 27 to 97 turrets, 1 to 21 tanks, and 77 to
+313 ships a level, and 2.0 to 3.1 scheduled enemy shots a second; hard gives 5.1 to 7.7.
+Every level passes the path check with its enemies.
 
 ### Simulation
 
 - **Ticks:** `level.tickCount` is `ceil(totalSamples / 400)`. `state.tick` counts the ticks
-  run, so the state shows song sample `400 * state.tick`. `tick()` moves the ship, clamps
-  it, increments `state.tick`, then tests collision at the new tick. It does nothing once
-  `state.dead` or `state.finished` is set.
+  run, so the state shows song sample `400 * state.tick`. `tick()` does nothing once
+  `state.dead` or `state.finished` is set. Otherwise, in order: move and clamp the ship and
+  increment `state.tick`; spawn enemies whose tick has come and move every live one; fire
+  and move shots and test them against enemies; fire enemies' scheduled shots and move
+  bullets; then, unless the ship is in its safe time, test it against the terrain, live
+  enemies and bullets.
 - **Input bits** (`InputBit`, one byte per tick): up 1, down 2, left 4, right 8, fire 16,
-  bomb 32, buy 64. Only movement does anything in M1. Opposite directions cancel.
+  bomb 32, buy 64. Bomb and buy do nothing yet. Opposite directions cancel.
 - **Ship:** 384 Q8 (1.5 px) per tick straight. Diagonals move 272 Q8 on each axis
   (384 / sqrt 2, rounded), about 1.503 px per tick in total. The centre stays within
   x 16 to 160 and y 3 to 213, so the hitbox never leaves the screen. It starts at (64, 108).
-- **Collision:** the hitbox against the solid part of every bar it overlaps horizontally:
-  lit segments, plus peak dots where they are solid. Integer comparisons only.
-- **Death:** `state.dead` and `state.deathTick` (the value of `state.tick` after the fatal
-  tick). M1 restarts the song on death; `state.lives` is there for later.
+- **Collision:** `boxHitsTerrain()` tests a box against the solid part of every bar it
+  overlaps horizontally: lit segments, plus peak dots where they are solid. Boxes against
+  each other are half-open overlaps of centre and half size. Integer comparisons only.
+- **Shots:** holding fire shoots every 8 ticks from the ship's nose, at most 6 in flight,
+  1024 Q8 (4 px) per tick to the right. A shot passes through the walls and stops on the
+  first live enemy it overlaps (6x2 px against the enemy's hitbox).
+- **Enemies:** turrets (8x6 px) stay at their world x; tanks (12x7) move left 64 Q8 per tick
+  in world terms and sit on the floor of the bar under their centre; ships (10x8) cross the
+  screen at the difficulty's ship speed, steering at up to 256 Q8 per tick towards the
+  cave's centre line plus their offset and motion. Weave is 12 px over 96 ticks, each half a
+  parabola `4q(h - q) / h^2`; climb and dive drift 128 Q8 per tick up to 48 px; hop steps
+  0, -10, +10 px every 16 ticks. Turrets and ships take 1 hit, tanks 3 (`ENEMY_HP`). An
+  enemy whose centre passes screen x -16 is gone. `state.enemyStatus` holds waiting, alive,
+  destroyed or gone, and `state.enemyEndTick` when it ended.
+- **Enemy bullets:** 16 slots, at most `maxBullets` in flight. A bullet starts at the
+  enemy's centre with velocity `trunc(d * speed / |d|)` towards the ship's centre, `|d|`
+  from `Math.sqrt`; it moves in screen terms and stops on the walls or off screen.
+- **Lives:** 3 (`START_LIVES`). A hit costs one: `state.hitTick` records it. Ramming an
+  enemy destroys it (and counts in `state.kills`). With lives left the ship goes to x 64 at
+  the middle of the cave's gap there, every bullet is cleared, and it can't be hit until
+  `state.safeUntil`, 240 ticks on. The last life sets `state.dead` and `state.deathTick`.
 - **Running a log:** `runInputLog(level, inputs, state?)` runs from the state's current
-  tick until the log ends, the ship dies, or the song ends. `resetSimState` reuses a state.
+  tick until the log ends, the last life is lost, or the song ends. `resetSimState` reuses
+  a state; `tick()` sizes its enemy arrays to the level on the first tick, the only time it
+  allocates.
 - **Autopilot:** `autopilotInputs(level)` in `sim/autopilot.ts` flies a level by looking
-  24 ticks ahead and records its input log. Tests use it to show the path exists; it never
-  moves horizontally.
+  24 ticks ahead through the walls from `solidWalls()`, so it steers clear of turrets and
+  tank tracks, and holds fire. Of its three moves (up, down, none) it takes the one no
+  bullet or ship would hit soonest within 16 ticks, then the one nearest its target. It
+  never moves horizontally. On the terrain alone (`withoutEnemies(level)`) it always
+  reaches the end; tests use that to show the path exists.
 - **Speed:** `pnpm --filter @game/analysis bench:sim` on the fixture ran 12.5 to 13.7
   million ticks per second in Node 26 in the cloud development container (checked
-  2026-11-08), about 100 000 times real time.
+  2026-11-08, before enemies), about 100 000 times real time.
 
 ## Versions to bump
 
@@ -369,13 +447,16 @@ and libopenmpt version it was made with. `test/golden.test.ts` analyzes each fix
 the same commit as a `GEN_VERSION` bump.
 `packages/analysis/fixtures/golden-levelgen.json` pins, for each fixture and difficulty,
 the SHA-256 of `serializeLevel(level)` and of `serializeSimState` after two scripted runs:
-the autopilot (which must survive) and a fixed zigzag log (which crashes, at the recorded
-`zigzagDeathTick`). The same test checks them in Node and in the browsers. A Level hash
+the autopilot with the enemies, which pins their placement, movement, aim and collisions,
+and a fixed zigzag log (which loses its lives, the last at the recorded
+`zigzagDeathTick`). The test also checks that the autopilot reaches the end of the terrain
+alone. The same test checks them in Node and in the browsers. A Level hash
 changes only with a `GEN_VERSION` bump, a sim hash only with a `SIM_VERSION` bump.
 
 **Bundled songs.** `packages/analysis/test/music.test.ts` analyzes every song in
-`music/manifest.json`, builds its level on each difficulty, and checks that the path check
-passes and the autopilot reaches the end. It runs in Node only and takes about a minute
+`music/manifest.json`, builds its level on each difficulty, and checks that it has enemies,
+that the path check passes with them, and that the autopilot reaches the end of the
+terrain alone. It runs in Node only and takes about a minute
 for the nine songs, so a levelgen change that makes a real song unplayable fails `pnpm test`.
 
 **Browsers.** The analysis package's `vitest.config.ts` has two projects. `node` runs every
@@ -521,8 +602,8 @@ In capture mode the renderer must:
   `difficulty`, records `autopilotInputs(level)`, and runs the sim from tick 0 to
   `floor(round(t * 48000) / 400)` with that log, through the same `catchUp` the game loop
   uses. It then draws the frame at song sample `round(t * 48000)`, the scroll interpolated
-  between ticks as in play. If the autopilot crashed before `t`, the frame shows the crash,
-  timed from the crash tick in song time.
+  between ticks as in play. If the autopilot lost its last life before `t`, the frame shows
+  the crash, timed from the crash tick in song time.
 - The renderer is created with `preserveDrawingBuffer`, so the screenshot reads the frame
   that was drawn, and the page waits two animation frames after the draw before it calls
   `markCaptureReady()`. Capture mode needs WebGL and throws if PixiJS picks another
@@ -671,9 +752,9 @@ Run `pnpm dev` and open the URL it prints.
   last ends the run. **Practice** plays one song. Each level opens with a 2 s card: the
   level number ("Final level" for the last), the song's title and credit, and the
   difficulty.
-- **In play,** arrows or WASD move, and Esc pauses and resumes; Q while paused goes back to
-  the title. A crash is game over until M2 adds lives: any key retries the level, Esc goes
-  to the title. Game over and level complete ignore keys for 0.7 s, so a key still held from
+- **In play,** arrows or WASD move, Space, Z or J fire (hold to keep firing), and Esc
+  pauses and resumes; Q while paused goes back to the title. Losing the last of three
+  lives is game over: any key retries the level, Esc goes to the title. Game over and level complete ignore keys for 0.7 s, so a key still held from
   play doesn't skip them. The game pauses when the window loses focus or the tab is hidden.
 - **Jukebox:** Enter plays the song under the cursor or stops it if it is playing, a song
   that ends hands over to the next, and Esc or Back returns to the title, where the title
@@ -774,8 +855,9 @@ is added.
   nearest-neighbour texture sampling. The canvas's CSS size is the largest whole multiple of
   384x216 that fits the window (`integerScale()`), with `image-rendering: pixelated`, centred
   on black by `index.html`.
-- **Layers,** back to front: the starfield, the world (terrain, ship, explosion), the death
-  flash, and the UI (title screen, jukebox, demo banner, messages, and the fade).
+- **Layers,** back to front: the starfield, the world (terrain, enemies and bullets, ship,
+  explosion), the lives, the death flash, and the UI (title screen, jukebox, demo banner,
+  messages, and the fade).
 - **Terrain** (`terrain.ts`, geometry in `terrain-layout.ts`): 41 columns
   (`MAX_VISIBLE_BARS`) of 50 sprites each, 25 a side (`SEGMENTS_PER_SIDE`, the most hard's
   36 px minimum gap allows), made once. Each frame moves the columns to the bars
@@ -786,6 +868,14 @@ is added.
   whole pixel once per frame, so bars never shift against each other.
 - **Ship** (`ship.ts`): a 16x8 sprite built from a character map, centred on the sim's
   `shipX` and `shipY`. The engine flame changes length every 1440 song samples (30 ms).
+- **Combat** (`combat.ts`, sprites from character maps in `pixels.ts`): `CombatView.draw()`
+  draws the live enemies (up to 64), shots and bullets from the sim state. Turrets and
+  tanks are placed from their world x against the terrain's drawn scroll, so they stay on
+  their bars when the display runs a few ticks off the sim; ships and bullets use the sim's
+  screen positions. It compares the state with the last draw to start a 16-particle burst
+  for each enemy destroyed (8 at once at most) and the ship's explosion for a life lost,
+  both timed in song time. It returns false on alternate 6-tick steps of the ship's safe
+  time, which blinks the ship. The lives are ship icons on a dark panel in the top left.
 - **Starfield** (`starfield.ts`): 112 stars in three layers placed by `seededRandom(seed)`,
   scrolling at 0.12, 0.25 and 0.5 of the terrain's speed.
 - **Text** (`font.ts`, `text.ts`): a 5x7 pixel font for printable ASCII, with descenders,
@@ -817,15 +907,16 @@ Node):
    is cosmetic; the sim only reads whole ticks.
 5. Draw and render.
 
-**Input.** `keyToBit()` maps arrows and WASD to `InputBit` in play (menus use
-`keyToMenuAction()`, above). A key held during a frame sets
+**Input.** `keyToBit()` maps arrows and WASD to the movement bits and Space, Z and J to
+fire in play (menus use `keyToMenuAction()`, above, where Space confirms). A key held during a frame sets
 its bit on every tick that frame runs, and a key pressed and released between two ticks
 still sets its bit for one tick.
 
 **Pause.** Esc calls `player.pause()`, which suspends the audio context. The clock stops, so
 the sim stops with it; resuming continues both from where they were.
 
-**Crash and song end.** When `state.dead` is set, the song stops, the picture holds the
+**Crash and song end.** A life lost short of the last plays an explosion where the ship
+was and the run goes on (`CombatView`). When `state.dead` is set, the song stops, the picture holds the
 crash tick, and the explosion and flash play on the wall clock. A retry calls
 `resetSimState()` and `player.start()`, which plays the song from its start. When
 `state.finished` is set, the "Song complete" message shows. Either way the run's difficulty,

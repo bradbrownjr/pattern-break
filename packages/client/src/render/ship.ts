@@ -37,10 +37,11 @@ export function shipPixels(): Uint8Array {
   return out;
 }
 
-let shipTexture: Texture | null = null;
+let shipTextureCache: Texture | null = null;
 
-function texture(): Texture {
-  shipTexture ??= new Texture({
+/** The ship sprite's texture, also used for the lives shown in play. */
+export function shipTexture(): Texture {
+  shipTextureCache ??= new Texture({
     source: new BufferImageSource({
       resource: shipPixels(),
       width: SHIP_SPRITE_WIDTH,
@@ -49,7 +50,7 @@ function texture(): Texture {
       label: 'ship',
     }),
   });
-  return shipTexture;
+  return shipTextureCache;
 }
 
 export class ShipView {
@@ -65,7 +66,7 @@ export class ShipView {
     this.#flameInner = new Sprite(Texture.WHITE);
     this.#flameInner.tint = AMBER;
     this.#flameInner.height = 2;
-    this.#body = new Sprite(texture());
+    this.#body = new Sprite(shipTexture());
     this.container.addChild(this.#flameOuter, this.#flameInner, this.#body);
   }
 

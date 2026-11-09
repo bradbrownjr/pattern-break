@@ -41,6 +41,91 @@ export const Terrain = {
   minSideSegments: 2,
 } as const;
 
+/**
+ * Enemies (docs/PLAN.md, "Enemies"). Each kind comes from one part of the song: drums
+ * place turrets on the wall tips, the bass sends tanks along the floor, and every other
+ * instrument sends ships. Enemies fire on their own instrument's notes, so every shot lands
+ * on the music.
+ */
+export const EnemyKind = { turret: 0, tank: 1, ship: 2 } as const;
+export type EnemyKind = (typeof EnemyKind)[keyof typeof EnemyKind];
+
+/** How a ship moves, from the effect on the note that sent it. */
+export const ShipMotion = { straight: 0, weave: 1, climb: 2, dive: 3, hop: 4 } as const;
+export type ShipMotion = (typeof ShipMotion)[keyof typeof ShipMotion];
+
+/**
+ * Per-difficulty enemy settings. Ticks are 1/120 s; speeds are Q8 px per tick.
+ * - `turretSpacingTicks`, `tankSpacingTicks`, `formationSpacingTicks`: the least time
+ *   between two turrets, two tanks, or the starts of two ship formations.
+ * - `formationSize`: ships in a formation, one per note of the phrase that sends it.
+ * - `fireIntervalTicks`: the least time between two shots of one enemy.
+ * - `bulletSpeedQ8`, `maxBullets`: enemy bullet speed, and how many can be in flight.
+ * - `shipShots`: shots each ship may fire. `shipSpeedQ8`: how fast ships cross the screen.
+ */
+export const EnemyTuning = {
+  easy: {
+    turretSpacingTicks: 360,
+    tankSpacingTicks: 720,
+    formationSpacingTicks: 360,
+    formationSize: 2,
+    fireIntervalTicks: 120,
+    bulletSpeedQ8: 224,
+    maxBullets: 4,
+    shipShots: 0,
+    shipSpeedQ8: 224,
+  },
+  normal: {
+    turretSpacingTicks: 240,
+    tankSpacingTicks: 480,
+    formationSpacingTicks: 240,
+    formationSize: 3,
+    fireIntervalTicks: 72,
+    bulletSpeedQ8: 288,
+    maxBullets: 8,
+    shipShots: 1,
+    shipSpeedQ8: 288,
+  },
+  hard: {
+    turretSpacingTicks: 168,
+    tankSpacingTicks: 336,
+    formationSpacingTicks: 168,
+    formationSize: 4,
+    fireIntervalTicks: 48,
+    bulletSpeedQ8: 352,
+    maxBullets: 12,
+    shipShots: 2,
+    shipSpeedQ8: 352,
+  },
+} as const;
+
+/**
+ * The enemies of a level, one entry per enemy in spawn order, as parallel arrays.
+ * Positions are Q8. The sim moves them; nothing here depends on how the player flies.
+ */
+export interface EnemyList {
+  count: number;
+  kind: Uint8Array;
+  /** The instrument that sent it; it fires on that instrument's notes. */
+  instrument: Uint8Array;
+  /** The tick it appears: a turret as it scrolls in, a tank or ship on its note. */
+  spawnTick: Uint32Array;
+  /** World x of its centre at spawnTick. */
+  x: Int32Array;
+  /**
+   * Turret: the centre y, fixed. Ship: its height above (negative) or below the cave's
+   * centre line, from the note's pitch. Tank: 0; it rides the floor.
+   */
+  y: Int32Array;
+  /** Turret: 0 on the floor, 1 on the ceiling. Others: 0. */
+  side: Uint8Array;
+  /** Ship: a ShipMotion. Others: 0. */
+  motion: Uint8Array;
+  /** Enemy i fires at the ticks fireTick[fireStart[i]] to fireTick[fireStart[i + 1] - 1]. */
+  fireStart: Uint32Array;
+  fireTick: Uint32Array;
+}
+
 /** Bars a peak stays at its level before it starts to fall one segment per bar. */
 export const PEAK_HOLD_BARS = 6;
 
@@ -74,4 +159,5 @@ export interface Level {
    * sim tick t (song sample t * SAMPLES_PER_TICK). See scrollAtSample() for the formula.
    */
   scroll: Int32Array;
+  enemies: EnemyList;
 }

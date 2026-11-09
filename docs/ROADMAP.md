@@ -16,7 +16,7 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 | [Title music, demo, and levels](#title-music-demo-and-levels) | Title music, an attract demo, menu sounds, an arcade run of levels, and game-over music. | Built; Brad to play-test |
 | [Cavern terrain](#cavern-terrain) | A cave that squeezes on every hit and winds with the melody; difficulty sets the song's speed and the cave's width. | Built; Brad to play-test |
 | [Eight levels](#eight-levels) | Six more songs, so the arcade run has eight levels. | Built; Brad to play-test |
-| [M2: enemies and scoring](#m2-enemies-and-scoring) | Notes become enemies; shooting, scoring, lives, power-ups, gamepad support, and replays that give the same score in every browser. | Next |
+| [M2: enemies and scoring](#m2-enemies-and-scoring) | Notes become enemies; shooting, scoring, lives, power-ups, gamepad support, and replays that give the same score in every browser. | Enemies and shooting built; Brad to play-test |
 | [M3: effects and look](#m3-effects-and-look) | Particles, big explosions, sound effects, copper bars, starfield, CRT filter, title and results screens, accessibility options. | Planned |
 | [M4: library, offline, music pack](#m4-library-offline-music-pack) | Import your own songs, install the game, and play with no connection; a bundled, credited music pack. | Planned |
 | [M5: leaderboards](#m5-leaderboards) | A global board per song, with scores checked by replaying them on the server. | Planned |
@@ -161,11 +161,34 @@ to 8 (2026-11-08).
 
 ## M2: enemies and scoring
 
-**Goal:** a complete, deterministic run.
+**Goal:** a complete, deterministic run. Built in slices, each play-tested before the next
+(Brad, 2026-11-09).
 
-- [ ] Note events become enemies, with motion from their effects.
-- [ ] Shooting (hold fire for auto-fire), the bomb, the on-beat bonus, score, lives, and
-      the power-up meter.
+### Enemies and shooting
+
+- [x] Turrets from the drums, on the bar tips of the floor and the ceiling; tanks from the
+      bass, along the floor; formations of ships from the other instruments, at heights
+      from their pitch and with motion from their effects.
+- [x] Every enemy fires on its own instrument's notes, aimed at the ship. Difficulty sets
+      the spacing, bullet speed, and how many bullets can be in flight.
+- [x] Hold fire to shoot (Space, Z or J). Turrets and ships take one hit, tanks three.
+- [x] Three lives: a hit costs one, and the ship comes back at the playhead, safe for 2 s.
+- [x] Turrets and tanks count as wall in the path check, so a level never needs a kill to
+      get through.
+- [x] The autopilot holds fire and dodges bullets and ships, so the attract demo fights.
+- [x] `GEN_VERSION` 3, `SIM_VERSION` 2 and Level format 2, with the golden hashes
+      regenerated. The golden autopilot run has enemies, so the browser tests check them in
+      every engine.
+
+**Acceptance:** Brad plays the levels and finds the enemies fair, readable, and tied to the
+music; `pnpm check` passes.
+
+**Docs:** `PLAN.md` ("Level generation", "Simulation", "Visual spec"), `DEVELOPMENT.md`
+("Enemies", "Simulation", "Playing it"), the README status.
+
+### Still to come
+
+- [ ] Score, the on-beat bonus, the bomb, and the power-up meter.
 - [ ] Gamepad and arcade-stick support through the Gamepad API, next to the keyboard
       (moved up from M6, 2026-11-08: a shooter wants a pad from the start).
 - [ ] Replay recording and playback.
@@ -258,6 +281,9 @@ These need Brad's answer before the work that depends on them. Don't guess.
    Needed before M5.
 3. **Peak dots:** they are off on every difficulty (2026-11-08). They could come back as a
    display option, as solid obstacles on hard, or not at all.
+4. **Shots through walls:** the player's shots pass through the LED walls, so turrets on
+   the bar tips can be hit; enemy bullets stop on them (2026-11-09, for Brad's play-test).
+   The other way, turrets are hard to reach behind taller bars.
 
 ## Decided
 
@@ -270,6 +296,11 @@ These need Brad's answer before the work that depends on them. Don't guess.
   with the melody (2026-11-09; until then the ceiling came from the left channel and the
   floor from the right). What matters is that it feels like playing the beat and that
   there is always a path for the ship, even a hard one (2026-11-08).
+- **Enemies:** drums make turrets on the floor and ceiling, the bass makes tanks on the
+  floor, and the other instruments make ships. Every enemy shot lands on a note of its
+  instrument (2026-11-09).
+- **Lives:** three; a hit costs one and the ship comes back at the playhead (2026-11-09).
+- **M2 comes in slices,** enemies and shooting first, each play-tested (2026-11-09).
 - **Difficulty sets the song's speed and the cave's width;** the beat and the winding are
   the same on every difficulty, and enemies add the rest of the challenge (2026-11-09).
 - **Terrain height comes from the song as it is,** with no per-song normalization. A quiet

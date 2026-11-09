@@ -1,15 +1,22 @@
-// Cosmetic effects for M1: the ship's explosion and the screen flash on death. Both are
-// functions of the time since they started, which the caller passes in (wall clock in
-// play, song time in capture mode). They never touch sim state.
+// Cosmetic effects: explosions (the ship's, and smaller ones for enemies) and the screen
+// flash on game over. Each is a function of the time since it started, which the caller
+// passes in (wall clock or song time). They never touch sim state.
 
 import { PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH } from '@game/core';
 import { Container, Sprite, Texture } from 'pixi.js';
 import { flashAlpha } from './flash.ts';
 import { AMBER, BACKGROUND, CYAN, MAGENTA, WHITE, mix } from './palette.ts';
 
-const PARTICLES = 48;
-const EXPLOSION_MS = 900;
-const PARTICLE_COLORS = [WHITE, CYAN, CYAN, MAGENTA, AMBER];
+export interface ExplosionStyle {
+  particles: number;
+  ms: number;
+  colors: readonly number[];
+  /** Top particle speed, px per second (the slowest is 20). */
+  speed: number;
+}
+
+/** The player ship's explosion. */
+export const SHIP_EXPLOSION: ExplosionStyle = { particles: 48, ms: 900, colors: [WHITE, CYAN, CYAN, MAGENTA, AMBER], speed: 110 };
 
 interface Particle {
   sprite: Sprite;
@@ -22,11 +29,13 @@ interface Particle {
 export class Explosion {
   readonly container = new Container();
   #particles: Particle[] = [];
+  #style: ExplosionStyle;
   #x = 0;
   #y = 0;
 
-  constructor() {
-    for (let i = 0; i < PARTICLES; i++) {
+  constructor(style: ExplosionStyle = SHIP_EXPLOSION) {
+    this.#style = style;
+    for (let i = 0; i < style.particles; i++) {
       const sprite = new Sprite(Texture.WHITE);
       sprite.visible = false;
       this.container.addChild(sprite);
@@ -42,11 +51,12 @@ export class Explosion {
       const p = this.#particles[i]!;
       // An even spread of directions with some jitter, and a mix of speeds.
       const angle = ((i + random() * 0.8) / this.#particles.length) * Math.PI * 2;
-      const speed = 20 + random() * 90;
+      const speed = 20 + random() * (this.#style.speed - 20);
       p.vx = Math.cos(angle) * speed;
       p.vy = Math.sin(angle) * speed;
-      p.color = PARTICLE_COLORS[Math.floor(random() * PARTICLE_COLORS.length)]!;
-      p.lifeMs = EXPLOSION_MS * (0.45 + random() * 0.55);
+      const colors = this.#style.colors;
+      p.color = colors[Math.floor(random() * colors.length)]!;
+      p.lifeMs = this.#style.ms * (0.45 + random() * 0.55);
       const size = random() < 0.3 ? 2 : 1;
       p.sprite.width = size;
       p.sprite.height = size;

@@ -1,7 +1,7 @@
 // Synthetic LevelData for levelgen and sim tests.
 
 import { LEVEL_DATA_FORMAT_VERSION, type LevelData } from '../src/level-data/types.ts';
-import { Difficulty, type DifficultyName } from '../src/levelgen/types.ts';
+import { Difficulty, type DifficultyName, type EnemyList } from '../src/levelgen/types.ts';
 
 export interface SyntheticNote {
   /** Song sample of the note-on. */
@@ -10,6 +10,9 @@ export interface SyntheticNote {
   /** 1..120. */
   note: number;
   channel?: number;
+  /** libopenmpt effect number and parameter. Default 0. */
+  effect?: number;
+  param?: number;
 }
 
 export interface SyntheticSong {
@@ -102,8 +105,8 @@ export function syntheticLevelData(song: SyntheticSong, difficulty: DifficultyNa
       note: Uint8Array.from(notes, (x) => x.note),
       volume: new Uint8Array(notes.length),
       volumeEffect: new Uint8Array(notes.length),
-      effect: new Uint8Array(notes.length),
-      effectParam: new Uint8Array(notes.length),
+      effect: Uint8Array.from(notes, (x) => x.effect ?? 0),
+      effectParam: Uint8Array.from(notes, (x) => x.param ?? 0),
     },
     frames: { frameCount, spectrumLeft, spectrumRight, vuLeft, vuRight: vuLeft.slice() },
   };
@@ -131,5 +134,36 @@ export function lcg(seed: number): () => number {
   return () => {
     s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
     return s / 0x100000000;
+  };
+}
+
+export interface HandEnemy {
+  kind: number;
+  spawnTick: number;
+  /** World x of the centre at spawnTick, Q8. */
+  x: number;
+  y?: number;
+  side?: number;
+  motion?: number;
+  instrument?: number;
+  fire?: number[];
+}
+
+/** An EnemyList from hand-made enemies, in the order given. */
+export function enemyList(enemies: HandEnemy[]): EnemyList {
+  const fires = enemies.flatMap((e) => e.fire ?? []);
+  const fireStart = new Uint32Array(enemies.length + 1);
+  for (let i = 0; i < enemies.length; i++) fireStart[i + 1] = fireStart[i]! + (enemies[i]!.fire ?? []).length;
+  return {
+    count: enemies.length,
+    kind: Uint8Array.from(enemies, (e) => e.kind),
+    instrument: Uint8Array.from(enemies, (e) => e.instrument ?? 1),
+    spawnTick: Uint32Array.from(enemies, (e) => e.spawnTick),
+    x: Int32Array.from(enemies, (e) => e.x),
+    y: Int32Array.from(enemies, (e) => e.y ?? 0),
+    side: Uint8Array.from(enemies, (e) => e.side ?? 0),
+    motion: Uint8Array.from(enemies, (e) => e.motion ?? 0),
+    fireStart,
+    fireTick: Uint32Array.from(fires),
   };
 }

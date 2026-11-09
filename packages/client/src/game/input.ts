@@ -1,6 +1,6 @@
-// Keyboard to sim input bits, and to menu actions. Arrows and WASD move. The sampler is
-// read once per sim tick; a key pressed and released between two reads still counts for one
-// tick, so a quick tap is never lost.
+// Keyboard to sim input bits, and to menu actions. Arrows and WASD move; Space, Z and J
+// fire. The sampler is read once per sim tick; a key pressed and released between two reads
+// still counts for one tick, so a quick tap is never lost.
 
 import { InputBit } from '@game/core';
 
@@ -19,6 +19,10 @@ export function keyToBit(code: string): number {
     case 'ArrowRight':
     case 'KeyD':
       return InputBit.right;
+    case 'Space':
+    case 'KeyZ':
+    case 'KeyJ':
+      return InputBit.fire;
     default:
       return 0;
   }

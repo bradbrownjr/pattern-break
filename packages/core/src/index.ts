@@ -14,8 +14,9 @@ export type {
 } from './level-data/types.ts';
 export { serializeLevelData, deserializeLevelData } from './level-data/serialize.ts';
 export * from './playfield.ts';
-export { Difficulty, PEAK_HOLD_BARS, Terrain } from './levelgen/types.ts';
-export type { DifficultyName, Level } from './levelgen/types.ts';
+export { Difficulty, EnemyKind, EnemyTuning, PEAK_HOLD_BARS, ShipMotion, Terrain } from './levelgen/types.ts';
+export type { DifficultyName, EnemyList, Level } from './levelgen/types.ts';
+export { ENEMY_GRACE_TICKS, emptyEnemyList, placeEnemies, withoutEnemies } from './levelgen/enemies.ts';
 export {
   generateLevel,
   findDrums,
@@ -24,10 +25,13 @@ export {
   playheadAtSample,
   MIN_GAP_OVERLAP_PX,
 } from './levelgen/generate.ts';
-export { findPathViolation } from './levelgen/path-check.ts';
+export { barPathViolation, findPathViolation, solidWalls } from './levelgen/path-check.ts';
 export { serializeLevel, LEVEL_FORMAT_VERSION } from './levelgen/serialize.ts';
 export * from './sim/constants.ts';
 export {
+  BULLET_SLOTS,
+  EnemyStatus,
+  boxHitsTerrain,
   createSimState,
   resetSimState,
   runInputLog,

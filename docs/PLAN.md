@@ -113,8 +113,8 @@ IndexedDB under `hash + tempo + GEN_VERSION`).
 
 ## 6. Level generation (`packages/core/src/levelgen`)
 
-A pure function: `generateLevel(levelData, difficulty) -> Level`. The seeded PRNG argument
-comes back with enemies, which are the only part that needs one.
+A pure function: `generateLevel(levelData, difficulty) -> Level`. Enemies are placed from
+the notes in order, so nothing here needs randomness.
 
 The aim: the player should feel they are playing the beat, and there is always a path for
 the ship, even when it is hard to fly. The path is a hard guarantee, checked by tests on
@@ -165,20 +165,30 @@ every bar of every generated level.
   difficulty is analyzed at its own tempo, so it has its own LevelData. Difficulty is a
   constant object (`easy`, `normal`, `hard`); the numbers and the exact rounding rules are
   in `docs/DEVELOPMENT.md`, "Level and sim".
-- **Enemies (from note events):**
-  - Map instrument to enemy archetype. The default heuristic, overridable per song in a
-    sidecar JSON later: low-pitched or percussive samples (short, low note) become heavy,
-    slow ships; high short samples (hats) become small, fast swarmers; the instrument with
-    the most melodic notes becomes "lead" enemies; sustained pads become hazards or mines.
-  - Note pitch sets spawn Y, within the open gap at that time.
-  - Effects set motion: vibrato (4xy) is a sine weave (from a lookup table), arpeggio (0xy)
-    a three-position flicker-hop, portamento up and down (1xx, 2xx) a dive or climb, volume
-    slide a fade-in shield.
-  - **Spawn enemies so they reach the player's firing line on their note's timestamp.** The
-    music hit and the kill moment line up.
-  - **Density control:** per difficulty, cap events per second and per channel. Easy keeps
-    one or two channels; Hard keeps all of them. The seeded PRNG is used only for
-    tie-breaking which events to drop.
+- **Enemies (2026-11-09):** three kinds, each from one part of the song. Every enemy fires
+  on its own instrument's notes, so every shot lands on the music.
+  - **Turrets** come from the drums. A turret sits on the tip of the bar its drum note plays
+    on, so it reaches the ship as the drum sounds, on the floor and the ceiling in turn.
+  - **Tanks** come from the bass: the non-drum instrument with the lowest middle note, when
+    the song has at least two. A tank comes in from the right edge on a bass note and drives
+    left along the floor, riding the bar under it.
+  - **Ships** come from every other instrument. A note starts a formation and the
+    instrument's next notes (at least 0.1 s apart, within 1 s of the first) add to it, up
+    to 2, 3 or 4 ships by difficulty. A ship follows the cave's centre line, 2 px higher per
+    semitone above its instrument's middle note (at most 24 px), and moves by its note's
+    effect: vibrato weaves, a slide up climbs, a slide down dives, an arpeggio hops between
+    three heights.
+  - **Fire:** an enemy fires at the ship on its instrument's notes while it is on screen
+    ahead of the ship, and no more often than the difficulty allows. Ships wait 0.25 s and
+    fire 0, 1 or 2 times by difficulty. A bullet is aimed when fired and flies straight.
+  - **Per difficulty** (`EnemyTuning`): the least time between turrets, between tanks and
+    between formations, enemy bullet speed, and how many bullets can be in flight. No enemy
+    appears or fires in a song's first 2 s.
+  - **The path stays guaranteed.** Turrets and tanks count as wall in the path check: a
+    turret is one more segment on its bar, and a tank's whole track raises the floor one
+    segment above the highest of the bars around. A turret or tank that would break the
+    path isn't placed. Ships and bullets are dodged or shot.
+  - Per-song overrides of which instrument makes which enemy come later (roadmap).
 - **Boss (after M6; see the roadmap):** the last pattern, or the most-repeated one, becomes a boss
   whose weak points pulse on the lead channel. In the arcade run, a mini boss ends level 4
   and the final boss ends level 8.
@@ -189,10 +199,16 @@ every bar of every generated level.
   a preallocated state in place and allocates nothing. Positions are Q24.8 fixed-point.
 - Sim time is derived from the audio clock (see "Audio and timing"). If the render loop hitches, run several
   ticks to catch up. Never skip ticks.
-- Player ship: 8-way movement, a fire button (hold for auto-fire), one special or bomb
-  button.
+- Player ship: 8-way movement, a fire button (hold for auto-fire: 15 shots a second, up to 6
+  in flight), one special or bomb button. Shots pass through the LED walls, so turrets on
+  the bar tips can be hit, and stop on the first enemy they hit. Turrets and ships take one
+  hit, tanks three.
 - Collision: ship against lit LED segments, enemies, and enemy bullets. Integer AABB
-  (axis-aligned bounding box) or small hitboxes.
+  (axis-aligned bounding box) or small hitboxes. Enemy bullets stop on the walls. Bullets
+  are aimed with `Math.sqrt`, which IEEE 754 rounds the same in every engine.
+- **Lives (2026-11-09):** three. A hit costs one; ramming an enemy destroys it too. The
+  music can't rewind, so the ship comes back at the playhead, in the middle of the cave
+  there, can't be hit for 2 s, and the enemy bullets in flight are cleared.
 - A Gradius-style power-up meter, drawn as a VU meter. Collected capsules advance the meter,
   and a button press buys the highlighted upgrade (speed, double shot, laser, option pod,
   shield).
@@ -243,6 +259,10 @@ every bar of every generated level.
 - Effects: pooled particle emitters on note hits and kills, hit-stop (cosmetic only),
   screen shake, a flash on downbeats, and a CRT filter (scanlines, slight bloom, vignette)
   as a toggle.
+- Enemies are small pixel-art sprites: magenta and amber turrets (upside down on the
+  ceiling), lime tanks, magenta ships facing left, and white-cored magenta bullets. The
+  player's shots are cyan dashes. A destroyed enemy bursts into a few particles; the
+  lives left are ship icons in the top left corner.
 - Explosions: a destroyed ship breaks apart pixel by pixel; every pixel of its sprite
   becomes a particle in its own colour and flies outward, with an expanding colourful
   shockwave ring and a short shake.

@@ -83,7 +83,7 @@ export class TitleScreen {
       this.#marker,
       this.#credit,
       new PixelText('Up and down choose. Left and right change. Enter selects.', GREY).place(CENTER, 172, 'center'),
-      new PixelText('In play: arrows or WASD fly, Esc pauses.', DIM_GREY).place(CENTER, 186, 'center'),
+      new PixelText('In play: arrows or WASD fly, Space or Z fires, Esc pauses.', DIM_GREY).place(CENTER, 186, 'center'),
     );
     this.container.addChild(this.#menu, this.#press);
   }

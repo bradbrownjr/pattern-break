@@ -11,6 +11,7 @@ import {
   InputBit,
   SIM_VERSION,
   autopilotInputs,
+  withoutEnemies,
   findPathViolation,
   generateLevel,
   runInputLog,
@@ -96,9 +97,12 @@ describe('golden levels and sim runs', () => {
           zigzagDeathTick: zigzag.deathTick,
         };
         expect(findPathViolation(level)).toBe('');
-        // The autopilot always finds the path the level generator guarantees.
-        expect(flown.dead).toBe(false);
-        expect(flown.finished).toBe(true);
+        // The autopilot run has enemies, so it pins their placement, movement, aim and
+        // collisions in every engine. On the terrain alone the bot always reaches the end.
+        const terrain = withoutEnemies(level);
+        const clear = runInputLog(terrain, autopilotInputs(terrain));
+        expect(clear.dead).toBe(false);
+        expect(clear.finished).toBe(true);
         expect(got).toEqual(want);
       }, 60_000);
     }

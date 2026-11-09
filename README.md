@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-<img src="docs/img/gameplay-clip.gif" width="768" alt="Four seconds of play in an LED cavern. Columns of square LED segments, lit green at the screen edges through yellow and orange to red at their tips, hang from the top and rise from the bottom and scroll from right to left, one column per row of the song. The dark passage between them narrows on the beats and drifts up and down the screen with the tune. A small cyan ship with a flickering engine flame follows the passage, and faint blue stars drift more slowly behind.">
+<img src="docs/img/gameplay-clip.gif" width="768" alt="Four seconds of play in an LED cavern. Columns of square LED segments, lit green at the screen edges through yellow and orange to red at their tips, hang from the top and rise from the bottom and scroll from right to left, one column per row of the song. Small magenta and amber turrets ride in on the tips of the floor and ceiling, and small magenta enemy ships fly in from the right and fire round magenta bullets. A small cyan ship on the left keeps firing cyan shots and moves up and down to dodge. Three ship icons in the top left corner show the lives left.">
 
 A side-scrolling neon tunnel shooter where every level is built from a song. The songs are
 tracker modules, often called mods: music files made in a tracker, a program that arranges
@@ -17,9 +17,11 @@ every song gets its own leaderboard.
 
 An early playable slice: title music with an attract demo, an arcade run of levels and a
 practice mode, the LED tunnel scrolling in time with the music, a ship you fly through it,
-game over and retry, and a jukebox for listening to the songs. There are no enemies, shooting, or scores yet;
-those come next, in M2. Level data comes out byte-for-byte the same in Node, Chromium,
-Firefox, and WebKit, which is what lets one song have one leaderboard.
+game over and retry, and a jukebox for listening to the songs. Turrets come from the drums,
+tanks from the bass, and ships from the other instruments, and each fires on its own
+notes; you have three lives and a gun. Scores, power-ups and the gamepad come next, in M2.
+Level data comes out byte-for-byte the same in Node, Chromium, Firefox, and WebKit, which is
+what lets one song have one leaderboard.
 
 - [Roadmap](docs/ROADMAP.md): what comes next
 - [Changelog](docs/CHANGELOG.md): what is finished

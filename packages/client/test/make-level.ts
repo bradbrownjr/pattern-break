@@ -1,7 +1,16 @@
 // A hand-made Level for client tests, built by the rules in docs/DEVELOPMENT.md, "Level and
 // sim", so tests don't need libopenmpt.
 
-import { PLAYHEAD_X, Q8, SAMPLES_PER_TICK, playheadAtSample, type DifficultyName, type Level } from '@game/core';
+import {
+  PLAYHEAD_X,
+  Q8,
+  SAMPLES_PER_TICK,
+  emptyEnemyList,
+  playheadAtSample,
+  type DifficultyName,
+  type EnemyList,
+  type Level,
+} from '@game/core';
 
 export interface LevelSpec {
   /** Lit ceiling and floor segments per bar; peaks default to the levels. */
@@ -12,6 +21,8 @@ export interface LevelSpec {
   /** Samples per row. Default 4800 (0.1 s). */
   rowSamples?: number;
   difficulty?: DifficultyName;
+  /** Default none. */
+  enemies?: EnemyList;
 }
 
 export function makeLevel(spec: LevelSpec): Level {
@@ -37,5 +48,6 @@ export function makeLevel(spec: LevelSpec): Level {
     floorPeak: Uint8Array.from(spec.floorPeak ?? spec.floor),
     tickCount,
     scroll,
+    enemies: spec.enemies ?? emptyEnemyList(),
   };
 }

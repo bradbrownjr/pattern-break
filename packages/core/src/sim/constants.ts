@@ -20,7 +20,7 @@ export const SHIP_START_Y = 108;
 export const SHIP_HITBOX_WIDTH = 10;
 export const SHIP_HITBOX_HEIGHT = 6;
 
-/** Input bits, one byte per tick. Only movement does anything in M1. */
+/** Input bits, one byte per tick. Movement and fire do something; bomb and buy come later. */
 export const InputBit = {
   up: 1,
   down: 2,
@@ -31,3 +31,49 @@ export const InputBit = {
   buy: 64,
 } as const;
 export type InputBit = (typeof InputBit)[keyof typeof InputBit];
+
+/** Lives at the start of a run. */
+export const START_LIVES = 3;
+/** After losing a life the ship is back at the playhead and can't be hit for 2 s. */
+export const RESPAWN_SAFE_TICKS = 240;
+
+/** Holding fire shoots every 8 ticks (15 a second), with at most 6 shots in flight. */
+export const SHOT_INTERVAL_TICKS = 8;
+export const MAX_SHOTS = 6;
+/** Player shots fly right at 4 px per tick. */
+export const SHOT_SPEED_Q8 = 1024;
+export const SHOT_WIDTH = 6;
+export const SHOT_HEIGHT = 2;
+
+/** Enemy hitboxes, centred on the enemy, in px. A turret fills one segment slot. */
+export const TURRET_WIDTH = 8;
+export const TURRET_HEIGHT = 6;
+export const TANK_WIDTH = 12;
+export const TANK_HEIGHT = 7;
+export const ENEMY_SHIP_WIDTH = 10;
+export const ENEMY_SHIP_HEIGHT = 8;
+export const ENEMY_BULLET_SIZE = 4;
+
+/** Hits each kind takes, indexed by EnemyKind. */
+export const ENEMY_HP = [1, 3, 1] as const;
+
+/** Tanks drive left along the floor at 0.25 px per tick, on top of the scroll. */
+export const TANK_SPEED_Q8 = 64;
+/** Tanks and ships appear with their centre this far right of the screen's left edge. */
+export const ENEMY_ENTRY_X = 392;
+/** An enemy whose centre is left of this screen x has gone. */
+export const ENEMY_EXIT_X = -16;
+/** Enemies fire only from this part of the screen, ahead of the ship. */
+export const FIRE_MIN_X = 104;
+export const FIRE_MAX_X = 376;
+/** A ship waits this long after it appears before it fires. */
+export const SHIP_FIRE_DELAY_TICKS = 30;
+/** Ships steer towards their place in the cave at up to 1 px per tick. */
+export const SHIP_STEER_Q8 = 256;
+/** Weave and hop sizes (px) and periods (ticks). */
+export const WEAVE_AMPLITUDE = 12;
+export const WEAVE_PERIOD_TICKS = 96;
+export const HOP_PX = 10;
+export const HOP_TICKS = 16;
+/** Climbing and diving ships drift 0.5 px per tick from their line. */
+export const DRIFT_Q8 = 128;
