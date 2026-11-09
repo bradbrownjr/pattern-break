@@ -198,11 +198,16 @@ importers:
         specifier: 1.65.0
         version: 1.65.0
 
+  packages/chipfx: {}
+
   packages/client:
     dependencies:
       '@game/analysis':
         specifier: workspace:*
         version: link:../analysis
+      '@game/chipfx':
+        specifier: workspace:*
+        version: link:../chipfx
       '@game/core':
         specifier: workspace:*
         version: link:../core

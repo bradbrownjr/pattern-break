@@ -1,6 +1,7 @@
 // Menu sounds, synthesized with Web Audio: short square-wave notes like a chip sound chip
 // makes, so there are no sound files to license (docs/PLAN.md, "Visual spec"). Cosmetic:
-// they never touch the song clock or the sim. M3 adds their volume setting and off switch.
+// they never touch the song clock or the sim. They play through the effects mixer, so the
+// Effects setting sets their volume too.
 
 export type MenuSound = 'coin' | 'move' | 'change' | 'select' | 'back' | 'start';
 
@@ -38,8 +39,11 @@ export const MENU_SOUNDS: Record<MenuSound, readonly (readonly [number, number])
   ],
 };
 
-/** Below the music, which plays at 1. */
-const SFX_VOLUME = 0.1;
+/**
+ * Below the music, which plays at 1. The effects volume halves it at its default (4 of 5),
+ * giving the 0.1 the menu sounds had before the setting.
+ */
+const SFX_VOLUME = 0.2;
 
 export function midiToHz(note: number): number {
   return 440 * Math.pow(2, (note - 69) / 12);
@@ -49,11 +53,11 @@ export class MenuSounds {
   readonly #context: BaseAudioContext;
   readonly #out: GainNode;
 
-  constructor(context: BaseAudioContext) {
+  constructor(context: BaseAudioContext, destination: AudioNode = context.destination) {
     this.#context = context;
     this.#out = context.createGain();
     this.#out.gain.value = SFX_VOLUME;
-    this.#out.connect(context.destination);
+    this.#out.connect(destination);
   }
 
   play(sound: MenuSound): void {

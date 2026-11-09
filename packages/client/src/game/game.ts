@@ -10,6 +10,7 @@ import {
   SIM_VERSION,
   SAMPLES_PER_TICK,
   SAMPLE_RATE,
+  PLAYFIELD_WIDTH,
   Q8,
   autopilotInputs,
   createSimState,
@@ -24,7 +25,9 @@ import {
   type LevelData,
 } from '@game/core';
 import { createAudioPlayer, type AudioPlayer } from '../audio/index.ts';
+import { EffectsMixer } from '../audio/mixer.ts';
 import { MenuSounds, type MenuSound } from '../audio/sfx.ts';
+import { SongNotes } from '../audio/song-notes.ts';
 import { CYAN, LIME, MAGENTA } from '../render/palette.ts';
 import { seededRandom } from '../render/random.ts';
 import type { GameRenderer } from '../render/renderer.ts';
@@ -34,7 +37,8 @@ import { PadBit, PadTracker, padMenuAction, readGamepads } from './gamepad.ts';
 import { InputSampler, keyToMenuAction, type MenuAction } from './input.ts';
 import { DisplayClock, InputLog, catchUp, targetTick } from './loop.ts';
 import { ControlsScreen } from './controls.ts';
-import { ControlsPages, DIFFICULTY_LABELS, JukeboxMenu, PauseMenu, TitleMenu, type TitleEvent } from './menu.ts';
+import { SoundCues, type Cue } from './cues.ts';
+import { ControlsPages, DIFFICULTY_LABELS, JukeboxMenu, PauseMenu, SettingsMenu, TitleMenu, type TitleEvent } from './menu.ts';
 import type { PerfMeter } from './perf.ts';
 import { drawPlay } from './play-view.ts';
 import {
@@ -43,6 +47,7 @@ import {
   JukeboxScreen,
   MessageScreen,
   PauseScreen,
+  SettingsScreen,
   SPECTRUM_BARS,
   SPECTRUM_SEGMENTS,
   TitleScreen,
@@ -56,6 +61,7 @@ import {
   songBySha256,
   type BundledSong,
 } from './songs.ts';
+import { browserStorage, loadSettings, saveSettings, volumeGain, type Settings } from './settings.ts';
 
 type Mode =
   | 'start'
@@ -63,6 +69,7 @@ type Mode =
   | 'demo'
   | 'jukebox'
   | 'controls'
+  | 'settings'
   | 'analyzing'
   | 'intro'
   | 'play'
@@ -132,6 +139,9 @@ interface CompleteView {
   after: () => void;
 }
 
+/** How far effects pan towards the side they happened on: 1 would be hard left or right. */
+const PAN_WIDTH = 0.6;
+
 /** Shown on game over and level complete when the run has a replay. */
 const REPLAY_HINT = 'R Replay  S Save';
 
@@ -161,6 +171,9 @@ export class Game {
   readonly #pauseScreen = new PauseScreen();
   readonly #controlsPages = new ControlsPages();
   readonly #controls = new ControlsScreen();
+  readonly #settingsScreen = new SettingsScreen();
+  #settingsMenu: SettingsMenu;
+  #settings: Settings = loadSettings(browserStorage());
   /** Where the controls screen returns to. */
   #controlsFrom: 'title' | 'paused' = 'title';
   /** True when the last press was on a gamepad, so the controls open on its page. */
@@ -181,6 +194,12 @@ export class Game {
   #player: Promise<AudioPlayer> | null = null;
   #playerReady: AudioPlayer | null = null;
   #sfx: MenuSounds | null = null;
+  #fx: EffectsMixer | null = null;
+  #musicVolume: GainNode | null = null;
+  readonly #cues = new SoundCues();
+  readonly #cueList: Cue[] = [];
+  /** The song's notes for each level, so effects can take their pitch from it. */
+  readonly #songNotes = new WeakMap<Level, SongNotes>();
   /** The song the player has loaded, and its length. */
   #loaded: BundledSong | null = null;
   #loadedTempo = 1000;
@@ -226,10 +245,12 @@ export class Game {
     this.#menu = new TitleMenu(options.songs.length, Math.max(0, options.songs.indexOf(options.song)));
     this.#jukeboxMenu = new JukeboxMenu(options.songs.length);
     this.#jukebox = new JukeboxScreen(options.songs);
+    this.#settingsMenu = new SettingsMenu(this.#settings);
     r.ui.addChild(
       this.#title.container,
       this.#jukebox.container,
       this.#controls.container,
+      this.#settingsScreen.container,
       this.#demoBanner.container,
       this.#replayBanner.container,
       this.#message.container,
@@ -269,6 +290,7 @@ export class Game {
     this.#title.container.visible = mode === 'start' || mode === 'title';
     this.#jukebox.container.visible = mode === 'jukebox';
     this.#controls.container.visible = mode === 'controls';
+    this.#settingsScreen.container.visible = mode === 'settings';
     this.#pauseScreen.container.visible = mode === 'paused';
     this.#demoBanner.container.visible = mode === 'demo';
     this.#replayBanner.container.visible = mode === 'replay';
@@ -285,6 +307,7 @@ export class Game {
     if (mode === 'analyzing') this.#message.show('', 0, ['Loading']);
     if (mode === 'paused') this.#pauseScreen.update(this.#pauseMenu.cursor);
     if (mode === 'controls') this.#controls.show(this.#controlsPages.page);
+    if (mode === 'settings') this.#settingsScreen.update(this.#settingsMenu.cursor, this.#settingsMenu.values);
   }
 
   #showError(err: unknown): void {
@@ -337,6 +360,7 @@ export class Game {
       case 'title':
       case 'jukebox':
       case 'controls':
+      case 'settings':
         this.#menuKey(e);
         return;
       default:
@@ -389,7 +413,8 @@ export class Game {
         return;
       case 'title':
       case 'jukebox':
-      case 'controls': {
+      case 'controls':
+      case 'settings': {
         const action = padMenuAction(bit);
         if (action) this.#onMenu(action);
         return;
@@ -424,7 +449,13 @@ export class Game {
     if (this.#mode === 'start') this.#leaveStart();
     else if (this.#mode === 'demo') this.#toTitle();
     else if (this.#mode === 'replay') this.#endReplay(true);
-    else if (this.#mode === 'title' || this.#mode === 'jukebox' || this.#mode === 'paused' || this.#mode === 'controls') {
+    else if (
+      this.#mode === 'title' ||
+      this.#mode === 'jukebox' ||
+      this.#mode === 'paused' ||
+      this.#mode === 'controls' ||
+      this.#mode === 'settings'
+    ) {
       this.#onMenu('confirm');
     }
     else this.#onAnyKey();
@@ -452,6 +483,10 @@ export class Game {
     }
     if (this.#mode === 'paused') {
       this.#onPauseMenu(action);
+      return;
+    }
+    if (this.#mode === 'settings') {
+      this.#onSettingsMenu(action);
       return;
     }
     if (this.#mode === 'controls') {
@@ -518,6 +553,11 @@ export class Game {
         this.#sound('select');
         this.#openControls('title');
         break;
+      case 'settings':
+        this.#sound('select');
+        this.#settingsMenu.cursor = 0;
+        this.#setMode('settings');
+        break;
       case null:
         break;
     }
@@ -545,6 +585,32 @@ export class Game {
     }
   }
 
+  #onSettingsMenu(action: MenuAction): void {
+    const before = { ...this.#settingsMenu.values };
+    switch (this.#settingsMenu.apply(action)) {
+      case 'moved':
+        this.#sound('move');
+        break;
+      case 'changed': {
+        this.#settings = { ...this.#settingsMenu.values };
+        saveSettings(browserStorage(), this.#settings);
+        this.#applyVolumes();
+        // A taste of the new effects level; the music is playing to hear its own.
+        if (this.#settings.effects !== before.effects) this.#fx?.play('killShip');
+        else this.#sound('change');
+        break;
+      }
+      case 'back':
+        this.#sound('back');
+        this.#lastInput = performance.now();
+        this.#setMode('title');
+        return;
+      case null:
+        return;
+    }
+    this.#settingsScreen.update(this.#settingsMenu.cursor, this.#settingsMenu.values);
+  }
+
   /** Opens the controls on the page for the last thing pressed: the keyboard or a pad. */
   #openControls(from: 'title' | 'paused'): void {
     this.#controlsFrom = from;
@@ -561,8 +627,13 @@ export class Game {
   #getPlayer(): Promise<AudioPlayer> {
     if (!this.#player) {
       const context = new AudioContext({ sampleRate: SAMPLE_RATE, latencyHint: 'interactive' });
-      this.#sfx = new MenuSounds(context);
-      const created = createAudioPlayer({ context });
+      this.#musicVolume = context.createGain();
+      this.#musicVolume.connect(context.destination);
+      this.#fx = new EffectsMixer(context);
+      this.#fx.prewarm();
+      this.#sfx = new MenuSounds(context, this.#fx.input);
+      this.#applyVolumes();
+      const created = createAudioPlayer({ context, output: this.#musicVolume });
       this.#player = created;
       created.then(
         (p) => {
@@ -575,6 +646,32 @@ export class Game {
       );
     }
     return this.#player;
+  }
+
+  /** Sets the music and effects volumes from the settings. */
+  #applyVolumes(): void {
+    if (this.#musicVolume) this.#musicVolume.gain.value = volumeGain(this.#settings.music);
+    if (this.#fx) this.#fx.volume = volumeGain(this.#settings.effects);
+  }
+
+  /** Builds `level` from `levelData` and keeps the song's notes for the effects' pitch. */
+  #makeLevel(levelData: LevelData, difficulty: DifficultyName): Level {
+    const level = generateLevel(levelData, difficulty);
+    this.#songNotes.set(level, new SongNotes(levelData));
+    return level;
+  }
+
+  /** Plays the sounds for what happened in `level` since the last frame. */
+  #playCues(level: Level): void {
+    const fx = this.#fx;
+    if (!fx) return;
+    this.#cues.update(level, this.#state, this.#cueList);
+    const notes = this.#songNotes.get(level);
+    for (const c of this.#cueList) {
+      const pitch = !notes ? 0 : c.instrument >= 0 ? notes.pitchAt(c.instrument, c.tick) : notes.melodyAt(c.tick);
+      fx.play(c.effect, ((c.x / PLAYFIELD_WIDTH) * 2 - 1) * PAN_WIDTH, pitch);
+    }
+    this.#cueList.length = 0;
   }
 
   #cacheFor(song: BundledSong): SongCache {
@@ -662,6 +759,7 @@ export class Game {
 
   #toTitle(): void {
     this.#cancelFade();
+    this.#fx?.stopAll();
     this.#run = null;
     this.#r.terrain.setLevel(null);
     this.#r.explosion.hide();
@@ -678,7 +776,7 @@ export class Game {
   /** Analyzes the title song and flies its level with the autopilot, for the demo; then level 1. */
   async #prepareDemo(): Promise<void> {
     try {
-      const level = generateLevel(await this.#levelData(this.#titleSong, DEMO_DIFFICULTY), DEMO_DIFFICULTY);
+      const level = this.#makeLevel(await this.#levelData(this.#titleSong, DEMO_DIFFICULTY), DEMO_DIFFICULTY);
       this.#demo = { level, inputs: autopilotInputs(level) };
     } catch (err) {
       // The game works without the demo; the title menu stays up.
@@ -758,7 +856,7 @@ export class Game {
       this.#difficulty = difficulty;
       let entry = cache.levels.get(difficulty);
       if (!entry) {
-        const level = generateLevel(levelData, difficulty);
+        const level = this.#makeLevel(levelData, difficulty);
         entry = { level, autopilot: this.#options.autopilot ? autopilotInputs(level) : null };
         cache.levels.set(difficulty, entry);
       }
@@ -1004,7 +1102,7 @@ export class Game {
     const cache = this.#cacheFor(song);
     let entry = cache.levels.get(difficulty);
     if (!entry) {
-      const level = generateLevel(await this.#levelData(song, difficulty), difficulty);
+      const level = this.#makeLevel(await this.#levelData(song, difficulty), difficulty);
       entry = { level, autopilot: this.#options.autopilot ? autopilotInputs(level) : null };
       cache.levels.set(difficulty, entry);
     }
@@ -1119,6 +1217,7 @@ export class Game {
         if (!player || !level) break;
         const clock = player.songTimeSamples();
         catchUp(level, this.#state, targetTick(clock, level.tickCount), this.#nextInput, this.#log);
+        this.#playCues(level);
         this.#displaySamples = this.#clock.update(now, clock, this.#state.tick);
         if (this.#state.dead) {
           // Freeze the picture on the tick of the crash.
@@ -1137,6 +1236,7 @@ export class Game {
         const { level, replay } = playback;
         const clock = player.songTimeSamples();
         catchUp(level, this.#state, targetTick(clock, level.tickCount), (tick) => replay.inputs[tick] ?? 0, null);
+        this.#playCues(level);
         this.#displaySamples = this.#clock.update(now, clock, this.#state.tick);
         if (this.#state.dead) this.#displaySamples = this.#state.deathTick * SAMPLES_PER_TICK;
         drawPlay(r, level, this.#state, this.#displaySamples);
@@ -1182,6 +1282,7 @@ export class Game {
     // The title music loops; when it starts over, so does the demo.
     if (target < this.#state.tick) resetSimState(this.#state);
     catchUp(demo.level, this.#state, target, (tick) => demo.inputs[tick] ?? 0, null);
+    this.#playCues(demo.level);
     const shown = this.#clock.update(now, clock, this.#state.tick);
     drawPlay(this.#r, demo.level, this.#state, shown);
     const over = now - this.#modeSince >= DEMO_LENGTH_MS || this.#state.dead || this.#state.finished;

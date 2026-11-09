@@ -1,0 +1,47 @@
+import { describe, expect, it } from 'vitest';
+import { DEFAULT_SETTINGS, loadSettings, saveSettings, volumeGain } from '../src/game/settings.ts';
+
+function memory(): Storage {
+  const m = new Map<string, string>();
+  return {
+    getItem: (k: string) => m.get(k) ?? null,
+    setItem: (k: string, v: string) => void m.set(k, v),
+  } as Storage;
+}
+
+describe('settings', () => {
+  it('halves the gain per level down, and 0 is silent', () => {
+    expect([0, 1, 2, 3, 4, 5].map(volumeGain)).toEqual([0, 1 / 16, 1 / 8, 1 / 4, 1 / 2, 1]);
+  });
+
+  it('saves and loads', () => {
+    const s = memory();
+    saveSettings(s, { music: 2, effects: 0 });
+    expect(loadSettings(s)).toEqual({ music: 2, effects: 0 });
+  });
+
+  it('falls back to the defaults for missing, broken or out-of-range values', () => {
+    const s = memory();
+    expect(loadSettings(s)).toEqual(DEFAULT_SETTINGS);
+    expect(loadSettings(null)).toEqual(DEFAULT_SETTINGS);
+    s.setItem('pattern-break.settings', '{not json');
+    expect(loadSettings(s)).toEqual(DEFAULT_SETTINGS);
+    s.setItem('pattern-break.settings', JSON.stringify({ music: 9, effects: 2.5 }));
+    expect(loadSettings(s)).toEqual(DEFAULT_SETTINGS);
+    s.setItem('pattern-break.settings', JSON.stringify({ music: 1 }));
+    expect(loadSettings(s)).toEqual({ music: 1, effects: DEFAULT_SETTINGS.effects });
+  });
+
+  it('ignores storage that throws', () => {
+    const broken = {
+      getItem: () => {
+        throw new Error('blocked');
+      },
+      setItem: () => {
+        throw new Error('blocked');
+      },
+    } as unknown as Storage;
+    expect(loadSettings(broken)).toEqual(DEFAULT_SETTINGS);
+    expect(() => saveSettings(broken, DEFAULT_SETTINGS)).not.toThrow();
+  });
+});

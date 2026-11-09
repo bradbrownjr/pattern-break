@@ -12,6 +12,8 @@ tracker. The docs, each with one job:
 - **`docs/DOC-STYLE.md`**: the writing rules.
 - **`docs/SONG-DIGEST.md`**: every song considered for the game, its numbers and license
   checks, and why the unused ones were left out.
+- **`docs/SOUND-EFFECTS.md`**: the sound effects' research, with sources, their design,
+  and what was measured. The generator, `packages/chipfx`, is meant for reuse.
 
 ## Writing
 

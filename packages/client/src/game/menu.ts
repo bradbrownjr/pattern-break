@@ -1,18 +1,19 @@
-// The title menu, the jukebox list, the pause menu and the controls pages, as state that
+// The title menu, the jukebox list, the pause menu, the controls pages and the settings, as state that
 // menu actions change. Drawing is in screens.ts and controls.ts; these classes hold no
 // display objects, so tests run in Node.
 
 import { Difficulty, type DifficultyName } from '@game/core';
 import type { MenuAction } from './input.ts';
+import { VOLUME_LEVELS, type Settings } from './settings.ts';
 
 export const DIFFICULTY_LABELS: Record<DifficultyName, string> = { easy: 'Easy', normal: 'Normal', hard: 'Hard' };
 export const DIFFICULTY_ORDER = Object.keys(Difficulty) as DifficultyName[];
 
-export const TITLE_ITEMS = ['play', 'practice', 'difficulty', 'jukebox', 'controls'] as const;
+export const TITLE_ITEMS = ['play', 'practice', 'difficulty', 'jukebox', 'controls', 'settings'] as const;
 export type TitleItem = (typeof TITLE_ITEMS)[number];
 
 /** What one action did on the title menu: what the game plays a sound for or opens. */
-export type TitleEvent = 'moved' | 'changed' | 'play' | 'practice' | 'jukebox' | 'controls' | null;
+export type TitleEvent = 'moved' | 'changed' | 'play' | 'practice' | 'jukebox' | 'controls' | 'settings' | null;
 
 /** Steps `i` by `step` through `count` values, wrapping at both ends. */
 function wrap(i: number, step: number, count: number): number {
@@ -20,7 +21,7 @@ function wrap(i: number, step: number, count: number): number {
 }
 
 /**
- * Play, Practice, Difficulty, Jukebox, Controls. Up and down move the cursor; left and right change
+ * Play, Practice, Difficulty, Jukebox, Controls, Settings. Up and down move the cursor; left and right change
  * Practice's song or the difficulty under it. Confirm on Difficulty steps it forward, so a
  * single button or a click can reach every choice.
  */
@@ -174,6 +175,51 @@ export class ControlsPages {
         return 'back';
       default:
         return null;
+    }
+  }
+}
+
+export const SETTINGS_ITEMS = ['music', 'effects', 'back'] as const;
+export type SettingsItem = (typeof SETTINGS_ITEMS)[number];
+
+/**
+ * Music and Effects volume, 0 (off) to 5, then Back. Left and right change a volume and stop
+ * at the ends; confirm steps it up and wraps from 5 to off, so a click alone can reach every
+ * level. Back, or confirm on Back, leaves.
+ */
+export class SettingsMenu {
+  cursor = 0;
+  readonly values: Settings;
+
+  constructor(values: Settings) {
+    this.values = { ...values };
+  }
+
+  get item(): SettingsItem {
+    return SETTINGS_ITEMS[this.cursor]!;
+  }
+
+  apply(action: MenuAction): 'moved' | 'changed' | 'back' | null {
+    const item = this.item;
+    switch (action) {
+      case 'up':
+      case 'down':
+        this.cursor = wrap(this.cursor, action === 'up' ? -1 : 1, SETTINGS_ITEMS.length);
+        return 'moved';
+      case 'left':
+      case 'right': {
+        if (item === 'back') return null;
+        const v = Math.max(0, Math.min(VOLUME_LEVELS, this.values[item] + (action === 'left' ? -1 : 1)));
+        if (v === this.values[item]) return null;
+        this.values[item] = v;
+        return 'changed';
+      }
+      case 'confirm':
+        if (item === 'back') return 'back';
+        this.values[item] = wrap(this.values[item], 1, VOLUME_LEVELS + 1);
+        return 'changed';
+      case 'back':
+        return 'back';
     }
   }
 }

@@ -1,4 +1,4 @@
-// The title screen, the jukebox, the pause menu, and the messages drawn over play
+// The title screen, the jukebox, the pause menu, the settings, and the messages drawn over play
 // (analyzing, crashed, song complete, errors). Layout is in 384x216 screen px.
 
 import { PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH, type DifficultyName } from '@game/core';
@@ -6,7 +6,8 @@ import { Container, Sprite, Texture } from 'pixi.js';
 import { BRAND } from '../config/brand.ts';
 import { AMBER, BACKGROUND, CYAN, DIM_GREY, GREY, LED_DIM, LED_LIT, LIME, MAGENTA, WHITE } from '../render/palette.ts';
 import { PixelText } from '../render/text.ts';
-import { DIFFICULTY_LABELS, PAUSE_ITEMS, TITLE_ITEMS, type PauseItem, type TitleItem } from './menu.ts';
+import { DIFFICULTY_LABELS, PAUSE_ITEMS, SETTINGS_ITEMS, TITLE_ITEMS, type PauseItem, type SettingsItem, type TitleItem } from './menu.ts';
+import { VOLUME_LEVELS, type Settings } from './settings.ts';
 import type { BundledSong } from './songs.ts';
 
 const CENTER = PLAYFIELD_WIDTH / 2;
@@ -27,6 +28,7 @@ const TITLE_LABELS: Record<TitleItem, string> = {
   difficulty: 'Difficulty',
   jukebox: 'Jukebox',
   controls: 'Controls',
+  settings: 'Settings',
 };
 const MENU_TOP = 78;
 const MENU_ROW = 13;
@@ -344,5 +346,72 @@ export class PauseScreen {
     this.#items.forEach((item, i) => (item.color = i === cursor ? AMBER : GREY));
     const item = this.#items[cursor]!;
     this.#marker.place(item.x - 10, item.y);
+  }
+}
+
+const SETTINGS_LABELS: Record<SettingsItem, string> = { music: 'Music', effects: 'Effects', back: 'Back' };
+const SETTINGS_TOP = 92;
+const SETTINGS_ROW = 16;
+const CELL_W = 10;
+const CELL_H = 5;
+const CELL_GAP = 3;
+
+/**
+ * The settings: Music and Effects as rows of five LED cells, lit up to the volume, green to
+ * red, with "Off" at 0; then Back.
+ */
+export class SettingsScreen {
+  readonly container = new Container();
+  #marker = new PixelText('>', AMBER);
+  #labels: PixelText[] = [];
+  #cells: Sprite[][] = [];
+  #arrows: PixelText[][] = [];
+  #off: PixelText[] = [];
+
+  constructor() {
+    const shadow = new PixelText('Settings', MAGENTA, 2).place(CENTER + 1, 40 + 1, 'center');
+    const heading = new PixelText('Settings', CYAN, 2).place(CENTER, 40, 'center');
+    this.container.addChild(shadow, heading, this.#marker);
+    SETTINGS_ITEMS.forEach((item, row) => {
+      const y = SETTINGS_TOP + row * SETTINGS_ROW;
+      const label = new PixelText(SETTINGS_LABELS[item]).place(LABEL_X, y);
+      this.#labels.push(label);
+      this.container.addChild(label);
+      const cells: Sprite[] = [];
+      const left = new PixelText('<', WHITE).place(VALUE_X - 12, y);
+      const right = new PixelText('>', WHITE).place(VALUE_X + VOLUME_LEVELS * (CELL_W + CELL_GAP) + 4, y);
+      const off = new PixelText('Off', GREY).place(VALUE_X, y);
+      if (item !== 'back') {
+        for (let i = 0; i < VOLUME_LEVELS; i++) {
+          const cell = new Sprite(Texture.WHITE);
+          cell.width = CELL_W;
+          cell.height = CELL_H;
+          cell.position.set(VALUE_X + i * (CELL_W + CELL_GAP), y + 1);
+          cells.push(cell);
+        }
+        this.container.addChild(...cells, left, right, off);
+      }
+      this.#cells.push(cells);
+      this.#arrows.push([left, right]);
+      this.#off.push(off);
+    });
+  }
+
+  update(cursor: number, values: Settings): void {
+    SETTINGS_ITEMS.forEach((item, row) => {
+      const selected = row === cursor;
+      this.#labels[row]!.color = selected ? AMBER : GREY;
+      for (const a of this.#arrows[row]!) a.visible = selected;
+      if (item === 'back') return;
+      const level = values[item];
+      this.#off[row]!.visible = level === 0;
+      this.#cells[row]!.forEach((cell, i) => {
+        cell.visible = level > 0;
+        // Five cells across the twelve LED colours, green to red, as on the walls.
+        const colour = Math.round((i * (LED_LIT.length - 1)) / (VOLUME_LEVELS - 1));
+        cell.tint = i < level ? LED_LIT[colour]! : LED_DIM[colour]!;
+      });
+    });
+    this.#marker.place(LABEL_X - 10, SETTINGS_TOP + cursor * SETTINGS_ROW);
   }
 }

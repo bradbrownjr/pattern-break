@@ -297,10 +297,12 @@ every bar of every generated level.
 - Explosions: a destroyed ship breaks apart pixel by pixel; every pixel of its sprite
   becomes a particle in its own colour and flies outward, with an expanding colourful
   shockwave ring and a short shake.
-- Sound effects: synthesized with Web Audio in the client (no sample files, nothing to
-  license), mixed under the music with their own volume and an off switch. The explosion is
-  a deep boom with echo (a feedback delay) and reverb (a generated impulse response).
-  Cosmetic, like every effect: never part of sim state.
+- Sound effects: synthesized in the client (no sample files, nothing to license) by our
+  own sfxr-style generator, `@game/chipfx`, with our own parameters; pitched effects take
+  their note from the song. Mixed under the music with their own volume and an off switch.
+  The explosion is a deep boom with echo (a feedback delay) and reverb (a generated impulse
+  response). Cosmetic, like every effect: never part of sim state. Research and design:
+  `SOUND-EFFECTS.md` (decided with Brad, 2026-11-09).
 - **Accessibility:** a "reduce flashing" option (caps flash intensity and frequency; on by
   default until the player changes it), a shake toggle, a colour-blind-safe LED palette
   option, and remappable controls, for the keyboard and for gamepads and arcade sticks
@@ -327,8 +329,9 @@ every bar of every generated level.
   stored in IndexedDB.
 - Song select: metadata, difficulty, personal best, the global top 10 when online, and
   attribution.
-- Settings: audio latency calibration, volume, controls (keyboard, gamepad through the
-  Gamepad API, a touch overlay on mobile), visual options, accessibility.
+- Settings, from the title menu: Music and Effects volume (built); to come, audio latency
+  calibration, controls (keyboard, gamepad through the Gamepad API, a touch overlay on
+  mobile), visual options, accessibility.
 - Results screen: score breakdown, personal best, submit to the leaderboard, save the
   replay.
 

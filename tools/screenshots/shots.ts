@@ -45,7 +45,7 @@ export const shots: Shot[] = [
       'The title screen on a near-black background with faint blue stars. "Pattern Break" in large cyan pixel ' +
       'letters with a magenta shadow, over a row of small LED segments shading from green to red. Below it, a ' +
       'menu in small pixel type: "Play" in amber with an amber ">" before it, then "Practice" with ' +
-      '"The_Epic_Chip", "Difficulty" with "Normal", "Jukebox" and "Controls", in grey. Under the menu, ' +
+      '"The_Epic_Chip", "Difficulty" with "Normal", "Jukebox", "Controls" and "Settings", in grey. Under the menu, ' +
       '"Music: The_Epic_Chip by Drozerix. Public Domain."',
     caption: 'The title menu. Not used in the README.',
     usedIn: [],
@@ -89,6 +89,17 @@ export const shots: Shot[] = [
       'right. Under it, a legend in two columns: Fly, Stick, D-pad; Fire, A, RT; Bomb, B; Missile, RB; Nuke, ' +
       'X; Buy, Y; Boost, LB, LT; Pause, Start. At the bottom, "< Keyboard  Gamepad >" with "Gamepad" in cyan.',
     caption: 'The controls screen, gamepad page. Not used in the README.',
+    usedIn: [],
+  },
+  {
+    id: 'settings',
+    query: { scene: 'settings', song: 'the_epic_chip', t: '0' },
+    alt:
+      '"Settings" in large cyan pixel letters with a magenta shadow. Below it, three rows in small pixel ' +
+      'type. "Music" in amber with an amber ">" before it, then "<", five LED cells lit green, yellow-green, ' +
+      'yellow, orange and red, and ">". "Effects" in grey with four of its five cells lit and the fifth dim ' +
+      'red. "Back" in grey.',
+    caption: 'The settings screen at the default volumes. Not used in the README.',
     usedIn: [],
   },
   {

@@ -55,6 +55,7 @@ pattern-break/
 │   ├── CHANGELOG.md               # what is finished
 │   ├── DEVELOPMENT.md             # this file
 │   ├── SELF-HOSTING.md            # running the Docker image: Docker, Compose, Unraid, HTTPS
+│   ├── SOUND-EFFECTS.md           # sound effects: the research, the design, measurements
 │   └── DOC-STYLE.md               # writing and voice
 ├── music/                         # the bundled songs, and manifest.json with their credits and licenses
 ├── packages/
@@ -75,9 +76,10 @@ pattern-break/
 │   │   ├── scripts/bench-sim.ts   # sim ticks per second on a module
 │   │   ├── fixtures/              # test modules and golden.json, their pinned hashes
 │   │   └── vitest.config.ts       # the node and browser test projects
+│   ├── chipfx/                    # @game/chipfx: sfxr-style sound effect generator, no game code (README.md)
 │   ├── client/                    # @game/client: the Vite app
 │   │   ├── src/config/brand.ts    # the game's name, in one place
-│   │   ├── src/audio/             # the libopenmpt AudioWorklet player and the song clock
+│   │   ├── src/audio/             # the libopenmpt AudioWorklet player, the song clock, sound effects and their mixer
 │   │   ├── src/render/            # PixiJS renderer: terrain, ship, starfield, pixel font, effects
 │   │   ├── src/game/              # game flow, frame loop, keyboard and gamepad input, analysis worker, capture mode
 │   │   ├── audio-debug.html       # dev-server page that plays the fixture and shows the clock
@@ -585,6 +587,13 @@ that the path check passes with them, and that the autopilot reaches the end of 
 terrain alone. It runs in Node only and takes about a minute
 for the nine songs, so a levelgen change that makes a real song unplayable fails `pnpm test`.
 
+**Sound effects.** `packages/chipfx/test/chipfx.test.ts` checks the generator (lengths,
+levels, determinism, pitch, slides, jumps, the cutoff, punch, filtering, mixing, and the
+NES noise register's periods). In the client, `test/effects.test.ts` renders every effect
+and checks it doesn't clip, `test/cues.test.ts` runs the autopilot and checks the cues
+(one bomb cue per burst, the same events at any number of ticks per frame, none after a
+retry), and `test/song-notes.test.ts` and `test/settings.test.ts` cover the rest.
+
 **Browsers.** The analysis package's `vitest.config.ts` has two projects. `node` runs every
 test in Node and is what `pnpm test` runs. `browser` runs the golden and replay tests in real browsers
 through Vitest browser mode and Playwright, and is what `pnpm test:browser` runs. Every
@@ -592,7 +601,9 @@ engine has to produce the committed hash, which is how we know Node and the brow
 identical levels.
 
 The client's `vitest.config.ts` has the same two projects. Its `browser` project runs
-`test/browser/audio.test.ts`, the worklet and clock tests in "Audio and clock", and
+`test/browser/audio.test.ts`, the worklet and clock tests in "Audio and clock";
+`test/browser/mixer.test.ts`, which renders effects through the mixer offline and checks
+the pan, the echo and reverb tail, silence at volume 0, and the voice limit; and
 `test/browser/render.test.ts`, which draws a hand-made level with WebGL and checks canvas
 pixels against the terrain rules and the palette. Each engine
 is launched with audio allowed to start without a click: Chromium with
@@ -702,7 +713,7 @@ The client reads query parameters; `packages/client/src/capture.ts` parses them
 | Parameter | Meaning |
 |---|---|
 | `capture` | `1` turns capture mode on. Without it the page behaves normally. |
-| `scene` | Which screen to show: `title`, `jukebox`, `controls-keyboard`, `controls-gamepad`, `play`, or `paused`. |
+| `scene` | Which screen to show: `title`, `jukebox`, `controls-keyboard`, `controls-gamepad`, `settings`, `play`, or `paused`. |
 | `song` | Song id: a bundled song's file name without its extension (`numenchip`), or `pb-fixture-01` for the test song. |
 | `t` | Song clock in seconds. |
 | `difficulty` | Difficulty name. |
@@ -726,8 +737,8 @@ In capture mode the renderer must:
   difficulty chosen, and the cursor steady instead of blinking. The stars sit where `t` puts them.
 - **`scene=jukebox`** draws the jukebox with the first song playing at `t`, its length from
   an analysis of the song, and the spectrum dark. **`scene=controls-keyboard`** and
-  **`scene=controls-gamepad`** draw the two controls pages. All three show the stars as
-  the title does.
+  **`scene=controls-gamepad`** draw the two controls pages, and **`scene=settings`** the
+  settings at their defaults. All of these show the stars as the title does.
 - **`scene=paused`** is `scene=play` with the pause menu over it, the cursor on Resume.
 - **`scene=play`** analyzes the song in the analysis worker, builds the level for
   `difficulty`, records `autopilotInputs(level)`, and runs the sim from tick 0 to
@@ -861,6 +872,29 @@ playing at a rate the analysis didn't time.
 Firefox and WebKit run the same tests in CI only; their latency reporting and
 `currentTime` step size are not measured here.
 
+### Sound effects
+
+The research and design are in [`SOUND-EFFECTS.md`](SOUND-EFFECTS.md). In code:
+
+- **`@game/chipfx`** (`packages/chipfx`) renders a sound from parameters to samples, in the
+  style of sfxr. It has no game code, so other projects can use it (its README).
+- **`audio/effects.ts`** is the game's effects as chipfx parameters (`EFFECTS`): layers,
+  noise variants, random rate change, echo and reverb sends, and priority. Pitched effects
+  are functions of the song's pitch class.
+- **`audio/mixer.ts`** (`EffectsMixer`) renders each effect to an `AudioBuffer` once
+  (`prewarm()` does the unpitched ones one per timer callback when the audio starts) and
+  plays it: stereo pan, the echo and reverb sends, a compressor, the effects volume, and at
+  most `MAX_VOICES` (14) at once by priority. `input` is where the menu sounds connect.
+- **`audio/song-notes.ts`** (`SongNotes`) keeps each instrument's notes and the melody by
+  tick, from the LevelData the level was made from, for the pitched effects. `Game` keeps
+  one per `Level` (`#makeLevel`).
+- **`game/cues.ts`** (`SoundCues`) compares the sim state with what it saw last frame and
+  lists what happened: the ship's volley, tank hits, kills (3 a frame at most), kills on the
+  beat, bombs, missiles, the nuke, a nuke charged, a life lost, shield hits, pickups, buys,
+  and boost. It only reads, and it starts over without cues when the level changes or the
+  tick goes back (a retry, the demo looping). `Game.#playCues` runs it after each frame's
+  `catchUp` in play, replays, and the demo.
+
 ## Renderer and game loop
 
 `packages/client/src/render/` draws the game with PixiJS 8.22.0 (MIT, checked 2026-11-08),
@@ -873,7 +907,7 @@ Run `pnpm dev` and open the URL it prints.
 
 - **Start screen:** the logo and "Press any key". Browsers let a page play sound only after
   a key press or click, so the first press starts the title music and opens the menu.
-- **Title menu:** Play, Practice, Difficulty, Jukebox, Controls, over the title song. Up and down
+- **Title menu:** Play, Practice, Difficulty, Jukebox, Controls, Settings, over the title song. Up and down
   (arrows or W and S) move the cursor, left and right change Practice's song or the
   difficulty, and Enter or Space selects. A click selects too, and Enter on Difficulty steps
   it forward, so one button reaches every choice.
@@ -902,6 +936,14 @@ Run `pnpm dev` and open the URL it prints.
   to the next page and leaves from the last (so a click alone sees both), and Esc goes
   back to where it was opened. The title and jukebox show no control hints of their own
   (Brad, 2026-11-09).
+- **Settings** (`settings.ts`, `SettingsMenu`, `SettingsScreen`), from the title menu: Music
+  and Effects volume as five LED cells each, off to 5, then Back. Left and right change a
+  volume and stop at the ends; Enter steps it up and wraps to off. Each step halves the gain.
+  The defaults are Music 5 and Effects 4. Changes take effect at once (a kill sound plays at
+  the new effects level) and are kept in `localStorage` under `pattern-break.settings`;
+  where storage is blocked, the defaults apply and changes last until the page closes.
+- **Sound effects** play in runs, replays, and the demo (see "Sound effects" under "Audio
+  and clock").
 - **Score:** top right in play. Each kill shows its points where the enemy was, amber when
   on the beat. After the lives come the bomb, which empties when one drops and fills
   again over its reload, the missile the same way once bought, the multiplier in amber
@@ -1004,12 +1046,13 @@ is added.
   as the music starts, then analyzes level 1, so Play doesn't wait. In the demo the sim
   catches up to the music's position each frame and starts over when the song does.
 - **Menu sounds:** `audio/sfx.ts` plays short square-wave notes through an `OscillatorNode`
-  and a gain envelope, at 0.1 of the music's volume, in the same AudioContext as the music:
-  `coin` for the first key, `move`, `change`, `select`, `back`, and `start` for a run or a
-  level. Each is a list of MIDI notes and lengths in `MENU_SOUNDS`. M3 adds the volume
-  setting and off switch. `Game` creates the AudioContext itself, inside the first key
-  press, and passes it to `createAudioPlayer()`, so the coin sound plays while the player is
-  still loading.
+  and a gain envelope, in the same AudioContext as the music: `coin` for the first key,
+  `move`, `change`, `select`, `back`, and `start` for a run or a level. Each is a list of
+  MIDI notes and lengths in `MENU_SOUNDS`. They play at 0.2 into the effects mixer, which
+  the default Effects setting halves to the 0.1 of the music they had before Settings.
+  `Game` creates the AudioContext itself, inside the first key press, with the music and
+  effects volumes, and passes it to `createAudioPlayer()` with the music volume as its
+  `output`, so the coin sound plays while the player is still loading.
 - **Spectrum:** an `AnalyserNode` (FFT size 1024, -90 to -25 dB, smoothing 0.7) tapped off
   `player.output`, the worklet node. It only reads, so what is heard and the song clock don't
   change. `render/spectrum.ts` groups the bins into 24 bars spaced on a log scale from 60 Hz
@@ -1135,6 +1178,23 @@ Headless Chromium renders WebGL with SwiftShader on the CPU, and that GPU-side t
 in the number, so the headless frame rate says nothing about real hardware. M1's 60 fps check
 is done by hand in desktop Chrome. `PLAN.md` sets a target of 2 ms or less per frame of sim
 and render work on desktop.
+
+## Reusable parts
+
+Parts that don't depend on the game and could go into another project (Brad, 2026-11-09).
+All are MIT licensed with the rest of the repository.
+
+| Part | Where | Needs |
+|---|---|---|
+| Sound effect generator (sfxr style) | `packages/chipfx` (its README) | nothing |
+| Effects mixer: echo, generated reverb, voice limit by priority | `packages/client/src/audio/mixer.ts` | chipfx and an effects table like `effects.ts` |
+| Menu sounds as chip notes | `packages/client/src/audio/sfx.ts` | Web Audio |
+| libopenmpt built to WebAssembly, with a fixed playback seed | `tools/build-libopenmpt.sh`, `tools/libopenmpt/`, `packages/analysis/vendor/libopenmpt/` | emsdk to rebuild |
+| Module player in an AudioWorklet, and a latency-corrected song clock | `packages/client/src/audio/player.ts`, `worklet.ts`, `clock.ts` | the libopenmpt build |
+| Screenshot and animated GIF pipeline driven by a shot list | `tools/screenshots/` | Playwright, gifenc, a page with a capture mode |
+| Writing-rules check (banned words and characters) | `tools/check-docs.ts` | Node |
+| Determinism lint plugin for Oxlint | `tools/lint/determinism-plugin.js`, `.oxlintrc.json` | Oxlint |
+| Static file server with cache headers and `/healthz` | `packages/server/src/static.ts` | Node |
 
 ## The docs check
 

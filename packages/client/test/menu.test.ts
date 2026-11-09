@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { ControlsPages, JukeboxMenu, PauseMenu, TitleMenu } from '../src/game/menu.ts';
+import { ControlsPages, JukeboxMenu, PauseMenu, SettingsMenu, TitleMenu } from '../src/game/menu.ts';
 
 describe('TitleMenu', () => {
   it('moves the cursor with up and down, wrapping at both ends', () => {
     const m = new TitleMenu(3);
     expect(m.item).toBe('play');
     expect(m.apply('up')).toBe('moved');
-    expect(m.item).toBe('controls');
+    expect(m.item).toBe('settings');
     m.apply('down');
     m.apply('down');
     expect(m.item).toBe('practice');
@@ -28,7 +28,7 @@ describe('TitleMenu', () => {
     expect(m.difficulty).toBe('easy');
   });
 
-  it('opens play, practice, the jukebox or the controls on confirm, and steps the difficulty forward', () => {
+  it('opens play, practice, the jukebox, the controls or the settings on confirm, and steps the difficulty forward', () => {
     const m = new TitleMenu(3, 1, 'easy');
     expect(m.apply('confirm')).toBe('play');
     m.apply('down');
@@ -40,6 +40,8 @@ describe('TitleMenu', () => {
     expect(m.apply('confirm')).toBe('jukebox');
     m.apply('down');
     expect(m.apply('confirm')).toBe('controls');
+    m.apply('down');
+    expect(m.apply('confirm')).toBe('settings');
     expect(m.apply('back')).toBeNull();
   });
 
@@ -108,5 +110,36 @@ describe('ControlsPages', () => {
     expect(p.apply('confirm')).toBe('back');
     expect(p.apply('back')).toBe('back');
     expect(p.apply('up')).toBeNull();
+  });
+});
+
+describe('SettingsMenu', () => {
+  it('changes a volume with left and right, stopping at off and 5', () => {
+    const m = new SettingsMenu({ music: 5, effects: 1 });
+    expect(m.apply('right')).toBeNull();
+    expect(m.apply('left')).toBe('changed');
+    expect(m.values.music).toBe(4);
+    m.apply('down');
+    m.apply('left');
+    expect(m.values.effects).toBe(0);
+    expect(m.apply('left')).toBeNull();
+  });
+
+  it('steps a volume up on confirm, wrapping from 5 to off, and leaves from Back', () => {
+    const m = new SettingsMenu({ music: 5, effects: 4 });
+    expect(m.apply('confirm')).toBe('changed');
+    expect(m.values.music).toBe(0);
+    m.apply('up');
+    expect(m.item).toBe('back');
+    expect(m.apply('right')).toBeNull();
+    expect(m.apply('confirm')).toBe('back');
+    m.apply('down');
+    expect(m.apply('back')).toBe('back');
+  });
+
+  it('works on its own copy of the settings', () => {
+    const start = { music: 3, effects: 3 };
+    new SettingsMenu(start).apply('left');
+    expect(start.music).toBe(3);
   });
 });

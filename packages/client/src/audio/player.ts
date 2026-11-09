@@ -34,6 +34,8 @@ export interface AudioPlayerOptions {
   wasm?: ArrayBuffer;
   /** How often the worklet reports its position, in song milliseconds. Default 50. */
   positionIntervalMs?: number;
+  /** Where the song goes after its volume: the game's music volume. Default: the context's destination. */
+  output?: AudioNode;
 }
 
 export interface LoadedSong {
@@ -133,7 +135,7 @@ export async function createAudioPlayer(options: AudioPlayerOptions = {}): Promi
     });
     const gain = context.createGain();
     node.connect(gain);
-    gain.connect(context.destination);
+    gain.connect(options.output ?? context.destination);
     const player = new Player(context, node, gain, ownsContext);
     await player.ready;
     return player;

@@ -37,9 +37,12 @@ start the next until the current one is done.
 - [ ] Big explosions: a destroyed ship breaks apart pixel by pixel, each pixel of its sprite
       flying off as its own particle in its own colour, with a colourful shockwave ring and
       a short screen shake. With "reduce flashing" on, the ring's brightness is capped.
-- [ ] Sound effects, made in the browser with Web Audio (no sound files to license): shots,
-      hits, power-ups, and an explosion with a deep boom, echo, and reverb. Mixed under the
-      music, with their own volume and an off switch.
+- [x] Sound effects, made in the browser (no sound files to license): shots, hits,
+      kills, power-ups, and an explosion with a deep boom, echo, and reverb, from our own
+      sfxr-style generator (`@game/chipfx`), with pitched effects on the song's notes.
+      Mixed under the music, with their own volume and an off switch in a new Settings
+      screen (Music and Effects). Research in `SOUND-EFFECTS.md`. Brad listens and says
+      which to change.
 - [ ] The results screen. (Attract mode and the menu sounds came earlier; see the
       changelog, November 8.)
 - [ ] Accessibility toggles: reduce flashing (on by default), shake, colour-blind-safe LED

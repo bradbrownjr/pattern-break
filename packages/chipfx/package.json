@@ -1,0 +1,15 @@
+{
+  "name": "@game/chipfx",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "A small sfxr-style sound effect generator: parameters in, samples out. No dependencies; usable outside Pattern Break.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  }
+}

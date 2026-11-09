@@ -1,8 +1,8 @@
 // Capture mode (docs/DEVELOPMENT.md, "Screenshots"): no audio, the song clock pinned to
 // `t`, and the ship flown by the autopilot's input log replayed through the sim up to `t`.
 // Everything on screen is a function of the query parameters. Scenes: title, jukebox (the
-// first song playing, its spectrum dark), controls-keyboard, controls-gamepad, play, and
-// paused (play with the pause menu over it).
+// first song playing, its spectrum dark), controls-keyboard, controls-gamepad, settings (at
+// the defaults), play, and paused (play with the pause menu over it).
 
 import {
   Difficulty,
@@ -24,7 +24,8 @@ import { analyzeInWorker } from './analysis.ts';
 import { catchUp, targetTick } from './loop.ts';
 import { drawPlay } from './play-view.ts';
 import { ControlsScreen } from './controls.ts';
-import { JukeboxScreen, PauseScreen, SPECTRUM_BARS, TitleScreen } from './screens.ts';
+import { JukeboxScreen, PauseScreen, SPECTRUM_BARS, SettingsScreen, TitleScreen } from './screens.ts';
+import { DEFAULT_SETTINGS } from './settings.ts';
 import { SONGS, TITLE_SONG_ID, fetchSongBytes, findSong, songById } from './songs.ts';
 
 declare global {
@@ -77,6 +78,11 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
       const controls = new ControlsScreen();
       controls.show(params.scene === 'controls-keyboard' ? 'keyboard' : 'gamepad');
       return menuScene(controls.container);
+    }
+    case 'settings': {
+      const settings = new SettingsScreen();
+      settings.update(0, DEFAULT_SETTINGS);
+      return menuScene(settings.container);
     }
     case 'play':
     case 'paused':
