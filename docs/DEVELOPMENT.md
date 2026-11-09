@@ -394,7 +394,7 @@ formation count and that many u8 sizes.
 - **Ticks:** `level.tickCount` is `ceil(totalSamples / 400)`. `state.tick` counts the ticks
   run, so the state shows song sample `400 * state.tick`. `tick()` does nothing once
   `state.dead` or `state.finished` is set. Otherwise, in order: move and clamp the ship,
-  increment `state.tick`, and place the options; spawn enemies whose tick has come and move
+  increment `state.tick`, and place the drones; spawn enemies whose tick has come and move
   every live one; buy, nuke, fire and move shots and test them against enemies; the bomb;
   missiles; fire enemies' scheduled shots and move bullets; move capsules and pick up any
   the ship touches; then, unless the ship is in its safe time, test it against the
@@ -410,7 +410,7 @@ formation count and that many u8 sizes.
   overlaps horizontally: lit segments, plus peak dots where they are solid. Boxes against
   each other are half-open overlaps of centre and half size. Integer comparisons only.
 - **Shots:** holding fire shoots a volley every 8 ticks from the ship's nose, and from
-  each option, 1024 Q8 (4 px) per tick to the right. Each source has at most 6 straight
+  each drone, 1024 Q8 (4 px) per tick to the right. Each source has at most 6 straight
   shots in flight (`MAX_SHOTS`; 3 for one build on 2026-11-09, until Brad settled that the
   gun sprays freely and only the bomb and missile reload), and 6 angled ones with double,
   in a pool of `SHOT_SLOTS` (36). A shot passes through the walls and stops on the first
@@ -453,7 +453,7 @@ formation count and that many u8 sizes.
   means flying low (Brad, 2026-11-09; until then capsules drifted along the cave's centre
   line, and the autopilot collected 17 to 60 a level on normal). One the ship's hitbox
   overlaps moves `state.meter` (-1 for none) one
-  slot along boost 0, double 1, laser 2, missile 3, option 4, shield 5 (`PowerUp`),
+  slot along boost 0, double 1, laser 2, missile 3, drone 4, shield 5 (`PowerUp`),
   wrapping from shield to boost. A new buy press buys the highlighted upgrade and sets the
   meter to -1, unless `canBuy()` says it is at its most, when nothing happens and the
   highlight stays. Losing a life loses every upgrade (`loseUpgrades()`); the highlight and
@@ -467,16 +467,16 @@ formation count and that many u8 sizes.
   straight shot with a 16x2 px beam at 1536 Q8 (6 px) per tick that passes through
   enemies, taking a hit off each it overlaps every tick, so a tank in its path takes 3.
 - **Missile:** a new press of the missile bit, once bought, launches one from the ship's
-  nose and one from each option, if the ship's (slot 0) is not in flight and
+  nose and one from each drone, if the ship's (slot 0) is not in flight and
   `state.missileReadyTick` has come. A missile (8x4 px) flies right 768 Q8 per tick
   through the walls and bursts on the first live enemy it overlaps, destroying every live
   enemy whose hitbox overlaps the 40x40 px square around it, scored as shot kills. The
   ship's missile bursting or leaving the right edge starts the 120-tick reload
   (`MISSILE_RELOAD_TICKS`). `state.missileBlastTick`, `missileBlastX` and `missileBlastY`
   record each slot's last burst for the client.
-- **Options:** `state.trailX` and `trailY` keep the ship's last 64 positions; option k sits
-  where the ship was 16 x (k + 1) ticks ago (`optionX`, `optionY`). Options can't be hit
-  and pass through walls. A life lost refills the trail with the new position, so options
+- **Drones:** `state.trailX` and `trailY` keep the ship's last 64 positions; drone k sits
+  where the ship was 16 x (k + 1) ticks ago (`droneX`, `droneY`). Drones can't be hit
+  and pass through walls. A life lost refills the trail with the new position, so drones
   bought later start on the ship.
 - **Shield:** a buy sets `state.shieldHits` to 3. A bullet or enemy that touches the ship
   then costs a shield hit instead of a life; a rammed enemy is still destroyed, scoring
@@ -502,7 +502,7 @@ formation count and that many u8 sizes.
   24 ticks ahead through the walls from `solidWalls()`, so it steers clear of turrets and
   tank tracks, holds fire, and presses bomb when it can drop one and a tank or floor
   turret is 60 to 140 px ahead. It doesn't steer for capsules, but buys double, missile,
-  option and shield when the meter lands on them, and launches a missile at an enemy ship
+  drone and shield when the meter lands on them, and launches a missile at an enemy ship
   up to 240 px ahead and within 12 px of its height. On the nine songs (2026-11-09) it
   picks up 0 to 5 capsules a level on easy and 0 to 8 on normal, only those that fall
   onto its path, so it rarely has an upgrade. Of its three moves (up, down, none) it takes the one
@@ -515,7 +515,7 @@ formation count and that many u8 sizes.
   2026-11-08, before enemies). With enemies and power-ups it runs 0.5 to 0.6 million, 4000
   to 4800 times real time (Node 26.13 on a Xeon E5-2640 from 2012, 2026-11-09).
   `bench:sim:max` plays The_Epic_Chip on hard, the densest level (604 enemies), with a ship
-  that can't be hit, double, two options and the missile, fire held and bomb and missile
+  that can't be hit, double, two drones and the missile, fire held and bomb and missile
   pressed every other tick. At most 11 enemies, 36 of 36 shots, 12 of 16 bullets, 3 of 3
   missiles and 2 of 4 capsules were on screen at once; its busiest 10 000 ticks took 55 ms,
   5.5 us a tick. A server-side check of a replay of the whole 198 s song costs 4.1 s of
@@ -910,7 +910,7 @@ Run `pnpm dev` and open the URL it prints.
   shows the score.
 - **Power-up meter:** six LED cells along the bottom, Boost to Shield, lit green to red
   from the left up to the highlighted one. A label shows the count held for boost,
-  options and shield, and turns darker grey when that upgrade is at its most; a cyan bar
+  drones and shield, and turns darker grey when that upgrade is at its most; a cyan bar
   in the Boost cell shows the fuel left.
 - **Gamepad:** any pad that reports the Gamepad API's "standard" mapping
   (https://w3c.github.io/gamepad/, "Remapping"), which fixes its button and axis numbers;
@@ -1024,7 +1024,7 @@ is added.
   384x216 that fits the window (`integerScale()`), with `image-rendering: pixelated`, centred
   on black by `index.html`.
 - **Layers,** back to front: the starfield, the world (terrain, capsules, enemies, shots,
-  missiles, options, the shield and bullets, ship, explosion, point popups), the HUD
+  missiles, drones, the shield and bullets, ship, explosion, point popups), the HUD
   (lives, bomb and missile, multiplier, nukes, score, power-up meter), the death flash, and
   the UI (title screen, jukebox, controls, demo banner, messages, the pause menu, and the
   fade).
@@ -1055,7 +1055,7 @@ is added.
   is a 40-particle explosion over 600 ms, and a nuke flashes the playfield like the crash
   flash (25% white fading over 220 ms), under the HUD. An angled double shot is a 4x4 diagonal, a laser a
   16x2 white bar. A missile is an 8x4 sprite; each slot's burst is a 28-particle cyan
-  explosion over 500 ms. Options are 6x6 orbs, capsules 8x8 amber pills marked P, and the
+  explosion over 500 ms. Drones are 6x6 orbs, capsules 8x8 amber pills marked P, and the
   shield a 22x14 ring around the ship, more opaque with more hits left (35, 55 and 80%),
   blinking with the ship. The missile icon follows the bomb icon once bought and fills the
   same way over `MISSILE_RELOAD_TICKS`.

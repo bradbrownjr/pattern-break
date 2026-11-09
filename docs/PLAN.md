@@ -234,7 +234,7 @@ every bar of every generated level.
   - **Laser:** a beam 1.5 times as fast as a shot that goes through every enemy in line.
   - **Missile:** the bomb for air to air, on its own button: one per press, it bursts on
     the first enemy it touches and destroys every enemy within 20 px, then reloads for 1 s.
-  - **Option:** a drone that follows the ship's path 16 ticks behind (the second 32), can't
+  - **Drone:** follows the ship's path 16 ticks behind (the second 32), can't
     be hit, and fires the ship's shots and missiles. Up to 2.
   - **Shield:** takes 3 hits from bullets or enemies. The walls still cost a life.
 

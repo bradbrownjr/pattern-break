@@ -1,7 +1,7 @@
 // The power-up meter along the bottom of the playfield, drawn as a row of VU meter LEDs
 // (docs/PLAN.md, "Simulation"): one cell per upgrade, lit from the left up to the
 // highlighted one, which the buy button buys. A cell shows how many of its upgrade the
-// ship has (boost level, options, shield hits), dims its label when it can't be bought,
+// ship has (boost level, drones, shield hits), dims its label when it can't be bought,
 // and the boost cell shows the fuel left. Text changes only when the state does.
 
 import {
@@ -18,7 +18,7 @@ import { Container, Sprite, Texture } from 'pixi.js';
 import { BACKGROUND, CYAN, DIM_GREY, GREY, LED_DIM, LED_LIT } from './palette.ts';
 import { PixelText } from './text.ts';
 
-const LABELS = ['Boost', 'Double', 'Laser', 'Missile', 'Option', 'Shield'] as const;
+const LABELS = ['Boost', 'Double', 'Laser', 'Missile', 'Drone', 'Shield'] as const;
 const CELL_HEIGHT = 11;
 const CELL_GAP = 1;
 const MARGIN = 3;
@@ -33,8 +33,8 @@ function count(state: SimState, slot: number): number {
   switch (slot) {
     case PowerUp.boost:
       return state.boostLevel;
-    case PowerUp.option:
-      return state.options;
+    case PowerUp.drone:
+      return state.drones;
     case PowerUp.shield:
       return state.shieldHits;
     default:

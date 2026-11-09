@@ -1,5 +1,5 @@
 // Power-ups (sim.ts): capsules from whole formations, which fall to the cave's floor, the
-// meter and buying, and each upgrade: boost, double, laser, missile, option, shield. Losing
+// meter and buying, and each upgrade: boost, double, laser, missile, drone, shield. Losing
 // a life loses them all.
 
 import { describe, expect, it } from 'vitest';
@@ -112,18 +112,18 @@ describe('buying', () => {
 
   it("an upgrade at its most can't be bought, and the highlight stays", () => {
     const s = createSimState();
-    s.options = 2;
-    s.meter = PowerUp.option;
+    s.drones = 2;
+    s.meter = PowerUp.drone;
     tick(open, s, InputBit.buy);
-    expect([s.options, s.meter]).toEqual([2, PowerUp.option]);
+    expect([s.drones, s.meter]).toEqual([2, PowerUp.drone]);
   });
 
   it('losing a life loses every upgrade, and keeps the highlight', () => {
     const s = createSimState();
-    Object.assign(s, { double: true, missile: true, options: 2, boostLevel: 2, boostFuel: 50, meter: PowerUp.missile });
+    Object.assign(s, { double: true, missile: true, drones: 2, boostLevel: 2, boostFuel: 50, meter: PowerUp.missile });
     bulletOnShip(s);
     tick(open, s, 0);
-    expect([s.lives, s.double, s.missile, s.options, s.boostLevel, s.boostFuel, s.meter]).toEqual([
+    expect([s.lives, s.double, s.missile, s.drones, s.boostLevel, s.boostFuel, s.meter]).toEqual([
       2,
       false,
       false,
@@ -218,13 +218,13 @@ describe('missile', () => {
   });
 });
 
-describe('options', () => {
+describe('drones', () => {
   it('follow the ship 16 ticks behind and fire with it', () => {
     const s = createSimState();
-    s.options = 1;
+    s.drones = 1;
     for (let k = 0; k < 20; k++) tick(open, s, InputBit.down);
-    // At tick 20 the option is where the ship was at tick 4.
-    expect([s.optionX[0], s.optionY[0]]).toEqual([64 * Q, 108 * Q + 4 * SHIP_SPEED_Q8]);
+    // At tick 20 the drone is where the ship was at tick 4.
+    expect([s.droneX[0], s.droneY[0]]).toEqual([64 * Q, 108 * Q + 4 * SHIP_SPEED_Q8]);
     tick(open, s, InputBit.fire);
     const sources = Array.from(s.shotSource.filter((_, k) => s.shotActive[k] === 1)).sort();
     expect(sources).toEqual([0, 1]);

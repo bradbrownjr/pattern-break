@@ -1,4 +1,4 @@
-// Enemies, shots, bullets, the bomb, missiles, options, capsules and the shield drawn from
+// Enemies, shots, bullets, the bomb, missiles, drones, capsules and the shield drawn from
 // the sim state, plus their cosmetics: a burst and the points scored when an enemy is
 // destroyed, the bomb's and missiles' blasts, the nuke's flash, an explosion when the ship
 // loses a life, and the HUD: lives left, the bomb and missile reloading, the streak
@@ -14,7 +14,7 @@ import {
   CAPSULE_SLOTS,
   EnemyStatus,
   LASER_WIDTH,
-  MAX_OPTIONS,
+  MAX_DRONES,
   MISSILE_RELOAD_TICKS,
   MISSILE_SLOTS,
   PLAYFIELD_HEIGHT,
@@ -102,7 +102,7 @@ const ICON_ROWS = BOMB_ICON_MAP.length;
 /** The double's angled shot. */
 const SHOT_UP_MAP = ['...c', '..c.', '.c..', 'c...'];
 const MISSILE_MAP = ['..cc....', 'mcccccww', 'mcccccww', '..cc....'];
-const OPTION_MAP = ['.cccc.', 'ccwwcc', 'cwwwwc', 'cwwwwc', 'ccwwcc', '.cccc.'];
+const DRONE_MAP = ['.cccc.', 'ccwwcc', 'cwwwwc', 'cwwwwc', 'ccwwcc', '.cccc.'];
 /** A power-up capsule: an amber pill marked P. */
 const CAPSULE_MAP = [
   '.aaaaaa.',
@@ -182,7 +182,7 @@ interface Textures {
   nuke: Texture;
   shotUp: Texture;
   missile: Texture;
-  option: Texture;
+  drone: Texture;
   capsule: Texture;
   shield: Texture;
 }
@@ -213,7 +213,7 @@ function getTextures(): Textures {
     nuke: mapTexture(NUKE_MAP, COLORS, 'nuke'),
     shotUp: mapTexture(SHOT_UP_MAP, COLORS, 'shot-up'),
     missile: mapTexture(MISSILE_MAP, COLORS, 'missile'),
-    option: mapTexture(OPTION_MAP, COLORS, 'option'),
+    drone: mapTexture(DRONE_MAP, COLORS, 'drone'),
     capsule: mapTexture(CAPSULE_MAP, COLORS, 'capsule'),
     shield: mapTexture(SHIELD_MAP, COLORS, 'shield'),
   };
@@ -272,7 +272,7 @@ export class CombatView {
   #missileBlasts: Explosion[] = [];
   #missileBlastSample: number[] = [];
   #seenMissileBlast: number[] = [];
-  #options: Sprite[] = [];
+  #drones: Sprite[] = [];
   #capsules: Sprite[] = [];
   #shield = new Sprite();
   readonly #meter = new MeterView();
@@ -299,7 +299,7 @@ export class CombatView {
       this.#missileBlastSample.push(-1);
       this.#seenMissileBlast.push(-1);
     }
-    for (let i = 0; i < MAX_OPTIONS; i++) this.#options.push(this.#add(new Sprite(tex.option)));
+    for (let i = 0; i < MAX_DRONES; i++) this.#drones.push(this.#add(new Sprite(tex.drone)));
     this.#shield.texture = tex.shield;
     this.#add(this.#shield);
     for (let i = 0; i < BULLET_SLOTS; i++) this.#bullets.push(this.#add(new Sprite()));
@@ -450,7 +450,7 @@ export class CombatView {
       placeCentred(sprite, state.bulletX[b]! / Q8, state.bulletY[b]! / Q8);
     }
 
-    // Missiles and their blasts, options, capsules, and the shield.
+    // Missiles and their blasts, drones, capsules, and the shield.
     for (let m = 0; m < MISSILE_SLOTS; m++) {
       const sprite = this.#missiles[m]!;
       sprite.visible = state.missileActive[m] === 1;
@@ -465,10 +465,10 @@ export class CombatView {
         this.#missileBlasts[m]!.draw(Math.max(0, samplesToMs(displaySamples - this.#missileBlastSample[m]!)));
       }
     }
-    for (let k = 0; k < MAX_OPTIONS; k++) {
-      const sprite = this.#options[k]!;
-      sprite.visible = k < state.options && !state.dead;
-      if (sprite.visible) placeCentred(sprite, state.optionX[k]! / Q8, state.optionY[k]! / Q8);
+    for (let k = 0; k < MAX_DRONES; k++) {
+      const sprite = this.#drones[k]!;
+      sprite.visible = k < state.drones && !state.dead;
+      if (sprite.visible) placeCentred(sprite, state.droneX[k]! / Q8, state.droneY[k]! / Q8);
     }
     for (let c = 0; c < CAPSULE_SLOTS; c++) {
       const sprite = this.#capsules[c]!;

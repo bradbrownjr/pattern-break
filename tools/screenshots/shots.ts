@@ -116,7 +116,7 @@ export const shots: Shot[] = [
       'floor; another "200" marks a kill on the right. Three small ship icons on a dark panel in the top left ' +
       'corner show the lives left, followed by a small amber bomb icon and "x2" in amber; "0002200" in white in ' +
       'the top right corner is the score. Along the bottom edge runs the power-up meter, six dark LED cells ' +
-      'labelled Boost, Double, Laser, Missile, Option and Shield.',
+      'labelled Boost, Double, Laser, Missile, Drone and Shield.',
     caption: 'Pattern Break at 21.5 seconds into the test song on normal, with the ship flown by the autopilot.',
     usedIn: ['readme'],
   },
@@ -134,7 +134,7 @@ export const shots: Shot[] = [
       'away with them. Three ship icons in the top left corner show the lives left, followed by a bomb icon ' +
       'and "x3" in amber, and the score in the top right corner counts up as each kill shows its points ' +
       'where the enemy was. Along the bottom edge runs the power-up meter, six dark LED cells labelled ' +
-      'Boost, Double, Laser, Missile, Option and Shield.',
+      'Boost, Double, Laser, Missile, Drone and Shield.',
     caption: 'Four seconds of the test song on normal, flown by the autopilot through the sim.',
     usedIn: ['readme'],
   },

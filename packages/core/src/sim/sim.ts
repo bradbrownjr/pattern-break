@@ -23,13 +23,13 @@ import {
   DOUBLE_SPEED_Q8,
   LASER_SPEED_Q8,
   LASER_WIDTH,
-  MAX_OPTIONS,
+  MAX_DRONES,
   MISSILE_BLAST_PX,
   MISSILE_HEIGHT,
   MISSILE_RELOAD_TICKS,
   MISSILE_SPEED_Q8,
   MISSILE_WIDTH,
-  OPTION_DELAY_TICKS,
+  DRONE_DELAY_TICKS,
   POWER_UP_COUNT,
   PowerUp,
   SHIELD_HITS,
@@ -102,7 +102,7 @@ const MISSILE_HW = (MISSILE_WIDTH * Q8) / 2;
 const MISSILE_HH = (MISSILE_HEIGHT * Q8) / 2;
 const MISSILE_BLAST_H = MISSILE_BLAST_PX * Q8;
 const CAPSULE_H = (CAPSULE_SIZE * Q8) / 2;
-/** Ship positions kept for the options to follow: a power of two over the longest delay. */
+/** Ship positions kept for the drones to follow: a power of two over the longest delay. */
 const TRAIL = 64;
 const BLAST_H = BOMB_BLAST_PX * Q8;
 /** Half sizes of each enemy kind's hitbox, indexed by EnemyKind. */
@@ -112,11 +112,11 @@ const ENEMY_HH = [(TURRET_HEIGHT * Q8) / 2, (TANK_HEIGHT * Q8) / 2, (ENEMY_SHIP_
 export const BULLET_SLOTS = 16;
 /**
  * Shot slots: MAX_SHOTS straight and MAX_SHOTS angled (double) for the ship and each
- * option. Each of those six groups is capped at MAX_SHOTS in flight.
+ * drone. Each of those six groups is capped at MAX_SHOTS in flight.
  */
-export const SHOT_SLOTS = MAX_SHOTS * 2 * (1 + MAX_OPTIONS);
-/** Missile slots: the ship's, then one per option. */
-export const MISSILE_SLOTS = 1 + MAX_OPTIONS;
+export const SHOT_SLOTS = MAX_SHOTS * 2 * (1 + MAX_DRONES);
+/** Missile slots: the ship's, then one per drone. */
+export const MISSILE_SLOTS = 1 + MAX_DRONES;
 
 /** Where each enemy is in its life. */
 export const EnemyStatus = { waiting: 0, alive: 1, destroyed: 2, gone: 3 } as const;
@@ -167,7 +167,7 @@ export interface SimState {
   /** Enemies before this index are destroyed or gone; from it on, not yet spawned. */
   firstLive: number;
   nextSpawn: number;
-  /** Player shots: screen centre and velocity per tick, Q8; who fired (0 the ship, 1 and 2 the options); laser or not. */
+  /** Player shots: screen centre and velocity per tick, Q8; who fired (0 the ship, 1 and 2 the drones); laser or not. */
   shotActive: Uint8Array;
   shotX: Int32Array;
   shotY: Int32Array;
@@ -202,7 +202,7 @@ export interface SimState {
   /** The power-up meter's highlighted slot (a PowerUp), or -1; capsules picked up. */
   meter: number;
   capsules: number;
-  /** Upgrades bought: boost level (0 to 3) and fuel left (ticks), double, laser, missile, options, shield hits left. */
+  /** Upgrades bought: boost level (0 to 3) and fuel left (ticks), double, laser, missile, drones, shield hits left. */
   boostLevel: number;
   boostFuel: number;
   /** True if the ship boosted this tick. */
@@ -210,13 +210,13 @@ export interface SimState {
   double: boolean;
   laser: boolean;
   missile: boolean;
-  options: number;
+  drones: number;
   shieldHits: number;
-  /** The ship's centre over the last TRAIL ticks (index tick % TRAIL), and the options' positions, Q8. */
+  /** The ship's centre over the last TRAIL ticks (index tick % TRAIL), and the drones' positions, Q8. */
   trailX: Int32Array;
   trailY: Int32Array;
-  optionX: Int32Array;
-  optionY: Int32Array;
+  droneX: Int32Array;
+  droneY: Int32Array;
   /** Missiles by slot (0 the ship's), screen centre Q8; the tick the ship's next can launch. */
   missileActive: Uint8Array;
   missileX: Int32Array;
@@ -298,12 +298,12 @@ export function createSimState(): SimState {
     double: false,
     laser: false,
     missile: false,
-    options: 0,
+    drones: 0,
     shieldHits: 0,
     trailX: new Int32Array(TRAIL),
     trailY: new Int32Array(TRAIL),
-    optionX: new Int32Array(MAX_OPTIONS),
-    optionY: new Int32Array(MAX_OPTIONS),
+    droneX: new Int32Array(MAX_DRONES),
+    droneY: new Int32Array(MAX_DRONES),
     missileActive: new Uint8Array(MISSILE_SLOTS),
     missileX: new Int32Array(MISSILE_SLOTS),
     missileY: new Int32Array(MISSILE_SLOTS),
@@ -377,16 +377,16 @@ function loseUpgrades(state: SimState): void {
   state.double = false;
   state.laser = false;
   state.missile = false;
-  state.options = 0;
+  state.drones = 0;
   state.shieldHits = 0;
 }
 
-/** Fills the trail with (x, y), so the options start on the ship. */
+/** Fills the trail with (x, y), so the drones start on the ship. */
 function resetTrail(state: SimState, x: number, y: number): void {
   state.trailX.fill(x);
   state.trailY.fill(y);
-  state.optionX.fill(x);
-  state.optionY.fill(y);
+  state.droneX.fill(x);
+  state.droneY.fill(y);
 }
 
 /**
@@ -658,8 +658,8 @@ export function canBuy(state: SimState, slot: number): boolean {
       return !state.laser;
     case PowerUp.missile:
       return !state.missile;
-    case PowerUp.option:
-      return state.options < MAX_OPTIONS;
+    case PowerUp.drone:
+      return state.drones < MAX_DRONES;
     case PowerUp.shield:
       return state.shieldHits < SHIELD_HITS;
     default:
@@ -684,8 +684,8 @@ function buy(state: SimState, slot: number): void {
     case PowerUp.missile:
       state.missile = true;
       break;
-    case PowerUp.option:
-      state.options++;
+    case PowerUp.drone:
+      state.drones++;
       break;
     default:
       state.shieldHits = SHIELD_HITS;
@@ -714,7 +714,7 @@ function addShot(state: SimState, source: number, x: number, y: number, vx: numb
   return true;
 }
 
-/** A volley from the ship or an option centred at (x, y): the straight shot or laser, plus the angled one with double. */
+/** A volley from the ship or a drone centred at (x, y): the straight shot or laser, plus the angled one with double. */
 function fireVolley(state: SimState, source: number, x: number, y: number): boolean {
   const laser = state.laser;
   const hw = laser ? LASER_HW : SHOT_HW;
@@ -848,11 +848,11 @@ function loseLife(level: Level, state: SimState, t: number): void {
  * Advances `state` by one tick with `input` (InputBit flags), in this order:
  * 1. Move the ship (opposite directions cancel; diagonals use SHIP_DIAGONAL_SPEED_Q8 per
  *    axis; boost held with fuel left uses the boost speeds) and keep it in bounds, then
- *    advance the tick and move the options along the ship's trail.
+ *    advance the tick and move the drones along the ship's trail.
  * 2. Spawn enemies whose time has come, move every live one, and drop those off screen.
  * 3. A new press of buy buys the highlighted upgrade. A new press of the nuke button with
  *    a nuke held destroys every enemy on screen and clears the bullets. Fire if the fire
- *    bit is held and the gun is ready, from the ship and each option; move shots, which
+ *    bit is held and the gun is ready, from the ship and each drone; move shots, which
  *    pass through the LED walls (so turrets on the bar tips can be hit) and stop on the
  *    first enemy they hit (a laser goes on, taking a hit off each enemy it overlaps). Move
  *    the bomb, or drop one on a new press once it has reloaded; it bursts on the terrain
@@ -900,10 +900,10 @@ export function tick(level: Level, state: SimState, input: number): void {
   const t = state.tick;
   state.trailX[t & (TRAIL - 1)] = x;
   state.trailY[t & (TRAIL - 1)] = y;
-  for (let k = 0; k < MAX_OPTIONS; k++) {
-    const from = (t - OPTION_DELAY_TICKS * (k + 1)) & (TRAIL - 1);
-    state.optionX[k] = state.trailX[from]!;
-    state.optionY[k] = state.trailY[from]!;
+  for (let k = 0; k < MAX_DRONES; k++) {
+    const from = (t - DRONE_DELAY_TICKS * (k + 1)) & (TRAIL - 1);
+    state.droneX[k] = state.trailX[from]!;
+    state.droneY[k] = state.trailY[from]!;
   }
 
   // 2. Enemies.
@@ -933,7 +933,7 @@ export function tick(level: Level, state: SimState, input: number): void {
   if (state.shotCooldown > 0) state.shotCooldown--;
   if ((input & InputBit.fire) !== 0 && state.shotCooldown === 0) {
     let fired = fireVolley(state, 0, x, y);
-    for (let k = 0; k < state.options; k++) fired = fireVolley(state, k + 1, state.optionX[k]!, state.optionY[k]!) || fired;
+    for (let k = 0; k < state.drones; k++) fired = fireVolley(state, k + 1, state.droneX[k]!, state.droneY[k]!) || fired;
     if (fired) state.shotCooldown = SHOT_INTERVAL_TICKS;
   }
   for (let s = 0; s < SHOT_SLOTS; s++) {
@@ -969,11 +969,11 @@ export function tick(level: Level, state: SimState, input: number): void {
     state.bombVY = 0;
   }
   if (state.missile && (pressed & InputBit.missile) !== 0 && !state.missileActive[0] && t >= state.missileReadyTick) {
-    for (let m = 0; m <= state.options; m++) {
+    for (let m = 0; m <= state.drones; m++) {
       if (state.missileActive[m]) continue;
       state.missileActive[m] = 1;
-      state.missileX[m] = (m === 0 ? x : state.optionX[m - 1]!) + HALF_W + MISSILE_HW;
-      state.missileY[m] = m === 0 ? y : state.optionY[m - 1]!;
+      state.missileX[m] = (m === 0 ? x : state.droneX[m - 1]!) + HALF_W + MISSILE_HW;
+      state.missileY[m] = m === 0 ? y : state.droneY[m - 1]!;
     }
   }
   for (let m = 0; m < MISSILE_SLOTS; m++) {
@@ -1071,7 +1071,7 @@ export function runInputLog(level: Level, inputs: Uint16Array, state: SimState =
  * A deterministic byte form of the state, for golden hashes: 26 little-endian i32s (tick,
  * shipX, shipY, dead, deathTick, lives, finished, safeUntil, hitTick, kills, score,
  * streak, onBeatKills, survivalBonus, nukes, nukeCharge, blastTick, meter, capsules,
- * boostLevel, boostFuel, double, laser, missile, options, shieldHits), then each enemy's
+ * boostLevel, boostFuel, double, laser, missile, drones, shieldHits), then each enemy's
  * status byte.
  */
 export function serializeSimState(state: SimState): Uint8Array {
@@ -1102,7 +1102,7 @@ export function serializeSimState(state: SimState): Uint8Array {
     state.double ? 1 : 0,
     state.laser ? 1 : 0,
     state.missile ? 1 : 0,
-    state.options,
+    state.drones,
     state.shieldHits,
   ];
   for (let i = 0; i < fields.length; i++) view.setInt32(i * 4, fields[i]!, true);

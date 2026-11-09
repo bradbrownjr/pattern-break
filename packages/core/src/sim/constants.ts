@@ -134,7 +134,7 @@ export const MAX_NUKES = 3;
  * and clears the highlight. Losing a life loses every upgrade bought; the highlight stays.
  * The meter's slots, in order:
  */
-export const PowerUp = { boost: 0, double: 1, laser: 2, missile: 3, option: 4, shield: 5 } as const;
+export const PowerUp = { boost: 0, double: 1, laser: 2, missile: 3, drone: 4, shield: 5 } as const;
 export const POWER_UP_COUNT = 6;
 export const CAPSULE_SLOTS = 4;
 export const CAPSULE_SIZE = 8;
@@ -178,11 +178,11 @@ export const MISSILE_BLAST_PX = 20;
 export const MISSILE_RELOAD_TICKS = 120;
 
 /**
- * Option: a drone that follows the ship's path 16 ticks behind (the second 32), can't be
+ * Drone: follows the ship's path 16 ticks behind (the second 32), can't be
  * hit, and fires the ship's shots and missiles. Up to 2.
  */
-export const MAX_OPTIONS = 2;
-export const OPTION_DELAY_TICKS = 16;
+export const MAX_DRONES = 2;
+export const DRONE_DELAY_TICKS = 16;
 
 /** Shield: takes 3 hits from bullets or enemies. The walls still cost a life. */
 export const SHIELD_HITS = 3;

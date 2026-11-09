@@ -1,5 +1,5 @@
 // The sim at its busiest (docs/PLAN.md, "Testing", "Performance check"): the densest
-// level, The_Epic_Chip on hard, with a ship that can't be hit and has double, two options
+// level, The_Epic_Chip on hard, with a ship that can't be hit and has double, two drones
 // and the missile, holding fire and pressing bomb and missile every other tick. Prints the
 // most entities seen at once, the time for 10 000 ticks, and what a server-side replay
 // check of the whole song costs: analysis, level generation, and the sim.
@@ -51,7 +51,7 @@ function armed(s: SimState): void {
   resetSimState(s);
   s.double = true;
   s.missile = true;
-  s.options = 2;
+  s.drones = 2;
   s.safeUntil = 0x7fffffff;
 }
 

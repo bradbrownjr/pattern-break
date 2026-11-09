@@ -245,13 +245,13 @@ timing matters more than holding the bomb button, and the nuke is worth earning;
       capsule moves the meter's highlight, and the buy button buys it.
 - [x] The meter: boost (an afterburner on its own button, 1 s of fuel a buy, up to 3),
       double, laser, missile (its own button, one per press, 20 px burst, 1 s reload),
-      option (up to 2), shield (3 hits). Losing a life loses them all.
+      drone (up to 2), shield (3 hits). Losing a life loses them all.
 - [x] Input grows to 16 bits for the boost and missile buttons. Keys F or ' (buy), C or L
       (missile), Shift (boost); pad Y, RB, LB or LT.
 - [x] The meter as six LED cells along the bottom, with counts and the boost fuel; the
       missile icon fills as it reloads; sprites for capsules, angled shots, the laser,
       missiles, options and the shield.
-- [x] The autopilot buys double, missile, option and shield, and fires missiles at ships.
+- [x] The autopilot buys double, missile, drone and shield, and fires missiles at ships.
       `GEN_VERSION` 5 and Level format 4 (formations), `SIM_VERSION` 8, then 9 for falling
       capsules, with the golden hashes regenerated.
 
@@ -412,7 +412,7 @@ These need Brad's answer before the work that depends on them. Don't guess.
 - **M2 comes in slices,** enemies and shooting first, each play-tested (2026-11-09).
 - **Power-ups:** shooting down a whole formation of ships drops a capsule, which falls to
   the cave's floor so collecting one means flying low. The meter is
-  boost, double shot, laser, missile, option pod, shield. Boost is an afterburner on its
+  boost, double shot, laser, missile, drone, shield. Boost is an afterburner on its
   own button: the first buy unlocks it and more buys add fuel, since a permanent speed-up
   made the ship too hard to steer. The missile is the bomb for air to air: its own button,
   one per press, area damage, a reload. The gun is the standard weapon and sprays freely.

@@ -2,7 +2,7 @@
 // that generated levels are passable and to pin sim results, and the attract demo flies
 // it. It holds x, steers y through the cave (turrets and tank tracks count as wall), holds
 // fire, bombs tanks and floor turrets ahead, dodges the enemy bullets and ships it can see
-// coming, and nukes when it can't. It buys double, missile, option and shield when the
+// coming, and nukes when it can't. It buys double, missile, drone and shield when the
 // meter lands on them (it doesn't steer for capsules) and fires missiles at ships ahead.
 
 import { solidWalls } from '../levelgen/path-check.ts';
@@ -31,7 +31,7 @@ const DODGE_MARGIN = 3 * Q8;
 const NUKE_TICKS = 2;
 const BULLET_HALF = (ENEMY_BULLET_SIZE * Q8) / 2;
 
-/** The upgrades the autopilot buys, by PowerUp: double, missile, option and shield. */
+/** The upgrades the autopilot buys, by PowerUp: double, missile, drone and shield. */
 const AUTOPILOT_BUYS = [false, true, false, true, true, true];
 /** An enemy ship this far ahead (Q8) and this close in height is worth a missile. */
 const MISSILE_AHEAD_MAX = 240 * Q8;
