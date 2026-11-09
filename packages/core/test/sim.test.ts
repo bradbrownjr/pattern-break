@@ -23,12 +23,16 @@ import { lcg, syntheticLevelData } from './level-fixtures.ts';
 
 const Q = 256;
 
-/** A hand-made level: bars at world x 0, 10, 20, ...; scroll[t] = scrollPx * 256 for every t. */
+/**
+ * A hand-made level: bars at world x 0, pitch, 2 pitch, ... (pitch 10 unless given);
+ * scroll[t] = scrollPx * 256 for every t.
+ */
 function handLevel(
   difficulty: DifficultyName,
   bars: Array<[ceiling: number, floor: number, ceilingPeak?: number, floorPeak?: number]>,
   scrollPx = 0,
   tickCount = 100,
+  barPitch = 10,
 ): Level {
   const n = bars.length;
   return {
@@ -36,6 +40,7 @@ function handLevel(
     difficulty,
     totalSamples: tickCount * 400,
     barCount: n,
+    barPitch,
     barStartSample: Uint32Array.from(bars, (_, i) => i * 400),
     ceiling: Uint8Array.from(bars, (b) => b[0]),
     floor: Uint8Array.from(bars, (b) => b[1]),
@@ -102,6 +107,19 @@ describe('collision', () => {
     // A box that only touched the gap between segments 0 and 1 (y 6..7) would miss, but the
     // hitbox is 6 px tall, so any position near it overlaps a lit segment.
     for (let y = 3 * Q; y <= 20 * Q; y += 64) expect(shipCollides(level, 0, 4 * Q, y)).toBe(true);
+  });
+
+  it("places bars by the level's pitch, each solid for pitch - 2 px", () => {
+    // Pitch 13: bar 1 is solid for world x [13, 24).
+    const wide = handLevel('hard', [
+      [0, 0],
+      [3, 0],
+    ], 0, 100, 13);
+    expect(shipCollides(wide, 0, 18 * Q, 10 * Q)).toBe(true);
+    expect(shipCollides(wide, 0, 29 * Q, 10 * Q)).toBe(false); // left edge at 24 misses
+    expect(shipCollides(wide, 0, 29 * Q - 1, 10 * Q)).toBe(true);
+    expect(shipCollides(wide, 0, 8 * Q, 10 * Q)).toBe(false); // right edge at 13 misses
+    expect(shipCollides(wide, 0, 8 * Q + 1, 10 * Q)).toBe(true);
   });
 
   it('uses the scroll table for world x', () => {

@@ -4,7 +4,7 @@
 import { PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH, Q8, createSimState } from '@game/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { drawPlay } from '../../src/game/play-view.ts';
-import { BACKGROUND, CYAN, LED_DIM, LED_LIT } from '../../src/render/palette.ts';
+import { BACKGROUND, CYAN, LED_LIT, ROCK } from '../../src/render/palette.ts';
 import { createGameRenderer, type GameRenderer } from '../../src/render/renderer.ts';
 import { makeLevel } from '../make-level.ts';
 
@@ -53,13 +53,13 @@ describe.skipIf(!hasWebGl)('renderer', () => {
     expect(r.renderer.height).toBe(PLAYFIELD_HEIGHT);
   });
 
-  it('draws lit and dim segments, no peak dot, the ship, and the background', () => {
-    // Ceiling 3 lit with a peak at 6; floor 5 lit. No difficulty has solid peaks, so the
-    // peak segment draws dim.
+  it('draws rock, lit meter segments, no unlit segments or peak dot, the ship, and the background', () => {
+    // Ceiling 8 (5 rock, 3 meter) with a peak at 11; floor 10 (5 rock, 5 meter). No
+    // difficulty has solid peaks, so the peak segment is not drawn.
     const level = makeLevel({
-      ceiling: Array.from({ length: 100 }, () => 3),
-      ceilingPeak: Array.from({ length: 100 }, () => 6),
-      floor: Array.from({ length: 100 }, () => 5),
+      ceiling: Array.from({ length: 100 }, () => 8),
+      ceilingPeak: Array.from({ length: 100 }, () => 11),
+      floor: Array.from({ length: 100 }, () => 10),
     });
     const state = createSimState();
     r.terrain.setLevel(level);
@@ -71,14 +71,15 @@ describe.skipIf(!hasWebGl)('renderer', () => {
     r.render();
     const px = readCanvas();
     const x = 74 + 3;
-    expect(rgbAt(px, x, 2)).toBe(LED_LIT[0]);
-    expect(rgbAt(px, x, 7 * 2 + 2)).toBe(LED_LIT[2]);
-    expect(rgbAt(px, x, 7 * 3 + 2)).toBe(LED_DIM[3]);
-    expect(rgbAt(px, x, 7 * 5 + 2)).toBe(LED_DIM[5]);
-    expect(rgbAt(px, x, 7 * 6 + 2)).toBe(LED_DIM[6]);
-    // Floor segment 4 (lit) and 5 (dim), counted up from the bottom edge.
-    expect(rgbAt(px, x, PLAYFIELD_HEIGHT - 7 * 4 - 3)).toBe(LED_LIT[4]);
-    expect(rgbAt(px, x, PLAYFIELD_HEIGHT - 7 * 5 - 3)).toBe(LED_DIM[5]);
+    expect(rgbAt(px, x, 2)).toBe(ROCK[0]);
+    expect(rgbAt(px, x, 7 * 4 + 2)).toBe(ROCK[4]);
+    expect(rgbAt(px, x, 7 * 5 + 2)).toBe(LED_LIT[0]);
+    expect(rgbAt(px, x, 7 * 7 + 2)).toBe(LED_LIT[2]);
+    expect(rgbAt(px, x, 7 * 8 + 2)).toBe(BACKGROUND);
+    expect(rgbAt(px, x, 7 * 10 + 2)).toBe(BACKGROUND);
+    // Floor segment 9 (lit) and 10 (unlit), counted up from the bottom edge.
+    expect(rgbAt(px, x, PLAYFIELD_HEIGHT - 7 * 9 - 3)).toBe(LED_LIT[4]);
+    expect(rgbAt(px, x, PLAYFIELD_HEIGHT - 7 * 10 - 3)).toBe(BACKGROUND);
     // The 1 px row between segments and the 2 px column between bars are open.
     expect(rgbAt(px, x, 6)).toBe(BACKGROUND);
     expect(rgbAt(px, 74 + 8, 2)).toBe(BACKGROUND);

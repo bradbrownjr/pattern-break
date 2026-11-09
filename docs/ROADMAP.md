@@ -14,6 +14,7 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 | [M1: vertical slice](#m1-vertical-slice) | One song, LED terrain scrolling in time with it, a ship you can fly and crash. | Built; Brad to play-test |
 | [Songs and jukebox](#songs-and-jukebox) | Three bundled songs to pick from on a title menu, and a jukebox to listen to them. | Built; Brad to play-test |
 | [Title music, demo, and levels](#title-music-demo-and-levels) | Title music, an attract demo, menu sounds, an arcade run of levels, and game-over music. | Built; Brad to play-test |
+| [Cavern terrain](#cavern-terrain) | Walls that pump with the bass and highs, a narrower cave, and scroll speed by difficulty. | Built; Brad to play-test |
 | [Eight levels](#eight-levels) | Six more songs, so the arcade run has eight levels. | Next |
 | [M2: enemies and scoring](#m2-enemies-and-scoring) | Notes become enemies; shooting, scoring, lives, power-ups, gamepad support, and replays that give the same score in every browser. | Planned |
 | [M3: effects and look](#m3-effects-and-look) | Particles, big explosions, sound effects, copper bars, starfield, CRT filter, title and results screens, accessibility options. | Planned |
@@ -110,6 +111,28 @@ passes.
 
 **Docs:** `DEVELOPMENT.md` ("Playing it", "Bundled songs", "Menus and the jukebox"),
 `PLAN.md` ("Client UI"), the README status.
+
+## Cavern terrain
+
+**Goal:** terrain that feels like the song's beat and like a cavern. Added 2026-11-09 after
+Brad's play-test of the demo: the walls showed a sliding spectrum rather than the beat, and
+the gap (a median of 111 to 125 px on normal) was far wider than the ship.
+
+- [x] The floor follows the bass (40 to 260 Hz) and the ceiling the highs (2.5 to 16 kHz),
+      as meters that slam in on a hit and fall back at most 3 segments per bar.
+- [x] Each side has 5 rock segments that are always solid, and the gap never closes below
+      40 px; the first bar's gap is centred on the ship's start.
+- [x] The walls are the same on every difficulty; difficulty sets the scroll speed, with
+      bars 8, 10 and 13 px apart on easy, normal and hard.
+- [x] Unlit meter segments are not drawn, so the passage is plain background.
+- [x] `GEN_VERSION` and `SIM_VERSION` 2, with the golden hashes regenerated.
+
+**Acceptance:** Brad plays the demo and the three songs and finds the walls move with the
+music, the cave feels like a cave, and each difficulty's speed is right; every bundled song
+passes the path check and the autopilot on every difficulty; `pnpm check` passes.
+
+**Docs:** `PLAN.md` ("Level generation", "Visual spec"), `DEVELOPMENT.md` ("Level and
+sim", "Rendering"), the README, the "Decided" list below.
 
 ## Eight levels
 
@@ -233,9 +256,12 @@ These need Brad's answer before the work that depends on them. Don't guess.
   own licenses.
 - **Hosting:** Docker on Brad's Unraid server, with images published to GitHub Container
   Registry (2026-11-08).
-- **Terrain:** one LED bar per row of the song, ceiling from the left channel and floor from
-  the right. What matters is that it feels like playing the beat and that there is always a
-  path for the ship, even a hard one (2026-11-08).
+- **Terrain:** one LED bar per row of the song, a cavern whose floor follows the bass and
+  ceiling the highs (2026-11-09; until then the ceiling came from the left channel and the
+  floor from the right). What matters is that it feels like playing the beat and that
+  there is always a path for the ship, even a hard one (2026-11-08).
+- **Difficulty sets the scroll speed,** as rhythm games do; the walls are the same on every
+  difficulty, and enemies add the rest of the challenge (2026-11-09).
 - **Terrain height comes from the song as it is,** with no per-song normalization. A quiet
   song makes an easy level; enemies still make it a challenge (2026-11-08).
 - **Wording:** player-facing text calls modules songs and says what a module is on first

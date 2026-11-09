@@ -14,12 +14,12 @@ export type {
 } from './level-data/types.ts';
 export { serializeLevelData, deserializeLevelData } from './level-data/serialize.ts';
 export * from './playfield.ts';
-export { Difficulty, PEAK_HOLD_BARS } from './levelgen/types.ts';
+export { Difficulty, PEAK_HOLD_BARS, Terrain } from './levelgen/types.ts';
 export type { DifficultyName, Level } from './levelgen/types.ts';
 export {
   generateLevel,
   gapShiftLimitPx,
-  maxCombinedSegments,
+  MAX_COMBINED_SEGMENTS,
   playheadAtSample,
   MIN_GAP_OVERLAP_PX,
 } from './levelgen/generate.ts';

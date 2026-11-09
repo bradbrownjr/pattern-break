@@ -1,6 +1,6 @@
 // Node tests for the renderer's pure parts: the font, terrain geometry, flash cap, colours.
 
-import { BAR_LIT_WIDTH, BAR_PITCH, PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH, Q8, SAMPLES_PER_TICK } from '@game/core';
+import { BAR_OPEN_WIDTH, Difficulty, PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH, Q8, SAMPLES_PER_TICK, Terrain, type DifficultyName } from '@game/core';
 import { describe, expect, it } from 'vitest';
 import { FLASH_MAX_ALPHA, FLASH_MS, flashAlpha } from '../src/render/flash.ts';
 import { ATLAS_HEIGHT, ATLAS_WIDTH, FIRST_CHAR, LAST_CHAR, buildAtlasPixels, glyphIndex, glyphRows, textWidth } from '../src/render/font.ts';
@@ -9,9 +9,10 @@ import { seededRandom } from '../src/render/random.ts';
 import { shipPixels } from '../src/render/ship.ts';
 import {
   MAX_VISIBLE_BARS,
+  SEGMENT_HIDDEN,
   SEGMENT_LIT,
   SEGMENT_PEAK,
-  SEGMENT_UNLIT,
+  SEGMENT_ROCK,
   ceilingSegmentY,
   floorSegmentY,
   scrollPxAt,
@@ -59,25 +60,29 @@ describe('terrain layout', () => {
     expect(scrollPxAt(level, 1e9)).toBe(level.scroll[level.tickCount]! / Q8);
   });
 
-  it('lists exactly the bars with a lit pixel on screen', () => {
+  it.each(Object.keys(Difficulty) as DifficultyName[])('lists exactly the bars with a lit pixel on screen (%s)', (d) => {
+    const lv = makeLevel({ ceiling: Array.from({ length: 200 }, () => 6), floor: Array.from({ length: 200 }, () => 6), difficulty: d });
+    const pitch = Difficulty[d].barPitch;
     for (let scroll = -70; scroll < 2000; scroll += 3) {
-      const { first, end } = visibleBars(level, scroll);
+      const { first, end } = visibleBars(lv, scroll);
       expect(end - first).toBeLessThanOrEqual(MAX_VISIBLE_BARS);
-      for (let i = 0; i < level.barCount; i++) {
-        const x = i * BAR_PITCH - scroll;
-        const onScreen = x + BAR_LIT_WIDTH > 0 && x < PLAYFIELD_WIDTH;
+      for (let i = 0; i < lv.barCount; i++) {
+        const x = i * pitch - scroll;
+        const onScreen = x + pitch - BAR_OPEN_WIDTH > 0 && x < PLAYFIELD_WIDTH;
         expect(i >= first && i < end).toBe(onScreen);
       }
     }
   });
 
-  it('marks lit segments, the peak dot, and dim segments', () => {
-    expect(segmentState(3, 3, 0)).toBe(SEGMENT_LIT);
-    expect(segmentState(3, 3, 2)).toBe(SEGMENT_LIT);
-    expect(segmentState(3, 3, 3)).toBe(SEGMENT_UNLIT);
-    expect(segmentState(3, 7, 6)).toBe(SEGMENT_PEAK);
-    expect(segmentState(3, 7, 5)).toBe(SEGMENT_UNLIT);
-    expect(segmentState(0, 1, 0)).toBe(SEGMENT_PEAK);
+  it('marks rock, lit segments and the peak dot, and hides unlit segments', () => {
+    const r = Terrain.rockSegments;
+    expect(segmentState(r, r, 0)).toBe(SEGMENT_ROCK);
+    expect(segmentState(r, r, r - 1)).toBe(SEGMENT_ROCK);
+    expect(segmentState(r + 3, r + 3, r)).toBe(SEGMENT_LIT);
+    expect(segmentState(r + 3, r + 3, r + 2)).toBe(SEGMENT_LIT);
+    expect(segmentState(r + 3, r + 3, r + 3)).toBe(SEGMENT_HIDDEN);
+    expect(segmentState(r + 3, r + 7, r + 6)).toBe(SEGMENT_PEAK);
+    expect(segmentState(r + 3, r + 7, r + 5)).toBe(SEGMENT_HIDDEN);
   });
 
   it('mirrors floor segments onto ceiling segments', () => {

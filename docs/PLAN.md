@@ -11,9 +11,9 @@
 A horizontal-scrolling tunnel shooter in the Gradius mould, with more neon. **Every level is
 generated from a tracker module (MOD/XM/S3M/IT): a song file made in a music tracker, a
 program that arranges short samples into patterns of notes and beats.** Modules are often
-called mods; in player-facing text they are songs (see `DOC-STYLE.md`). The ceiling is drawn from the left
-audio channel and the floor from the right, both as segmented LED spectrum bars like an old
-stereo's visualizer. Notes in the song's pattern data spawn enemies. A given module file
+called mods; in player-facing text they are songs (see `DOC-STYLE.md`). The terrain is a cavern of
+segmented LED meter bars, like an old stereo's visualizer: the floor pumps with the bass and
+the ceiling with the highs. Notes in the song's pattern data spawn enemies. A given module file
 always produces the same level, so each song has its own global leaderboard.
 
 Aesthetic: Amiga and arcade. Low-res pixel art, copper-bar gradients, chunky LED meters,
@@ -119,33 +119,44 @@ the ship, even when it is hard to fly. The path is a hard guarantee, checked by 
 every bar of every generated level.
 
 - **One bar per played row.** The terrain is a row of LED bars, one for each row
-  libopenmpt played, in play order. Bars are 10 px apart (8 px lit, 2 px open), so bar i
-  sits at world x i * 10.
+  libopenmpt played, in play order. Bars are a difficulty's pitch apart (10 px on normal),
+  lit for all but the last 2 px, so bar i sits at world x i * pitch.
 - **Scroll follows the rows.** Between the starts of consecutive rows the scroll position
   moves linearly from one bar to the next; the last row ends at the song's end. A faster
   tempo scrolls faster, and every bar sits on the music's grid. A bar reaches the playhead
   (screen x 64) when its row starts.
-- **Ceiling and floor:**
-  - Bar i's ceiling comes from the left channel's band (i mod 16), and its floor from the
-    right channel's band (15 - i mod 16), so lows and highs alternate top and bottom like
-    a sliding stereo spectrum display.
-  - A bar's level is the highest LED level of its band over the analysis frames inside the
+- **Ceiling and floor (2026-11-09):**
+  - The floor follows the bass and the ceiling the highs: the floor reads bands 0 to 4
+    (about 40 to 260 Hz, kick and bass) and the ceiling bands 11 to 15 (about 2.5 to
+    16 kHz, snare and hats), the loudest of them on either stereo channel.
+  - A side's reading for a bar is the highest LED level over the analysis frames inside the
     row. A row shorter than a frame uses the frame nearest its start.
-  - The playfield is 384 x 216 px. LED segments are 7 px apart (6 px lit), so 12 levels
-    reach 84 px from each edge.
+  - Each side is a cave wall: 5 rock segments that are always solid, then an LED meter of
+    up to 12 segments. The meter lights 3 segments per LED level above a threshold (7 for
+    the bass, 5 for the highs; the highs read lower). A louder row sets the meter at once;
+    a quieter one lets it fall at most 3 segments per bar, so hits slam the wall in and it
+    eases back, like a VU meter.
+  - The playfield is 384 x 216 px. Segments are 7 px apart (6 px lit), so the rock reaches
+    35 px from each edge and a full meter 119 px.
 - **Always a path:**
-  - Each difficulty has a minimum gap between ceiling and floor: 96 px on easy, 72 on
-    normal, 56 on hard. A bar that would close it has both sides cut in proportion.
+  - The gap between ceiling and floor is never under 40 px, against the ship's 6 px
+    hitbox. A bar that would close it has both sides cut in proportion.
   - From one bar to the next the gap's centre moves no further than the ship can travel
     vertically in the earlier bar's row, and consecutive gaps always overlap by more than
     the ship's height. Levels are cut further where needed. A gap that grows to contain
     the previous one needs no cut, since the ship can stay where it is.
+  - The first bar reaches the ship on the first tick, so its gap is centred on the ship's
+    start height.
 - **Peak hold:** each side keeps a peak level that holds for 6 bars and then falls one
   segment per bar. Peak dots are off on every difficulty (2026-11-08): the peaks are
   computed but not drawn or solid. A difficulty can turn them on with `solidPeaks`, which
   makes them solid and visible and applies the path rules to them too.
-- **Difficulty** is a constant object (`easy`, `normal`, `hard`). The numbers and the
-  exact rounding rules are in `docs/DEVELOPMENT.md`, "Level and sim".
+- **Difficulty sets the scroll speed, not the walls (2026-11-09).** The walls are the same
+  on every difficulty. The bars are 8 px apart on easy, 10 on normal and 13 on hard, so on
+  a harder difficulty the terrain rushes past faster and less of the song is in view.
+  Enemies (M2) add the rest of the challenge. Difficulty is a constant object (`easy`,
+  `normal`, `hard`); the numbers and the exact rounding rules are in
+  `docs/DEVELOPMENT.md`, "Level and sim".
 - **Enemies (from note events):**
   - Map instrument to enemy archetype. The default heuristic, overridable per song in a
     sidecar JSON later: low-pitched or percussive samples (short, low note) become heavy,
@@ -215,8 +226,10 @@ every bar of every generated level.
 
 - Internal resolution **384x216** (16:9), integer-scaled with nearest-neighbour filtering
   and letterboxed. An optional 320x256 "Amiga PAL" mode later.
-- Palette: near-black background with neon cyan, magenta, lime, and amber accents. LED
-  segments go green to amber to red with height, with lit and unlit (dim) segments.
+- Palette: near-black background with neon cyan, magenta, lime, and amber accents. Rock
+  segments are dark stone; LED meter segments go green to amber to red with height above
+  the rock. Unlit meter segments are not drawn, so the passage is plain background
+  (2026-11-09).
   White peak-hold dots are drawn only on a difficulty with solid peaks (none, for now).
 - Backgrounds: animated copper-bar gradients (horizontal colour bands) and a parallax
   starfield. The bars can pulse with the bass channel's VU.

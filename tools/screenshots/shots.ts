@@ -55,11 +55,11 @@ export const shots: Shot[] = [
     id: 'gameplay',
     query: { scene: 'play', song: 'pb-fixture-01', t: '21.5', difficulty: 'normal', seed: '1' },
     alt:
-      'A frame of play in a tunnel of LED meter columns. Columns of small square segments hang from the top edge ' +
-      'and rise from the bottom edge, lit bright green at the edges and yellow to orange further in, with unlit ' +
-      'segments in dim brown and dark red. Near the left, a few columns ' +
-      'have almost nothing lit. A small cyan ship with a magenta and amber engine flame flies left of centre in ' +
-      'the dark open band through the middle, with faint blue stars behind.',
+      'A frame of play in an LED cavern. Bands of dark grey stone run along the top and bottom edges. Columns ' +
+      'of small square LED segments hang from the top stone, lit green to yellow, and rise from the bottom ' +
+      'stone, green through yellow to orange, the floor taller than the ceiling. Near the left, a few ceiling ' +
+      'columns have nothing lit. A small cyan ship with a magenta engine flame flies on the left through the ' +
+      'dark passage between them, with faint blue stars behind.',
     caption: 'Pattern Break at 21.5 seconds into the test song on normal, with the ship flown by the autopilot.',
     usedIn: ['readme'],
   },
@@ -68,10 +68,10 @@ export const shots: Shot[] = [
     query: { scene: 'play', song: 'pb-fixture-01', difficulty: 'normal', seed: '1' },
     clip: { from: 29, to: 33, fps: 25 },
     alt:
-      'Four seconds of play. The ceiling and floor, columns of square LED segments lit green, yellow and orange ' +
-      'with dim unlit segments, scroll from right to left, one column per row of the song, ' +
-      'their heights changing with the music. A small cyan ship with a flickering engine flame steers up and ' +
-      'down a little in the dark band through the middle, and faint blue stars drift more slowly behind.',
+      'Four seconds of play in an LED cavern. Dark grey stone runs along the top and bottom edges, and columns ' +
+      'of square LED segments on it, lit green to orange, scroll from right to left, one column per row of the ' +
+      'song, rising and falling with the music. A small cyan ship with a flickering engine flame steers through ' +
+      'the dark passage between them, and faint blue stars drift more slowly behind.',
     caption: 'Four seconds of the test song on normal, flown by the autopilot through the sim.',
     usedIn: ['readme'],
   },

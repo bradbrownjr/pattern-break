@@ -1,25 +1,25 @@
 {
-  "genVersion": 1,
-  "simVersion": 1,
+  "genVersion": 2,
+  "simVersion": 2,
   "fixtures": {
     "pb-fixture-01.mod": {
       "easy": {
-        "level": "355b17ab069acddde3dfe71b6383aae8738aac82400a66bae15cf157083fdaba",
-        "autopilot": "a8e99fa16cadb2e1e72c5d1724e4e11390ab9fff3db5ae51d5e302a501a3d044",
-        "zigzag": "1e1271da86bb065923543559a646e896c9ce8cbea56aefea23b5d5671d488004",
-        "zigzagDeathTick": 1400
+        "level": "0beeaf8972c7d051ceda37f05aa890d9d934786f35f58fb43ef2695e6e9af3e4",
+        "autopilot": "a8abeedaea94390a1cdf4bcce29a6a576ee6869472d063789ec0ac7e7674e6ea",
+        "zigzag": "2f5ec514639c5eb657e6a79ca0fcc1eaf2cdebf322bc80fd218c502d3ec43906",
+        "zigzagDeathTick": 7
       },
       "normal": {
-        "level": "31a3896e9979f2874fe61d442a11572d1fbdf3e53dd91fdee3702cd0dfd3cee6",
-        "autopilot": "a8e99fa16cadb2e1e72c5d1724e4e11390ab9fff3db5ae51d5e302a501a3d044",
-        "zigzag": "1e1271da86bb065923543559a646e896c9ce8cbea56aefea23b5d5671d488004",
-        "zigzagDeathTick": 1400
+        "level": "c291062fbe7b596093f6cd21dfcccf29d0d3452707cda84994ab822abac88a7a",
+        "autopilot": "a8abeedaea94390a1cdf4bcce29a6a576ee6869472d063789ec0ac7e7674e6ea",
+        "zigzag": "ce1b8b16f70a06b692600b710621195a2256f4298ac40a9d12b94a23ac4fc4aa",
+        "zigzagDeathTick": 9
       },
       "hard": {
-        "level": "9693f817387bef72c7aab1e12a78b2fcc1733b56c6ea012f714d5d27d2ec9da0",
-        "autopilot": "a8e99fa16cadb2e1e72c5d1724e4e11390ab9fff3db5ae51d5e302a501a3d044",
-        "zigzag": "1e1271da86bb065923543559a646e896c9ce8cbea56aefea23b5d5671d488004",
-        "zigzagDeathTick": 1400
+        "level": "18d7deef1f20a20c1a88a33dd9a74114088871164c467fa2aeb1831da79dc3e9",
+        "autopilot": "a8abeedaea94390a1cdf4bcce29a6a576ee6869472d063789ec0ac7e7674e6ea",
+        "zigzag": "b19949595359c2e61689d55f441c7e4fad63d46623501bc27a10cf186b01cb7d",
+        "zigzagDeathTick": 11
       }
     }
   }

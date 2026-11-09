@@ -11,10 +11,11 @@ export const Q8 = 256;
 export const PLAYFIELD_WIDTH = 384;
 export const PLAYFIELD_HEIGHT = 216;
 
-/** World x distance between consecutive LED bars, one bar per played row. */
-export const BAR_PITCH = 10;
-/** Lit (and solid) width of a bar, from its left edge; the remaining 2 px are open. */
-export const BAR_LIT_WIDTH = 8;
+/**
+ * The open part of each bar's pitch, after its lit (and solid) part. The pitch, the world x
+ * distance between consecutive bars, depends on the difficulty (Difficulty.barPitch).
+ */
+export const BAR_OPEN_WIDTH = 2;
 
 /** Vertical distance between LED segments. */
 export const SEGMENT_PITCH = 7;
