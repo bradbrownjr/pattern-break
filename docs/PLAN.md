@@ -199,8 +199,8 @@ every bar of every generated level.
   a preallocated state in place and allocates nothing. Positions are Q24.8 fixed-point.
 - Sim time is derived from the audio clock (see "Audio and timing"). If the render loop hitches, run several
   ticks to catch up. Never skip ticks.
-- Player ship: 8-way movement, a fire button (hold for auto-fire: 15 shots a second, up to 6
-  in flight), a bomb button and a nuke button. Shots pass through the LED walls, so turrets on
+- Player ship: 8-way movement, a fire button (hold for auto-fire: 15 shots a second, up to 3
+  in flight, so a miss costs time and a hit doesn't), a bomb button and a nuke button. Shots pass through the LED walls, so turrets on
   the bar tips can be hit, and stop on the first enemy they hit. Turrets and ships take one
   hit, tanks three.
 - Collision: ship against lit LED segments, enemies, and enemy bullets. Integer AABB
@@ -209,8 +209,10 @@ every bar of every generated level.
 - **Lives (2026-11-09):** three. A hit costs one; ramming an enemy destroys it too. The
   music can't rewind, so the ship comes back at the playhead, in the middle of the cave
   there, can't be hit for 2 s, and the enemy bullets in flight are cleared.
-- **Bomb (2026-11-09):** held, the bomb button drops a concussive bomb whenever none is in
-  the air. It falls in an arc and bursts on the terrain or an enemy, destroying every enemy
+- **Bomb (2026-11-09):** each press of the bomb button drops a concussive bomb, one in the
+  air at a time and 1 s to reload after it bursts, so bombs are timed, not held down.
+  Never more than one tank is on screen at once (measured on all 27 levels). It falls in
+  an arc and bursts on the terrain or an enemy, destroying every enemy
   within 24 px, tanks included. Its kills score like shots.
 - **Nuke (2026-11-09):** a last resort. A press destroys every enemy on screen and clears
   the enemy bullets. One charges per 10 kills on the beat, up to 3 held, kept when a life

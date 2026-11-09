@@ -1,23 +1,23 @@
 {
   "genVersion": 4,
-  "simVersion": 5,
+  "simVersion": 6,
   "fixtures": {
     "pb-fixture-01.mod": {
       "easy": {
         "level": "bf4394df42dab7d75c3168a2d39fd777af8944b5b6fe6c2dece0419c38503591",
-        "autopilot": "6358ef4d04f1f49ca7888f648a08a49370777421269b0beb53781eb336abd1b9",
+        "autopilot": "e007fada03db96a69ec42f73d48eb52bb2e83e69bb944d7f393a4d4c7ccff225",
         "zigzag": "c945f715bfbfcba3c102219e9813e987a11f89ada12169ca4e0f128a2d5b61ca",
         "zigzagDeathTick": 519
       },
       "normal": {
         "level": "42925a9ce75a9efba1d490ab6fcb0254735a07ed500ad0cbddc16d701cb43dd0",
-        "autopilot": "835fa94ed496ae9f5023a8fe4048ea80c02b6b89d7c27d8ef34c7040edffaa24",
+        "autopilot": "1e7a0686f93d54aa02474666672b2c76f6724ae2a0a4df2eed777e3d02aff92f",
         "zigzag": "55fd53e54b637eb3454537d9940e9af481e867b8468adafa5cd9f6271eae8969",
         "zigzagDeathTick": 581
       },
       "hard": {
         "level": "ea0917bb576640fbc0f634b046ad9bb5d291fec0a0cadad6f1543b7287f9dd0f",
-        "autopilot": "ec557baaf7f7126a6ad5da4aa79531c97a5b422afd2f655cac497ef85a739f78",
+        "autopilot": "58f729a08ad616d16811b8bcef0e82bd6e9bd9a5999102cdc2ccafcbe86ee626",
         "zigzag": "760692d4bae6b68a6a0e58a3e72533b5ae70f45a3b595c61f89fbd23cc8e637a",
         "zigzagDeathTick": 558
       }

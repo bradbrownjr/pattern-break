@@ -59,12 +59,10 @@ export const shots: Shot[] = [
       'A frame of play in an LED cavern. Columns of small square LED segments hang from the top edge and rise ' +
       'from the bottom edge, lit green at the screen edges through yellow and orange to red at their tips, ' +
       'leaving a dark passage across the middle. Two small magenta and amber turrets sit upside down on the ' +
-      'tips of the ceiling. A small cyan ship with a magenta engine flame flies on the left, with a row of cyan ' +
-      'shots ahead of it and a scatter of coloured particles where an enemy was just destroyed, with "200" in ' +
-      'white pixel digits above it and above another kill. Below the ship a small amber bomb falls, and a ' +
-      'burst of particles marks where the last one hit the floor bars. Three small ship icons on a dark ' +
-      'panel in the top left corner show the lives left, followed by "x2" in amber; "0003000" in white in ' +
-      'the top right corner is the score.',
+      'tips of the ceiling. A small cyan ship with a magenta engine flame flies on the left, with cyan shots ' +
+      'ahead of it, and a magenta enemy ship flies towards it from the right. Three small ship icons on a ' +
+      'dark panel in the top left corner show the lives left, followed by a small amber bomb icon and "x2" ' +
+      'in amber; "0002000" in white in the top right corner is the score.',
     caption: 'Pattern Break at 21.5 seconds into the test song on normal, with the ship flown by the autopilot.',
     usedIn: ['readme'],
   },
@@ -77,9 +75,9 @@ export const shots: Shot[] = [
       'through yellow and orange to red at their tips, hang from the top and rise from the bottom and scroll ' +
       'from right to left, one column per row of the song. Small magenta and amber turrets ride in on the ' +
       'tips of the floor and ceiling, and small magenta enemy ships fly in from the right and fire round ' +
-      'magenta bullets. A small cyan ship on the left keeps firing cyan shots, drops small amber bombs that ' +
-      'burst on the floor bars, and moves up and down to dodge. ' +
-      'Three ship icons in the top left corner show the lives left, followed by "x3" in amber, and the score ' +
+      'magenta bullets. A small cyan ship on the left keeps firing cyan shots, drops a small amber bomb that ' +
+      'bursts on the floor bars, and moves up and down to dodge. ' +
+      'Three ship icons in the top left corner show the lives left, followed by a bomb icon and "x3" in amber, and the score ' +
       'in the top right corner counts up as each kill shows its points where the enemy was.',
     caption: 'Four seconds of the test song on normal, flown by the autopilot through the sim.',
     usedIn: ['readme'],

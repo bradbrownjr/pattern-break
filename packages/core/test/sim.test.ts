@@ -4,6 +4,7 @@ import { generateLevel } from '../src/levelgen/generate.ts';
 import { Difficulty, EnemyKind, EnemyTuning, ShipMotion, type DifficultyName, type EnemyList, type Level } from '../src/levelgen/types.ts';
 import { autopilotInputs } from '../src/sim/autopilot.ts';
 import {
+  BOMB_RELOAD_TICKS,
   ENEMY_HP,
   InputBit,
   MAX_SHOTS,
@@ -201,7 +202,7 @@ describe('tick', () => {
 });
 
 describe('shots', () => {
-  it('fires from the nose every 8 ticks, 4 px per tick, at most 6 in flight', () => {
+  it('fires from the nose every 8 ticks, 4 px per tick, at most 3 in flight', () => {
     const level = enemyLevel([]);
     const s = createSimState();
     tick(level, s, InputBit.fire);
@@ -213,6 +214,7 @@ describe('shots', () => {
     expect(activeShots(s)).toBe(2);
     for (let i = 0; i < 60; i++) tick(level, s, InputBit.fire);
     expect(activeShots(s)).toBe(MAX_SHOTS);
+    expect(MAX_SHOTS).toBe(3);
   });
 
   it('pass through the walls, and destroy a turret with one hit', () => {
@@ -384,17 +386,30 @@ describe('bomb', () => {
     expect([s.blastX, s.blastY, s.bombActive]).toEqual([144 * Q, 113 * Q + 4 * 80 * 81, false]);
   });
 
-  it('drops one at a time while held', () => {
-    const level = enemyLevel([], 400);
-    const s = createSimState();
+  it('drops one per press, never while one is in the air, and reloads for 1 s after a burst', () => {
+    const level = enemyLevel([], 600);
+    const held = createSimState();
     let drops = 0;
-    for (let t = 0; t < 200; t++) {
-      const was = s.bombActive;
-      tick(level, s, InputBit.bomb);
-      if (!was && s.bombActive) drops++;
+    for (let t = 0; t < 500; t++) {
+      const was = held.bombActive;
+      tick(level, held, InputBit.bomb);
+      if (!was && held.bombActive) drops++;
     }
-    // 1 tick to drop, 80 to fall: a new one every 81 ticks.
-    expect(drops).toBe(3);
+    // Holding the button drops only the first.
+    expect(drops).toBe(1);
+
+    // Pressing every other tick: the next drops on the first press 120 ticks after the burst.
+    const mashed = createSimState();
+    const dropTicks: number[] = [];
+    for (let t = 0; t < 500; t++) {
+      const was = mashed.bombActive;
+      tick(level, mashed, t % 2 === 0 ? InputBit.bomb : 0);
+      if (!was && mashed.bombActive) dropTicks.push(mashed.tick);
+      if (dropTicks.length === 2) break;
+    }
+    expect(BOMB_RELOAD_TICKS).toBe(120);
+    // Dropped on tick 1, burst on tick 81, ready on tick 201; tick 201 is a press.
+    expect(dropTicks).toEqual([1, 201]);
   });
 
   it('destroys a tank in one blast, and scores it like a shot', () => {

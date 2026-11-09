@@ -14,6 +14,7 @@ import {
 } from '../playfield.ts';
 import {
   BOMB_BLAST_PX,
+  BOMB_RELOAD_TICKS,
   BOMB_GRAVITY_Q8,
   BOMB_MAX_VY_Q8,
   BOMB_SIZE,
@@ -146,6 +147,8 @@ export interface SimState {
   bombX: number;
   bombY: number;
   bombVY: number;
+  /** A bomb can't be dropped before this tick: BOMB_RELOAD_TICKS after the last burst. */
+  bombReadyTick: number;
   /** The last bomb's burst: its tick (-1 before the first) and screen centre, Q8. */
   blastTick: number;
   blastX: number;
@@ -198,6 +201,7 @@ export function createSimState(): SimState {
     bombX: 0,
     bombY: 0,
     bombVY: 0,
+    bombReadyTick: 0,
     blastTick: -1,
     blastX: 0,
     blastY: 0,
@@ -244,6 +248,7 @@ export function resetSimState(state: SimState): void {
   state.bombX = 0;
   state.bombY = 0;
   state.bombVY = 0;
+  state.bombReadyTick = 0;
   state.blastTick = -1;
   state.blastX = 0;
   state.blastY = 0;
@@ -436,6 +441,7 @@ function scoreKill(level: Level, state: SimState, i: number, t: number, nuked = 
 function burstBomb(level: Level, state: SimState, x: number, y: number, t: number): void {
   const e = level.enemies;
   state.bombActive = false;
+  state.bombReadyTick = t + BOMB_RELOAD_TICKS;
   state.blastTick = t;
   state.blastX = x;
   state.blastY = y;
@@ -539,8 +545,8 @@ function loseLife(level: Level, state: SimState, t: number): void {
  * 3. A new press of the nuke button with a nuke held destroys every enemy on screen and
  *    clears the bullets. Fire if the fire bit is held and the gun is ready; move shots,
  *    which pass through the LED walls (so turrets on the bar tips can be hit) and stop on
- *    the first enemy they hit. Move the bomb, or drop one if the bomb bit is held and none
- *    is in the air; it bursts on the terrain or an enemy, destroying all within its blast.
+ *    the first enemy they hit. Move the bomb, or drop one on a new press of the bomb button
+ *    once it has reloaded; it bursts on the terrain or an enemy, destroying all within its blast.
  * 4. Enemies fire on their scheduled ticks; move enemy bullets, which stop on the terrain.
  * 5. Unless the ship is in its safe time after a respawn, test it against the terrain,
  *    live enemies (which are destroyed too) and enemy bullets; a hit costs a life and the
@@ -618,7 +624,7 @@ export function tick(level: Level, state: SimState, input: number): void {
   }
   if (state.bombActive) {
     moveBomb(level, state, t);
-  } else if ((input & InputBit.bomb) !== 0) {
+  } else if ((input & ~state.prevInput & InputBit.bomb) !== 0 && t >= state.bombReadyTick) {
     state.bombActive = true;
     state.bombX = x;
     state.bombY = y + HALF_H + BOMB_H;

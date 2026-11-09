@@ -222,16 +222,19 @@ help.
 ### Bomb and nuke
 
 - [x] The bomb button drops a concussive bomb that falls in an arc and bursts on the
-      floor or an enemy, destroying everything within 24 px, tanks included. One in the
-      air at a time.
+      floor or an enemy, destroying everything within 24 px, tanks included. One per
+      press, one in the air, 1 s to reload; a HUD icon shows when it is ready. Never more
+      than one tank is on screen at once, on any of the 27 levels.
+- [x] At most 3 shots in flight, not 6, so a miss costs time and aiming beats spraying.
 - [x] The nuke button destroys every enemy on screen and clears the bullets. One charges
       per 10 kills on the beat, up to 3, shown after the lives.
 - [x] Keys X or K (bomb) and V or ; (nuke); pad B and X. The autopilot bombs, and nukes
       when it can't dodge.
-- [x] `SIM_VERSION` 5, with the golden hashes regenerated.
+- [x] `SIM_VERSION` 5, then 6 for the reload and the shot cap, with the golden hashes
+      regenerated.
 
 **Acceptance:** Brad finds the bomb useful against tanks without making shooting pointless,
-and the nuke worth earning; `pnpm check` passes.
+timing and aim matter more than holding buttons, and the nuke is worth earning; `pnpm check` passes.
 
 **Docs:** `PLAN.md` ("Simulation"), `DEVELOPMENT.md` ("Simulation", "Playing it",
 "Renderer").

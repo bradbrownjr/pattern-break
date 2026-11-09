@@ -393,14 +393,15 @@ For the on-beat bonus the level also keeps every note's tick by instrument
   enemies and bullets.
 - **Input bits** (`InputBit`, one byte per tick): up 1, down 2, left 4, right 8, fire 16,
   bomb 32, buy 64, nuke 128. Buy does nothing yet. Opposite directions cancel.
-  `state.prevInput` keeps the last tick's byte, so a nuke goes off once per press.
+  `state.prevInput` keeps the last tick's byte, so a bomb or nuke goes off once per press.
 - **Ship:** 384 Q8 (1.5 px) per tick straight. Diagonals move 272 Q8 on each axis
   (384 / sqrt 2, rounded), about 1.503 px per tick in total. The centre stays within
   x 16 to 160 and y 3 to 213, so the hitbox never leaves the screen. It starts at (64, 108).
 - **Collision:** `boxHitsTerrain()` tests a box against the solid part of every bar it
   overlaps horizontally: lit segments, plus peak dots where they are solid. Boxes against
   each other are half-open overlaps of centre and half size. Integer comparisons only.
-- **Shots:** holding fire shoots every 8 ticks from the ship's nose, at most 6 in flight,
+- **Shots:** holding fire shoots every 8 ticks from the ship's nose, at most 3 in flight
+  (`MAX_SHOTS`; 6 until 2026-11-09, which let a held button spray the screen),
   1024 Q8 (4 px) per tick to the right. A shot passes through the walls and stops on the
   first live enemy it overlaps (6x2 px against the enemy's hitbox).
 - **Enemies:** turrets (8x6 px) stay at their world x; tanks (12x7) move left 64 Q8 per tick
@@ -423,8 +424,9 @@ For the on-beat bonus the level also keeps every note's tick by instrument
   Ramming scores nothing. Reaching the end adds 1000 a life
   left (`state.survivalBonus`). `state.enemyPoints` and `state.enemyOnBeat` keep what each
   kill scored, for the popups.
-- **Bomb:** while the bomb bit is held and no bomb is in the air, one drops 2 px below the
-  ship's hitbox. Each tick it moves right 256 Q8 and its fall speed grows by 8 Q8, to at
+- **Bomb:** a new press of the bomb bit (`input & ~prevInput`) drops one 2 px below the
+  ship's hitbox, if none is in the air and `state.bombReadyTick` has come: 120 ticks
+  (`BOMB_RELOAD_TICKS`) after the last burst. Each tick it moves right 256 Q8 and its fall speed grows by 8 Q8, to at
   most 768 Q8. It bursts when it touches the terrain, a live enemy, or the right or bottom
   edge: every live enemy whose hitbox overlaps the 48x48 px square around the burst is
   destroyed and scored as a shot kill (on-beat double included). Dropped from the start
@@ -445,7 +447,8 @@ For the on-beat bonus the level also keeps every note's tick by instrument
   allocates.
 - **Autopilot:** `autopilotInputs(level)` in `sim/autopilot.ts` flies a level by looking
   24 ticks ahead through the walls from `solidWalls()`, so it steers clear of turrets and
-  tank tracks, and holds fire and bomb. Of its three moves (up, down, none) it takes the one
+  tank tracks, holds fire, and presses bomb when it can drop one and a tank or floor
+  turret is 60 to 140 px ahead. Of its three moves (up, down, none) it takes the one
   no bullet or ship would hit soonest within 16 ticks, then the one nearest its target; if
   even that one is hit within 2 ticks and it holds a nuke, it nukes. It
   never moves horizontally. On the terrain alone (`withoutEnemies(level)`) it always
@@ -781,13 +784,13 @@ Run `pnpm dev` and open the URL it prints.
   level number ("Final level" for the last), the song's title and credit, and the
   difficulty.
 - **In play,** arrows or WASD move, Space, Z or J fire (hold to keep firing), X or K drop
-  bombs (hold to keep dropping), V or ; (semicolon) nuke, and Esc pauses and resumes (a
+  a bomb (one per press, 1 s to reload after it bursts), V or ; (semicolon) nuke, and Esc pauses and resumes (a
   gamepad is below); Q while paused goes back to the title. Losing the last of three
   lives is game over: any key retries the level, Esc goes to the title. Game over and level complete ignore keys for 0.7 s, so a key still held from
   play doesn't skip them. The game pauses when the window loses focus or the tab is hidden.
 - **Score:** top right in play. Each kill shows its points where the enemy was, amber when
-  on the beat, and the multiplier shows in amber after the lives once it is above 1,
-  followed by an amber ring for each nuke held. Level
+  on the beat. After the lives come the bomb, bright when one can drop, the multiplier in
+  amber once it is above 1, and an amber ring for each nuke held. Level
   complete shows the score and the lives bonus, and in the arcade run the total of the
   levels finished; game over shows the score.
 - **Gamepad:** any pad that reports the Gamepad API's "standard" mapping
@@ -922,8 +925,8 @@ is added.
   for each enemy destroyed (8 at once at most) and the ship's explosion for a life lost,
   both timed in song time. It returns false on alternate 6-tick steps of the ship's safe
   time, which blinks the ship. The lives are ship icons on a dark panel in the top left,
-  followed by the multiplier when it is above 1 and a 7x7 amber ring per nuke held (3 at
-  most); the score, 7 digits, is on a panel in the
+  followed by a bomb icon (dimmed while a bomb falls or reloads), the multiplier when it
+  is above 1, and a 7x7 amber ring per nuke held (3 at most); the score, 7 digits, is on a panel in the
   top right and changes only when the score does. Each kill's points rise 8 px over 600 ms
   from where the enemy was (8 popups at once at most). The bomb is a 4x4 sprite; its burst
   is a 40-particle explosion over 600 ms, and a nuke flashes the playfield like the crash

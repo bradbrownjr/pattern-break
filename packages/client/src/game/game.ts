@@ -232,6 +232,7 @@ export class Game {
       mode === 'paused' ||
       mode === 'gameover' ||
       mode === 'complete';
+    this.#r.combat.hud.visible = this.#r.world.visible;
     if (mode === 'analyzing') this.#message.show('', 0, ['Analyzing song...']);
     if (mode === 'paused') {
       this.#message.show('Paused', AMBER, ['Q or Select quits to the title screen', 'Esc or Start resumes']);

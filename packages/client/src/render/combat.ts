@@ -65,6 +65,19 @@ const BULLET_MAP = ['.mm.', 'mwwm', 'mwwm', '.mm.'];
 
 const BOMB_MAP = ['.aa.', 'awwa', 'aaaa', '.aa.'];
 
+/** The bomb in the HUD. */
+const BOMB_ICON_MAP = [
+  '....ww.',
+  '...w...',
+  '..aaa..',
+  '.aaaaa.',
+  '.aawaa.',
+  '.aaaaa.',
+  '..aaa..',
+];
+/** The HUD bomb's opacity while a bomb falls or reloads. */
+const BOMB_ICON_DIM = 0.3;
+
 /** A nuke held, in the HUD. */
 const NUKE_MAP = [
   '..aaa..',
@@ -103,6 +116,7 @@ interface Textures {
   ship: Texture;
   bullet: Texture;
   bomb: Texture;
+  bombIcon: Texture;
   nuke: Texture;
 }
 
@@ -116,6 +130,7 @@ function getTextures(): Textures {
     ship: mapTexture(ENEMY_SHIP_MAP, COLORS, 'enemy-ship'),
     bullet: mapTexture(BULLET_MAP, COLORS, 'bullet'),
     bomb: mapTexture(BOMB_MAP, COLORS, 'bomb'),
+    bombIcon: mapTexture(BOMB_ICON_MAP, COLORS, 'bomb-icon'),
     nuke: mapTexture(NUKE_MAP, COLORS, 'nuke'),
   };
   return textures;
@@ -161,6 +176,7 @@ export class CombatView {
   #nukeSample = -1;
   #seenNuke = -1;
   #nukes: Sprite[] = [];
+  #bombIcon = new Sprite();
   #lifeLost = new Explosion(SHIP_EXPLOSION);
   #lifeLostSample = -1;
   /** Sim tick and first possibly live enemy at the last draw, to find what changed since. */
@@ -205,7 +221,8 @@ export class CombatView {
       this.hud.addChild(icon);
       this.#lives.push(icon);
     }
-    this.hud.addChild(this.#multiplier);
+    this.#bombIcon.texture = getTextures().bombIcon;
+    this.hud.addChild(this.#multiplier, this.#bombIcon);
     for (let i = 0; i < NUKE_ICONS; i++) {
       const icon = new Sprite(getTextures().nuke);
       icon.visible = false;
@@ -362,11 +379,16 @@ export class CombatView {
     const lives = state.lives < MAX_LIFE_ICONS ? state.lives : MAX_LIFE_ICONS;
     for (let i = 0; i < MAX_LIFE_ICONS; i++) this.#lives[i]!.visible = i < lives;
     const iconsWidth = lives * (SHIP_SPRITE_WIDTH + LIFE_ICON_GAP) + LIFE_ICON_GAP;
+    // The bomb: bright when one can drop, dim while one falls or reloads.
+    const bombX = 2 + iconsWidth + HUD_PAD;
+    this.#bombIcon.position.set(bombX, 4 + Math.floor((SHIP_SPRITE_HEIGHT - BOMB_ICON_MAP.length) / 2));
+    this.#bombIcon.alpha = !state.bombActive && state.tick + 1 >= state.bombReadyTick ? 1 : BOMB_ICON_DIM;
+    const afterBomb = bombX + BOMB_ICON_MAP[0]!.length + LIFE_ICON_GAP;
     const multiplier = scoreMultiplier(state.streak);
     this.#multiplier.visible = multiplier > 1;
     this.#multiplier.text = `x${multiplier}`;
-    this.#multiplier.place(2 + iconsWidth + HUD_PAD, 4 + Math.floor((SHIP_SPRITE_HEIGHT - 7) / 2));
-    let right = 2 + iconsWidth + (multiplier > 1 ? this.#multiplier.textWidth + 2 * HUD_PAD : 0);
+    this.#multiplier.place(afterBomb + HUD_PAD, 4 + Math.floor((SHIP_SPRITE_HEIGHT - 7) / 2));
+    let right = afterBomb + (multiplier > 1 ? this.#multiplier.textWidth + 2 * HUD_PAD : 0);
     const nukes = state.nukes < NUKE_ICONS ? state.nukes : NUKE_ICONS;
     for (let i = 0; i < NUKE_ICONS; i++) {
       const icon = this.#nukes[i]!;
@@ -375,7 +397,6 @@ export class CombatView {
       icon.position.set(right + (i === 0 ? HUD_PAD : 0), 4 + Math.floor((SHIP_SPRITE_HEIGHT - NUKE_MAP.length) / 2));
       right = icon.x + NUKE_MAP.length + LIFE_ICON_GAP;
     }
-    this.#livesBacking.visible = right > 2 + LIFE_ICON_GAP;
     this.#livesBacking.width = right - 2;
 
     // Score, in the top right corner.

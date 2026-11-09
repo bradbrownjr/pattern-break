@@ -1,7 +1,8 @@
 // A deterministic bot that flies a level and records its input log. Tests use it to check
 // that generated levels are passable and to pin sim results, and the attract demo flies
 // it. It holds x, steers y through the cave (turrets and tank tracks count as wall), holds
-// fire, and dodges enemy bullets it can see coming. It doesn't dodge ships.
+// fire, bombs tanks and floor turrets ahead, dodges the enemy bullets and ships it can see
+// coming, and nukes when it can't.
 
 import { solidWalls } from '../levelgen/path-check.ts';
 import { EnemyKind, EnemyTuning, type Level } from '../levelgen/types.ts';
@@ -10,7 +11,8 @@ import {
   ENEMY_BULLET_SIZE,
   ENEMY_SHIP_HEIGHT,
   ENEMY_SHIP_WIDTH,
-  InputBit,   SHIP_HITBOX_HEIGHT,
+  InputBit,
+  SHIP_HITBOX_HEIGHT,
   SHIP_HITBOX_WIDTH,
   SHIP_SPEED_Q8,
 } from './constants.ts';
@@ -27,6 +29,22 @@ const DODGE_MARGIN = 3 * Q8;
 /** The autopilot nukes when the best move is hit this soon. */
 const NUKE_TICKS = 2;
 const BULLET_HALF = (ENEMY_BULLET_SIZE * Q8) / 2;
+
+/** Screen x range ahead of the ship, Q8, where a floor target is worth a bomb. */
+const BOMB_AHEAD_MIN = 60 * Q8;
+const BOMB_AHEAD_MAX = 140 * Q8;
+
+/** True if a live tank or floor turret is between BOMB_AHEAD_MIN and BOMB_AHEAD_MAX ahead. */
+function floorTargetAhead(level: Level, state: SimState): boolean {
+  const e = level.enemies;
+  for (let i = state.firstLive; i < state.nextSpawn; i++) {
+    if (state.enemyStatus[i] !== EnemyStatus.alive) continue;
+    const floor = e.kind[i] === EnemyKind.tank || (e.kind[i] === EnemyKind.turret && e.side[i] === 0);
+    const ahead = state.enemyX[i]! - state.shipX;
+    if (floor && ahead >= BOMB_AHEAD_MIN && ahead <= BOMB_AHEAD_MAX) return true;
+  }
+  return false;
+}
 
 /**
  * The first tick within DODGE_TICKS at which an enemy bullet or ship would hit the ship if
@@ -121,8 +139,12 @@ export function autopilotInputs(level: Level): Uint8Array {
         best = dy;
       }
     }
-    // Fire and drop bombs all the time; nuke when every move is hit within NUKE_TICKS.
-    let input = (best < 0 ? InputBit.up : best > 0 ? InputBit.down : 0) | InputBit.fire | InputBit.bomb;
+    // Fire all the time, bomb a floor target ahead, and nuke when every move is hit within
+    // NUKE_TICKS.
+    let input = (best < 0 ? InputBit.up : best > 0 ? InputBit.down : 0) | InputBit.fire;
+    if (!state.bombActive && t + 1 >= state.bombReadyTick && (state.prevInput & InputBit.bomb) === 0 && floorTargetAhead(level, state)) {
+      input |= InputBit.bomb;
+    }
     if (bestHit <= NUKE_TICKS && state.nukes > 0) input |= InputBit.nuke;
     inputs[t] = input;
     tick(level, state, input);

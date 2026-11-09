@@ -38,9 +38,13 @@ export const START_LIVES = 3;
 /** After losing a life the ship is back at the playhead and can't be hit for 2 s. */
 export const RESPAWN_SAFE_TICKS = 240;
 
-/** Holding fire shoots every 8 ticks (15 a second), with at most 6 shots in flight. */
+/**
+ * Holding fire shoots every 8 ticks (15 a second), with at most 3 shots in flight. A miss
+ * keeps its slot until it leaves the screen and a hit frees it at once, so aiming beats
+ * spraying (Brad, 2026-11-09; it was 6).
+ */
 export const SHOT_INTERVAL_TICKS = 8;
-export const MAX_SHOTS = 6;
+export const MAX_SHOTS = 3;
 /** Player shots fly right at 4 px per tick. */
 export const SHOT_SPEED_Q8 = 1024;
 export const SHOT_WIDTH = 6;
@@ -97,11 +101,14 @@ export const MAX_MULTIPLIER = 4;
 export const SURVIVAL_POINTS_PER_LIFE = 1000;
 
 /**
- * The concussive bomb (Brad, 2026-11-09): held, the bomb button drops one whenever none is in
- * the air. It leaves the ship's underside carrying forward 1 px per tick, falls with
+ * The concussive bomb (Brad, 2026-11-09): each press of the bomb button drops one, if none
+ * is in the air and BOMB_RELOAD_TICKS have passed since the last burst; holding does not
+ * drop more. It leaves the ship's underside carrying forward 1 px per tick, falls with
  * gravity, and bursts on the terrain, on an enemy, or off screen. The blast destroys every
- * enemy within 24 px of the burst, tanks included, whatever their hits left.
+ * enemy within 24 px of the burst, tanks included, whatever their hits left. Never more
+ * than one tank is on screen at once, so one bomb at a time is enough.
  */
+export const BOMB_RELOAD_TICKS = 120;
 export const BOMB_SIZE = 4;
 export const BOMB_VX_Q8 = 256;
 /** Added to the bomb's fall speed each tick, up to BOMB_MAX_VY_Q8 (3 px per tick). */
