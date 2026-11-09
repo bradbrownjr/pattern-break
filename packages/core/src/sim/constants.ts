@@ -39,12 +39,12 @@ export const START_LIVES = 3;
 export const RESPAWN_SAFE_TICKS = 240;
 
 /**
- * Holding fire shoots every 8 ticks (15 a second), with at most 3 shots in flight. A miss
- * keeps its slot until it leaves the screen and a hit frees it at once, so aiming beats
- * spraying (Brad, 2026-11-09; it was 6).
+ * Holding fire shoots every 8 ticks (15 a second), with at most 6 shots in flight. The gun
+ * is the standard weapon and sprays freely; the bomb and the missile power-up are the ones
+ * with a reload (Brad, 2026-11-09; 3 for one build).
  */
 export const SHOT_INTERVAL_TICKS = 8;
-export const MAX_SHOTS = 3;
+export const MAX_SHOTS = 6;
 /** Player shots fly right at 4 px per tick. */
 export const SHOT_SPEED_Q8 = 1024;
 export const SHOT_WIDTH = 6;

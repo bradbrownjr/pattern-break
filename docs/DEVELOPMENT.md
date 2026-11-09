@@ -400,8 +400,9 @@ For the on-beat bonus the level also keeps every note's tick by instrument
 - **Collision:** `boxHitsTerrain()` tests a box against the solid part of every bar it
   overlaps horizontally: lit segments, plus peak dots where they are solid. Boxes against
   each other are half-open overlaps of centre and half size. Integer comparisons only.
-- **Shots:** holding fire shoots every 8 ticks from the ship's nose, at most 3 in flight
-  (`MAX_SHOTS`; 6 until 2026-11-09, which let a held button spray the screen),
+- **Shots:** holding fire shoots every 8 ticks from the ship's nose, at most 6 in flight
+  (`MAX_SHOTS`; 3 for one build on 2026-11-09, until Brad settled that the gun sprays
+  freely and only the bomb and missile reload),
   1024 Q8 (4 px) per tick to the right. A shot passes through the walls and stops on the
   first live enemy it overlaps (6x2 px against the enemy's hitbox).
 - **Enemies:** turrets (8x6 px) stay at their world x; tanks (12x7) move left 64 Q8 per tick
@@ -790,8 +791,7 @@ Run `pnpm dev` and open the URL it prints.
   play doesn't skip them. The game pauses when the window loses focus or the tab is hidden.
 - **Score:** top right in play. Each kill shows its points where the enemy was, amber when
   on the beat. After the lives come the bomb, which empties when one drops and fills
-  again over its reload, three pips for the shots, each filling as its shot crosses the
-  screen, the multiplier in amber once it is above 1, and an amber ring for each nuke held. Level
+  again over its reload, the multiplier in amber once it is above 1, and an amber ring for each nuke held. Level
   complete shows the score and the lives bonus, and in the arcade run the total of the
   levels finished; game over shows the score.
 - **Gamepad:** any pad that reports the Gamepad API's "standard" mapping
@@ -926,14 +926,11 @@ is added.
   for each enemy destroyed (8 at once at most) and the ship's explosion for a life lost,
   both timed in song time. It returns false on alternate 6-tick steps of the ship's safe
   time, which blinks the ship. The lives are ship icons on a dark panel in the top left,
-  followed by a bomb icon, three cyan 3x7 pips for the shot slots, the multiplier when it
-  is above 1, and a 7x7 amber ring per nuke held (3 at most); the score, 7 digits, is on a panel in the
+  followed by a bomb icon, the multiplier when it is above 1, and a 7x7 amber ring per nuke held (3 at most); the score, 7 digits, is on a panel in the
   top right and changes only when the score does. Each kill's points rise 8 px over 600 ms
   from where the enemy was (8 popups at once at most). The bomb icon is drawn dim, with
   its bottom rows bright: none while a bomb falls, then filling over the reload
-  (`state.bombReadyTick`), whole when one can drop. A shot pip is full while its slot is
-  free; for a shot in flight it fills with the share of the way from where the shot was
-  first drawn to the right edge, so a hit refills it at once. Full pips come first. The bomb is a 4x4 sprite; its burst
+  (`state.bombReadyTick`), whole when one can drop. The bomb is a 4x4 sprite; its burst
   is a 40-particle explosion over 600 ms, and a nuke flashes the playfield like the crash
   flash (25% white fading over 220 ms), under the HUD.
 - **Starfield** (`starfield.ts`): 112 stars in three layers placed by `seededRandom(seed)`,

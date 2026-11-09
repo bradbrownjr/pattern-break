@@ -13,10 +13,10 @@
  * lives (2026-11-09). 3 = score: kill points, the on-beat bonus, the streak multiplier and
  * the survival bonus (2026-11-09). 4 = turrets score 200, not 100 (2026-11-09). 5 = the
  * concussive bomb and the nuke (2026-11-09). 6 = 3 shots in flight, not 6, and a bomb per
- * press with a 1 s reload (2026-11-09).
+ * press with a 1 s reload (2026-11-09). 7 = 6 shots in flight again (2026-11-09).
  */
 export const GEN_VERSION = 4;
-export const SIM_VERSION = 6;
+export const SIM_VERSION = 7;
 
 /** Fixed simulation tick rate (docs/PLAN.md, "Simulation"). */
 export const TICK_HZ = 120;

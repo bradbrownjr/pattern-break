@@ -225,17 +225,15 @@ help.
       floor or an enemy, destroying everything within 24 px, tanks included. One per
       press, one in the air, 1 s to reload; the HUD's bomb fills as it reloads. Never more
       than one tank is on screen at once, on any of the 27 levels.
-- [x] At most 3 shots in flight, not 6, so a miss costs time and aiming beats spraying.
-      Three HUD pips fill as their shots cross the screen and refill on a hit.
 - [x] The nuke button destroys every enemy on screen and clears the bullets. One charges
       per 10 kills on the beat, up to 3, shown after the lives.
 - [x] Keys X or K (bomb) and V or ; (nuke); pad B and X. The autopilot bombs, and nukes
       when it can't dodge.
-- [x] `SIM_VERSION` 5, then 6 for the reload and the shot cap, with the golden hashes
-      regenerated.
+- [x] `SIM_VERSION` 5, then 6 for the reload (and a 3-shot cap, dropped again in 7: the
+      gun is the standard weapon), with the golden hashes regenerated.
 
 **Acceptance:** Brad finds the bomb useful against tanks without making shooting pointless,
-timing and aim matter more than holding buttons, and the nuke is worth earning; `pnpm check` passes.
+timing matters more than holding the bomb button, and the nuke is worth earning; `pnpm check` passes.
 
 **Docs:** `PLAN.md` ("Simulation"), `DEVELOPMENT.md` ("Simulation", "Playing it",
 "Renderer").
@@ -243,8 +241,8 @@ timing and aim matter more than holding buttons, and the nuke is worth earning; 
 ### Still to come
 
 - [ ] Capsules from whole formations and the power-up meter: boost (an afterburner on its
-      own button), double shot, laser, option pod, shield. Input grows to 16 bits for the
-      boost button.
+      own button), missile (air to air, its own button), double shot, laser, option pod,
+      shield. Input grows to 16 bits for the boost and missile buttons.
 - [ ] Pads and arcade sticks without the Gamepad API's standard mapping, which need a
       way to assign their buttons.
 - [ ] Replay recording and playback.
@@ -358,9 +356,11 @@ These need Brad's answer before the work that depends on them. Don't guess.
 - **Lives:** three; a hit costs one and the ship comes back at the playhead (2026-11-09).
 - **M2 comes in slices,** enemies and shooting first, each play-tested (2026-11-09).
 - **Power-ups:** shooting down a whole formation of ships drops a capsule. The meter is
-  boost, double shot, laser, option pod, shield. Boost is an afterburner on its own button:
-  the first buy unlocks it and more buys add fuel, since a permanent speed-up made the
-  ship too hard to steer. Losing a life loses every power-up bought (2026-11-09).
+  boost, missile, double shot, laser, option pod, shield. Boost is an afterburner on its
+  own button: the first buy unlocks it and more buys add fuel, since a permanent speed-up
+  made the ship too hard to steer. The missile is the bomb for air to air: its own button,
+  one per press, area damage, a reload. The gun is the standard weapon and sprays freely.
+  Losing a life loses every power-up bought (2026-11-09).
 - **Bomb:** its own button from the start; a concussive bomb falls to the floor and
   destroys the tanks and turrets near where it bursts (2026-11-09).
 - **Nuke:** a last resort on its own button that clears the screen of enemies and

@@ -199,8 +199,8 @@ every bar of every generated level.
   a preallocated state in place and allocates nothing. Positions are Q24.8 fixed-point.
 - Sim time is derived from the audio clock (see "Audio and timing"). If the render loop hitches, run several
   ticks to catch up. Never skip ticks.
-- Player ship: 8-way movement, a fire button (hold for auto-fire: 15 shots a second, up to 3
-  in flight, so a miss costs time and a hit doesn't), a bomb button and a nuke button. Shots pass through the LED walls, so turrets on
+- Player ship: 8-way movement, a fire button (hold for auto-fire: 15 shots a second, up to 6
+  in flight; the gun sprays freely, and the bomb and missile have reloads), a bomb button and a nuke button. Shots pass through the LED walls, so turrets on
   the bar tips can be hit, and stop on the first enemy they hit. Turrets and ships take one
   hit, tanks three.
 - Collision: ship against lit LED segments, enemies, and enemy bullets. Integer AABB
@@ -220,8 +220,9 @@ every bar of every generated level.
   never doubled.
 - A Gradius-style power-up meter, drawn as a VU meter. Shooting down a whole formation
   drops a capsule, capsules advance the meter, and a button press buys the highlighted
-  upgrade: boost (an afterburner on its own button, more fuel with each buy), double shot,
-  laser, option pod, shield. Losing a life loses every upgrade bought (2026-11-09).
+  upgrade: boost (an afterburner on its own button, more fuel with each buy), missile (air
+  to air area damage on its own button, with a reload), double shot, laser, option pod,
+  shield. Losing a life loses every upgrade bought (2026-11-09).
 - **Scoring (2026-11-09):** a shot-down ship is 100, a turret 200, a tank 300; ramming scores
   nothing. The **on-beat bonus** doubles a kill within 25 ms of a note of that enemy's
   instrument. A **streak multiplier** adds 1 for every 10 kills without losing a life, up

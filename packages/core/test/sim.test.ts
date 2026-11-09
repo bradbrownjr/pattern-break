@@ -202,7 +202,7 @@ describe('tick', () => {
 });
 
 describe('shots', () => {
-  it('fires from the nose every 8 ticks, 4 px per tick, at most 3 in flight', () => {
+  it('fires from the nose every 8 ticks, 4 px per tick, at most 6 in flight', () => {
     const level = enemyLevel([]);
     const s = createSimState();
     tick(level, s, InputBit.fire);
@@ -214,7 +214,7 @@ describe('shots', () => {
     expect(activeShots(s)).toBe(2);
     for (let i = 0; i < 60; i++) tick(level, s, InputBit.fire);
     expect(activeShots(s)).toBe(MAX_SHOTS);
-    expect(MAX_SHOTS).toBe(3);
+    expect(MAX_SHOTS).toBe(6);
   });
 
   it('pass through the walls, and destroy a turret with one hit', () => {

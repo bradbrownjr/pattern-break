@@ -79,10 +79,7 @@ const BOMB_ICON_MAP = [
 /** The HUD bomb's empty part: it fills from the bottom as it reloads. */
 const BOMB_ICON_DIM = 0.3;
 const ICON_ROWS = BOMB_ICON_MAP.length;
-/** A HUD pip per shot slot, 3x7 px, filling as its shot crosses the screen. */
-const SHOT_PIP_WIDTH = 3;
-const SHOT_PIP_GAP = 1;
-const SHOT_PIP_DIM = 0.25;
+
 
 /** A nuke held, in the HUD. */
 const NUKE_MAP = [
@@ -194,14 +191,7 @@ export class CombatView {
   #nukes: Sprite[] = [];
   #bombIcon = new Sprite();
   #bombFill = new Sprite();
-  #shotPipBacks: Sprite[] = [];
-  #shotPips: Sprite[] = [];
-  /** Per shot slot: whether it was in flight at the last draw, its x then, and where it started (px). */
-  #shotSeen = new Uint8Array(MAX_SHOTS);
-  #shotLastX = new Float64Array(MAX_SHOTS);
-  #shotStartX = new Float64Array(MAX_SHOTS);
-  /** Each slot's reload, 0 to 1, sorted fullest first for drawing. */
-  #shotFill = new Float64Array(MAX_SHOTS);
+
   #lifeLost = new Explosion(SHIP_EXPLOSION);
   #lifeLostSample = -1;
   /** Sim tick and first possibly live enemy at the last draw, to find what changed since. */
@@ -233,7 +223,6 @@ export class CombatView {
     this.#nukeFlash.width = PLAYFIELD_WIDTH;
     this.#nukeFlash.height = PLAYFIELD_HEIGHT;
     this.#nukeFlash.visible = false;
-    this.#shotSeen.fill(0);
     this.hud.addChild(this.#nukeFlash);
     this.#livesBacking.tint = BACKGROUND;
     this.#livesBacking.alpha = 0.85;
@@ -250,19 +239,7 @@ export class CombatView {
     this.#bombIcon.texture = getTextures().bombIcon;
     this.#bombIcon.alpha = BOMB_ICON_DIM;
     this.hud.addChild(this.#multiplier, this.#bombIcon, this.#bombFill);
-    for (let i = 0; i < MAX_SHOTS; i++) {
-      const back = new Sprite(Texture.WHITE);
-      back.tint = CYAN;
-      back.alpha = SHOT_PIP_DIM;
-      back.width = SHOT_PIP_WIDTH;
-      back.height = ICON_ROWS;
-      const pip = new Sprite(Texture.WHITE);
-      pip.tint = CYAN;
-      pip.width = SHOT_PIP_WIDTH;
-      this.hud.addChild(back, pip);
-      this.#shotPipBacks.push(back);
-      this.#shotPips.push(pip);
-    }
+
     for (let i = 0; i < NUKE_ICONS; i++) {
       const icon = new Sprite(getTextures().nuke);
       icon.visible = false;
@@ -432,35 +409,7 @@ export class CombatView {
         : Math.floor(((BOMB_RELOAD_TICKS - reloadLeft) * ICON_ROWS) / BOMB_RELOAD_TICKS);
     this.#bombFill.texture = getTextures().bombFill[bombRows]!;
     this.#bombFill.position.set(bombX, iconY + ICON_ROWS - bombRows);
-    let pipX = bombX + BOMB_ICON_MAP[0]!.length + LIFE_ICON_GAP;
-    // Shot slots: free ones are full; one in flight fills as it crosses from where it started.
-    for (let s = 0; s < MAX_SHOTS; s++) {
-      if (state.shotActive[s] !== 1) {
-        this.#shotSeen[s] = 0;
-        this.#shotFill[s] = 1;
-        continue;
-      }
-      const x = state.shotX[s]! / Q8;
-      // A new shot in the slot: it wasn't in flight, or it is behind where the last one was.
-      if (this.#shotSeen[s] === 0 || x < this.#shotLastX[s]!) this.#shotStartX[s] = x;
-      this.#shotSeen[s] = 1;
-      this.#shotLastX[s] = x;
-      const start = this.#shotStartX[s]!;
-      const end = PLAYFIELD_WIDTH + SHOT_WIDTH / 2;
-      this.#shotFill[s] = end > start ? (x - start) / (end - start) : 1;
-    }
-    this.#shotFill.sort().reverse();
-    for (let i = 0; i < MAX_SHOTS; i++) {
-      const f = this.#shotFill[i]!;
-      const rows = f >= 1 ? ICON_ROWS : Math.floor(f * ICON_ROWS);
-      this.#shotPipBacks[i]!.position.set(pipX, iconY);
-      const pip = this.#shotPips[i]!;
-      pip.visible = rows > 0;
-      pip.height = rows;
-      pip.position.set(pipX, iconY + ICON_ROWS - rows);
-      pipX += SHOT_PIP_WIDTH + SHOT_PIP_GAP;
-    }
-    const afterBomb = pipX - SHOT_PIP_GAP + LIFE_ICON_GAP;
+    const afterBomb = bombX + BOMB_ICON_MAP[0]!.length + LIFE_ICON_GAP;
     const multiplier = scoreMultiplier(state.streak);
     this.#multiplier.visible = multiplier > 1;
     this.#multiplier.text = `x${multiplier}`;

@@ -7,7 +7,7 @@
   },
   "gameplay": {
     "path": "docs/img/gameplay.png",
-    "alt": "A frame of play in an LED cavern. Columns of small square LED segments hang from the top edge and rise from the bottom edge, lit green at the screen edges through yellow and orange to red at their tips, leaving a dark passage across the middle. Two small magenta and amber turrets sit upside down on the tips of the ceiling. A small cyan ship with a magenta engine flame flies on the left, with cyan shots ahead of it, and a magenta enemy ship flies towards it from the right. Three small ship icons on a dark panel in the top left corner show the lives left, followed by a small amber bomb icon, three empty cyan bars for the shots in flight, and \"x2\" in amber; \"0002000\" in white in the top right corner is the score.",
+    "alt": "A frame of play in an LED cavern. Columns of small square LED segments hang from the top edge and rise from the bottom edge, lit green at the screen edges through yellow and orange to red at their tips, leaving a dark passage across the middle. Two small magenta and amber turrets sit upside down on the tips of the ceiling. A small cyan ship with a magenta engine flame flies on the left, with a row of cyan shots ahead of it and a scatter of coloured particles where an enemy was just destroyed, with \"200\" in white pixel digits above it and above another kill. Three small ship icons on a dark panel in the top left corner show the lives left, followed by a small amber bomb icon and \"x2\" in amber; \"0002200\" in white in the top right corner is the score.",
     "caption": "Pattern Break at 21.5 seconds into the test song on normal, with the ship flown by the autopilot.",
     "usedIn": [
       "readme"
@@ -15,7 +15,7 @@
   },
   "gameplay-clip": {
     "path": "docs/img/gameplay-clip.gif",
-    "alt": "Four seconds of play in an LED cavern. Columns of square LED segments, lit green at the screen edges through yellow and orange to red at their tips, hang from the top and rise from the bottom and scroll from right to left, one column per row of the song. Small magenta and amber turrets ride in on the tips of the floor and ceiling, and small magenta enemy ships fly in from the right and fire round magenta bullets. A small cyan ship on the left keeps firing cyan shots, drops a small amber bomb that bursts on the floor bars, and moves up and down to dodge. Three ship icons in the top left corner show the lives left, followed by a bomb icon, three cyan bars that empty and refill as shots fly, and \"x3\" in amber, and the score in the top right corner counts up as each kill shows its points where the enemy was.",
+    "alt": "Four seconds of play in an LED cavern. Columns of square LED segments, lit green at the screen edges through yellow and orange to red at their tips, hang from the top and rise from the bottom and scroll from right to left, one column per row of the song. Small magenta and amber turrets ride in on the tips of the floor and ceiling, and small magenta enemy ships fly in from the right and fire round magenta bullets. A small cyan ship on the left keeps firing cyan shots, drops a small amber bomb that bursts on the floor bars, and moves up and down to dodge. Three ship icons in the top left corner show the lives left, followed by a bomb icon and \"x3\" in amber, and the score in the top right corner counts up as each kill shows its points where the enemy was.",
     "caption": "Four seconds of the test song on normal, flown by the autopilot through the sim.",
     "usedIn": [
       "readme"
