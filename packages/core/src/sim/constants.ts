@@ -78,8 +78,11 @@ export const HOP_TICKS = 16;
 /** Climbing and diving ships drift 0.5 px per tick from their line. */
 export const DRIFT_Q8 = 128;
 
-/** Points for destroying each kind with a shot, indexed by EnemyKind. Ramming scores nothing. */
-export const KILL_POINTS = [100, 300, 100] as const;
+/**
+ * Points for destroying each kind with a shot, indexed by EnemyKind: turrets are harder to
+ * hit than ships and easier than moving tanks (Brad, 2026-11-09). Ramming scores nothing.
+ */
+export const KILL_POINTS = [200, 300, 100] as const;
 /**
  * A kill within 3 ticks (25 ms) of a note of the enemy's instrument is on the beat: double
  * points. At 6 ticks, busy instruments made nearly every kill count; at 3, an autopilot that

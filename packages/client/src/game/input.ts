@@ -1,6 +1,7 @@
 // Keyboard to sim input bits, and to menu actions. Arrows and WASD move; Space, Z and J
-// fire. The sampler is read once per sim tick; a key pressed and released between two reads
-// still counts for one tick, so a quick tap is never lost.
+// fire. A gamepad's bits (gamepad.ts) join in through setPad(). The sampler is read once
+// per sim tick; a key pressed and released between two reads still counts for one tick, so
+// a quick tap is never lost.
 
 import { InputBit } from '@game/core';
 
@@ -30,7 +31,7 @@ export function keyToBit(code: string): number {
 
 /**
  * What a menu does with one press. Menus take actions, not keys, so a gamepad's D-pad,
- * A, B and Start (M2) can map to the same actions as the keyboard.
+ * A, B and Start map to the same actions as the keyboard (gamepad.ts).
  */
 export type MenuAction = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back';
 
@@ -65,6 +66,8 @@ export class InputSampler {
   #heldBits = 0;
   /** Bits pressed since the last sample, held or not. */
   #latched = 0;
+  /** Sim bits the gamepads hold, from the last setPad(). */
+  #padBits = 0;
 
   keyDown(code: string): void {
     const bit = keyToBit(code);
@@ -79,6 +82,16 @@ export class InputSampler {
     this.#recompute();
   }
 
+  /**
+   * The gamepads' bits, read once a frame (padBits()); only the sim's low 8 bits are kept. A
+   * bit that goes down latches like a key, so a press between two ticks still counts.
+   */
+  setPad(bits: number): void {
+    const sim = bits & 0xff;
+    this.#latched |= sim & ~this.#padBits;
+    this.#padBits = sim;
+  }
+
   /** Forgets every key, for when the window loses focus and key-up events go elsewhere. */
   clear(): void {
     this.#held.clear();
@@ -86,9 +99,9 @@ export class InputSampler {
     this.#latched = 0;
   }
 
-  /** The input byte for the next tick: keys held now, plus keys tapped since the last sample. */
+  /** The input byte for the next tick: keys and buttons held now, plus those tapped since the last sample. */
   sample(): number {
-    const bits = this.#heldBits | this.#latched;
+    const bits = this.#heldBits | this.#padBits | this.#latched;
     this.#latched = 0;
     return bits;
   }

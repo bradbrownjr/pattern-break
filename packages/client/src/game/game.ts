@@ -23,6 +23,7 @@ import { seededRandom } from '../render/random.ts';
 import type { GameRenderer } from '../render/renderer.ts';
 import { barBinEdges, barLevels } from '../render/spectrum.ts';
 import { analyzeInWorker } from './analysis.ts';
+import { PadBit, PadTracker, padMenuAction, readGamepads } from './gamepad.ts';
 import { InputSampler, keyToMenuAction, type MenuAction } from './input.ts';
 import { DisplayClock, InputLog, catchUp, targetTick } from './loop.ts';
 import { DIFFICULTY_LABELS, JukeboxMenu, TitleMenu, type TitleEvent } from './menu.ts';
@@ -174,6 +175,7 @@ export class Game {
   #log: InputLog | null = null;
   #displaySamples = 0;
   #runs = 0;
+  readonly #pads = new PadTracker();
   /** Points from the arcade run's finished levels. */
   #runScore = 0;
   /** What a key does on the level-complete screen. */
@@ -231,7 +233,9 @@ export class Game {
       mode === 'gameover' ||
       mode === 'complete';
     if (mode === 'analyzing') this.#message.show('', 0, ['Analyzing song...']);
-    if (mode === 'paused') this.#message.show('Paused', AMBER, ['Q quits to the title screen', 'Press Esc to resume']);
+    if (mode === 'paused') {
+      this.#message.show('Paused', AMBER, ['Q or Select quits to the title screen', 'Esc or Start resumes']);
+    }
   }
 
   #showError(err: unknown): void {
@@ -294,6 +298,49 @@ export class Game {
       return;
     }
     this.#onAnyKey();
+  }
+
+  /** Polls the gamepads: their held bits go to the sim, new presses act like keys. */
+  #pollPads(now: number): void {
+    const bits = readGamepads();
+    this.#input.setPad(bits);
+    for (const bit of this.#pads.update(bits, now)) this.#onPadPress(bit);
+  }
+
+  #onPadPress(bit: number): void {
+    switch (this.#mode) {
+      case 'start':
+        // Browsers start sound only after a key press or click (the HTML spec's
+        // activation-triggering input events don't include gamepads).
+        if (navigator.userActivation?.hasBeenActive) this.#leaveStart();
+        else this.#title.showPadHint();
+        return;
+      case 'demo':
+        this.#toTitle();
+        return;
+      case 'title':
+      case 'jukebox': {
+        const action = padMenuAction(bit);
+        if (action) this.#onMenu(action);
+        return;
+      }
+      case 'play':
+        if (bit === PadBit.start) void this.#pause();
+        return;
+      case 'paused':
+        if (bit === PadBit.start) void this.#resume();
+        else if (bit === PadBit.select) this.#toTitle();
+        return;
+      case 'gameover':
+      case 'complete':
+        // B or Select is Esc; any other button is any key. Directions don't count, so a
+        // stick still leaning from play doesn't skip the screen.
+        if (bit === PadBit.b || bit === PadBit.select) this.#toTitle();
+        else if ((bit & (PadBit.up | PadBit.down | PadBit.left | PadBit.right)) === 0) this.#onAnyKey();
+        return;
+      default:
+        return;
+    }
   }
 
   #onPointer(): void {
@@ -682,7 +729,7 @@ export class Game {
       this.#message.show(`Level ${run.level + 1} complete`, LIME, [
         `${this.#song.title}, ${difficulty}`,
         ...score,
-        `Press any key for level ${run.level + 2}`,
+        `Press any key or button for level ${run.level + 2}`,
       ]);
       this.#afterComplete = () => {
         this.#sound('start');
@@ -693,11 +740,11 @@ export class Game {
       this.#message.show('All levels complete', LIME, [
         `Every level on ${difficulty}`,
         ...score,
-        'Press any key to continue',
+        'Press any key or button to continue',
       ]);
       this.#afterComplete = () => this.#toTitle();
     } else {
-      this.#message.show('Song complete', LIME, [`${this.#song.title}, ${difficulty}`, ...score, 'Press any key to continue']);
+      this.#message.show('Song complete', LIME, [`${this.#song.title}, ${difficulty}`, ...score, 'Press any key or button to continue']);
       this.#afterComplete = () => this.#toTitle();
     }
   }
@@ -715,6 +762,7 @@ export class Game {
 
   readonly #frame = (now: number): void => {
     const start = performance.now();
+    this.#pollPads(now);
     const r = this.#r;
     const level = this.#level;
     const blink = Math.floor(now / PROMPT_BLINK_MS) % 2 === 0;
@@ -782,8 +830,8 @@ export class Game {
           this.#message.container.visible = true;
           this.#message.show('Game over', MAGENTA, [
             `Score ${this.#state.score}`,
-            'Esc returns to the title screen',
-            'Press any key to retry',
+            'Esc or B returns to the title screen',
+            'Press any key or button to retry',
           ]);
         }
         const player = this.#playerReady;

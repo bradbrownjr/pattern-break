@@ -77,7 +77,7 @@ pattern-break/
 │   │   ├── src/config/brand.ts    # the game's name, in one place
 │   │   ├── src/audio/             # the libopenmpt AudioWorklet player and the song clock
 │   │   ├── src/render/            # PixiJS renderer: terrain, ship, starfield, pixel font, effects
-│   │   ├── src/game/              # game flow, frame loop, input, analysis worker, capture mode
+│   │   ├── src/game/              # game flow, frame loop, keyboard and gamepad input, analysis worker, capture mode
 │   │   ├── audio-debug.html       # dev-server page that plays the fixture and shows the clock
 │   │   └── vitest.config.ts       # the node and browser test projects
 │   └── server/                    # @game/server: static file server now; leaderboard API and replay validator (M5)
@@ -413,7 +413,7 @@ For the on-beat bonus the level also keeps every note's tick by instrument
 - **Enemy bullets:** 16 slots, at most `maxBullets` in flight. A bullet starts at the
   enemy's centre with velocity `trunc(d * speed / |d|)` towards the ship's centre, `|d|`
   from `Math.sqrt`; it moves in screen terms and stops on the walls or off screen.
-- **Score:** a shot-down turret or ship is 100 points, a tank 300 (`KILL_POINTS`), doubled
+- **Score:** a shot-down ship is 100 points, a turret 200, a tank 300 (`KILL_POINTS`), doubled
   on the beat: within 3 ticks (25 ms, `ON_BEAT_TICKS`) of a note of the enemy's own
   instrument, found by `onBeat()`'s binary search of the level's note table. At 6 ticks an
   autopilot that ignores the beat got about 85% of its kills on it, since busy instruments
@@ -766,7 +766,8 @@ Run `pnpm dev` and open the URL it prints.
   last ends the run. **Practice** plays one song. Each level opens with a 2 s card: the
   level number ("Final level" for the last), the song's title and credit, and the
   difficulty.
-- **In play,** arrows or WASD move, Space, Z or J fire (hold to keep firing), and Esc
+- **In play,** arrows or WASD move, Space, Z or J fire (hold to keep firing; a gamepad is
+  below), and Esc
   pauses and resumes; Q while paused goes back to the title. Losing the last of three
   lives is game over: any key retries the level, Esc goes to the title. Game over and level complete ignore keys for 0.7 s, so a key still held from
   play doesn't skip them. The game pauses when the window loses focus or the tab is hidden.
@@ -774,6 +775,18 @@ Run `pnpm dev` and open the URL it prints.
   on the beat, and the multiplier shows in amber after the lives once it is above 1. Level
   complete shows the score and the lives bonus, and in the arcade run the total of the
   levels finished; game over shows the score.
+- **Gamepad:** any pad that reports the Gamepad API's "standard" mapping
+  (https://w3c.github.io/gamepad/, "Remapping"), which fixes its button and axis numbers;
+  other pads are ignored for now. In play the left stick (past half way) or the D-pad
+  flies; A, X, RB and RT (buttons 0, 2, 5, 7) fire; Start pauses and resumes; Select
+  (button 8) quits from the pause. B and Y do nothing in play yet, kept for the bomb and the
+  power-up meter. In menus the stick or D-pad moves (held, it repeats after 400 ms, then
+  every 100 ms), A or Start selects, and B or Select goes back. On game over and level
+  complete B or Select is Esc and any other button is any key. A pad can't leave the start
+  screen on a fresh page: browsers start sound only after a user activation, and the HTML
+  spec's activation-triggering input events are keydown, mousedown, pointer and touch
+  events, not gamepad presses. So unless `navigator.userActivation.hasBeenActive`, a pad
+  press there shows "A key or a click turns on the sound first".
 - **Jukebox:** Enter plays the song under the cursor or stops it if it is playing, a song
   that ends hands over to the next, and Esc or Back returns to the title, where the title
   music starts again.
@@ -832,9 +845,9 @@ is added.
 
 - **Menu state** is in `game/menu.ts`, apart from drawing, and tested in Node. `TitleMenu`
   and `JukeboxMenu` take a `MenuAction` (up, down, left, right, confirm, back), not a key.
-  `keyToMenuAction()` in `input.ts` maps the keyboard; M2's gamepad support maps the D-pad,
-  A, B and Start to the same actions. A held arrow repeats in a menu; a held Enter or Esc
-  does not.
+  `keyToMenuAction()` in `input.ts` maps the keyboard and `padMenuAction()` in
+  `gamepad.ts` the pad. A held arrow, D-pad direction or stick repeats in a menu; a held
+  Enter, Esc or button does not.
 - **Screens:** `TitleScreen` (with the start screen), `JukeboxScreen`, `DemoBanner` and
   `FadeOverlay` in `screens.ts` draw from a view of that state and redo their text only when
   it changes.

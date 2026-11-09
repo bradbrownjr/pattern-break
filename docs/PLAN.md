@@ -212,7 +212,7 @@ every bar of every generated level.
 - A Gradius-style power-up meter, drawn as a VU meter. Collected capsules advance the meter,
   and a button press buys the highlighted upgrade (speed, double shot, laser, option pod,
   shield).
-- **Scoring (2026-11-09):** a shot-down turret or ship is 100, a tank 300; ramming scores
+- **Scoring (2026-11-09):** a shot-down ship is 100, a turret 200, a tank 300; ramming scores
   nothing. The **on-beat bonus** doubles a kill within 25 ms of a note of that enemy's
   instrument. A **streak multiplier** adds 1 for every 10 kills without losing a life, up
   to 4. Reaching the end of the song adds 1000 a life left. Game over before the song ends

@@ -16,7 +16,7 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 | [Title music, demo, and levels](#title-music-demo-and-levels) | Title music, an attract demo, menu sounds, an arcade run of levels, and game-over music. | Built; Brad to play-test |
 | [Cavern terrain](#cavern-terrain) | A cave that squeezes on every hit and winds with the melody; difficulty sets the song's speed and the cave's width. | Built; Brad to play-test |
 | [Eight levels](#eight-levels) | Six more songs, so the arcade run has eight levels. | Built; Brad to play-test |
-| [M2: enemies and scoring](#m2-enemies-and-scoring) | Notes become enemies; shooting, scoring, lives, power-ups, gamepad support, and replays that give the same score in every browser. | Enemies, shooting and scoring built; Brad to play-test |
+| [M2: enemies and scoring](#m2-enemies-and-scoring) | Notes become enemies; shooting, scoring, lives, power-ups, gamepad support, and replays that give the same score in every browser. | Enemies, shooting, scoring and the gamepad built; Brad to play-test |
 | [M3: effects and look](#m3-effects-and-look) | Particles, big explosions, sound effects, copper bars, starfield, CRT filter, title and results screens, accessibility options. | Planned |
 | [M4: library, offline, music pack](#m4-library-offline-music-pack) | Import your own songs, install the game, and play with no connection; a bundled, credited music pack. | Planned |
 | [M5: leaderboards](#m5-leaderboards) | A global board per song, with scores checked by replaying them on the server. | Planned |
@@ -188,14 +188,14 @@ music; `pnpm check` passes.
 
 ### Scoring
 
-- [x] Kill points (100 a turret or ship, 300 a tank), doubled within 25 ms of a note of the
-      enemy's instrument; a multiplier up 1 every 10 kills without a hit, to 4; 1000 a life
-      left at the end of the song.
+- [x] Kill points (100 a ship, 200 a turret, 300 a tank), doubled within 25 ms of a note
+      of the enemy's instrument; a multiplier up 1 every 10 kills without a hit, to 4; 1000
+      a life left at the end of the song.
 - [x] The score in the top right, each kill's points where it fell (amber on the beat), the
       multiplier after the lives, and the score on game over and level complete, with the
       arcade run's total.
-- [x] `GEN_VERSION` 4 and Level format 3 (each instrument's note ticks), `SIM_VERSION` 3,
-      with the golden hashes regenerated.
+- [x] `GEN_VERSION` 4 and Level format 3 (each instrument's note ticks), `SIM_VERSION` 3
+      (4 once turrets went to 200), with the golden hashes regenerated.
 
 **Acceptance:** Brad plays a few levels and finds the on-beat bonus noticeable and earned,
 not automatic; `pnpm check` passes.
@@ -203,11 +203,27 @@ not automatic; `pnpm check` passes.
 **Docs:** `PLAN.md` ("Simulation"), `DEVELOPMENT.md` ("Enemies", "Simulation", "Playing
 it", "Renderer").
 
+### Gamepad
+
+Moved up from M6 (2026-11-08): a shooter wants a pad from the start.
+
+- [x] Pads with the Gamepad API's standard mapping, read once a frame: the stick or D-pad
+      flies, A, X, RB or RT fires, Start pauses, Select quits from the pause. Menus take
+      the same `MenuAction`s as the keyboard, with held directions repeating.
+- [x] On a fresh page a pad press on the start screen says a key or click must come
+      first, since browsers start sound only on those.
+
+**Acceptance:** Brad plays a level and the menus with a pad, keyboard untouched after the
+first key; `pnpm check` passes.
+
+**Docs:** `DEVELOPMENT.md` ("Playing it", "Menus and the jukebox"), the title screen's
+help.
+
 ### Still to come
 
 - [ ] The bomb and the power-up meter.
-- [ ] Gamepad and arcade-stick support through the Gamepad API, next to the keyboard
-      (moved up from M6, 2026-11-08: a shooter wants a pad from the start).
+- [ ] Pads and arcade sticks without the Gamepad API's standard mapping, which need a
+      way to assign their buttons.
 - [ ] Replay recording and playback.
 - [ ] Cross-engine determinism tests in Vitest browser mode.
 - [ ] The headless sim benchmark (10 000 ticks, maximum entities), which also gives the

@@ -20,7 +20,7 @@ practice mode, the LED tunnel scrolling in time with the music, a ship you fly t
 game over and retry, and a jukebox for listening to the songs. Turrets come from the drums,
 tanks from the bass, and ships from the other instruments, and each fires on its own
 notes; you have three lives and a gun, and kills score double on their instrument's beat.
-Power-ups and the gamepad come next, in M2.
+A gamepad works next to the keyboard. Power-ups and the bomb come next, in M2.
 Level data comes out byte-for-byte the same in Node, Chromium, Firefox, and WebKit, which is
 what lets one song have one leaderboard.
 

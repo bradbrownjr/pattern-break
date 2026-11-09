@@ -336,16 +336,16 @@ describe('score', () => {
     return s;
   }
 
-  it('a shot-down turret scores 100, double on a note of its instrument', () => {
+  it('a shot-down turret scores 200, double on a note of its instrument', () => {
     const off = shootTurret();
-    expect([off.score, off.enemyPoints[0], off.enemyOnBeat[0]]).toEqual([100, 100, 0]);
+    expect([off.score, off.enemyPoints[0], off.enemyOnBeat[0]]).toEqual([200, 200, 0]);
     const t = off.tick;
     // Notes 3 ticks either side count; 4 do not.
-    expect(shootTurret({ 1: [t + 3] }).score).toBe(200);
-    expect(shootTurret({ 1: [t - 3] }).score).toBe(200);
-    expect(shootTurret({ 1: [t - 4, t + 4] }).score).toBe(100);
+    expect(shootTurret({ 1: [t + 3] }).score).toBe(400);
+    expect(shootTurret({ 1: [t - 3] }).score).toBe(400);
+    expect(shootTurret({ 1: [t - 4, t + 4] }).score).toBe(200);
     // Another instrument's note doesn't count.
-    expect(shootTurret({ 2: [t] }).score).toBe(100);
+    expect(shootTurret({ 2: [t] }).score).toBe(200);
     expect(shootTurret({ 1: [t] }).onBeatKills).toBe(1);
   });
 

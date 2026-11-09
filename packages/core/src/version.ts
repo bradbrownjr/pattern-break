@@ -11,10 +11,10 @@
  *
  * SIM_VERSION 1 = the ship and terrain (M1). 2 = enemies, shots, enemy bullets and three
  * lives (2026-11-09). 3 = score: kill points, the on-beat bonus, the streak multiplier and
- * the survival bonus (2026-11-09).
+ * the survival bonus (2026-11-09). 4 = turrets score 200, not 100 (2026-11-09).
  */
 export const GEN_VERSION = 4;
-export const SIM_VERSION = 3;
+export const SIM_VERSION = 4;
 
 /** Fixed simulation tick rate (docs/PLAN.md, "Simulation"). */
 export const TICK_HZ = 120;

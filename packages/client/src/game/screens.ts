@@ -58,6 +58,8 @@ export class TitleScreen {
   readonly container = new Container();
   #menu = new Container();
   #press = new PixelText('Press any key', CYAN).place(CENTER, 120, 'center');
+  /** Shown on the start screen after a gamepad press: browsers start sound only on a key or click. */
+  #padHint = new PixelText('A key or a click turns on the sound first', GREY).place(CENTER, 136, 'center');
   #marker = new PixelText('>', AMBER);
   #labels: PixelText[] = [];
   #values: PixelText[] = [];
@@ -84,13 +86,21 @@ export class TitleScreen {
       this.#credit,
       new PixelText('Up and down choose. Left and right change. Enter selects.', GREY).place(CENTER, 172, 'center'),
       new PixelText('In play: arrows or WASD fly, Space or Z fires, Esc pauses.', DIM_GREY).place(CENTER, 186, 'center'),
+      new PixelText('Gamepad: stick or D-pad flies, A fires, Start pauses.', DIM_GREY).place(CENTER, 198, 'center'),
     );
-    this.container.addChild(this.#menu, this.#press);
+    this.#padHint.visible = false;
+    this.container.addChild(this.#menu, this.#press, this.#padHint);
+  }
+
+  /** Shows, on the start screen, that a key or click must come first. */
+  showPadHint(): void {
+    this.#padHint.visible = true;
   }
 
   /** `view` null shows the start screen. */
   update(view: TitleView | null, blinkBright: boolean): void {
     this.#menu.visible = view !== null;
+    if (view) this.#padHint.visible = false;
     this.#press.visible = view === null && blinkBright;
     if (!view) return;
     this.#marker.visible = blinkBright;
