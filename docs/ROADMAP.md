@@ -241,7 +241,7 @@ timing matters more than holding the bomb button, and the nuke is worth earning;
 ### Still to come
 
 - [ ] Capsules from whole formations and the power-up meter: boost (an afterburner on its
-      own button), missile (air to air, its own button), double shot, laser, option pod,
+      own button), double shot, laser, missile (air to air, its own button), option pod,
       shield. Input grows to 16 bits for the boost and missile buttons.
 - [ ] Pads and arcade sticks without the Gamepad API's standard mapping, which need a
       way to assign their buttons.
@@ -356,7 +356,7 @@ These need Brad's answer before the work that depends on them. Don't guess.
 - **Lives:** three; a hit costs one and the ship comes back at the playhead (2026-11-09).
 - **M2 comes in slices,** enemies and shooting first, each play-tested (2026-11-09).
 - **Power-ups:** shooting down a whole formation of ships drops a capsule. The meter is
-  boost, missile, double shot, laser, option pod, shield. Boost is an afterburner on its
+  boost, double shot, laser, missile, option pod, shield. Boost is an afterburner on its
   own button: the first buy unlocks it and more buys add fuel, since a permanent speed-up
   made the ship too hard to steer. The missile is the bomb for air to air: its own button,
   one per press, area damage, a reload. The gun is the standard weapon and sprays freely.

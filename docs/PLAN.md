@@ -220,9 +220,9 @@ every bar of every generated level.
   never doubled.
 - A Gradius-style power-up meter, drawn as a VU meter. Shooting down a whole formation
   drops a capsule, capsules advance the meter, and a button press buys the highlighted
-  upgrade: boost (an afterburner on its own button, more fuel with each buy), missile (air
-  to air area damage on its own button, with a reload), double shot, laser, option pod,
-  shield. Losing a life loses every upgrade bought (2026-11-09).
+  upgrade, in this order: boost (an afterburner on its own button, more fuel with each
+  buy), double shot, laser, missile (air to air area damage on its own button, with a
+  reload), option pod (a drone that trails the ship and fires what it fires), shield. Losing a life loses every upgrade bought (2026-11-09).
 - **Scoring (2026-11-09):** a shot-down ship is 100, a turret 200, a tank 300; ramming scores
   nothing. The **on-beat bonus** doubles a kill within 25 ms of a note of that enemy's
   instrument. A **streak multiplier** adds 1 for every 10 kills without losing a life, up
