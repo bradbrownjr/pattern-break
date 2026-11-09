@@ -21,6 +21,6 @@ export function drawPlay(r: GameRenderer, level: Level, state: SimState, display
   const visible = !state.dead && r.combat.draw(level, state, scrollPx, displaySamples);
   r.ship.visible = visible;
   if (visible) {
-    r.ship.draw(state.shipX / Q8, state.shipY / Q8, Math.floor(displaySamples / FLAME_STEP_SAMPLES));
+    r.ship.draw(state.shipX / Q8, state.shipY / Q8, Math.floor(displaySamples / FLAME_STEP_SAMPLES), state.boosting);
   }
 }

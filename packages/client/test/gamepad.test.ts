@@ -33,13 +33,14 @@ describe('padBits', () => {
     expect(padBits(pad([], [0.49, -0.49]))).toBe(0);
   });
 
-  it('fires on A and the right front buttons, bombs on B, nukes on X; A also confirms', () => {
+  it('fires on A and RT, bombs on B, nukes on X, buys on Y, missiles on RB, boosts on LB or LT; A also confirms', () => {
     expect(padBits(pad([0]))).toBe(PadBit.fire | PadBit.a);
-    for (const b of [5, 7]) expect(padBits(pad([b])), `button ${b}`).toBe(PadBit.fire);
+    expect(padBits(pad([7]))).toBe(PadBit.fire);
     expect(padBits(pad([1]))).toBe(PadBit.b | InputBit.bomb);
     expect(padBits(pad([2]))).toBe(InputBit.nuke);
-    // Y stays free, for buying from the power-up meter.
-    expect(padBits(pad([3]))).toBe(0);
+    expect(padBits(pad([3]))).toBe(InputBit.buy);
+    expect(padBits(pad([5]))).toBe(InputBit.missile);
+    expect([4, 6].map((b) => padBits(pad([b])))).toEqual([InputBit.boost, InputBit.boost]);
     expect(padBits(pad([8, 9]))).toBe(PadBit.select | PadBit.start);
   });
 

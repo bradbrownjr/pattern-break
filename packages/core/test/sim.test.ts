@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { emptyEnemyList, withoutEnemies } from '../src/levelgen/enemies.ts';
+import { withoutEnemies } from '../src/levelgen/enemies.ts';
 import { generateLevel } from '../src/levelgen/generate.ts';
-import { Difficulty, EnemyKind, EnemyTuning, ShipMotion, type DifficultyName, type EnemyList, type Level } from '../src/levelgen/types.ts';
+import { Difficulty, EnemyKind, EnemyTuning, ShipMotion, type DifficultyName, type Level } from '../src/levelgen/types.ts';
 import { autopilotInputs } from '../src/sim/autopilot.ts';
 import {
   BOMB_RELOAD_TICKS,
@@ -26,50 +26,9 @@ import {
   shipCollides,
   tick,
 } from '../src/sim/sim.ts';
-import { enemyList, lcg, noteTable, randomSong, syntheticLevelData, type HandEnemy } from './level-fixtures.ts';
+import { enemyLevel, enemyList, handLevel, lcg, randomSong, syntheticLevelData, type HandEnemy } from './level-fixtures.ts';
 
 const Q = 256;
-
-/**
- * A hand-made level: bars at world x 0, 10, 20, ...; scroll[t] = scrollPx * 256 for every
- * t, or scrollPx(t) * 256.
- */
-function handLevel(
-  difficulty: DifficultyName,
-  bars: Array<[ceiling: number, floor: number, ceilingPeak?: number, floorPeak?: number]>,
-  scrollPx: number | ((t: number) => number) = 0,
-  tickCount = 100,
-  enemies: EnemyList = emptyEnemyList(),
-  notes: Record<number, number[]> = {},
-): Level {
-  const n = bars.length;
-  return {
-    genVersion: 0,
-    difficulty,
-    totalSamples: tickCount * 400,
-    barCount: n,
-    barStartSample: Uint32Array.from(bars, (_, i) => i * 400),
-    ceiling: Uint8Array.from(bars, (b) => b[0]),
-    floor: Uint8Array.from(bars, (b) => b[1]),
-    ceilingPeak: Uint8Array.from(bars, (b) => b[2] ?? b[0]),
-    floorPeak: Uint8Array.from(bars, (b) => b[3] ?? b[1]),
-    tickCount,
-    scroll: Int32Array.from({ length: tickCount + 1 }, (_, t) => (typeof scrollPx === 'number' ? scrollPx : scrollPx(t)) * Q),
-    enemies,
-    ...noteTable(notes),
-  };
-}
-
-/** An open level of `bars` empty bars with these enemies, and notes per instrument. */
-function enemyLevel(
-  enemies: HandEnemy[],
-  tickCount = 1000,
-  scrollPx: number | ((t: number) => number) = 0,
-  bars = 60,
-  notes: Record<number, number[]> = {},
-): Level {
-  return handLevel('easy', Array.from({ length: bars }, () => [0, 0]), scrollPx, tickCount, enemyList(enemies), notes);
-}
 
 function activeShots(s: ReturnType<typeof createSimState>): number {
   return s.shotActive.reduce((a, b) => a + b, 0);
@@ -186,7 +145,7 @@ describe('tick', () => {
 
   it('finishes at the end of the song', () => {
     const level = handLevel('easy', [], 0, 50);
-    const s = runInputLog(level, new Uint8Array(80));
+    const s = runInputLog(level, new Uint16Array(80));
     expect(s.finished).toBe(true);
     expect(s.tick).toBe(50);
     expect(s.dead).toBe(false);
@@ -195,7 +154,7 @@ describe('tick', () => {
   it('runInputLog uses the given state in place', () => {
     const level = handLevel('easy', [], 0, 50);
     const s = createSimState();
-    expect(runInputLog(level, Uint8Array.from([InputBit.up, InputBit.up]), s)).toBe(s);
+    expect(runInputLog(level, Uint16Array.from([InputBit.up, InputBit.up]), s)).toBe(s);
     expect(s.tick).toBe(2);
     expect(s.shipY).toBe(SHIP_START_Y * Q - 2 * SHIP_SPEED_Q8);
   });
@@ -364,7 +323,7 @@ describe('score', () => {
   });
 
   it('the end of the song adds 1000 per life left', () => {
-    const s = runInputLog(enemyLevel([], 50), new Uint8Array(50));
+    const s = runInputLog(enemyLevel([], 50), new Uint16Array(50));
     expect([s.finished, s.survivalBonus, s.score]).toEqual([true, 3000, 3000]);
   });
 });

@@ -124,6 +124,10 @@ export interface EnemyList {
   /** Enemy i fires at the ticks fireTick[fireStart[i]] to fireTick[fireStart[i + 1] - 1]. */
   fireStart: Uint32Array;
   fireTick: Uint32Array;
+  /** Ship: the index of its formation, in the order formations start. Others: -1. */
+  formation: Int32Array;
+  /** Ships in each formation; shooting all of them down drops a power-up capsule. */
+  formationSize: Uint8Array;
 }
 
 /** Bars a peak stays at its level before it starts to fall one segment per bar. */

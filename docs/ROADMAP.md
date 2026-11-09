@@ -16,7 +16,7 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 | [Title music, demo, and levels](#title-music-demo-and-levels) | Title music, an attract demo, menu sounds, an arcade run of levels, and game-over music. | Built; Brad to play-test |
 | [Cavern terrain](#cavern-terrain) | A cave that squeezes on every hit and winds with the melody; difficulty sets the song's speed and the cave's width. | Built; Brad to play-test |
 | [Eight levels](#eight-levels) | Six more songs, so the arcade run has eight levels. | Built; Brad to play-test |
-| [M2: enemies and scoring](#m2-enemies-and-scoring) | Notes become enemies; shooting, scoring, lives, power-ups, gamepad support, and replays that give the same score in every browser. | Enemies, shooting, scoring, the gamepad, bomb and nuke built; Brad to play-test |
+| [M2: enemies and scoring](#m2-enemies-and-scoring) | Notes become enemies; shooting, scoring, lives, power-ups, gamepad support, and replays that give the same score in every browser. | Enemies, shooting, scoring, the gamepad, bomb and nuke, power-ups built; Brad to play-test |
 | [M3: effects and look](#m3-effects-and-look) | Particles, big explosions, sound effects, copper bars, starfield, CRT filter, title and results screens, accessibility options. | Planned |
 | [M4: library, offline, music pack](#m4-library-offline-music-pack) | Import your own songs, install the game, and play with no connection; a bundled, credited music pack. | Planned |
 | [M5: leaderboards](#m5-leaderboards) | A global board per song, with scores checked by replaying them on the server. | Planned |
@@ -238,11 +238,34 @@ timing matters more than holding the bomb button, and the nuke is worth earning;
 **Docs:** `PLAN.md` ("Simulation"), `DEVELOPMENT.md` ("Simulation", "Playing it",
 "Renderer").
 
+### Power-ups
+
+- [x] Shooting down every ship of a formation drops a capsule that drifts back along the
+      cave; a ship that gets away or is rammed spoils it. Each capsule moves the meter's
+      highlight, and the buy button buys it.
+- [x] The meter: boost (an afterburner on its own button, 1 s of fuel a buy, up to 3),
+      double, laser, missile (its own button, one per press, 20 px burst, 1 s reload),
+      option (up to 2), shield (3 hits). Losing a life loses them all.
+- [x] Input grows to 16 bits for the boost and missile buttons. Keys F or ' (buy), C or L
+      (missile), Shift (boost); pad Y, RB, LB or LT. The title menu shows the controls as
+      a table.
+- [x] The meter as six LED cells along the bottom, with counts and the boost fuel; the
+      missile icon fills as it reloads; sprites for capsules, angled shots, the laser,
+      missiles, options and the shield.
+- [x] The autopilot buys double, missile, option and shield, and fires missiles at ships.
+      `GEN_VERSION` 5 and Level format 4 (formations), `SIM_VERSION` 8, with the golden
+      hashes regenerated.
+
+**Acceptance:** Brad finds capsules come often enough to matter but not so often the meter
+is always full, each upgrade feels worth buying, and boost is easy to steer; `pnpm check`
+passes. The autopilot, which flies the cave's centre line where capsules drift, picks up
+17 to 60 a level on normal.
+
+**Docs:** `PLAN.md` ("Simulation"), `DEVELOPMENT.md` ("Enemies", "Simulation", "Playing
+it", "Renderer"), the title screen's help.
+
 ### Still to come
 
-- [ ] Capsules from whole formations and the power-up meter: boost (an afterburner on its
-      own button), double shot, laser, missile (air to air, its own button), option pod,
-      shield. Input grows to 16 bits for the boost and missile buttons.
 - [ ] Pads and arcade sticks without the Gamepad API's standard mapping, which need a
       way to assign their buttons.
 - [ ] Replay recording and playback.

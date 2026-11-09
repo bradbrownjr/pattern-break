@@ -38,7 +38,10 @@ export * from './sim/constants.ts';
 export {
   BULLET_SLOTS,
   EnemyStatus,
+  MISSILE_SLOTS,
+  SHOT_SLOTS,
   boxHitsTerrain,
+  canBuy,
   createSimState,
   onBeat,
   scoreMultiplier,

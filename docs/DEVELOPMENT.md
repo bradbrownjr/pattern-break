@@ -382,29 +382,37 @@ For the on-beat bonus the level also keeps every note's tick by instrument
 `noteTick[noteStart[i + 1]]`. `serializeLevel` writes them after the enemies (Level format
 3). Hand-made levels in tests use `noNotes()`.
 
+Each ship has a formation id (`enemies.formation`, -1 for turrets and tanks), numbered in
+the order formations start, and `enemies.formationSize` counts each one's ships, for the
+power-up capsules. Level format 4 appends them: count x i32 formation, then a u32
+formation count and that many u8 sizes.
+
 ### Simulation
 
 - **Ticks:** `level.tickCount` is `ceil(totalSamples / 400)`. `state.tick` counts the ticks
   run, so the state shows song sample `400 * state.tick`. `tick()` does nothing once
-  `state.dead` or `state.finished` is set. Otherwise, in order: move and clamp the ship and
-  increment `state.tick`; spawn enemies whose tick has come and move every live one; fire
-  and move shots and test them against enemies; fire enemies' scheduled shots and move
-  bullets; then, unless the ship is in its safe time, test it against the terrain, live
-  enemies and bullets.
-- **Input bits** (`InputBit`, one byte per tick): up 1, down 2, left 4, right 8, fire 16,
-  bomb 32, buy 64, nuke 128. Buy does nothing yet. Opposite directions cancel.
-  `state.prevInput` keeps the last tick's byte, so a bomb or nuke goes off once per press.
+  `state.dead` or `state.finished` is set. Otherwise, in order: move and clamp the ship,
+  increment `state.tick`, and place the options; spawn enemies whose tick has come and move
+  every live one; buy, nuke, fire and move shots and test them against enemies; the bomb;
+  missiles; fire enemies' scheduled shots and move bullets; move capsules and pick up any
+  the ship touches; then, unless the ship is in its safe time, test it against the
+  terrain, live enemies and bullets.
+- **Input bits** (`InputBit`, a u16 per tick, so input logs are `Uint16Array`s): up 1, down
+  2, left 4, right 8, fire 16, bomb 32, buy 64, nuke 128, boost 256, missile 512. Opposite
+  directions cancel. `state.prevInput` keeps the last tick's bits, so a buy, bomb, missile
+  or nuke goes off once per press.
 - **Ship:** 384 Q8 (1.5 px) per tick straight. Diagonals move 272 Q8 on each axis
   (384 / sqrt 2, rounded), about 1.503 px per tick in total. The centre stays within
   x 16 to 160 and y 3 to 213, so the hitbox never leaves the screen. It starts at (64, 108).
 - **Collision:** `boxHitsTerrain()` tests a box against the solid part of every bar it
   overlaps horizontally: lit segments, plus peak dots where they are solid. Boxes against
   each other are half-open overlaps of centre and half size. Integer comparisons only.
-- **Shots:** holding fire shoots every 8 ticks from the ship's nose, at most 6 in flight
-  (`MAX_SHOTS`; 3 for one build on 2026-11-09, until Brad settled that the gun sprays
-  freely and only the bomb and missile reload),
-  1024 Q8 (4 px) per tick to the right. A shot passes through the walls and stops on the
-  first live enemy it overlaps (6x2 px against the enemy's hitbox).
+- **Shots:** holding fire shoots a volley every 8 ticks from the ship's nose, and from
+  each option, 1024 Q8 (4 px) per tick to the right. Each source has at most 6 straight
+  shots in flight (`MAX_SHOTS`; 3 for one build on 2026-11-09, until Brad settled that the
+  gun sprays freely and only the bomb and missile reload), and 6 angled ones with double,
+  in a pool of `SHOT_SLOTS` (36). A shot passes through the walls and stops on the first
+  live enemy it overlaps (6x2 px against the enemy's hitbox).
 - **Enemies:** turrets (8x6 px) stay at their world x; tanks (12x7) move left 64 Q8 per tick
   in world terms and sit on the floor of the bar under their centre; ships (10x8) cross the
   screen at the difficulty's ship speed, steering at up to 256 Q8 per tick towards the
@@ -433,13 +441,47 @@ For the on-beat bonus the level also keeps every note's tick by instrument
   destroyed and scored as a shot kill (on-beat double included). Dropped from the start
   position with no walls it reaches the bottom edge 80 moves later, at x 144.
   `state.blastTick`, `blastX` and `blastY` record the last burst for the client.
+- **Capsules and the meter:** each ship knows its formation. Killing one by any weapon adds
+  to `state.formationShot`; a ship that leaves the screen or is rammed sets
+  `state.formationSpoiled`. When the last ship of an unspoiled formation is killed, a
+  capsule (8x8 px) appears where it was, if one of the 4 slots is free. Capsules drift left
+  128 Q8 per tick and steer towards the cave's centre line at up to 256 Q8 per tick; they
+  go at the left edge. One the ship's hitbox overlaps moves `state.meter` (-1 for none) one
+  slot along boost 0, double 1, laser 2, missile 3, option 4, shield 5 (`PowerUp`),
+  wrapping from shield to boost. A new buy press buys the highlighted upgrade and sets the
+  meter to -1, unless `canBuy()` says it is at its most, when nothing happens and the
+  highlight stays. Losing a life loses every upgrade (`loseUpgrades()`); the highlight and
+  the nukes stay.
+- **Boost:** each buy raises `state.boostLevel` (to 3) and fills `state.boostFuel` to 120
+  ticks a level. Holding boost with fuel moves the ship 640 Q8 per tick (453 on each axis
+  diagonally) and burns a tick of fuel; otherwise fuel refills a tick's worth on every
+  third tick. `state.boosting` tells the client to lengthen the flame.
+- **Double and laser,** which replace each other: double adds a shot from the top of the
+  ship's nose angled 45 degrees up, 724 Q8 per tick on each axis. Laser replaces the
+  straight shot with a 16x2 px beam at 1536 Q8 (6 px) per tick that passes through
+  enemies, taking a hit off each it overlaps every tick, so a tank in its path takes 3.
+- **Missile:** a new press of the missile bit, once bought, launches one from the ship's
+  nose and one from each option, if the ship's (slot 0) is not in flight and
+  `state.missileReadyTick` has come. A missile (8x4 px) flies right 768 Q8 per tick
+  through the walls and bursts on the first live enemy it overlaps, destroying every live
+  enemy whose hitbox overlaps the 40x40 px square around it, scored as shot kills. The
+  ship's missile bursting or leaving the right edge starts the 120-tick reload
+  (`MISSILE_RELOAD_TICKS`). `state.missileBlastTick`, `missileBlastX` and `missileBlastY`
+  record each slot's last burst for the client.
+- **Options:** `state.trailX` and `trailY` keep the ship's last 64 positions; option k sits
+  where the ship was 16 x (k + 1) ticks ago (`optionX`, `optionY`). Options can't be hit
+  and pass through walls. A life lost refills the trail with the new position, so options
+  bought later start on the ship.
+- **Shield:** a buy sets `state.shieldHits` to 3. A bullet or enemy that touches the ship
+  then costs a shield hit instead of a life; a rammed enemy is still destroyed, scoring
+  nothing, and the streak is kept. The terrain always costs a life.
 - **Nuke:** a new press (`input & ~prevInput`) with `state.nukes` above 0 destroys every
   live enemy whose centre is on screen (x 0 to 384) and clears the bullets, before shots
   move that tick. Its kills score base points times the multiplier, never on the beat.
   Each kill on the beat adds to `state.nukeCharge`; at 10 it becomes a nuke, while fewer
   than 3 are held (`NUKE_CHARGE_KILLS`, `MAX_NUKES`). Nukes stay when a life is lost.
-- **Lives:** 3 (`START_LIVES`). A hit costs one, and resets the streak: `state.hitTick`
-  records it. Ramming an enemy destroys it (and counts in `state.kills`). With lives left the ship goes to x 64 at
+- **Lives:** 3 (`START_LIVES`). A hit costs one, every upgrade bought, and the streak:
+  `state.hitTick` records it. Ramming an enemy destroys it (and counts in `state.kills`). With lives left the ship goes to x 64 at
   the middle of the cave's gap there, every bullet is cleared, and it can't be hit until
   `state.safeUntil`, 240 ticks on. The last life sets `state.dead` and `state.deathTick`.
 - **Running a log:** `runInputLog(level, inputs, state?)` runs from the state's current
@@ -449,7 +491,11 @@ For the on-beat bonus the level also keeps every note's tick by instrument
 - **Autopilot:** `autopilotInputs(level)` in `sim/autopilot.ts` flies a level by looking
   24 ticks ahead through the walls from `solidWalls()`, so it steers clear of turrets and
   tank tracks, holds fire, and presses bomb when it can drop one and a tank or floor
-  turret is 60 to 140 px ahead. Of its three moves (up, down, none) it takes the one
+  turret is 60 to 140 px ahead. It doesn't steer for capsules, but buys double, missile,
+  option and shield when the meter lands on them, and launches a missile at an enemy ship
+  up to 240 px ahead and within 12 px of its height. On the nine songs (2026-11-09) it
+  picks up 14 to 50 capsules a level on easy and 17 to 60 on normal, since capsules drift
+  along the cave's centre line where it flies. Of its three moves (up, down, none) it takes the one
   no bullet or ship would hit soonest within 16 ticks, then the one nearest its target; if
   even that one is hit within 2 ticks and it holds a nuke, it nukes. It
   never moves horizontally. On the terrain alone (`withoutEnemies(level)`) it always
@@ -658,12 +704,13 @@ game pixel is a 2x2 block.
 - `tools/screenshots/gif.ts` encodes the frames with gifenc 1.0.3 (MIT, pure JavaScript,
   checked 2026-11-08), so there is no ffmpeg. Every frame shares one palette. When the frames
   use 256 colours or fewer, the palette is exactly those colours, sorted, and no pixel
-  changes; past 256, gifenc's quantizer builds one from all the frames. The game's flat
-  colours keep it exact: `gameplay-clip` uses 28.
+  changes; past 256, gifenc's quantizer builds one from all the frames. Particles fading
+  over the terrain blend in new colours: `gameplay-clip` used 202 before the power-ups and
+  is quantized since its missile bursts (2026-11-09).
 - GIF frame delays are whole hundredths of a second, so `fps` must divide 100; the script
   rejects other values.
 - The script fails a clip over 5 MB. Keep clips a few seconds long: `gameplay-clip` is 4 s at
-  25 fps, 100 frames, about 1.9 MB.
+  25 fps, 100 frames, about 1.7 MB.
 
 Clip bytes are stable like the stills: two runs gave the same SHA-256 for
 `docs/img/gameplay-clip.gif` (2026-11-08).
@@ -785,21 +832,28 @@ Run `pnpm dev` and open the URL it prints.
   level number ("Final level" for the last), the song's title and credit, and the
   difficulty.
 - **In play,** arrows or WASD move, Space, Z or J fire (hold to keep firing), X or K drop
-  a bomb (one per press, 1 s to reload after it bursts), V or ; (semicolon) nuke, and Esc pauses and resumes (a
-  gamepad is below); Q while paused goes back to the title. Losing the last of three
+  a bomb (one per press, 1 s to reload after it bursts), C or L launch a missile once
+  bought, V or ; (semicolon) nuke, F or ' (quote) buy the highlighted power-up, Shift
+  boosts once bought, and Esc pauses and resumes (a gamepad is below); the title menu
+  shows these as a table. Q while paused goes back to the title. Losing the last of three
   lives is game over: any key retries the level, Esc goes to the title. Game over and level complete ignore keys for 0.7 s, so a key still held from
   play doesn't skip them. The game pauses when the window loses focus or the tab is hidden.
 - **Score:** top right in play. Each kill shows its points where the enemy was, amber when
   on the beat. After the lives come the bomb, which empties when one drops and fills
-  again over its reload, the multiplier in amber once it is above 1, and an amber ring for each nuke held. Level
+  again over its reload, the missile the same way once bought, the multiplier in amber
+  once it is above 1, and an amber ring for each nuke held.
+- **Power-up meter:** six LED cells along the bottom, Boost to Shield, lit green to red
+  from the left up to the highlighted one. A label shows the count held for boost,
+  options and shield, and turns darker grey when that upgrade is at its most; a cyan bar
+  in the Boost cell shows the fuel left. Level
   complete shows the score and the lives bonus, and in the arcade run the total of the
   levels finished; game over shows the score.
 - **Gamepad:** any pad that reports the Gamepad API's "standard" mapping
   (https://w3c.github.io/gamepad/, "Remapping"), which fixes its button and axis numbers;
   other pads are ignored for now. In play the left stick (past half way) or the D-pad
-  flies; A, RB and RT (buttons 0, 5, 7) fire; B (1) drops bombs; X (2) nukes; Start
-  pauses and resumes; Select (button 8) quits from the pause. Y does nothing in play yet,
-  kept for buying from the power-up meter. In menus the stick or D-pad moves (held, it repeats after 400 ms, then
+  flies; A and RT (buttons 0, 7) fire; B (1) drops bombs; X (2) nukes; Y (3) buys; LB
+  and LT (4, 6) boost; RB (5) launches a missile; Start pauses and resumes; Select
+  (button 8) quits from the pause. In menus the stick or D-pad moves (held, it repeats after 400 ms, then
   every 100 ms), A or Start selects, and B or Select goes back. On game over and level
   complete B or Select is Esc and any other button is any key. A pad can't leave the start
   screen on a fresh page: browsers start sound only after a user activation, and the HTML
@@ -905,8 +959,9 @@ is added.
   nearest-neighbour texture sampling. The canvas's CSS size is the largest whole multiple of
   384x216 that fits the window (`integerScale()`), with `image-rendering: pixelated`, centred
   on black by `index.html`.
-- **Layers,** back to front: the starfield, the world (terrain, enemies and bullets, ship,
-  explosion, point popups), the HUD (lives, multiplier, score), the death flash, and the UI (title screen, jukebox, demo banner,
+- **Layers,** back to front: the starfield, the world (terrain, capsules, enemies, shots,
+  missiles, options, the shield and bullets, ship, explosion, point popups), the HUD
+  (lives, bomb and missile, multiplier, nukes, score, power-up meter), the death flash, and the UI (title screen, jukebox, demo banner,
   messages, and the fade).
 - **Terrain** (`terrain.ts`, geometry in `terrain-layout.ts`): 41 columns
   (`MAX_VISIBLE_BARS`) of 50 sprites each, 25 a side (`SEGMENTS_PER_SIDE`, the most hard's
@@ -917,7 +972,8 @@ is added.
   Unlit segments are hidden, so the passage is plain background. The scroll is rounded to a
   whole pixel once per frame, so bars never shift against each other.
 - **Ship** (`ship.ts`): a 16x8 sprite built from a character map, centred on the sim's
-  `shipX` and `shipY`. The engine flame changes length every 1440 song samples (30 ms).
+  `shipX` and `shipY`. The engine flame changes length every 1440 song samples (30 ms),
+  and is longer while boosting.
 - **Combat** (`combat.ts`, sprites from character maps in `pixels.ts`): `CombatView.draw()`
   draws the live enemies (up to 64), shots and bullets from the sim state. Turrets and
   tanks are placed from their world x against the terrain's drawn scroll, so they stay on
@@ -932,7 +988,15 @@ is added.
   its bottom rows bright: none while a bomb falls, then filling over the reload
   (`state.bombReadyTick`), whole when one can drop. The bomb is a 4x4 sprite; its burst
   is a 40-particle explosion over 600 ms, and a nuke flashes the playfield like the crash
-  flash (25% white fading over 220 ms), under the HUD.
+  flash (25% white fading over 220 ms), under the HUD. An angled double shot is a 4x4 diagonal, a laser a
+  16x2 white bar. A missile is an 8x4 sprite; each slot's burst is a 28-particle cyan
+  explosion over 500 ms. Options are 6x6 orbs, capsules 8x8 amber pills marked P, and the
+  shield a 22x14 ring around the ship, more opaque with more hits left (35, 55 and 80%),
+  blinking with the ship. The missile icon follows the bomb icon once bought and fills the
+  same way over `MISSILE_RELOAD_TICKS`.
+- **Meter** (`meter.ts`): `MeterView` draws six 62x11 cells on a dark backing at the
+  bottom of the HUD, tinted from `LED_LIT` and `LED_DIM` green to red, with a label in each.
+  It changes a cell's tint or label only when that cell's state does.
 - **Starfield** (`starfield.ts`): 112 stars in three layers placed by `seededRandom(seed)`,
   scrolling at 0.12, 0.25 and 0.5 of the terrain's speed.
 - **Text** (`font.ts`, `text.ts`): a 5x7 pixel font for printable ASCII, with descenders,

@@ -57,9 +57,9 @@ describe('golden LevelData', () => {
  * drifting right for 400 ticks and then left for 400. It crashes at some point, which pins
  * death handling.
  */
-function zigzagInputs(ticks: number): Uint8Array {
+function zigzagInputs(ticks: number): Uint16Array {
   const vertical = [InputBit.up, InputBit.down, InputBit.down, InputBit.up];
-  return Uint8Array.from({ length: ticks }, (_, t) => {
+  return Uint16Array.from({ length: ticks }, (_, t) => {
     const horizontal = Math.floor(t / 400) % 2 === 0 ? InputBit.right : InputBit.left;
     return vertical[Math.floor(t / 40) % 4]! | horizontal;
   });

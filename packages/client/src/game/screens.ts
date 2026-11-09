@@ -28,6 +28,21 @@ const TITLE_LABELS: Record<TitleItem, string> = {
   jukebox: 'Jukebox',
 };
 const MENU_TOP = 78;
+/** The controls, as a table under the menu: a header, then the keys, then the pad. */
+const HELP_COLUMNS = [
+  ['', 'Keys', 'Pad'],
+  ['Fly', 'Arrows', 'Stick'],
+  ['Fire', 'Z', 'A'],
+  ['Bomb', 'X', 'B'],
+  ['Missile', 'C', 'RB'],
+  ['Nuke', 'V', 'X'],
+  ['Buy', 'F', 'Y'],
+  ['Boost', 'Shift', 'LB'],
+  ['Pause', 'Esc', 'Start'],
+];
+const HELP_ROWS = [0, 1, 2].map((r) =>
+  HELP_COLUMNS.map((col) => col[r]!.padEnd(Math.max(...col.map((c) => c.length)))).join('  '),
+);
 const MENU_ROW = 13;
 const LABEL_X = 112;
 const VALUE_X = 188;
@@ -84,10 +99,9 @@ export class TitleScreen {
     this.#menu.addChild(
       this.#marker,
       this.#credit,
-      new PixelText('Up and down choose. Left and right change. Enter selects.', GREY).place(CENTER, 172, 'center'),
-      new PixelText('Keys: arrows fly, Z fires, X bombs, V nukes, Esc pauses.', DIM_GREY).place(CENTER, 186, 'center'),
-      new PixelText('Pad: stick flies, A fires, B bombs, X nukes, Start pauses.', DIM_GREY).place(CENTER, 198, 'center'),
+      new PixelText('Up and down choose. Left and right change. Enter selects.', GREY).place(CENTER, 168, 'center'),
     );
+    HELP_ROWS.forEach((row, i) => this.#menu.addChild(new PixelText(row, i === 0 ? GREY : DIM_GREY).place(CENTER, 184 + i * 10, 'center')));
     this.#padHint.visible = false;
     this.container.addChild(this.#menu, this.#press, this.#padHint);
   }

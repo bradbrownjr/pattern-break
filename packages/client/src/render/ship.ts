@@ -72,15 +72,15 @@ export class ShipView {
 
   /**
    * Draws the ship with its sprite centre at screen (x, y) px. `phase` is any integer that
-   * advances with song time; the flame flickers with it.
+   * advances with song time; the flame flickers with it, and is longer while boosting.
    */
-  draw(x: number, y: number, phase: number): void {
+  draw(x: number, y: number, phase: number, boosting = false): void {
     const left = Math.round(x) - SHIP_SPRITE_WIDTH / 2;
     const top = Math.round(y) - SHIP_SPRITE_HEIGHT / 2;
     this.#body.position.set(left, top);
     const long = (phase & 1) === 0;
-    const outer = long ? 4 : 3;
-    const inner = long ? 2 : 1;
+    const outer = boosting ? (long ? 10 : 8) : long ? 4 : 3;
+    const inner = boosting ? (long ? 6 : 4) : long ? 2 : 1;
     this.#flameOuter.width = outer;
     this.#flameOuter.position.set(left - outer, top + 3);
     this.#flameInner.width = inner;

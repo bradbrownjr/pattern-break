@@ -200,7 +200,9 @@ every bar of every generated level.
 - Sim time is derived from the audio clock (see "Audio and timing"). If the render loop hitches, run several
   ticks to catch up. Never skip ticks.
 - Player ship: 8-way movement, a fire button (hold for auto-fire: 15 shots a second, up to 6
-  in flight; the gun sprays freely, and the bomb and missile have reloads), a bomb button and a nuke button. Shots pass through the LED walls, so turrets on
+  in flight; the gun sprays freely, and the bomb and missile have reloads), a bomb button,
+  a nuke button, a buy button for the power-up meter, and boost and missile buttons that
+  work once those are bought. Shots pass through the LED walls, so turrets on
   the bar tips can be hit, and stop on the first enemy they hit. Turrets and ships take one
   hit, tanks three.
 - Collision: ship against lit LED segments, enemies, and enemy bullets. Integer AABB
@@ -218,11 +220,23 @@ every bar of every generated level.
   the enemy bullets. One charges per 10 kills on the beat, up to 3 held, kept when a life
   is lost; a level starts with none. Its kills score their points times the multiplier,
   never doubled.
-- A Gradius-style power-up meter, drawn as a VU meter. Shooting down a whole formation
-  drops a capsule, capsules advance the meter, and a button press buys the highlighted
-  upgrade, in this order: boost (an afterburner on its own button, more fuel with each
-  buy), double shot, laser, missile (air to air area damage on its own button, with a
-  reload), option pod (a drone that trails the ship and fires what it fires), shield. Losing a life loses every upgrade bought (2026-11-09).
+- **Power-ups (2026-11-09):** a Gradius-style meter, drawn as a row of VU meter LEDs along
+  the bottom. Shooting down every ship of a formation, by any weapon, drops a capsule; a
+  ship that gets away or is rammed spoils it. Each capsule picked up moves the highlight
+  one slot, wrapping after the last, and a buy press buys the highlighted upgrade and
+  clears the highlight. In order:
+  - **Boost:** an afterburner on its own button, 1.67 times the ship's speed. The first
+    buy unlocks it with 1 s of fuel; each further buy adds 1 s, up to 3. Fuel refills at
+    a third of the rate it burns.
+  - **Double:** a second shot angled 45 degrees up. Double and laser replace each other.
+  - **Laser:** a beam 1.5 times as fast as a shot that goes through every enemy in line.
+  - **Missile:** the bomb for air to air, on its own button: one per press, it bursts on
+    the first enemy it touches and destroys every enemy within 20 px, then reloads for 1 s.
+  - **Option:** a drone that follows the ship's path 16 ticks behind (the second 32), can't
+    be hit, and fires the ship's shots and missiles. Up to 2.
+  - **Shield:** takes 3 hits from bullets or enemies. The walls still cost a life.
+
+  Losing a life loses every upgrade bought; the highlight stays.
 - **Scoring (2026-11-09):** a shot-down ship is 100, a turret 200, a tank 300; ramming scores
   nothing. The **on-beat bonus** doubles a kill within 25 ms of a note of that enemy's
   instrument. A **streak multiplier** adds 1 for every 10 kills without losing a life, up

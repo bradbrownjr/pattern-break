@@ -20,7 +20,7 @@ export const SHIP_START_Y = 108;
 export const SHIP_HITBOX_WIDTH = 10;
 export const SHIP_HITBOX_HEIGHT = 6;
 
-/** Input bits, one byte per tick. Buy does nothing yet (the power-up meter is to come). */
+/** Input bits, 16 per tick (input logs are Uint16Arrays); bits 10 to 15 are unused. */
 export const InputBit = {
   up: 1,
   down: 2,
@@ -30,6 +30,8 @@ export const InputBit = {
   bomb: 32,
   buy: 64,
   nuke: 128,
+  boost: 256,
+  missile: 512,
 } as const;
 export type InputBit = (typeof InputBit)[keyof typeof InputBit];
 
@@ -124,3 +126,60 @@ export const BOMB_BLAST_PX = 24;
  */
 export const NUKE_CHARGE_KILLS = 10;
 export const MAX_NUKES = 3;
+
+/**
+ * Power-ups (Brad, 2026-11-09). Shooting down every ship of a formation drops a capsule,
+ * which drifts left along the cave. Each capsule picked up moves the meter's highlight one
+ * slot, wrapping from the last to the first; the buy button buys the highlighted upgrade
+ * and clears the highlight. Losing a life loses every upgrade bought; the highlight stays.
+ * The meter's slots, in order:
+ */
+export const PowerUp = { boost: 0, double: 1, laser: 2, missile: 3, option: 4, shield: 5 } as const;
+export const POWER_UP_COUNT = 6;
+export const CAPSULE_SLOTS = 4;
+export const CAPSULE_SIZE = 8;
+/** Capsules drift left 0.5 px per tick and steer towards the cave's centre line at up to 1 px per tick. */
+export const CAPSULE_SPEED_Q8 = 128;
+
+/**
+ * Boost: an afterburner on its own button. The first buy unlocks it, each of up to 3 buys
+ * adds 1 s of fuel. Held with fuel left, the ship moves 640 Q8 per tick (1.67 times its
+ * speed); otherwise the fuel refills one tick's worth every 3 ticks.
+ */
+export const BOOST_MAX_LEVEL = 3;
+export const BOOST_FUEL_PER_LEVEL = 120;
+export const BOOST_REFILL_TICKS = 3;
+export const BOOST_SPEED_Q8 = 640;
+/** 640 / sqrt 2, rounded. */
+export const BOOST_DIAGONAL_SPEED_Q8 = 453;
+
+/** Double: each volley adds a shot angled 45 degrees up, 4 px per tick (1024 / sqrt 2 per axis). */
+export const DOUBLE_SPEED_Q8 = 724;
+/**
+ * Laser: replaces the straight shot with a 16x2 px beam at 6 px per tick that goes through
+ * enemies, taking a hit off each one it overlaps every tick. Double and laser replace each
+ * other.
+ */
+export const LASER_WIDTH = 16;
+export const LASER_SPEED_Q8 = 1536;
+
+/**
+ * Missile: its own button, one per press. It flies straight ahead at 3 px per tick through
+ * the walls and bursts on the first enemy it touches, destroying every enemy within 20 px.
+ * The next can't launch until 1 s after the last one bursts or leaves the screen.
+ */
+export const MISSILE_WIDTH = 8;
+export const MISSILE_HEIGHT = 4;
+export const MISSILE_SPEED_Q8 = 768;
+export const MISSILE_BLAST_PX = 20;
+export const MISSILE_RELOAD_TICKS = 120;
+
+/**
+ * Option: a drone that follows the ship's path 16 ticks behind (the second 32), can't be
+ * hit, and fires the ship's shots and missiles. Up to 2.
+ */
+export const MAX_OPTIONS = 2;
+export const OPTION_DELAY_TICKS = 16;
+
+/** Shield: takes 3 hits from bullets or enemies. The walls still cost a life. */
+export const SHIELD_HITS = 3;

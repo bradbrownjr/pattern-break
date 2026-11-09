@@ -36,7 +36,7 @@ describe('catchUp', () => {
     expect(ran).toBe(7);
     expect(state.tick).toBe(7);
     expect(asked).toEqual([0, 1, 2, 3, 4, 5, 6]);
-    expect(log.toBytes()).toEqual(new Uint8Array(7).fill(InputBit.down));
+    expect(log.toArray()).toEqual(new Uint16Array(7).fill(InputBit.down));
     // A later frame continues from where the last one stopped.
     expect(catchUp(level, state, 10, () => 0, log)).toBe(3);
     expect(log.length).toBe(10);
@@ -44,7 +44,7 @@ describe('catchUp', () => {
   });
 
   it('gives the same state as runInputLog over the same inputs, however the frames split it', () => {
-    const inputs = new Uint8Array(level.tickCount);
+    const inputs = new Uint16Array(level.tickCount);
     for (let t = 0; t < inputs.length; t++) inputs[t] = Math.floor(t / 40) % 2 === 0 ? InputBit.down : InputBit.up;
     const expected = serializeSimState(runInputLog(level, inputs));
 
@@ -57,7 +57,7 @@ describe('catchUp', () => {
       catchUp(level, state, target, (t) => inputs[t]!, log);
     }
     expect(serializeSimState(state)).toEqual(expected);
-    expect(log.toBytes()).toEqual(inputs.slice(0, state.tick));
+    expect(log.toArray()).toEqual(inputs.slice(0, state.tick));
   });
 
   it('stops at a crash and does not ask for more input', () => {
@@ -78,7 +78,7 @@ describe('InputLog', () => {
     log.push(1);
     log.push(2);
     log.push(3);
-    expect(log.toBytes()).toEqual(Uint8Array.from([1, 2]));
+    expect(log.toArray()).toEqual(Uint16Array.from([1, 2]));
     log.reset();
     expect(log.length).toBe(0);
   });

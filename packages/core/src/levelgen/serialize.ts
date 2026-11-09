@@ -4,11 +4,12 @@
 // ceilingPeak, floorPeak, u32 tickCount, (tickCount + 1) x i32 scroll, then the enemies:
 // u32 count, count x (u8 kind, u8 instrument, u32 spawnTick, i32 x, i32 y, u8 side,
 // u8 motion), (count + 1) x u32 fireStart, u32 fire tick count, that many u32 fireTick,
-// then 257 x u32 noteStart, u32 note count, that many u32 noteTick.
+// then 257 x u32 noteStart, u32 note count, that many u32 noteTick, then count x i32
+// formation, u32 formation count, that many u8 formationSize.
 
 import { Difficulty, type Level } from './types.ts';
 
-export const LEVEL_FORMAT_VERSION = 3;
+export const LEVEL_FORMAT_VERSION = 4;
 
 export function serializeLevel(level: Level): Uint8Array {
   const n = level.barCount;
@@ -16,7 +17,8 @@ export function serializeLevel(level: Level): Uint8Array {
   const size =
     4 + 4 + 4 + 1 + 4 + 4 + n * 4 + n * 4 + 4 + level.scroll.length * 4 +
     4 + e.count * 16 + (e.count + 1) * 4 + 4 + e.fireTick.length * 4 +
-    level.noteStart.length * 4 + 4 + level.noteTick.length * 4;
+    level.noteStart.length * 4 + 4 + level.noteTick.length * 4 +
+    e.count * 4 + 4 + e.formationSize.length;
   const out = new Uint8Array(size);
   const view = new DataView(out.buffer);
   let p = 0;
@@ -60,5 +62,8 @@ export function serializeLevel(level: Level): Uint8Array {
   for (let k = 0; k < level.noteStart.length; k++) u32(level.noteStart[k]!);
   u32(level.noteTick.length);
   for (let k = 0; k < level.noteTick.length; k++) u32(level.noteTick[k]!);
+  for (let k = 0; k < e.count; k++) i32(e.formation[k]!);
+  u32(e.formationSize.length);
+  for (let k = 0; k < e.formationSize.length; k++) u8(e.formationSize[k]!);
   return out;
 }

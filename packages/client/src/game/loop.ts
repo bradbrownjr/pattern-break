@@ -12,11 +12,11 @@ export function targetTick(samples: number, tickCount: number): number {
 
 /** The input bytes of one run, one per tick, in a buffer sized for the whole song. */
 export class InputLog {
-  readonly bytes: Uint8Array;
+  readonly inputs: Uint16Array;
   length = 0;
 
   constructor(tickCount: number) {
-    this.bytes = new Uint8Array(tickCount);
+    this.inputs = new Uint16Array(tickCount);
   }
 
   reset(): void {
@@ -24,12 +24,12 @@ export class InputLog {
   }
 
   push(input: number): void {
-    if (this.length < this.bytes.length) this.bytes[this.length++] = input;
+    if (this.length < this.inputs.length) this.inputs[this.length++] = input;
   }
 
   /** A copy of the recorded ticks. */
-  toBytes(): Uint8Array {
-    return this.bytes.slice(0, this.length);
+  toArray(): Uint16Array {
+    return this.inputs.slice(0, this.length);
   }
 }
 

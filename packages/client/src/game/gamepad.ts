@@ -19,17 +19,17 @@ export const PadBit = {
   left: InputBit.left,
   right: InputBit.right,
   fire: InputBit.fire,
-  /** A: fire in play, confirm in menus. */
-  a: 1 << 8,
+  /** A: fire in play, confirm in menus. Menu-only bits sit above the sim's 16. */
+  a: 1 << 16,
   /** B: back in menus; in play it drops bombs (InputBit.bomb). */
-  b: 1 << 9,
-  select: 1 << 10,
-  start: 1 << 11,
+  b: 1 << 17,
+  select: 1 << 18,
+  start: 1 << 19,
 } as const;
 
 /** How far the stick must lean on an axis to count as that direction. */
 export const STICK_THRESHOLD = 0.5;
-const FIRE_BUTTONS = [0, 5, 7];
+const FIRE_BUTTONS = [0, 7];
 const DPAD: ReadonlyArray<[number, number]> = [
   [12, PadBit.up],
   [13, PadBit.down],
@@ -60,6 +60,9 @@ export function padBits(pad: PadSnapshot): number {
   if (down(0)) bits |= PadBit.a;
   if (down(1)) bits |= PadBit.b | InputBit.bomb;
   if (down(2)) bits |= InputBit.nuke;
+  if (down(3)) bits |= InputBit.buy;
+  if (down(4) || down(6)) bits |= InputBit.boost;
+  if (down(5)) bits |= InputBit.missile;
   if (down(8)) bits |= PadBit.select;
   if (down(9)) bits |= PadBit.start;
   return bits;

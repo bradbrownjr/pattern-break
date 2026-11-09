@@ -18,9 +18,12 @@ describe('keyToBit', () => {
     expect(['Space', 'KeyZ', 'KeyJ'].map(keyToBit)).toEqual([InputBit.fire, InputBit.fire, InputBit.fire]);
   });
 
-  it('maps X and K to the bomb, V and semicolon to the nuke', () => {
+  it('maps X and K to the bomb, V and semicolon to the nuke, C and L to missiles, F and quote to buy, Shift to boost', () => {
     expect(['KeyX', 'KeyK'].map(keyToBit)).toEqual([InputBit.bomb, InputBit.bomb]);
     expect(['KeyV', 'Semicolon'].map(keyToBit)).toEqual([InputBit.nuke, InputBit.nuke]);
+    expect(['KeyC', 'KeyL'].map(keyToBit)).toEqual([InputBit.missile, InputBit.missile]);
+    expect(['KeyF', 'Quote'].map(keyToBit)).toEqual([InputBit.buy, InputBit.buy]);
+    expect(['ShiftLeft', 'ShiftRight'].map(keyToBit)).toEqual([InputBit.boost, InputBit.boost]);
   });
 
   it('ignores other keys', () => {

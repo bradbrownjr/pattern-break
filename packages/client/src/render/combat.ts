@@ -1,7 +1,9 @@
-// Enemies, shots, bullets and the bomb drawn from the sim state, plus their cosmetics: a
-// burst and the points scored when an enemy is destroyed, the bomb's blast, the nuke's
-// flash, an explosion when the ship loses a life, and the HUD: lives left, the streak
-// multiplier, nukes held and the score (docs/PLAN.md, "Enemies" and "Scoring"). Turrets and tanks are placed against the terrain as drawn, so
+// Enemies, shots, bullets, the bomb, missiles, options, capsules and the shield drawn from
+// the sim state, plus their cosmetics: a burst and the points scored when an enemy is
+// destroyed, the bomb's and missiles' blasts, the nuke's flash, an explosion when the ship
+// loses a life, and the HUD: lives left, the bomb and missile reloading, the streak
+// multiplier, nukes held, the score, and the power-up meter (meter.ts; docs/PLAN.md,
+// "Enemies" and "Scoring"). Turrets and tanks are placed against the terrain as drawn, so
 // they stay on their bars. Effect timing comes from song time, so capture mode reproduces
 // it. Sprites are pooled; drawing allocates nothing.
 
@@ -9,14 +11,20 @@ import {
   BOMB_RELOAD_TICKS,
   BULLET_SLOTS,
   EnemyKind,
+  CAPSULE_SLOTS,
   EnemyStatus,
-  MAX_SHOTS,
+  LASER_WIDTH,
+  MAX_OPTIONS,
+  MISSILE_RELOAD_TICKS,
+  MISSILE_SLOTS,
   PLAYFIELD_HEIGHT,
   PLAYFIELD_WIDTH,
   Q8,
   SAMPLES_PER_TICK,
   SAMPLE_RATE,
+  SHIELD_HITS,
   SHOT_HEIGHT,
+  SHOT_SLOTS,
   SHOT_WIDTH,
   TANK_SPEED_Q8,
   scoreMultiplier,
@@ -26,6 +34,7 @@ import {
 import { Container, Rectangle, Sprite, Texture } from 'pixi.js';
 import { Explosion, SHIP_EXPLOSION, type ExplosionStyle } from './effects.ts';
 import { flashAlpha } from './flash.ts';
+import { MeterView } from './meter.ts';
 import { AMBER, BACKGROUND, CYAN, LIME, MAGENTA, WHITE } from './palette.ts';
 import { flipRows, mapTexture } from './pixels.ts';
 import { seededRandom } from './random.ts';
@@ -76,9 +85,54 @@ const BOMB_ICON_MAP = [
   '.aaaaa.',
   '..aaa..',
 ];
-/** The HUD bomb's empty part: it fills from the bottom as it reloads. */
+/** The missile in the HUD, shown once bought. */
+const MISSILE_ICON_MAP = [
+  '.......',
+  '..cc...',
+  'mcccccw',
+  'mccccww',
+  'mcccccw',
+  '..cc...',
+  '.......',
+];
+/** The HUD bomb's and missile's empty part: they fill from the bottom as they reload. */
 const BOMB_ICON_DIM = 0.3;
 const ICON_ROWS = BOMB_ICON_MAP.length;
+
+/** The double's angled shot. */
+const SHOT_UP_MAP = ['...c', '..c.', '.c..', 'c...'];
+const MISSILE_MAP = ['..cc....', 'mcccccww', 'mcccccww', '..cc....'];
+const OPTION_MAP = ['.cccc.', 'ccwwcc', 'cwwwwc', 'cwwwwc', 'ccwwcc', '.cccc.'];
+/** A power-up capsule: an amber pill marked P. */
+const CAPSULE_MAP = [
+  '.aaaaaa.',
+  'aawwwwaa',
+  'aawaawaa',
+  'aawwwwaa',
+  'aawaaaaa',
+  'aawaaaaa',
+  'aaaaaaaa',
+  '.aaaaaa.',
+];
+
+/** An ellipse outline `w` x `h` px around the ship, for the shield. */
+function ringMap(w: number, h: number): string[] {
+  const rows: string[] = [];
+  for (let y = 0; y < h; y++) {
+    let row = '';
+    for (let x = 0; x < w; x++) {
+      const dx = (x + 0.5 - w / 2) / (w / 2);
+      const dy = (y + 0.5 - h / 2) / (h / 2);
+      const d = dx * dx + dy * dy;
+      row += d <= 1 && d >= 0.6 ? 'c' : '.';
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+const SHIELD_MAP = ringMap(22, 14);
+/** The shield's opacity with 1, 2 and 3 hits left. */
+const SHIELD_ALPHA = [0, 0.35, 0.55, 0.8];
 
 
 /** A nuke held, in the HUD. */
@@ -92,7 +146,7 @@ const NUKE_MAP = [
   '..aaa..',
 ];
 
-const COLORS: Record<string, number> = { m: MAGENTA, w: WHITE, a: AMBER, l: LIME, g: 0x3c7a1a };
+const COLORS: Record<string, number> = { m: MAGENTA, w: WHITE, a: AMBER, l: LIME, g: 0x3c7a1a, c: CYAN };
 
 /** Enemy sprites on screen at once; enemies beyond this are not drawn. */
 const ENEMY_SPRITES = 64;
@@ -100,6 +154,7 @@ const ENEMY_SPRITES = 64;
 const BURSTS = 8;
 const ENEMY_BURST: ExplosionStyle = { particles: 16, ms: 450, colors: [WHITE, MAGENTA, AMBER, LIME], speed: 70 };
 const BLAST: ExplosionStyle = { particles: 40, ms: 600, colors: [WHITE, AMBER, AMBER, MAGENTA], speed: 130 };
+const MISSILE_BLAST: ExplosionStyle = { particles: 28, ms: 500, colors: [WHITE, CYAN, CYAN, MAGENTA], speed: 110 };
 const NUKE_ICONS = 3;
 /** The ship blinks every 6 ticks (20 ms on, 20 ms off) while it can't be hit. */
 const BLINK_TICKS = 6;
@@ -122,7 +177,23 @@ interface Textures {
   bombIcon: Texture;
   /** The bomb icon's bottom k rows, for k = 0 to ICON_ROWS. */
   bombFill: Texture[];
+  missileIcon: Texture;
+  missileFill: Texture[];
   nuke: Texture;
+  shotUp: Texture;
+  missile: Texture;
+  option: Texture;
+  capsule: Texture;
+  shield: Texture;
+}
+
+/** A texture's bottom k rows, for k = 0 to its height. */
+function bottomRows(texture: Texture, width: number, height: number): Texture[] {
+  const out: Texture[] = [];
+  for (let k = 0; k <= height; k++) {
+    out.push(k === 0 ? Texture.EMPTY : new Texture({ source: texture.source, frame: new Rectangle(0, height - k, width, k) }));
+  }
+  return out;
 }
 
 let textures: Textures | null = null;
@@ -137,14 +208,18 @@ function getTextures(): Textures {
     bomb: mapTexture(BOMB_MAP, COLORS, 'bomb'),
     bombIcon: mapTexture(BOMB_ICON_MAP, COLORS, 'bomb-icon'),
     bombFill: [],
+    missileIcon: mapTexture(MISSILE_ICON_MAP, COLORS, 'missile-icon'),
+    missileFill: [],
     nuke: mapTexture(NUKE_MAP, COLORS, 'nuke'),
+    shotUp: mapTexture(SHOT_UP_MAP, COLORS, 'shot-up'),
+    missile: mapTexture(MISSILE_MAP, COLORS, 'missile'),
+    option: mapTexture(OPTION_MAP, COLORS, 'option'),
+    capsule: mapTexture(CAPSULE_MAP, COLORS, 'capsule'),
+    shield: mapTexture(SHIELD_MAP, COLORS, 'shield'),
   };
   if (textures.bombFill.length === 0) {
-    const source = textures.bombIcon.source;
-    const w = BOMB_ICON_MAP[0]!.length;
-    for (let k = 0; k <= ICON_ROWS; k++) {
-      textures.bombFill.push(k === 0 ? Texture.EMPTY : new Texture({ source, frame: new Rectangle(0, ICON_ROWS - k, w, k) }));
-    }
+    textures.bombFill = bottomRows(textures.bombIcon, BOMB_ICON_MAP[0]!.length, ICON_ROWS);
+    textures.missileFill = bottomRows(textures.missileIcon, MISSILE_ICON_MAP[0]!.length, ICON_ROWS);
   }
   return textures;
 }
@@ -191,6 +266,16 @@ export class CombatView {
   #nukes: Sprite[] = [];
   #bombIcon = new Sprite();
   #bombFill = new Sprite();
+  #missileIcon = new Sprite();
+  #missileFill = new Sprite();
+  #missiles: Sprite[] = [];
+  #missileBlasts: Explosion[] = [];
+  #missileBlastSample: number[] = [];
+  #seenMissileBlast: number[] = [];
+  #options: Sprite[] = [];
+  #capsules: Sprite[] = [];
+  #shield = new Sprite();
+  readonly #meter = new MeterView();
 
   #lifeLost = new Explosion(SHIP_EXPLOSION);
   #lifeLostSample = -1;
@@ -203,13 +288,20 @@ export class CombatView {
 
   constructor() {
     for (let i = 0; i < ENEMY_SPRITES; i++) this.#enemies.push(this.#add(new Sprite()));
-    for (let i = 0; i < MAX_SHOTS; i++) {
-      const shot = this.#add(new Sprite(Texture.WHITE));
-      shot.width = SHOT_WIDTH;
-      shot.height = SHOT_HEIGHT;
-      shot.tint = CYAN;
-      this.#shots.push(shot);
+    const tex = getTextures();
+    for (let i = 0; i < CAPSULE_SLOTS; i++) this.#capsules.push(this.#add(new Sprite(tex.capsule)));
+    for (let i = 0; i < SHOT_SLOTS; i++) this.#shots.push(this.#add(new Sprite(Texture.WHITE)));
+    for (let i = 0; i < MISSILE_SLOTS; i++) {
+      this.#missiles.push(this.#add(new Sprite(tex.missile)));
+      const blast = new Explosion(MISSILE_BLAST);
+      this.container.addChild(blast.container);
+      this.#missileBlasts.push(blast);
+      this.#missileBlastSample.push(-1);
+      this.#seenMissileBlast.push(-1);
     }
+    for (let i = 0; i < MAX_OPTIONS; i++) this.#options.push(this.#add(new Sprite(tex.option)));
+    this.#shield.texture = tex.shield;
+    this.#add(this.#shield);
     for (let i = 0; i < BULLET_SLOTS; i++) this.#bullets.push(this.#add(new Sprite()));
     for (let i = 0; i < BURSTS; i++) {
       const b = new Explosion(ENEMY_BURST);
@@ -236,9 +328,11 @@ export class CombatView {
       this.hud.addChild(icon);
       this.#lives.push(icon);
     }
-    this.#bombIcon.texture = getTextures().bombIcon;
+    this.#bombIcon.texture = tex.bombIcon;
     this.#bombIcon.alpha = BOMB_ICON_DIM;
-    this.hud.addChild(this.#multiplier, this.#bombIcon, this.#bombFill);
+    this.#missileIcon.texture = tex.missileIcon;
+    this.#missileIcon.alpha = BOMB_ICON_DIM;
+    this.hud.addChild(this.#multiplier, this.#bombIcon, this.#bombFill, this.#missileIcon, this.#missileFill, this.#meter.container);
 
     for (let i = 0; i < NUKE_ICONS; i++) {
       const icon = new Sprite(getTextures().nuke);
@@ -280,6 +374,12 @@ export class CombatView {
     this.#nukeSample = -1;
     this.#seenNuke = -1;
     this.#nukeFlash.visible = false;
+    for (let m = 0; m < MISSILE_SLOTS; m++) {
+      this.#missileBlastSample[m] = -1;
+      this.#seenMissileBlast[m] = -1;
+      this.#missileBlasts[m]!.hide();
+    }
+    this.#meter.reset();
     for (let i = 0; i < BURSTS; i++) {
       this.#burstSample[i] = -1;
       this.#bursts[i]!.hide();
@@ -325,11 +425,22 @@ export class CombatView {
     }
     for (let i = used; i < ENEMY_SPRITES; i++) this.#enemies[i]!.visible = false;
 
-    // Shots and bullets.
-    for (let s = 0; s < MAX_SHOTS; s++) {
+    // Shots (straight, angled, or laser) and bullets.
+    for (let s = 0; s < SHOT_SLOTS; s++) {
       const sprite = this.#shots[s]!;
       sprite.visible = state.shotActive[s] === 1;
-      if (sprite.visible) placeCentred(sprite, state.shotX[s]! / Q8, state.shotY[s]! / Q8);
+      if (!sprite.visible) continue;
+      if (state.shotVY[s] !== 0) {
+        sprite.texture = tex.shotUp;
+        sprite.scale.set(1);
+        sprite.tint = WHITE;
+      } else {
+        sprite.texture = Texture.WHITE;
+        sprite.width = state.shotLaser[s] === 1 ? LASER_WIDTH : SHOT_WIDTH;
+        sprite.height = SHOT_HEIGHT;
+        sprite.tint = state.shotLaser[s] === 1 ? WHITE : CYAN;
+      }
+      placeCentred(sprite, state.shotX[s]! / Q8, state.shotY[s]! / Q8);
     }
     for (let b = 0; b < BULLET_SLOTS; b++) {
       const sprite = this.#bullets[b]!;
@@ -337,6 +448,39 @@ export class CombatView {
       if (!sprite.visible) continue;
       sprite.texture = tex.bullet;
       placeCentred(sprite, state.bulletX[b]! / Q8, state.bulletY[b]! / Q8);
+    }
+
+    // Missiles and their blasts, options, capsules, and the shield.
+    for (let m = 0; m < MISSILE_SLOTS; m++) {
+      const sprite = this.#missiles[m]!;
+      sprite.visible = state.missileActive[m] === 1;
+      if (sprite.visible) placeCentred(sprite, state.missileX[m]! / Q8, state.missileY[m]! / Q8);
+      const blastTick = state.missileBlastTick[m]!;
+      if (blastTick !== this.#seenMissileBlast[m] && blastTick > 0) {
+        this.#missileBlasts[m]!.start(state.missileBlastX[m]! / Q8, state.missileBlastY[m]! / Q8, seededRandom(blastTick * 3 + m));
+        this.#missileBlastSample[m] = blastTick * SAMPLES_PER_TICK;
+      }
+      this.#seenMissileBlast[m] = blastTick;
+      if (this.#missileBlastSample[m]! >= 0) {
+        this.#missileBlasts[m]!.draw(Math.max(0, samplesToMs(displaySamples - this.#missileBlastSample[m]!)));
+      }
+    }
+    for (let k = 0; k < MAX_OPTIONS; k++) {
+      const sprite = this.#options[k]!;
+      sprite.visible = k < state.options && !state.dead;
+      if (sprite.visible) placeCentred(sprite, state.optionX[k]! / Q8, state.optionY[k]! / Q8);
+    }
+    for (let c = 0; c < CAPSULE_SLOTS; c++) {
+      const sprite = this.#capsules[c]!;
+      sprite.visible = state.capsuleActive[c] === 1;
+      if (sprite.visible) placeCentred(sprite, state.capsuleX[c]! / Q8, state.capsuleY[c]! / Q8);
+    }
+    const shipVisible = state.tick >= state.safeUntil || Math.floor(state.tick / BLINK_TICKS) % 2 === 0;
+    const hits = state.shieldHits < SHIELD_HITS ? state.shieldHits : SHIELD_HITS;
+    this.#shield.visible = hits > 0 && shipVisible && !state.dead;
+    if (this.#shield.visible) {
+      this.#shield.alpha = SHIELD_ALPHA[hits]!;
+      placeCentred(this.#shield, state.shipX / Q8, state.shipY / Q8);
     }
 
     // The bomb, its blast, and the nuke's flash.
@@ -407,9 +551,24 @@ export class CombatView {
       : reloadLeft <= 0
         ? ICON_ROWS
         : Math.floor(((BOMB_RELOAD_TICKS - reloadLeft) * ICON_ROWS) / BOMB_RELOAD_TICKS);
-    this.#bombFill.texture = getTextures().bombFill[bombRows]!;
+    this.#bombFill.texture = tex.bombFill[bombRows]!;
     this.#bombFill.position.set(bombX, iconY + ICON_ROWS - bombRows);
-    const afterBomb = bombX + BOMB_ICON_MAP[0]!.length + LIFE_ICON_GAP;
+    let afterBomb = bombX + BOMB_ICON_MAP[0]!.length + LIFE_ICON_GAP;
+    // The missile, once bought, the same way.
+    this.#missileIcon.visible = state.missile;
+    this.#missileFill.visible = state.missile;
+    if (state.missile) {
+      const left = state.missileReadyTick - (state.tick + 1);
+      const rows = state.missileActive[0]
+        ? 0
+        : left <= 0
+          ? ICON_ROWS
+          : Math.floor(((MISSILE_RELOAD_TICKS - left) * ICON_ROWS) / MISSILE_RELOAD_TICKS);
+      this.#missileIcon.position.set(afterBomb, iconY);
+      this.#missileFill.texture = tex.missileFill[rows]!;
+      this.#missileFill.position.set(afterBomb, iconY + ICON_ROWS - rows);
+      afterBomb += MISSILE_ICON_MAP[0]!.length + LIFE_ICON_GAP;
+    }
     const multiplier = scoreMultiplier(state.streak);
     this.#multiplier.visible = multiplier > 1;
     this.#multiplier.text = `x${multiplier}`;
@@ -425,6 +584,8 @@ export class CombatView {
     }
     this.#livesBacking.width = right - 2;
 
+    this.#meter.draw(state);
+
     // Score, in the top right corner.
     if (state.score !== this.#shownScore) {
       this.#shownScore = state.score;
@@ -439,6 +600,6 @@ export class CombatView {
     this.#scanFrom = state.firstLive;
     this.#shipX = state.shipX / Q8;
     this.#shipY = state.shipY / Q8;
-    return state.tick >= state.safeUntil || Math.floor(state.tick / BLINK_TICKS) % 2 === 0;
+    return shipVisible;
   }
 }

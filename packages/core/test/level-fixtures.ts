@@ -1,7 +1,8 @@
 // Synthetic LevelData for levelgen and sim tests.
 
 import { LEVEL_DATA_FORMAT_VERSION, type LevelData } from '../src/level-data/types.ts';
-import { Difficulty, type DifficultyName, type EnemyList } from '../src/levelgen/types.ts';
+import { emptyEnemyList } from '../src/levelgen/enemies.ts';
+import { Difficulty, type DifficultyName, type EnemyList, type Level } from '../src/levelgen/types.ts';
 
 export interface SyntheticNote {
   /** Song sample of the note-on. */
@@ -147,12 +148,18 @@ export interface HandEnemy {
   motion?: number;
   instrument?: number;
   fire?: number[];
+  /** Ship: its formation index. Default: one formation per ship, numbered in order; give every ship one or none. */
+  formation?: number;
 }
 
 /** An EnemyList from hand-made enemies, in the order given. */
 export function enemyList(enemies: HandEnemy[]): EnemyList {
   const fires = enemies.flatMap((e) => e.fire ?? []);
   const fireStart = new Uint32Array(enemies.length + 1);
+  let ships = 0;
+  const formation = Int32Array.from(enemies, (e) => (e.kind === 2 ? (e.formation ?? ships++) : -1));
+  const formationSize = new Uint8Array(formation.reduce((m, f) => Math.max(m, f + 1), 0));
+  for (const f of formation) if (f >= 0) formationSize[f]!++;
   for (let i = 0; i < enemies.length; i++) fireStart[i + 1] = fireStart[i]! + (enemies[i]!.fire ?? []).length;
   return {
     count: enemies.length,
@@ -165,6 +172,8 @@ export function enemyList(enemies: HandEnemy[]): EnemyList {
     motion: Uint8Array.from(enemies, (e) => e.motion ?? 0),
     fireStart,
     fireTick: Uint32Array.from(fires),
+    formation,
+    formationSize,
   };
 }
 
@@ -178,4 +187,47 @@ export function noteTable(ticks: Record<number, number[]>): { noteStart: Uint32A
   }
   noteStart[256] = all.length;
   return { noteStart, noteTick: Uint32Array.from(all) };
+}
+
+const Q = 256;
+
+/**
+ * A hand-made level: bars at world x 0, 10, 20, ...; scroll[t] = scrollPx * 256 for every
+ * t, or scrollPx(t) * 256.
+ */
+export function handLevel(
+  difficulty: DifficultyName,
+  bars: Array<[ceiling: number, floor: number, ceilingPeak?: number, floorPeak?: number]>,
+  scrollPx: number | ((t: number) => number) = 0,
+  tickCount = 100,
+  enemies: EnemyList = emptyEnemyList(),
+  notes: Record<number, number[]> = {},
+): Level {
+  const n = bars.length;
+  return {
+    genVersion: 0,
+    difficulty,
+    totalSamples: tickCount * 400,
+    barCount: n,
+    barStartSample: Uint32Array.from(bars, (_, i) => i * 400),
+    ceiling: Uint8Array.from(bars, (b) => b[0]),
+    floor: Uint8Array.from(bars, (b) => b[1]),
+    ceilingPeak: Uint8Array.from(bars, (b) => b[2] ?? b[0]),
+    floorPeak: Uint8Array.from(bars, (b) => b[3] ?? b[1]),
+    tickCount,
+    scroll: Int32Array.from({ length: tickCount + 1 }, (_, t) => (typeof scrollPx === 'number' ? scrollPx : scrollPx(t)) * Q),
+    enemies,
+    ...noteTable(notes),
+  };
+}
+
+/** An open level of `bars` empty bars with these enemies, and notes per instrument. */
+export function enemyLevel(
+  enemies: HandEnemy[],
+  tickCount = 1000,
+  scrollPx: number | ((t: number) => number) = 0,
+  bars = 60,
+  notes: Record<number, number[]> = {},
+): Level {
+  return handLevel('easy', Array.from({ length: bars }, () => [0, 0]), scrollPx, tickCount, enemyList(enemies), notes);
 }

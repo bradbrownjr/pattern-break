@@ -160,6 +160,21 @@ describe('tanks and ships', () => {
     expect(SHIP_MAX_OFFSET_PX).toBe(24);
   });
 
+  it('the ships of a formation share its index, and each formation knows its size', () => {
+    const notes = Array.from({ length: 100 }, (_, i): SyntheticNote => ({ time: (30 + 2 * i) * ROW, instrument: LEAD, note: [72, 76, 79, 74][i % 4]! }));
+    const l = level([...notes, drum(60), bass(90)], 'normal');
+    const ships = of(l, EnemyKind.ship);
+    const ids = ships.map((i) => l.enemies.formation[i]!);
+    // Three ships per formation on normal, numbered in the order they start.
+    expect(ids.slice(0, 6)).toEqual([0, 0, 0, 1, 1, 1]);
+    expect(Array.from(l.enemies.formationSize).reduce((a, b) => a + b, 0)).toBe(ships.length);
+    for (let f = 0; f < l.enemies.formationSize.length; f++) {
+      expect(ids.filter((id) => id === f).length).toBe(l.enemies.formationSize[f]);
+    }
+    // Turrets and tanks belong to none.
+    for (const i of [...of(l, EnemyKind.turret), ...of(l, EnemyKind.tank)]) expect(l.enemies.formation[i]).toBe(-1);
+  });
+
   it("ships don't fire on easy, and fire at most once on normal", () => {
     const notes = Array.from({ length: 200 }, (_, i) => lead(30 + i));
     expect(EnemyTuning.easy.shipShots).toBe(0);

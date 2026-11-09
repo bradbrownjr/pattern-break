@@ -73,7 +73,7 @@ type Run = { kind: 'arcade'; level: number } | { kind: 'practice'; song: Bundled
 interface SongCache {
   bytes: Promise<Uint8Array>;
   levelData: Map<number, Promise<LevelData>>;
-  levels: Map<DifficultyName, { level: Level; autopilot: Uint8Array | null }>;
+  levels: Map<DifficultyName, { level: Level; autopilot: Uint16Array | null }>;
 }
 
 /** How long game over and level complete ignore keys, so a key held from play doesn't skip them. */
@@ -108,7 +108,7 @@ const SPECTRUM_HIGH_HZ = 14_000;
 /** One finished run: what M2's replays will store. */
 export interface RunRecord {
   difficulty: DifficultyName;
-  inputs: Uint8Array;
+  inputs: Uint16Array;
   /** The tick the ship crashed on, or -1 if it reached the end. */
   deathTick: number;
   /** Points scored, the lives bonus included. */
@@ -165,13 +165,13 @@ export class Game {
   #barEdges: Uint16Array | null = null;
   #barLevels = new Uint8Array(SPECTRUM_BARS);
 
-  #demo: { level: Level; inputs: Uint8Array } | null = null;
+  #demo: { level: Level; inputs: Uint16Array } | null = null;
   #run: Run | null = null;
   /** The song and difficulty of the run in play (or last played). */
   #song: BundledSong;
   #difficulty: DifficultyName = 'normal';
   #level: Level | null = null;
-  #autopilot: Uint8Array | null = null;
+  #autopilot: Uint16Array | null = null;
   #log: InputLog | null = null;
   #displaySamples = 0;
   #runs = 0;
@@ -693,7 +693,7 @@ export class Game {
     if (!log) return;
     this.lastRun = {
       difficulty: this.#difficulty,
-      inputs: log.toBytes(),
+      inputs: log.toArray(),
       deathTick: this.#state.dead ? this.#state.deathTick : -1,
       score: this.#state.score,
     };

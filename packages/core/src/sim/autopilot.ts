@@ -2,7 +2,8 @@
 // that generated levels are passable and to pin sim results, and the attract demo flies
 // it. It holds x, steers y through the cave (turrets and tank tracks count as wall), holds
 // fire, bombs tanks and floor turrets ahead, dodges the enemy bullets and ships it can see
-// coming, and nukes when it can't.
+// coming, and nukes when it can't. It buys double, missile, option and shield when the
+// meter lands on them (it doesn't steer for capsules) and fires missiles at ships ahead.
 
 import { solidWalls } from '../levelgen/path-check.ts';
 import { EnemyKind, EnemyTuning, type Level } from '../levelgen/types.ts';
@@ -16,7 +17,7 @@ import {
   SHIP_HITBOX_WIDTH,
   SHIP_SPEED_Q8,
 } from './constants.ts';
-import { BULLET_SLOTS, EnemyStatus, createSimState, tick, type SimState } from './sim.ts';
+import { BULLET_SLOTS, EnemyStatus, canBuy, createSimState, tick, type SimState } from './sim.ts';
 
 const HALF_W = (SHIP_HITBOX_WIDTH * Q8) / 2;
 const HALF_H = (SHIP_HITBOX_HEIGHT * Q8) / 2;
@@ -29,6 +30,24 @@ const DODGE_MARGIN = 3 * Q8;
 /** The autopilot nukes when the best move is hit this soon. */
 const NUKE_TICKS = 2;
 const BULLET_HALF = (ENEMY_BULLET_SIZE * Q8) / 2;
+
+/** The upgrades the autopilot buys, by PowerUp: double, missile, option and shield. */
+const AUTOPILOT_BUYS = [false, true, false, true, true, true];
+/** An enemy ship this far ahead (Q8) and this close in height is worth a missile. */
+const MISSILE_AHEAD_MAX = 240 * Q8;
+const MISSILE_HEIGHT_MAX = 12 * Q8;
+
+/** True if a live enemy ship is ahead within MISSILE_AHEAD_MAX, near the ship's height. */
+function shipAhead(level: Level, state: SimState): boolean {
+  const e = level.enemies;
+  for (let i = state.firstLive; i < state.nextSpawn; i++) {
+    if (state.enemyStatus[i] !== EnemyStatus.alive || e.kind[i] !== EnemyKind.ship) continue;
+    const ahead = state.enemyX[i]! - state.shipX;
+    const dy = state.enemyY[i]! - state.shipY;
+    if (ahead > 0 && ahead <= MISSILE_AHEAD_MAX && dy < MISSILE_HEIGHT_MAX && -dy < MISSILE_HEIGHT_MAX) return true;
+  }
+  return false;
+}
 
 /** Screen x range ahead of the ship, Q8, where a floor target is worth a bomb. */
 const BOMB_AHEAD_MIN = 60 * Q8;
@@ -102,8 +121,8 @@ function clearRange(level: Level, walls: { ceiling: Uint8Array; floor: Uint8Arra
 }
 
 /** Flies `level` from the start and returns the input log, one byte per tick. */
-export function autopilotInputs(level: Level): Uint8Array {
-  const inputs = new Uint8Array(level.tickCount);
+export function autopilotInputs(level: Level): Uint16Array {
+  const inputs = new Uint16Array(level.tickCount);
   const state = createSimState();
   const walls = solidWalls(level);
   const next = [0, 0];
@@ -146,6 +165,18 @@ export function autopilotInputs(level: Level): Uint8Array {
       input |= InputBit.bomb;
     }
     if (bestHit <= NUKE_TICKS && state.nukes > 0) input |= InputBit.nuke;
+    if (state.meter >= 0 && AUTOPILOT_BUYS[state.meter] && canBuy(state, state.meter) && (state.prevInput & InputBit.buy) === 0) {
+      input |= InputBit.buy;
+    }
+    if (
+      state.missile &&
+      !state.missileActive[0] &&
+      t + 1 >= state.missileReadyTick &&
+      (state.prevInput & InputBit.missile) === 0 &&
+      shipAhead(level, state)
+    ) {
+      input |= InputBit.missile;
+    }
     inputs[t] = input;
     tick(level, state, input);
   }

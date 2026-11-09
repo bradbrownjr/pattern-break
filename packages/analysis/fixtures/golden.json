@@ -1,11 +1,11 @@
 {
-  "genVersion": 4,
+  "genVersion": 5,
   "libopenmpt": "0.8.10",
   "levelData": {
     "pb-fixture-01.mod": {
-      "easy": "b9e469019fb6c397bc8176a2a42cc1495e69b6ac382f01a79244c293f314bd1f",
-      "normal": "74b82a98b782fa659d72291412d1834aca0d92fda3de79319136e13a261f9140",
-      "hard": "492f68537931a023782ecdcc3fb7b9222fa985db6386508c25d6664da4b94e63"
+      "easy": "bea4f2ba50b9c1d428c5251fb8fa71b02c09f420f27998630398a4bbd9ca9e28",
+      "normal": "ca45d600b0684beeb96c83727d4670778e71273c155a86652fc666c5dce93eec",
+      "hard": "c299de8fcd78a7529adc33e3d55e88459b77a097763eca3af6e24e0db598a902"
     }
   }
 }

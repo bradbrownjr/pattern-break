@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-<img src="docs/img/gameplay-clip.gif" width="768" alt="Four seconds of play in an LED cavern. Columns of square LED segments, lit green at the screen edges through yellow and orange to red at their tips, hang from the top and rise from the bottom and scroll from right to left, one column per row of the song. Small magenta and amber turrets ride in on the tips of the floor and ceiling, and small magenta enemy ships fly in from the right and fire round magenta bullets. A small cyan ship on the left keeps firing cyan shots, drops a small amber bomb that bursts on the floor bars, and moves up and down to dodge. Three ship icons in the top left corner show the lives left, followed by a bomb icon and "x3" in amber, and the score in the top right corner counts up as each kill shows its points where the enemy was.">
+<img src="docs/img/gameplay-clip.gif" width="768" alt="Four seconds of play in an LED cavern. Columns of square LED segments, lit green at the screen edges through yellow and orange to red at their tips, hang from the top and rise from the bottom and scroll from right to left, one column per row of the song. Small magenta and amber turrets ride in on the tips of the floor and ceiling, and small magenta enemy ships fly in from the right and fire round magenta bullets. A small cyan ship on the left keeps firing cyan shots, some angled up, and moves up and down to dodge. Amber capsules marked &quot;P&quot; drift left along the middle of the cave. Three ship icons in the top left corner show the lives left, followed by a bomb icon, a cyan missile icon and &quot;x3&quot; in amber, and the score in the top right corner counts up as each kill shows its points where the enemy was, once &quot;1200&quot; in amber. Along the bottom edge runs the power-up meter, six LED cells labelled Boost, Double, Laser, Missile, Option and Shield, with Boost lit green."x3" in amber, and the score in the top right corner counts up as each kill shows its points where the enemy was.">
 
 A side-scrolling neon tunnel shooter where every level is built from a song. The songs are
 tracker modules, often called mods: music files made in a tracker, a program that arranges
@@ -21,7 +21,8 @@ game over and retry, and a jukebox for listening to the songs. Turrets come from
 tanks from the bass, and ships from the other instruments, and each fires on its own
 notes; you have three lives and a gun, and kills score double on their instrument's beat.
 A bomb takes out tanks on the floor, and a nuke earned by playing the beat clears the
-screen. A gamepad works next to the keyboard. Power-ups come next, in M2.
+screen. Shooting down a whole formation drops a capsule for the power-up meter: boost,
+double shot, laser, missile, option and shield. A gamepad works next to the keyboard.
 Level data comes out byte-for-byte the same in Node, Chromium, Firefox, and WebKit, which is
 what lets one song have one leaderboard.
 

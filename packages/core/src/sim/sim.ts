@@ -13,6 +13,27 @@ import {
   SEGMENT_PITCH,
 } from '../playfield.ts';
 import {
+  BOOST_DIAGONAL_SPEED_Q8,
+  BOOST_FUEL_PER_LEVEL,
+  BOOST_MAX_LEVEL,
+  BOOST_REFILL_TICKS,
+  BOOST_SPEED_Q8,
+  CAPSULE_SIZE,
+  CAPSULE_SLOTS,
+  CAPSULE_SPEED_Q8,
+  DOUBLE_SPEED_Q8,
+  LASER_SPEED_Q8,
+  LASER_WIDTH,
+  MAX_OPTIONS,
+  MISSILE_BLAST_PX,
+  MISSILE_HEIGHT,
+  MISSILE_RELOAD_TICKS,
+  MISSILE_SPEED_Q8,
+  MISSILE_WIDTH,
+  OPTION_DELAY_TICKS,
+  POWER_UP_COUNT,
+  PowerUp,
+  SHIELD_HITS,
   BOMB_BLAST_PX,
   BOMB_RELOAD_TICKS,
   BOMB_GRAVITY_Q8,
@@ -77,12 +98,26 @@ const SHOT_HW = (SHOT_WIDTH * Q8) / 2;
 const SHOT_HH = (SHOT_HEIGHT * Q8) / 2;
 const BULLET_H = (ENEMY_BULLET_SIZE * Q8) / 2;
 const BOMB_H = (BOMB_SIZE * Q8) / 2;
+const LASER_HW = (LASER_WIDTH * Q8) / 2;
+const MISSILE_HW = (MISSILE_WIDTH * Q8) / 2;
+const MISSILE_HH = (MISSILE_HEIGHT * Q8) / 2;
+const MISSILE_BLAST_H = MISSILE_BLAST_PX * Q8;
+const CAPSULE_H = (CAPSULE_SIZE * Q8) / 2;
+/** Ship positions kept for the options to follow: a power of two over the longest delay. */
+const TRAIL = 64;
 const BLAST_H = BOMB_BLAST_PX * Q8;
 /** Half sizes of each enemy kind's hitbox, indexed by EnemyKind. */
 const ENEMY_HW = [(TURRET_WIDTH * Q8) / 2, (TANK_WIDTH * Q8) / 2, (ENEMY_SHIP_WIDTH * Q8) / 2] as const;
 const ENEMY_HH = [(TURRET_HEIGHT * Q8) / 2, (TANK_HEIGHT * Q8) / 2, (ENEMY_SHIP_HEIGHT * Q8) / 2] as const;
 /** Bullet slots; each difficulty caps how many are in flight (EnemyTuning.maxBullets). */
 export const BULLET_SLOTS = 16;
+/**
+ * Shot slots: MAX_SHOTS straight and MAX_SHOTS angled (double) for the ship and each
+ * option. Each of those six groups is capped at MAX_SHOTS in flight.
+ */
+export const SHOT_SLOTS = MAX_SHOTS * 2 * (1 + MAX_OPTIONS);
+/** Missile slots: the ship's, then one per option. */
+export const MISSILE_SLOTS = 1 + MAX_OPTIONS;
 
 /** Where each enemy is in its life. */
 export const EnemyStatus = { waiting: 0, alive: 1, destroyed: 2, gone: 3 } as const;
@@ -131,10 +166,14 @@ export interface SimState {
   /** Enemies before this index are destroyed or gone; from it on, not yet spawned. */
   firstLive: number;
   nextSpawn: number;
-  /** Player shots: screen centre, Q8. */
+  /** Player shots: screen centre and velocity per tick, Q8; who fired (0 the ship, 1 and 2 the options); laser or not. */
   shotActive: Uint8Array;
   shotX: Int32Array;
   shotY: Int32Array;
+  shotVX: Int32Array;
+  shotVY: Int32Array;
+  shotSource: Uint8Array;
+  shotLaser: Uint8Array;
   /** Enemy bullets: screen centre and velocity per tick, Q8. */
   bulletActive: Uint8Array;
   bulletX: Int32Array;
@@ -159,6 +198,40 @@ export interface SimState {
   nukeTick: number;
   /** The previous tick's input, so a press of the nuke button acts once. */
   prevInput: number;
+  /** The power-up meter's highlighted slot (a PowerUp), or -1; capsules picked up. */
+  meter: number;
+  capsules: number;
+  /** Upgrades bought: boost level (0 to 3) and fuel left (ticks), double, laser, missile, options, shield hits left. */
+  boostLevel: number;
+  boostFuel: number;
+  /** True if the ship boosted this tick. */
+  boosting: boolean;
+  double: boolean;
+  laser: boolean;
+  missile: boolean;
+  options: number;
+  shieldHits: number;
+  /** The ship's centre over the last TRAIL ticks (index tick % TRAIL), and the options' positions, Q8. */
+  trailX: Int32Array;
+  trailY: Int32Array;
+  optionX: Int32Array;
+  optionY: Int32Array;
+  /** Missiles by slot (0 the ship's), screen centre Q8; the tick the ship's next can launch. */
+  missileActive: Uint8Array;
+  missileX: Int32Array;
+  missileY: Int32Array;
+  missileReadyTick: number;
+  /** Each missile slot's last burst: tick (-1 before the first) and screen centre, Q8. */
+  missileBlastTick: Int32Array;
+  missileBlastX: Int32Array;
+  missileBlastY: Int32Array;
+  /** Capsules: screen centre, Q8. */
+  capsuleActive: Uint8Array;
+  capsuleX: Int32Array;
+  capsuleY: Int32Array;
+  /** Per formation: ships shot down, and 1 once one got away or was rammed (no capsule then). */
+  formationShot: Uint8Array;
+  formationSpoiled: Uint8Array;
 }
 
 export function createSimState(): SimState {
@@ -188,9 +261,13 @@ export function createSimState(): SimState {
     enemyOnBeat: new Uint8Array(0),
     firstLive: 0,
     nextSpawn: 0,
-    shotActive: new Uint8Array(MAX_SHOTS),
-    shotX: new Int32Array(MAX_SHOTS),
-    shotY: new Int32Array(MAX_SHOTS),
+    shotActive: new Uint8Array(SHOT_SLOTS),
+    shotX: new Int32Array(SHOT_SLOTS),
+    shotY: new Int32Array(SHOT_SLOTS),
+    shotVX: new Int32Array(SHOT_SLOTS),
+    shotVY: new Int32Array(SHOT_SLOTS),
+    shotSource: new Uint8Array(SHOT_SLOTS),
+    shotLaser: new Uint8Array(SHOT_SLOTS),
     bulletActive: new Uint8Array(BULLET_SLOTS),
     bulletX: new Int32Array(BULLET_SLOTS),
     bulletY: new Int32Array(BULLET_SLOTS),
@@ -209,6 +286,32 @@ export function createSimState(): SimState {
     nukeCharge: 0,
     nukeTick: -1,
     prevInput: 0,
+    meter: -1,
+    capsules: 0,
+    boostLevel: 0,
+    boostFuel: 0,
+    boosting: false,
+    double: false,
+    laser: false,
+    missile: false,
+    options: 0,
+    shieldHits: 0,
+    trailX: new Int32Array(TRAIL),
+    trailY: new Int32Array(TRAIL),
+    optionX: new Int32Array(MAX_OPTIONS),
+    optionY: new Int32Array(MAX_OPTIONS),
+    missileActive: new Uint8Array(MISSILE_SLOTS),
+    missileX: new Int32Array(MISSILE_SLOTS),
+    missileY: new Int32Array(MISSILE_SLOTS),
+    missileReadyTick: 0,
+    missileBlastTick: new Int32Array(MISSILE_SLOTS),
+    missileBlastX: new Int32Array(MISSILE_SLOTS),
+    missileBlastY: new Int32Array(MISSILE_SLOTS),
+    capsuleActive: new Uint8Array(CAPSULE_SLOTS),
+    capsuleX: new Int32Array(CAPSULE_SLOTS),
+    capsuleY: new Int32Array(CAPSULE_SLOTS),
+    formationShot: new Uint8Array(0),
+    formationSpoiled: new Uint8Array(0),
   };
   resetSimState(state);
   return state;
@@ -256,6 +359,36 @@ export function resetSimState(state: SimState): void {
   state.nukeCharge = 0;
   state.nukeTick = -1;
   state.prevInput = 0;
+  state.meter = -1;
+  state.capsules = 0;
+  loseUpgrades(state);
+  state.boosting = false;
+  resetTrail(state, state.shipX, state.shipY);
+  state.missileActive.fill(0);
+  state.missileReadyTick = 0;
+  state.missileBlastTick.fill(-1);
+  state.capsuleActive.fill(0);
+  state.formationShot.fill(0);
+  state.formationSpoiled.fill(0);
+}
+
+/** Every upgrade bought is lost (a new run, or a life lost). */
+function loseUpgrades(state: SimState): void {
+  state.boostLevel = 0;
+  state.boostFuel = 0;
+  state.double = false;
+  state.laser = false;
+  state.missile = false;
+  state.options = 0;
+  state.shieldHits = 0;
+}
+
+/** Fills the trail with (x, y), so the options start on the ship. */
+function resetTrail(state: SimState, x: number, y: number): void {
+  state.trailX.fill(x);
+  state.trailY.fill(y);
+  state.optionX.fill(x);
+  state.optionY.fill(y);
 }
 
 function sizeEnemies(state: SimState, level: Level): void {
@@ -269,6 +402,8 @@ function sizeEnemies(state: SimState, level: Level): void {
   state.enemyPoints = new Uint16Array(n);
   state.enemyOnBeat = new Uint8Array(n);
   for (let i = 0; i < n; i++) state.enemyFire[i] = level.enemies.fireStart[i]!;
+  state.formationShot = new Uint8Array(level.enemies.formationSize.length);
+  state.formationSpoiled = new Uint8Array(level.enemies.formationSize.length);
 }
 
 /**
@@ -428,11 +563,142 @@ function scoreKill(level: Level, state: SimState, i: number, t: number, nuked = 
   state.enemyPoints[i] = points;
   state.enemyOnBeat[i] = beat ? 1 : 0;
   state.streak++;
+  const f = level.enemies.formation[i]!;
+  if (f >= 0 && ++state.formationShot[f]! === level.enemies.formationSize[f]! && state.formationSpoiled[f] === 0) {
+    spawnCapsule(state, state.enemyX[i]!, state.enemyY[i]!);
+  }
   if (beat) {
     state.onBeatKills++;
     if (state.nukes < MAX_NUKES && ++state.nukeCharge >= NUKE_CHARGE_KILLS) {
       state.nukes++;
       state.nukeCharge = 0;
+    }
+  }
+}
+
+/** Enemy i got away or was rammed: its formation drops no capsule. */
+function spoilFormation(level: Level, state: SimState, i: number): void {
+  const f = level.enemies.formation[i]!;
+  if (f >= 0) state.formationSpoiled[f] = 1;
+}
+
+function spawnCapsule(state: SimState, x: number, y: number): void {
+  for (let c = 0; c < CAPSULE_SLOTS; c++) {
+    if (state.capsuleActive[c]) continue;
+    state.capsuleActive[c] = 1;
+    state.capsuleX[c] = x;
+    state.capsuleY[c] = y;
+    return;
+  }
+}
+
+/** Capsules drift left and steer towards the cave's centre line; they go at the left edge. */
+function moveCapsules(level: Level, state: SimState, t: number): void {
+  for (let c = 0; c < CAPSULE_SLOTS; c++) {
+    if (!state.capsuleActive[c]) continue;
+    const x = state.capsuleX[c]! - CAPSULE_SPEED_Q8;
+    state.capsuleX[c] = x;
+    if (x < -CAPSULE_H) {
+      state.capsuleActive[c] = 0;
+      continue;
+    }
+    const target = caveCentre(level, barAt(level, level.scroll[t]! + x));
+    const y = state.capsuleY[c]!;
+    state.capsuleY[c] = target > y + SHIP_STEER_Q8 ? y + SHIP_STEER_Q8 : target < y - SHIP_STEER_Q8 ? y - SHIP_STEER_Q8 : target;
+  }
+}
+
+/** True if the highlighted upgrade `slot` can be bought: it isn't at its most. */
+export function canBuy(state: SimState, slot: number): boolean {
+  switch (slot) {
+    case PowerUp.boost:
+      return state.boostLevel < BOOST_MAX_LEVEL;
+    case PowerUp.double:
+      return !state.double;
+    case PowerUp.laser:
+      return !state.laser;
+    case PowerUp.missile:
+      return !state.missile;
+    case PowerUp.option:
+      return state.options < MAX_OPTIONS;
+    case PowerUp.shield:
+      return state.shieldHits < SHIELD_HITS;
+    default:
+      return false;
+  }
+}
+
+function buy(state: SimState, slot: number): void {
+  switch (slot) {
+    case PowerUp.boost:
+      state.boostLevel++;
+      state.boostFuel = state.boostLevel * BOOST_FUEL_PER_LEVEL;
+      break;
+    case PowerUp.double:
+      state.double = true;
+      state.laser = false;
+      break;
+    case PowerUp.laser:
+      state.laser = true;
+      state.double = false;
+      break;
+    case PowerUp.missile:
+      state.missile = true;
+      break;
+    case PowerUp.option:
+      state.options++;
+      break;
+    default:
+      state.shieldHits = SHIELD_HITS;
+  }
+}
+
+/** Fires one shot from (x, y) Q8 for `source`, unless that source's group is full. */
+function addShot(state: SimState, source: number, x: number, y: number, vx: number, vy: number, laser: boolean): boolean {
+  let inGroup = 0;
+  let free = -1;
+  for (let s = 0; s < SHOT_SLOTS; s++) {
+    if (!state.shotActive[s]) {
+      if (free < 0) free = s;
+    } else if (state.shotSource[s] === source && (state.shotVY[s] !== 0) === (vy !== 0)) {
+      inGroup++;
+    }
+  }
+  if (free < 0 || inGroup >= MAX_SHOTS) return false;
+  state.shotActive[free] = 1;
+  state.shotX[free] = x;
+  state.shotY[free] = y;
+  state.shotVX[free] = vx;
+  state.shotVY[free] = vy;
+  state.shotSource[free] = source;
+  state.shotLaser[free] = laser ? 1 : 0;
+  return true;
+}
+
+/** A volley from the ship or an option centred at (x, y): the straight shot or laser, plus the angled one with double. */
+function fireVolley(state: SimState, source: number, x: number, y: number): boolean {
+  const laser = state.laser;
+  const hw = laser ? LASER_HW : SHOT_HW;
+  let fired = addShot(state, source, x + HALF_W + hw, y, laser ? LASER_SPEED_Q8 : SHOT_SPEED_Q8, 0, laser);
+  if (state.double) fired = addShot(state, source, x + HALF_W, y - HALF_H, DOUBLE_SPEED_Q8, -DOUBLE_SPEED_Q8, false) || fired;
+  return fired;
+}
+
+/** Missile slot m bursts at tick t, destroying every live enemy within its blast. */
+function burstMissile(level: Level, state: SimState, m: number, t: number): void {
+  const e = level.enemies;
+  const x = state.missileX[m]!;
+  const y = state.missileY[m]!;
+  state.missileActive[m] = 0;
+  state.missileBlastTick[m] = t;
+  state.missileBlastX[m] = x;
+  state.missileBlastY[m] = y;
+  if (m === 0) state.missileReadyTick = t + MISSILE_RELOAD_TICKS;
+  for (let i = state.firstLive; i < state.nextSpawn; i++) {
+    if (state.enemyStatus[i] !== EnemyStatus.alive) continue;
+    const k = e.kind[i]!;
+    if (overlaps(x, y, MISSILE_BLAST_H, MISSILE_BLAST_H, state.enemyX[i]!, state.enemyY[i]!, ENEMY_HW[k]!, ENEMY_HH[k]!)) {
+      scoreKill(level, state, i, t);
     }
   }
 }
@@ -517,14 +783,15 @@ function endEnemy(state: SimState, i: number, t: number, status: number): void {
 }
 
 /**
- * The ship loses a life at tick t. With lives left it comes back at the playhead, in the
- * middle of the cave there, can't be hit for RESPAWN_SAFE_TICKS, and every enemy bullet
- * is cleared. With none left the run is over.
+ * The ship loses a life at tick t, and every upgrade bought. With lives left it comes back
+ * at the playhead, in the middle of the cave there, can't be hit for RESPAWN_SAFE_TICKS,
+ * and every enemy bullet is cleared. With none left the run is over.
  */
 function loseLife(level: Level, state: SimState, t: number): void {
   state.lives--;
   state.hitTick = t;
   state.streak = 0;
+  loseUpgrades(state);
   if (state.lives <= 0) {
     state.dead = true;
     state.deathTick = t;
@@ -535,35 +802,50 @@ function loseLife(level: Level, state: SimState, t: number): void {
   state.safeUntil = t + RESPAWN_SAFE_TICKS;
   state.bulletActive.fill(0);
   state.bulletCount = 0;
+  resetTrail(state, state.shipX, state.shipY);
 }
 
 /**
  * Advances `state` by one tick with `input` (InputBit flags), in this order:
  * 1. Move the ship (opposite directions cancel; diagonals use SHIP_DIAGONAL_SPEED_Q8 per
- *    axis) and keep it in bounds, then advance the tick.
+ *    axis; boost held with fuel left uses the boost speeds) and keep it in bounds, then
+ *    advance the tick and move the options along the ship's trail.
  * 2. Spawn enemies whose time has come, move every live one, and drop those off screen.
- * 3. A new press of the nuke button with a nuke held destroys every enemy on screen and
- *    clears the bullets. Fire if the fire bit is held and the gun is ready; move shots,
- *    which pass through the LED walls (so turrets on the bar tips can be hit) and stop on
- *    the first enemy they hit. Move the bomb, or drop one on a new press of the bomb button
- *    once it has reloaded; it bursts on the terrain or an enemy, destroying all within its blast.
+ * 3. A new press of buy buys the highlighted upgrade. A new press of the nuke button with
+ *    a nuke held destroys every enemy on screen and clears the bullets. Fire if the fire
+ *    bit is held and the gun is ready, from the ship and each option; move shots, which
+ *    pass through the LED walls (so turrets on the bar tips can be hit) and stop on the
+ *    first enemy they hit (a laser goes on, taking a hit off each enemy it overlaps). Move
+ *    the bomb, or drop one on a new press once it has reloaded; it bursts on the terrain
+ *    or an enemy, destroying all within its blast. Move missiles, or launch them on a new
+ *    press once reloaded; they burst on the first enemy they touch.
  * 4. Enemies fire on their scheduled ticks; move enemy bullets, which stop on the terrain.
- * 5. Unless the ship is in its safe time after a respawn, test it against the terrain,
- *    live enemies (which are destroyed too) and enemy bullets; a hit costs a life and the
- *    streak.
+ * 5. Move capsules; the ship picks up those it touches, moving the meter's highlight.
+ *    Unless the ship is in its safe time after a respawn, test it against the terrain,
+ *    live enemies (which are destroyed too) and enemy bullets. The shield takes a hit from
+ *    an enemy or bullet; any other hit costs a life, the streak, and every upgrade.
  * 6. At the song's end, add the survival bonus.
  * A shot that destroys an enemy scores KILL_POINTS for its kind, doubled on the beat (a
- * note of its instrument within ON_BEAT_TICKS), times scoreMultiplier(streak).
+ * note of its instrument within ON_BEAT_TICKS), times scoreMultiplier(streak). Shooting
+ * down every ship of a formation drops a capsule.
  * Does nothing once the ship is dead or the song is over.
  */
 export function tick(level: Level, state: SimState, input: number): void {
   if (state.dead || state.finished) return;
   const e = level.enemies;
-  if (state.enemyStatus.length !== e.count) sizeEnemies(state, level);
+  if (state.enemyStatus.length !== e.count || state.formationShot.length !== e.formationSize.length) sizeEnemies(state, level);
+  const pressed = input & ~state.prevInput;
 
   const dx = ((input & InputBit.right) !== 0 ? 1 : 0) - ((input & InputBit.left) !== 0 ? 1 : 0);
   const dy = ((input & InputBit.down) !== 0 ? 1 : 0) - ((input & InputBit.up) !== 0 ? 1 : 0);
-  const speed = dx !== 0 && dy !== 0 ? SHIP_DIAGONAL_SPEED_Q8 : SHIP_SPEED_Q8;
+  const boosting = (input & InputBit.boost) !== 0 && state.boostFuel > 0;
+  state.boosting = boosting;
+  if (boosting) state.boostFuel--;
+  else if (state.boostFuel < state.boostLevel * BOOST_FUEL_PER_LEVEL && state.tick % BOOST_REFILL_TICKS === 0) state.boostFuel++;
+  const diagonal = dx !== 0 && dy !== 0;
+  const speed = boosting
+    ? diagonal ? BOOST_DIAGONAL_SPEED_Q8 : BOOST_SPEED_Q8
+    : diagonal ? SHIP_DIAGONAL_SPEED_Q8 : SHIP_SPEED_Q8;
   let x = state.shipX + dx * speed;
   let y = state.shipY + dy * speed;
   if (x < MIN_X) x = MIN_X;
@@ -574,6 +856,13 @@ export function tick(level: Level, state: SimState, input: number): void {
   state.shipY = y;
   state.tick++;
   const t = state.tick;
+  state.trailX[t & (TRAIL - 1)] = x;
+  state.trailY[t & (TRAIL - 1)] = y;
+  for (let k = 0; k < MAX_OPTIONS; k++) {
+    const from = (t - OPTION_DELAY_TICKS * (k + 1)) & (TRAIL - 1);
+    state.optionX[k] = state.trailX[from]!;
+    state.optionY[k] = state.trailY[from]!;
+  }
 
   // 2. Enemies.
   while (state.nextSpawn < e.count && e.spawnTick[state.nextSpawn]! <= t) {
@@ -584,51 +873,85 @@ export function tick(level: Level, state: SimState, input: number): void {
   for (let i = state.firstLive; i < state.nextSpawn; i++) {
     if (state.enemyStatus[i] !== EnemyStatus.alive) continue;
     placeEnemy(level, state, i, t);
-    if (state.enemyX[i]! < ENEMY_EXIT_X * Q8) endEnemy(state, i, t, EnemyStatus.gone);
+    if (state.enemyX[i]! < ENEMY_EXIT_X * Q8) {
+      endEnemy(state, i, t, EnemyStatus.gone);
+      spoilFormation(level, state, i);
+    }
   }
   while (state.firstLive < state.nextSpawn && state.enemyStatus[state.firstLive]! >= EnemyStatus.destroyed) {
     state.firstLive++;
   }
 
-  // 3. The nuke, shots and the bomb.
-  if ((input & ~state.prevInput & InputBit.nuke) !== 0 && state.nukes > 0) nuke(level, state, t);
+  // 3. Buying, the nuke, shots, the bomb and missiles.
+  if ((pressed & InputBit.buy) !== 0 && state.meter >= 0 && canBuy(state, state.meter)) {
+    buy(state, state.meter);
+    state.meter = -1;
+  }
+  if ((pressed & InputBit.nuke) !== 0 && state.nukes > 0) nuke(level, state, t);
   if (state.shotCooldown > 0) state.shotCooldown--;
   if ((input & InputBit.fire) !== 0 && state.shotCooldown === 0) {
-    let slot = 0;
-    while (slot < MAX_SHOTS && state.shotActive[slot]) slot++;
-    if (slot < MAX_SHOTS) {
-      state.shotActive[slot] = 1;
-      state.shotX[slot] = x + HALF_W + SHOT_HW;
-      state.shotY[slot] = y;
-      state.shotCooldown = SHOT_INTERVAL_TICKS;
-    }
+    let fired = fireVolley(state, 0, x, y);
+    for (let k = 0; k < state.options; k++) fired = fireVolley(state, k + 1, state.optionX[k]!, state.optionY[k]!) || fired;
+    if (fired) state.shotCooldown = SHOT_INTERVAL_TICKS;
   }
-  for (let s = 0; s < MAX_SHOTS; s++) {
+  for (let s = 0; s < SHOT_SLOTS; s++) {
     if (!state.shotActive[s]) continue;
-    const sx = state.shotX[s]! + SHOT_SPEED_Q8;
-    const sy = state.shotY[s]!;
+    const sx = state.shotX[s]! + state.shotVX[s]!;
+    const sy = state.shotY[s]! + state.shotVY[s]!;
     state.shotX[s] = sx;
-    if (sx - SHOT_HW >= WIDTH_Q8) {
+    state.shotY[s] = sy;
+    const laser = state.shotLaser[s] === 1;
+    const hw = laser ? LASER_HW : SHOT_HW;
+    if (sx - hw >= WIDTH_Q8 || sy + SHOT_HH <= 0) {
       state.shotActive[s] = 0;
       continue;
     }
     for (let i = state.firstLive; i < state.nextSpawn; i++) {
       if (state.enemyStatus[i] !== EnemyStatus.alive) continue;
       const k = e.kind[i]!;
-      if (!overlaps(sx, sy, SHOT_HW, SHOT_HH, state.enemyX[i]!, state.enemyY[i]!, ENEMY_HW[k]!, ENEMY_HH[k]!)) continue;
-      state.shotActive[s] = 0;
+      if (!overlaps(sx, sy, hw, SHOT_HH, state.enemyX[i]!, state.enemyY[i]!, ENEMY_HW[k]!, ENEMY_HH[k]!)) continue;
       state.enemyHp[i]!--;
       if (state.enemyHp[i] === 0) scoreKill(level, state, i, t);
-      break;
+      if (!laser) {
+        state.shotActive[s] = 0;
+        break;
+      }
     }
   }
   if (state.bombActive) {
     moveBomb(level, state, t);
-  } else if ((input & ~state.prevInput & InputBit.bomb) !== 0 && t >= state.bombReadyTick) {
+  } else if ((pressed & InputBit.bomb) !== 0 && t >= state.bombReadyTick) {
     state.bombActive = true;
     state.bombX = x;
     state.bombY = y + HALF_H + BOMB_H;
     state.bombVY = 0;
+  }
+  if (state.missile && (pressed & InputBit.missile) !== 0 && !state.missileActive[0] && t >= state.missileReadyTick) {
+    for (let m = 0; m <= state.options; m++) {
+      if (state.missileActive[m]) continue;
+      state.missileActive[m] = 1;
+      state.missileX[m] = (m === 0 ? x : state.optionX[m - 1]!) + HALF_W + MISSILE_HW;
+      state.missileY[m] = m === 0 ? y : state.optionY[m - 1]!;
+    }
+  }
+  for (let m = 0; m < MISSILE_SLOTS; m++) {
+    if (!state.missileActive[m]) continue;
+    const mx = state.missileX[m]! + MISSILE_SPEED_Q8;
+    state.missileX[m] = mx;
+    if (mx - MISSILE_HW >= WIDTH_Q8) {
+      state.missileActive[m] = 0;
+      if (m === 0) state.missileReadyTick = t + MISSILE_RELOAD_TICKS;
+      continue;
+    }
+    const my = state.missileY[m]!;
+    for (let i = state.firstLive; i < state.nextSpawn; i++) {
+      if (state.enemyStatus[i] !== EnemyStatus.alive) continue;
+      const k = e.kind[i]!;
+      if (overlaps(mx, my, MISSILE_HW, MISSILE_HH, state.enemyX[i]!, state.enemyY[i]!, ENEMY_HW[k]!, ENEMY_HH[k]!)) {
+        burstMissile(level, state, m, t);
+        break;
+      }
+    }
   }
 
   // 4. Enemy fire and bullets.
@@ -653,7 +976,15 @@ export function tick(level: Level, state: SimState, input: number): void {
     if (off || boxHitsTerrain(level, t, bx, by, BULLET_H, BULLET_H)) removeBullet(state, b);
   }
 
-  // 5. The ship.
+  // 5. Capsules, then the ship.
+  moveCapsules(level, state, t);
+  for (let c = 0; c < CAPSULE_SLOTS; c++) {
+    if (!state.capsuleActive[c]) continue;
+    if (!overlaps(x, y, HALF_W, HALF_H, state.capsuleX[c]!, state.capsuleY[c]!, CAPSULE_H, CAPSULE_H)) continue;
+    state.capsuleActive[c] = 0;
+    state.capsules++;
+    state.meter = state.meter + 1 >= POWER_UP_COUNT ? 0 : state.meter + 1;
+  }
   if (t >= state.safeUntil) {
     let hit = shipCollides(level, t, x, y);
     for (let i = state.firstLive; i < state.nextSpawn && !hit; i++) {
@@ -661,15 +992,18 @@ export function tick(level: Level, state: SimState, input: number): void {
       const k = e.kind[i]!;
       if (overlaps(x, y, HALF_W, HALF_H, state.enemyX[i]!, state.enemyY[i]!, ENEMY_HW[k]!, ENEMY_HH[k]!)) {
         endEnemy(state, i, t, EnemyStatus.destroyed);
+        spoilFormation(level, state, i);
         state.kills++;
-        hit = true;
+        if (state.shieldHits > 0) state.shieldHits--;
+        else hit = true;
       }
     }
     for (let b = 0; b < BULLET_SLOTS && !hit; b++) {
       if (!state.bulletActive[b]) continue;
       if (overlaps(x, y, HALF_W, HALF_H, state.bulletX[b]!, state.bulletY[b]!, BULLET_H, BULLET_H)) {
         removeBullet(state, b);
-        hit = true;
+        if (state.shieldHits > 0) state.shieldHits--;
+        else hit = true;
       }
     }
     if (hit) loseLife(level, state, t);
@@ -683,22 +1017,23 @@ export function tick(level: Level, state: SimState, input: number): void {
 }
 
 /**
- * Runs `inputs` (one InputBit byte per tick) from the start of the song until the log
+ * Runs `inputs` (one set of InputBit flags per tick) from the start of the song until the log
  * ends, the last life is lost, or the song ends, and returns the final state.
  */
-export function runInputLog(level: Level, inputs: Uint8Array, state: SimState = createSimState()): SimState {
+export function runInputLog(level: Level, inputs: Uint16Array, state: SimState = createSimState()): SimState {
   for (let i = 0; i < inputs.length && !state.dead && !state.finished; i++) tick(level, state, inputs[i]!);
   return state;
 }
 
 /**
- * A deterministic byte form of the state, for golden hashes: 17 little-endian i32s (tick,
+ * A deterministic byte form of the state, for golden hashes: 26 little-endian i32s (tick,
  * shipX, shipY, dead, deathTick, lives, finished, safeUntil, hitTick, kills, score,
- * streak, onBeatKills, survivalBonus, nukes, nukeCharge, blastTick), then each enemy's
+ * streak, onBeatKills, survivalBonus, nukes, nukeCharge, blastTick, meter, capsules,
+ * boostLevel, boostFuel, double, laser, missile, options, shieldHits), then each enemy's
  * status byte.
  */
 export function serializeSimState(state: SimState): Uint8Array {
-  const out = new Uint8Array(68 + state.enemyStatus.length);
+  const out = new Uint8Array(104 + state.enemyStatus.length);
   const view = new DataView(out.buffer);
   const fields = [
     state.tick,
@@ -718,8 +1053,17 @@ export function serializeSimState(state: SimState): Uint8Array {
     state.nukes,
     state.nukeCharge,
     state.blastTick,
+    state.meter,
+    state.capsules,
+    state.boostLevel,
+    state.boostFuel,
+    state.double ? 1 : 0,
+    state.laser ? 1 : 0,
+    state.missile ? 1 : 0,
+    state.options,
+    state.shieldHits,
   ];
   for (let i = 0; i < fields.length; i++) view.setInt32(i * 4, fields[i]!, true);
-  out.set(state.enemyStatus, 68);
+  out.set(state.enemyStatus, 104);
   return out;
 }

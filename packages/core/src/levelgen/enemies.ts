@@ -76,6 +76,8 @@ export function emptyEnemyList(): EnemyList {
     motion: new Uint8Array(0),
     fireStart: new Uint32Array(1),
     fireTick: new Uint32Array(0),
+    formation: new Int32Array(0),
+    formationSize: new Uint8Array(0),
   };
 }
 
@@ -184,7 +186,11 @@ export function placeEnemies(
   const side: number[] = [];
   const motion: number[] = [];
   const fires: number[][] = [];
+  const formation: number[] = [];
+  const formationSize: number[] = [];
   const add = (k: number, inst: number, t: number, x: number, y: number, s: number, m: number, f: number[]): void => {
+    formation.push(k === EnemyKind.ship ? formationSize.length - 1 : -1);
+    if (k === EnemyKind.ship) formationSize[formationSize.length - 1]!++;
     kind.push(k);
     instrument.push(inst);
     spawnTick.push(t);
@@ -284,6 +290,7 @@ export function placeEnemies(
       formationLeft--;
       formationLast = t;
     } else if (t - lastFormation >= tune.formationSpacingTicks) {
+      formationSize.push(0);
       addShip(t, k);
       formationInstrument = inst;
       formationLeft = tune.formationSize - 1;
@@ -307,6 +314,8 @@ export function placeEnemies(
     motion: Uint8Array.from(order, (i) => motion[i]!),
     fireStart: new Uint32Array(count + 1),
     fireTick: new Uint32Array(order.reduce((sum, i) => sum + fires[i]!.length, 0)),
+    formation: Int32Array.from(order, (i) => formation[i]!),
+    formationSize: Uint8Array.from(formationSize),
   };
   let p = 0;
   for (let j = 0; j < count; j++) {
