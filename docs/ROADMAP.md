@@ -223,9 +223,10 @@ help.
 
 - [x] The bomb button drops a concussive bomb that falls in an arc and bursts on the
       floor or an enemy, destroying everything within 24 px, tanks included. One per
-      press, one in the air, 1 s to reload; a HUD icon shows when it is ready. Never more
+      press, one in the air, 1 s to reload; the HUD's bomb fills as it reloads. Never more
       than one tank is on screen at once, on any of the 27 levels.
 - [x] At most 3 shots in flight, not 6, so a miss costs time and aiming beats spraying.
+      Three HUD pips fill as their shots cross the screen and refill on a hit.
 - [x] The nuke button destroys every enemy on screen and clears the bullets. One charges
       per 10 kills on the beat, up to 3, shown after the lives.
 - [x] Keys X or K (bomb) and V or ; (nuke); pad B and X. The autopilot bombs, and nukes

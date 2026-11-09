@@ -789,8 +789,9 @@ Run `pnpm dev` and open the URL it prints.
   lives is game over: any key retries the level, Esc goes to the title. Game over and level complete ignore keys for 0.7 s, so a key still held from
   play doesn't skip them. The game pauses when the window loses focus or the tab is hidden.
 - **Score:** top right in play. Each kill shows its points where the enemy was, amber when
-  on the beat. After the lives come the bomb, bright when one can drop, the multiplier in
-  amber once it is above 1, and an amber ring for each nuke held. Level
+  on the beat. After the lives come the bomb, which empties when one drops and fills
+  again over its reload, three pips for the shots, each filling as its shot crosses the
+  screen, the multiplier in amber once it is above 1, and an amber ring for each nuke held. Level
   complete shows the score and the lives bonus, and in the arcade run the total of the
   levels finished; game over shows the score.
 - **Gamepad:** any pad that reports the Gamepad API's "standard" mapping
@@ -925,10 +926,14 @@ is added.
   for each enemy destroyed (8 at once at most) and the ship's explosion for a life lost,
   both timed in song time. It returns false on alternate 6-tick steps of the ship's safe
   time, which blinks the ship. The lives are ship icons on a dark panel in the top left,
-  followed by a bomb icon (dimmed while a bomb falls or reloads), the multiplier when it
+  followed by a bomb icon, three cyan 3x7 pips for the shot slots, the multiplier when it
   is above 1, and a 7x7 amber ring per nuke held (3 at most); the score, 7 digits, is on a panel in the
   top right and changes only when the score does. Each kill's points rise 8 px over 600 ms
-  from where the enemy was (8 popups at once at most). The bomb is a 4x4 sprite; its burst
+  from where the enemy was (8 popups at once at most). The bomb icon is drawn dim, with
+  its bottom rows bright: none while a bomb falls, then filling over the reload
+  (`state.bombReadyTick`), whole when one can drop. A shot pip is full while its slot is
+  free; for a shot in flight it fills with the share of the way from where the shot was
+  first drawn to the right edge, so a hit refills it at once. Full pips come first. The bomb is a 4x4 sprite; its burst
   is a 40-particle explosion over 600 ms, and a nuke flashes the playfield like the crash
   flash (25% white fading over 220 ms), under the HUD.
 - **Starfield** (`starfield.ts`): 112 stars in three layers placed by `seededRandom(seed)`,
