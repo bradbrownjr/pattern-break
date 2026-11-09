@@ -59,8 +59,10 @@ export const shots: Shot[] = [
       'from the bottom edge, lit green at the screen edges through yellow and orange to red at their tips, ' +
       'leaving a dark passage across the middle. Two small magenta and amber turrets sit upside down on the ' +
       'tips of the ceiling. A small cyan ship with a magenta engine flame flies on the left, with a row of cyan ' +
-      'shots ahead of it and a scatter of coloured particles where an enemy was just destroyed. Three small ' +
-      'ship icons on a dark panel in the top left corner show the lives left.',
+      'shots ahead of it and a scatter of coloured particles where an enemy was just destroyed, with "200" in ' +
+      'white pixel digits above it and above another kill. Three small ship icons on a dark panel in the top ' +
+      'left corner show the lives left, followed by "x2" in amber; "0001900" in white in the top right ' +
+      'corner is the score.',
     caption: 'Pattern Break at 21.5 seconds into the test song on normal, with the ship flown by the autopilot.',
     usedIn: ['readme'],
   },
@@ -74,7 +76,8 @@ export const shots: Shot[] = [
       'from right to left, one column per row of the song. Small magenta and amber turrets ride in on the ' +
       'tips of the floor and ceiling, and small magenta enemy ships fly in from the right and fire round ' +
       'magenta bullets. A small cyan ship on the left keeps firing cyan shots and moves up and down to dodge. ' +
-      'Three ship icons in the top left corner show the lives left.',
+      'Three ship icons in the top left corner show the lives left, followed by "x3" in amber, and the score ' +
+      'in the top right corner counts up as each kill shows its points where the enemy was.',
     caption: 'Four seconds of the test song on normal, flown by the autopilot through the sim.',
     usedIn: ['readme'],
   },

@@ -110,6 +110,8 @@ export interface RunRecord {
   inputs: Uint8Array;
   /** The tick the ship crashed on, or -1 if it reached the end. */
   deathTick: number;
+  /** Points scored, the lives bonus included. */
+  score: number;
 }
 
 export interface GameOptions {
@@ -172,6 +174,8 @@ export class Game {
   #log: InputLog | null = null;
   #displaySamples = 0;
   #runs = 0;
+  /** Points from the arcade run's finished levels. */
+  #runScore = 0;
   /** What a key does on the level-complete screen. */
   #afterComplete: (() => void) | null = null;
   /** The last finished run, kept for M2's replays. */
@@ -352,6 +356,7 @@ export class Game {
       case 'play':
         this.#sound('start');
         this.#run = { kind: 'arcade', level: 0 };
+        this.#runScore = 0;
         void this.#beginLevel();
         break;
       case 'practice':
@@ -642,6 +647,7 @@ export class Game {
       difficulty: this.#difficulty,
       inputs: log.toBytes(),
       deathTick: this.#state.dead ? this.#state.deathTick : -1,
+      score: this.#state.score,
     };
   }
 
@@ -666,9 +672,16 @@ export class Game {
     this.#message.container.visible = true;
     const run = this.#run;
     const difficulty = DIFFICULTY_LABELS[this.#difficulty];
+    const s = this.#state;
+    const score = [`Score ${s.score}, lives bonus ${s.survivalBonus}`];
+    if (run?.kind === 'arcade') {
+      this.#runScore += s.score;
+      score.push(`Run total ${this.#runScore}`);
+    }
     if (run?.kind === 'arcade' && run.level < this.#levelSongs.length - 1) {
       this.#message.show(`Level ${run.level + 1} complete`, LIME, [
         `${this.#song.title}, ${difficulty}`,
+        ...score,
         `Press any key for level ${run.level + 2}`,
       ]);
       this.#afterComplete = () => {
@@ -679,11 +692,12 @@ export class Game {
     } else if (run?.kind === 'arcade') {
       this.#message.show('All levels complete', LIME, [
         `Every level on ${difficulty}`,
+        ...score,
         'Press any key to continue',
       ]);
       this.#afterComplete = () => this.#toTitle();
     } else {
-      this.#message.show('Song complete', LIME, [`${this.#song.title}, ${difficulty}`, 'Press any key to continue']);
+      this.#message.show('Song complete', LIME, [`${this.#song.title}, ${difficulty}`, ...score, 'Press any key to continue']);
       this.#afterComplete = () => this.#toTitle();
     }
   }
@@ -766,7 +780,11 @@ export class Game {
         r.flash.draw(elapsed);
         if (elapsed >= PROMPT_DELAY_MS && !this.#message.container.visible) {
           this.#message.container.visible = true;
-          this.#message.show('Game over', MAGENTA, ['Esc returns to the title screen', 'Press any key to retry']);
+          this.#message.show('Game over', MAGENTA, [
+            `Score ${this.#state.score}`,
+            'Esc returns to the title screen',
+            'Press any key to retry',
+          ]);
         }
         const player = this.#playerReady;
         if (this.#music === 'gameover' && player && player.songTimeSeconds() >= GAME_OVER_MUSIC.seconds) {

@@ -6,6 +6,7 @@ import {
   Q8,
   SAMPLES_PER_TICK,
   emptyEnemyList,
+  noNotes,
   playheadAtSample,
   type DifficultyName,
   type EnemyList,
@@ -49,5 +50,6 @@ export function makeLevel(spec: LevelSpec): Level {
     tickCount,
     scroll,
     enemies: spec.enemies ?? emptyEnemyList(),
+    ...noNotes(),
   };
 }

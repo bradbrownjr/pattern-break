@@ -18,13 +18,14 @@ import {
 import {
   EnemyStatus,
   createSimState,
+  scoreMultiplier,
   resetSimState,
   runInputLog,
   serializeSimState,
   shipCollides,
   tick,
 } from '../src/sim/sim.ts';
-import { enemyList, lcg, randomSong, syntheticLevelData, type HandEnemy } from './level-fixtures.ts';
+import { enemyList, lcg, noteTable, randomSong, syntheticLevelData, type HandEnemy } from './level-fixtures.ts';
 
 const Q = 256;
 
@@ -38,6 +39,7 @@ function handLevel(
   scrollPx: number | ((t: number) => number) = 0,
   tickCount = 100,
   enemies: EnemyList = emptyEnemyList(),
+  notes: Record<number, number[]> = {},
 ): Level {
   const n = bars.length;
   return {
@@ -53,12 +55,19 @@ function handLevel(
     tickCount,
     scroll: Int32Array.from({ length: tickCount + 1 }, (_, t) => (typeof scrollPx === 'number' ? scrollPx : scrollPx(t)) * Q),
     enemies,
+    ...noteTable(notes),
   };
 }
 
-/** An open level of `bars` empty bars with these enemies. */
-function enemyLevel(enemies: HandEnemy[], tickCount = 1000, scrollPx: number | ((t: number) => number) = 0, bars = 60): Level {
-  return handLevel('easy', Array.from({ length: bars }, () => [0, 0]), scrollPx, tickCount, enemyList(enemies));
+/** An open level of `bars` empty bars with these enemies, and notes per instrument. */
+function enemyLevel(
+  enemies: HandEnemy[],
+  tickCount = 1000,
+  scrollPx: number | ((t: number) => number) = 0,
+  bars = 60,
+  notes: Record<number, number[]> = {},
+): Level {
+  return handLevel('easy', Array.from({ length: bars }, () => [0, 0]), scrollPx, tickCount, enemyList(enemies), notes);
 }
 
 function activeShots(s: ReturnType<typeof createSimState>): number {
@@ -315,6 +324,46 @@ describe('enemies', () => {
       const bar = Math.floor((255 * Q - 64 * (s.tick - 1)) / (10 * Q));
       expect(s.enemyY[0]).toBe(216 * Q - 7 * Q * (bar % 3) - (7 * Q) / 2);
     }
+  });
+});
+
+describe('score', () => {
+  /** Holds fire until the turret in front of the ship is shot down; returns the tick. */
+  function shootTurret(notes: Record<number, number[]> = {}): ReturnType<typeof createSimState> {
+    const level = enemyLevel([{ kind: EnemyKind.turret, spawnTick: 0, x: 200 * Q, y: 108 * Q, instrument: 1 }], 1000, 0, 60, notes);
+    const s = createSimState();
+    while (s.kills === 0) tick(level, s, InputBit.fire);
+    return s;
+  }
+
+  it('a shot-down turret scores 100, double on a note of its instrument', () => {
+    const off = shootTurret();
+    expect([off.score, off.enemyPoints[0], off.enemyOnBeat[0]]).toEqual([100, 100, 0]);
+    const t = off.tick;
+    // Notes 3 ticks either side count; 4 do not.
+    expect(shootTurret({ 1: [t + 3] }).score).toBe(200);
+    expect(shootTurret({ 1: [t - 3] }).score).toBe(200);
+    expect(shootTurret({ 1: [t - 4, t + 4] }).score).toBe(100);
+    // Another instrument's note doesn't count.
+    expect(shootTurret({ 2: [t] }).score).toBe(100);
+    expect(shootTurret({ 1: [t] }).onBeatKills).toBe(1);
+  });
+
+  it('the multiplier goes up by 1 every 10 kills, to 4', () => {
+    expect([0, 9, 10, 19, 20, 30, 1000].map(scoreMultiplier)).toEqual([1, 1, 2, 2, 3, 4, 4]);
+  });
+
+  it('losing a life resets the streak; ramming scores nothing', () => {
+    const level = enemyLevel([{ kind: EnemyKind.ship, spawnTick: 1, x: 392 * Q }]);
+    const s = createSimState();
+    s.streak = 15;
+    while (s.lives === 3) tick(level, s, 0);
+    expect([s.streak, s.score, s.enemyPoints[0]]).toEqual([0, 0, 0]);
+  });
+
+  it('the end of the song adds 1000 per life left', () => {
+    const s = runInputLog(enemyLevel([], 50), new Uint8Array(50));
+    expect([s.finished, s.survivalBonus, s.score]).toEqual([true, 3000, 3000]);
   });
 });
 

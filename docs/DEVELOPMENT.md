@@ -377,6 +377,11 @@ On the nine songs (2026-11-09), normal gives 27 to 97 turrets, 1 to 21 tanks, an
 313 ships a level, and 2.0 to 3.1 scheduled enemy shots a second; hard gives 5.1 to 7.7.
 Every level passes the path check with its enemies.
 
+For the on-beat bonus the level also keeps every note's tick by instrument
+(`instrumentNotes()`): instrument i's ticks, in order, are `noteTick[noteStart[i]]` up to
+`noteTick[noteStart[i + 1]]`. `serializeLevel` writes them after the enemies (Level format
+3). Hand-made levels in tests use `noNotes()`.
+
 ### Simulation
 
 - **Ticks:** `level.tickCount` is `ceil(totalSamples / 400)`. `state.tick` counts the ticks
@@ -408,8 +413,17 @@ Every level passes the path check with its enemies.
 - **Enemy bullets:** 16 slots, at most `maxBullets` in flight. A bullet starts at the
   enemy's centre with velocity `trunc(d * speed / |d|)` towards the ship's centre, `|d|`
   from `Math.sqrt`; it moves in screen terms and stops on the walls or off screen.
-- **Lives:** 3 (`START_LIVES`). A hit costs one: `state.hitTick` records it. Ramming an
-  enemy destroys it (and counts in `state.kills`). With lives left the ship goes to x 64 at
+- **Score:** a shot-down turret or ship is 100 points, a tank 300 (`KILL_POINTS`), doubled
+  on the beat: within 3 ticks (25 ms, `ON_BEAT_TICKS`) of a note of the enemy's own
+  instrument, found by `onBeat()`'s binary search of the level's note table. At 6 ticks an
+  autopilot that ignores the beat got about 85% of its kills on it, since busy instruments
+  play every row; at 3 it gets 10 to 65% (2026-11-09). Then times the streak multiplier,
+  `scoreMultiplier(streak)`: 1, plus 1 for every 10 kills since the last life lost, at most 4.
+  Ramming scores nothing. Reaching the end adds 1000 a life
+  left (`state.survivalBonus`). `state.enemyPoints` and `state.enemyOnBeat` keep what each
+  kill scored, for the popups.
+- **Lives:** 3 (`START_LIVES`). A hit costs one, and resets the streak: `state.hitTick`
+  records it. Ramming an enemy destroys it (and counts in `state.kills`). With lives left the ship goes to x 64 at
   the middle of the cave's gap there, every bullet is cleared, and it can't be hit until
   `state.safeUntil`, 240 ticks on. The last life sets `state.dead` and `state.deathTick`.
 - **Running a log:** `runInputLog(level, inputs, state?)` runs from the state's current
@@ -756,6 +770,10 @@ Run `pnpm dev` and open the URL it prints.
   pauses and resumes; Q while paused goes back to the title. Losing the last of three
   lives is game over: any key retries the level, Esc goes to the title. Game over and level complete ignore keys for 0.7 s, so a key still held from
   play doesn't skip them. The game pauses when the window loses focus or the tab is hidden.
+- **Score:** top right in play. Each kill shows its points where the enemy was, amber when
+  on the beat, and the multiplier shows in amber after the lives once it is above 1. Level
+  complete shows the score and the lives bonus, and in the arcade run the total of the
+  levels finished; game over shows the score.
 - **Jukebox:** Enter plays the song under the cursor or stops it if it is playing, a song
   that ends hands over to the next, and Esc or Back returns to the title, where the title
   music starts again.
@@ -856,7 +874,7 @@ is added.
   384x216 that fits the window (`integerScale()`), with `image-rendering: pixelated`, centred
   on black by `index.html`.
 - **Layers,** back to front: the starfield, the world (terrain, enemies and bullets, ship,
-  explosion), the lives, the death flash, and the UI (title screen, jukebox, demo banner,
+  explosion, point popups), the HUD (lives, multiplier, score), the death flash, and the UI (title screen, jukebox, demo banner,
   messages, and the fade).
 - **Terrain** (`terrain.ts`, geometry in `terrain-layout.ts`): 41 columns
   (`MAX_VISIBLE_BARS`) of 50 sprites each, 25 a side (`SEGMENTS_PER_SIDE`, the most hard's
@@ -875,7 +893,10 @@ is added.
   screen positions. It compares the state with the last draw to start a 16-particle burst
   for each enemy destroyed (8 at once at most) and the ship's explosion for a life lost,
   both timed in song time. It returns false on alternate 6-tick steps of the ship's safe
-  time, which blinks the ship. The lives are ship icons on a dark panel in the top left.
+  time, which blinks the ship. The lives are ship icons on a dark panel in the top left,
+  followed by the multiplier when it is above 1; the score, 7 digits, is on a panel in the
+  top right and changes only when the score does. Each kill's points rise 8 px over 600 ms
+  from where the enemy was (8 popups at once at most).
 - **Starfield** (`starfield.ts`): 112 stars in three layers placed by `seededRandom(seed)`,
   scrolling at 0.12, 0.25 and 0.5 of the terrain's speed.
 - **Text** (`font.ts`, `text.ts`): a 5x7 pixel font for printable ASCII, with descenders,
@@ -885,7 +906,8 @@ is added.
   that fades from 25% opacity over 220 ms. "Reduce flashing" is on by default (`PLAN.md`,
   "Visual spec") and M1 has no settings screen, so this reduced flash is the only one.
 - **Allocation:** display objects are made at startup or when a screen changes. The
-  per-frame path in play only writes positions and tints and allocates nothing in our code;
+  per-frame path in play only writes positions and tints and allocates nothing in our code
+  except the score and popup strings on a kill;
   PixiJS's own render call has not been audited.
 
 ### The frame loop

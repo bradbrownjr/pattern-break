@@ -14,7 +14,7 @@ import { SHIP_START_Y } from '../sim/constants.ts';
 import { GEN_VERSION } from '../version.ts';
 import { Difficulty, PEAK_HOLD_BARS, Terrain, type DifficultyName, type Level } from './types.ts';
 
-import { placeEnemies } from './enemies.ts';
+import { instrumentNotes, placeEnemies } from './enemies.ts';
 import { MIN_GAP_OVERLAP_PX, gapShiftLimitPx, maxCombinedSegments } from './rules.ts';
 
 export { MIN_GAP_OVERLAP_PX, gapShiftLimitPx, maxCombinedSegments };
@@ -328,5 +328,6 @@ export function generateLevel(levelData: LevelData, difficulty: DifficultyName):
     tickCount,
     scroll,
   };
-  return { ...terrain, enemies: placeEnemies(levelData, terrain, drums) };
+  const byInstrument = instrumentNotes(levelData);
+  return { ...terrain, enemies: placeEnemies(levelData, terrain, drums, byInstrument), ...byInstrument };
 }

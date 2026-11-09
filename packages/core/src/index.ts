@@ -16,7 +16,14 @@ export { serializeLevelData, deserializeLevelData } from './level-data/serialize
 export * from './playfield.ts';
 export { Difficulty, EnemyKind, EnemyTuning, PEAK_HOLD_BARS, ShipMotion, Terrain } from './levelgen/types.ts';
 export type { DifficultyName, EnemyList, Level } from './levelgen/types.ts';
-export { ENEMY_GRACE_TICKS, emptyEnemyList, placeEnemies, withoutEnemies } from './levelgen/enemies.ts';
+export {
+  ENEMY_GRACE_TICKS,
+  emptyEnemyList,
+  instrumentNotes,
+  noNotes,
+  placeEnemies,
+  withoutEnemies,
+} from './levelgen/enemies.ts';
 export {
   generateLevel,
   findDrums,
@@ -33,6 +40,8 @@ export {
   EnemyStatus,
   boxHitsTerrain,
   createSimState,
+  onBeat,
+  scoreMultiplier,
   resetSimState,
   runInputLog,
   serializeSimState,

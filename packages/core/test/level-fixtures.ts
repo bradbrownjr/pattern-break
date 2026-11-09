@@ -167,3 +167,15 @@ export function enemyList(enemies: HandEnemy[]): EnemyList {
     fireTick: Uint32Array.from(fires),
   };
 }
+
+/** A Level note table (noteStart, noteTick) with these ticks per instrument. */
+export function noteTable(ticks: Record<number, number[]>): { noteStart: Uint32Array; noteTick: Uint32Array } {
+  const noteStart = new Uint32Array(257);
+  const all: number[] = [];
+  for (let i = 0; i < 256; i++) {
+    noteStart[i] = all.length;
+    all.push(...[...(ticks[i] ?? [])].sort((a, b) => a - b));
+  }
+  noteStart[256] = all.length;
+  return { noteStart, noteTick: Uint32Array.from(all) };
+}

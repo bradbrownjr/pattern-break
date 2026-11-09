@@ -1,6 +1,7 @@
-// Enemies, shots and bullets drawn from the sim state, plus their cosmetics: a burst when
-// an enemy is destroyed, an explosion when the ship loses a life, and the lives left
-// (docs/PLAN.md, "Enemies"). Turrets and tanks are placed against the terrain as drawn, so
+// Enemies, shots and bullets drawn from the sim state, plus their cosmetics: a burst and
+// the points scored when an enemy is shot down, an explosion when the ship loses a life,
+// and the HUD: lives left, the streak multiplier and the score (docs/PLAN.md, "Enemies"
+// and "Scoring"). Turrets and tanks are placed against the terrain as drawn, so
 // they stay on their bars. Effect timing comes from song time, so capture mode reproduces
 // it. Sprites are pooled; drawing allocates nothing.
 
@@ -9,12 +10,14 @@ import {
   EnemyKind,
   EnemyStatus,
   MAX_SHOTS,
+  PLAYFIELD_WIDTH,
   Q8,
   SAMPLES_PER_TICK,
   SAMPLE_RATE,
   SHOT_HEIGHT,
   SHOT_WIDTH,
   TANK_SPEED_Q8,
+  scoreMultiplier,
   type Level,
   type SimState,
 } from '@game/core';
@@ -23,6 +26,7 @@ import { Explosion, SHIP_EXPLOSION, type ExplosionStyle } from './effects.ts';
 import { AMBER, BACKGROUND, CYAN, LIME, MAGENTA, WHITE } from './palette.ts';
 import { flipRows, mapTexture } from './pixels.ts';
 import { seededRandom } from './random.ts';
+import { PixelText } from './text.ts';
 import { SHIP_SPRITE_HEIGHT, SHIP_SPRITE_WIDTH, shipTexture } from './ship.ts';
 
 const TURRET_MAP = [
@@ -68,6 +72,12 @@ const ENEMY_BURST: ExplosionStyle = { particles: 16, ms: 450, colors: [WHITE, MA
 const BLINK_TICKS = 6;
 const LIFE_ICON_GAP = 2;
 const MAX_LIFE_ICONS = 9;
+/** Point popups that can show at once; the oldest is reused. */
+const POPUPS = 8;
+const POPUP_MS = 600;
+const POPUP_RISE_PX = 8;
+const SCORE_DIGITS = 7;
+const HUD_PAD = 2;
 
 interface Textures {
   turret: Texture;
@@ -112,6 +122,15 @@ export class CombatView {
   #bursts: Explosion[] = [];
   #burstSample: number[] = [];
   #nextBurst = 0;
+  #popups: PixelText[] = [];
+  #popupSample: number[] = [];
+  #popupX: number[] = [];
+  #popupY: number[] = [];
+  #nextPopup = 0;
+  #multiplier = new PixelText('', AMBER);
+  #score = new PixelText('', WHITE);
+  #scoreBacking = new Sprite(Texture.WHITE);
+  #shownScore = -1;
   #lifeLost = new Explosion(SHIP_EXPLOSION);
   #lifeLostSample = -1;
   /** Sim tick and first possibly live enemy at the last draw, to find what changed since. */
@@ -150,6 +169,20 @@ export class CombatView {
       this.hud.addChild(icon);
       this.#lives.push(icon);
     }
+    this.hud.addChild(this.#multiplier);
+    this.#scoreBacking.tint = BACKGROUND;
+    this.#scoreBacking.alpha = 0.85;
+    this.#scoreBacking.height = SHIP_SPRITE_HEIGHT + 4;
+    this.hud.addChild(this.#scoreBacking, this.#score);
+    for (let i = 0; i < POPUPS; i++) {
+      const popup = new PixelText('', WHITE);
+      popup.visible = false;
+      this.container.addChild(popup);
+      this.#popups.push(popup);
+      this.#popupSample.push(-1);
+      this.#popupX.push(0);
+      this.#popupY.push(0);
+    }
   }
 
   #add(sprite: Sprite): Sprite {
@@ -168,6 +201,10 @@ export class CombatView {
     for (let i = 0; i < BURSTS; i++) {
       this.#burstSample[i] = -1;
       this.#bursts[i]!.hide();
+    }
+    for (let i = 0; i < POPUPS; i++) {
+      this.#popupSample[i] = -1;
+      this.#popups[i]!.visible = false;
     }
   }
 
@@ -228,6 +265,22 @@ export class CombatView {
       this.#nextBurst = (k + 1) % BURSTS;
       this.#bursts[k]!.start(state.enemyX[i]! / Q8, state.enemyY[i]! / Q8, seededRandom(i + 1));
       this.#burstSample[k] = state.enemyEndTick[i]! * SAMPLES_PER_TICK;
+      // Shot down, not rammed: show the points, amber when on the beat.
+      if (state.enemyPoints[i]! > 0) {
+        const p = this.#nextPopup;
+        this.#nextPopup = (p + 1) % POPUPS;
+        this.#popups[p]!.text = String(state.enemyPoints[i]);
+        this.#popups[p]!.color = state.enemyOnBeat[i] === 1 ? AMBER : WHITE;
+        this.#popupX[p] = state.enemyX[i]! / Q8;
+        this.#popupY[p] = state.enemyY[i]! / Q8 - 10;
+        this.#popupSample[p] = state.enemyEndTick[i]! * SAMPLES_PER_TICK;
+      }
+    }
+    for (let p = 0; p < POPUPS; p++) {
+      const popup = this.#popups[p]!;
+      const ms = this.#popupSample[p]! < 0 ? -1 : samplesToMs(displaySamples - this.#popupSample[p]!);
+      popup.visible = ms >= 0 && ms < POPUP_MS;
+      if (popup.visible) popup.place(this.#popupX[p]!, this.#popupY[p]! - Math.floor((ms * POPUP_RISE_PX) / POPUP_MS), 'center');
     }
     for (let k = 0; k < BURSTS; k++) {
       if (this.#burstSample[k]! < 0) continue;
@@ -245,8 +298,23 @@ export class CombatView {
     // Lives.
     const lives = state.lives < MAX_LIFE_ICONS ? state.lives : MAX_LIFE_ICONS;
     for (let i = 0; i < MAX_LIFE_ICONS; i++) this.#lives[i]!.visible = i < lives;
-    this.#livesBacking.visible = lives > 0;
-    this.#livesBacking.width = lives * (SHIP_SPRITE_WIDTH + LIFE_ICON_GAP) + LIFE_ICON_GAP;
+    const iconsWidth = lives * (SHIP_SPRITE_WIDTH + LIFE_ICON_GAP) + LIFE_ICON_GAP;
+    const multiplier = scoreMultiplier(state.streak);
+    this.#multiplier.visible = multiplier > 1;
+    this.#multiplier.text = `x${multiplier}`;
+    this.#multiplier.place(2 + iconsWidth + HUD_PAD, 4 + Math.floor((SHIP_SPRITE_HEIGHT - 7) / 2));
+    this.#livesBacking.visible = lives > 0 || multiplier > 1;
+    this.#livesBacking.width = iconsWidth + (multiplier > 1 ? this.#multiplier.textWidth + 2 * HUD_PAD : 0);
+
+    // Score, in the top right corner.
+    if (state.score !== this.#shownScore) {
+      this.#shownScore = state.score;
+      this.#score.text = String(state.score).padStart(SCORE_DIGITS, '0');
+      const right = PLAYFIELD_WIDTH - 4;
+      this.#score.place(right, 4 + Math.floor((SHIP_SPRITE_HEIGHT - 7) / 2), 'right');
+      this.#scoreBacking.width = this.#score.textWidth + 2 * HUD_PAD + 1;
+      this.#scoreBacking.position.set(right - this.#score.textWidth - HUD_PAD, 2);
+    }
 
     this.#seenTick = state.tick;
     this.#scanFrom = state.firstLive;

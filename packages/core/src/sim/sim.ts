@@ -14,6 +14,11 @@ import {
 } from '../playfield.ts';
 import {
   DRIFT_Q8,
+  KILL_POINTS,
+  MAX_MULTIPLIER,
+  ON_BEAT_TICKS,
+  STREAK_STEP,
+  SURVIVAL_POINTS_PER_LIFE,
   ENEMY_BULLET_SIZE,
   ENEMY_ENTRY_X,
   ENEMY_EXIT_X,
@@ -91,6 +96,13 @@ export interface SimState {
   hitTick: number;
   /** Enemies destroyed by shots or by ramming. */
   kills: number;
+  score: number;
+  /** Kills by shots since the ship last lost a life; sets the multiplier. */
+  streak: number;
+  /** Kills on the beat. */
+  onBeatKills: number;
+  /** The points for lives left, added when the song ends, or 0. */
+  survivalBonus: number;
   /** Ticks until the ship can fire again. */
   shotCooldown: number;
   /** Per enemy of the level, by index: an EnemyStatus. */
@@ -103,6 +115,9 @@ export interface SimState {
   enemyFire: Uint32Array;
   /** The tick each enemy was destroyed or left the screen, or 0. */
   enemyEndTick: Int32Array;
+  /** Points each enemy scored when shot down (0 if rammed or not destroyed), and whether on the beat. */
+  enemyPoints: Uint16Array;
+  enemyOnBeat: Uint8Array;
   /** Enemies before this index are destroyed or gone; from it on, not yet spawned. */
   firstLive: number;
   nextSpawn: number;
@@ -131,6 +146,10 @@ export function createSimState(): SimState {
     safeUntil: 0,
     hitTick: -1,
     kills: 0,
+    score: 0,
+    streak: 0,
+    onBeatKills: 0,
+    survivalBonus: 0,
     shotCooldown: 0,
     enemyStatus: new Uint8Array(0),
     enemyHp: new Uint8Array(0),
@@ -138,6 +157,8 @@ export function createSimState(): SimState {
     enemyY: new Int32Array(0),
     enemyFire: new Uint32Array(0),
     enemyEndTick: new Int32Array(0),
+    enemyPoints: new Uint16Array(0),
+    enemyOnBeat: new Uint8Array(0),
     firstLive: 0,
     nextSpawn: 0,
     shotActive: new Uint8Array(MAX_SHOTS),
@@ -166,6 +187,10 @@ export function resetSimState(state: SimState): void {
   state.safeUntil = 0;
   state.hitTick = -1;
   state.kills = 0;
+  state.score = 0;
+  state.streak = 0;
+  state.onBeatKills = 0;
+  state.survivalBonus = 0;
   state.shotCooldown = 0;
   state.enemyStatus.fill(0);
   state.enemyHp.fill(0);
@@ -173,6 +198,8 @@ export function resetSimState(state: SimState): void {
   state.enemyY.fill(0);
   state.enemyFire.fill(0);
   state.enemyEndTick.fill(0);
+  state.enemyPoints.fill(0);
+  state.enemyOnBeat.fill(0);
   state.firstLive = 0;
   state.nextSpawn = 0;
   state.shotActive.fill(0);
@@ -188,6 +215,8 @@ function sizeEnemies(state: SimState, level: Level): void {
   state.enemyY = new Int32Array(n);
   state.enemyFire = new Uint32Array(n);
   state.enemyEndTick = new Int32Array(n);
+  state.enemyPoints = new Uint16Array(n);
+  state.enemyOnBeat = new Uint8Array(n);
   for (let i = 0; i < n; i++) state.enemyFire[i] = level.enemies.fireStart[i]!;
 }
 
@@ -316,6 +345,36 @@ function placeEnemy(level: Level, state: SimState, i: number, t: number): void {
   }
 }
 
+/** The score multiplier for a streak of `streak` kills without losing a life. */
+export function scoreMultiplier(streak: number): number {
+  const m = 1 + Math.floor(streak / STREAK_STEP);
+  return m < MAX_MULTIPLIER ? m : MAX_MULTIPLIER;
+}
+
+/** True if instrument `inst` has a note within ON_BEAT_TICKS of tick t. */
+export function onBeat(level: Level, inst: number, t: number): boolean {
+  // The first of the instrument's note ticks at or after t - ON_BEAT_TICKS.
+  let lo = level.noteStart[inst]!;
+  let hi = level.noteStart[inst + 1]!;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (level.noteTick[mid]! < t - ON_BEAT_TICKS) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo < level.noteStart[inst + 1]! && level.noteTick[lo]! <= t + ON_BEAT_TICKS;
+}
+
+/** Scores enemy i, shot down at tick t: its kind's points, doubled on the beat, times the multiplier. */
+function scoreKill(level: Level, state: SimState, i: number, t: number): void {
+  const beat = onBeat(level, level.enemies.instrument[i]!, t);
+  const points = KILL_POINTS[level.enemies.kind[i]!]! * (beat ? 2 : 1) * scoreMultiplier(state.streak);
+  state.score += points;
+  state.enemyPoints[i] = points;
+  state.enemyOnBeat[i] = beat ? 1 : 0;
+  state.streak++;
+  if (beat) state.onBeatKills++;
+}
+
 /** Fires an enemy bullet from (x, y) at the ship, if the difficulty's cap allows one more. */
 function fireAtShip(level: Level, state: SimState, x: number, y: number): void {
   const { bulletSpeedQ8, maxBullets } = EnemyTuning[level.difficulty];
@@ -354,6 +413,7 @@ function endEnemy(state: SimState, i: number, t: number, status: number): void {
 function loseLife(level: Level, state: SimState, t: number): void {
   state.lives--;
   state.hitTick = t;
+  state.streak = 0;
   if (state.lives <= 0) {
     state.dead = true;
     state.deathTick = t;
@@ -375,7 +435,11 @@ function loseLife(level: Level, state: SimState, t: number): void {
  *    LED walls (so turrets on the bar tips can be hit) and stop on the first enemy they hit.
  * 4. Enemies fire on their scheduled ticks; move enemy bullets, which stop on the terrain.
  * 5. Unless the ship is in its safe time after a respawn, test it against the terrain,
- *    live enemies (which are destroyed too) and enemy bullets; a hit costs a life.
+ *    live enemies (which are destroyed too) and enemy bullets; a hit costs a life and the
+ *    streak.
+ * 6. At the song's end, add the survival bonus.
+ * A shot that destroys an enemy scores KILL_POINTS for its kind, doubled on the beat (a
+ * note of its instrument within ON_BEAT_TICKS), times scoreMultiplier(streak).
  * Does nothing once the ship is dead or the song is over.
  */
 export function tick(level: Level, state: SimState, input: number): void {
@@ -442,6 +506,7 @@ export function tick(level: Level, state: SimState, input: number): void {
       if (state.enemyHp[i] === 0) {
         endEnemy(state, i, t, EnemyStatus.destroyed);
         state.kills++;
+        scoreKill(level, state, i, t);
       }
       break;
     }
@@ -490,7 +555,11 @@ export function tick(level: Level, state: SimState, input: number): void {
     }
     if (hit) loseLife(level, state, t);
   }
-  if (state.tick >= level.tickCount) state.finished = true;
+  if (state.tick >= level.tickCount && !state.dead) {
+    state.finished = true;
+    state.survivalBonus = state.lives * SURVIVAL_POINTS_PER_LIFE;
+    state.score += state.survivalBonus;
+  }
 }
 
 /**
@@ -503,12 +572,12 @@ export function runInputLog(level: Level, inputs: Uint8Array, state: SimState = 
 }
 
 /**
- * A deterministic byte form of the state, for golden hashes: 10 little-endian i32s (tick,
- * shipX, shipY, dead, deathTick, lives, finished, safeUntil, hitTick, kills), then each
- * enemy's status byte.
+ * A deterministic byte form of the state, for golden hashes: 14 little-endian i32s (tick,
+ * shipX, shipY, dead, deathTick, lives, finished, safeUntil, hitTick, kills, score,
+ * streak, onBeatKills, survivalBonus), then each enemy's status byte.
  */
 export function serializeSimState(state: SimState): Uint8Array {
-  const out = new Uint8Array(40 + state.enemyStatus.length);
+  const out = new Uint8Array(56 + state.enemyStatus.length);
   const view = new DataView(out.buffer);
   const fields = [
     state.tick,
@@ -521,8 +590,12 @@ export function serializeSimState(state: SimState): Uint8Array {
     state.safeUntil,
     state.hitTick,
     state.kills,
+    state.score,
+    state.streak,
+    state.onBeatKills,
+    state.survivalBonus,
   ];
   for (let i = 0; i < fields.length; i++) view.setInt32(i * 4, fields[i]!, true);
-  out.set(state.enemyStatus, 40);
+  out.set(state.enemyStatus, 56);
   return out;
 }

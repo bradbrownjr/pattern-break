@@ -212,9 +212,11 @@ every bar of every generated level.
 - A Gradius-style power-up meter, drawn as a VU meter. Collected capsules advance the meter,
   and a button press buys the highlighted upgrade (speed, double shot, laser, option pod,
   shield).
-- Scoring: kills; an **on-beat bonus** for a kill within plus or minus N ms of a note event
-  on that enemy's channel; a no-hit streak multiplier; an end-of-song survival bonus. Death
-  costs a life; game over before the song ends keeps the partial score.
+- **Scoring (2026-11-09):** a shot-down turret or ship is 100, a tank 300; ramming scores
+  nothing. The **on-beat bonus** doubles a kill within 25 ms of a note of that enemy's
+  instrument. A **streak multiplier** adds 1 for every 10 kills without losing a life, up
+  to 4. Reaching the end of the song adds 1000 a life left. Game over before the song ends
+  keeps the partial score.
 - **Replay format:** a header `{ moduleHash, difficulty, GEN_VERSION, SIM_VERSION }` plus
   run-length-encoded input bits per tick. That is all the server needs.
 

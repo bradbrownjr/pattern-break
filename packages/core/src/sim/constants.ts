@@ -77,3 +77,17 @@ export const HOP_PX = 10;
 export const HOP_TICKS = 16;
 /** Climbing and diving ships drift 0.5 px per tick from their line. */
 export const DRIFT_Q8 = 128;
+
+/** Points for destroying each kind with a shot, indexed by EnemyKind. Ramming scores nothing. */
+export const KILL_POINTS = [100, 300, 100] as const;
+/**
+ * A kill within 3 ticks (25 ms) of a note of the enemy's instrument is on the beat: double
+ * points. At 6 ticks, busy instruments made nearly every kill count; at 3, an autopilot that
+ * ignores the beat lands 10 to 65% of its kills on it.
+ */
+export const ON_BEAT_TICKS = 3;
+/** Every 10 kills without losing a life raise the multiplier by 1, up to 4. */
+export const STREAK_STEP = 10;
+export const MAX_MULTIPLIER = 4;
+/** Reaching the end of the song scores this much per life left. */
+export const SURVIVAL_POINTS_PER_LIFE = 1000;

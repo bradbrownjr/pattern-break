@@ -160,4 +160,11 @@ export interface Level {
    */
   scroll: Int32Array;
   enemies: EnemyList;
+  /**
+   * Each instrument's note ticks, for the on-beat bonus: instrument i's notes are at
+   * noteTick[noteStart[i]] to noteTick[noteStart[i + 1] - 1], in order. noteStart has 257
+   * entries.
+   */
+  noteStart: Uint32Array;
+  noteTick: Uint32Array;
 }

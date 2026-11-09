@@ -40,7 +40,28 @@ const FIRE_MIN_Q8 = FIRE_MIN_X * Q8;
 const FIRE_MAX_Q8 = FIRE_MAX_X * Q8;
 
 /** A level's terrain before enemies are placed. */
-export type LevelTerrain = Omit<Level, 'enemies'>;
+export type LevelTerrain = Omit<Level, 'enemies' | 'noteStart' | 'noteTick'>;
+
+/**
+ * Each instrument's note ticks in time order (Level.noteStart and noteTick): a counting
+ * sort of the notes by instrument, keeping their order.
+ */
+export function instrumentNotes(levelData: LevelData): { noteStart: Uint32Array; noteTick: Uint32Array } {
+  const { timeSamples, resolvedInstrument } = levelData.notes;
+  const n = timeSamples.length;
+  const noteStart = new Uint32Array(INSTRUMENTS + 1);
+  for (let k = 0; k < n; k++) noteStart[resolvedInstrument[k]! + 1]!++;
+  for (let i = 0; i < INSTRUMENTS; i++) noteStart[i + 1]! += noteStart[i]!;
+  const noteTick = new Uint32Array(n);
+  const cursor = noteStart.slice(0, INSTRUMENTS);
+  for (let k = 0; k < n; k++) noteTick[cursor[resolvedInstrument[k]!]!++] = Math.floor(timeSamples[k]! / SAMPLES_PER_TICK);
+  return { noteStart, noteTick };
+}
+
+/** A note table with no notes, for hand-made levels. */
+export function noNotes(): { noteStart: Uint32Array; noteTick: Uint32Array } {
+  return { noteStart: new Uint32Array(INSTRUMENTS + 1), noteTick: new Uint32Array(0) };
+}
 
 /** An enemy list with no enemies. */
 export function emptyEnemyList(): EnemyList {
@@ -95,30 +116,27 @@ function shipMotion(effect: number, param: number): number {
  * instrument's later notes, while it is ahead of the ship, no more often than the
  * difficulty allows.
  */
-export function placeEnemies(levelData: LevelData, terrain: LevelTerrain, drums: Uint8Array): EnemyList {
+export function placeEnemies(
+  levelData: LevelData,
+  terrain: LevelTerrain,
+  drums: Uint8Array,
+  notes: { noteStart: Uint32Array; noteTick: Uint32Array },
+): EnemyList {
   const tune = EnemyTuning[terrain.difficulty];
   const { solidPeaks } = Difficulty[terrain.difficulty];
   const { barCount, tickCount, scroll, barStartSample } = terrain;
   const { timeSamples, resolvedInstrument, note, effect, effectParam } = levelData.notes;
   const n = timeSamples.length;
 
-  // Each instrument's note ticks, in time order, and its middle note.
-  const perInstrument = new Uint32Array(INSTRUMENTS + 1);
+  // Each instrument's middle note.
+  const { noteStart, noteTick } = notes;
   const pitches = new Uint32Array(INSTRUMENTS * NOTES);
-  for (let k = 0; k < n; k++) {
-    perInstrument[resolvedInstrument[k]! + 1]!++;
-    pitches[resolvedInstrument[k]! * NOTES + note[k]!]!++;
-  }
-  for (let i = 0; i < INSTRUMENTS; i++) perInstrument[i + 1]! += perInstrument[i]!;
-  const firstNote = perInstrument.slice(0, INSTRUMENTS);
-  const noteTicks = new Uint32Array(n);
-  const cursor = firstNote.slice();
-  for (let k = 0; k < n; k++) noteTicks[cursor[resolvedInstrument[k]!]!++] = Math.floor(timeSamples[k]! / SAMPLES_PER_TICK);
+  for (let k = 0; k < n; k++) pitches[resolvedInstrument[k]! * NOTES + note[k]!]!++;
   const middle = new Uint8Array(INSTRUMENTS);
   let bass = -1;
   let melodic = 0;
   for (let i = 0; i < INSTRUMENTS; i++) {
-    const total = perInstrument[i + 1]! - perInstrument[i]!;
+    const total = noteStart[i + 1]! - noteStart[i]!;
     if (total === 0) continue;
     // The middle note: the lowest pitch at or below which half the notes fall.
     let p = 0;
@@ -135,8 +153,8 @@ export function placeEnemies(levelData: LevelData, terrain: LevelTerrain, drums:
   const fireTicks = (inst: number, from: number, until: number, max: number, screenX: (t: number) => number): number[] => {
     const out: number[] = [];
     let last = -tune.fireIntervalTicks;
-    for (let j = firstNote[inst]!; j < perInstrument[inst + 1]! && out.length < max; j++) {
-      const t = noteTicks[j]!;
+    for (let j = noteStart[inst]!; j < noteStart[inst + 1]! && out.length < max; j++) {
+      const t = noteTick[j]!;
       if (t < from || t < ENEMY_GRACE_TICKS) continue;
       if (t >= until) break;
       const x = screenX(t);
