@@ -1,7 +1,7 @@
 import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
 
-// `node` runs every test in Node. `browser` runs the golden test in real browsers:
+// `node` runs every test in Node. `browser` runs the golden and replay tests in real browsers:
 // PB_BROWSERS picks them (default chromium; CI sets chromium,firefox,webkit), and
 // PB_CHROMIUM points at a Chromium binary when Playwright's own download isn't available.
 const browsers = (process.env['PB_BROWSERS'] ?? 'chromium').split(',').map((b) => b.trim());
@@ -16,7 +16,7 @@ export default defineConfig({
       {
         test: {
           name: 'browser',
-          include: ['test/golden.test.ts'],
+          include: ['test/golden.test.ts', 'test/replay.test.ts'],
           browser: {
             enabled: true,
             headless: true,

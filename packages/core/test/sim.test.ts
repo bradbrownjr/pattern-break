@@ -67,6 +67,21 @@ describe('ship movement', () => {
   });
 });
 
+describe('resetSimState', () => {
+  it('plays a level again exactly as a fresh state does, enemy fire included', () => {
+    // A generated level, so enemies fire on their notes; a retry resets the same state.
+    // Seed 1 at 600 rows played differently after a reset before 2026-11-09's fix: reset
+    // zeroed each enemy's next fire index instead of setting it to its first fire tick.
+    const level = generateLevel(syntheticLevelData(randomSong(lcg(1), 600, 8), 'normal'), 'normal');
+    const inputs = autopilotInputs(level);
+    expect(level.enemies.fireTick.length).toBeGreaterThan(0);
+    const fresh = serializeSimState(runInputLog(level, inputs));
+    const s = runInputLog(level, inputs);
+    resetSimState(s);
+    expect(serializeSimState(runInputLog(level, inputs, s))).toEqual(fresh);
+  });
+});
+
 describe('collision', () => {
   // One bar at world x 0..8 with 3 ceiling segments (lit y 0..6, 7..13, 14..20) and 2 floor
   // segments (lit y 210..216 and 203..209). Scroll 0, so screen x = world x.

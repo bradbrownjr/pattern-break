@@ -122,7 +122,7 @@ export class JukeboxMenu {
 export const PAUSE_ITEMS = ['resume', 'controls', 'quit'] as const;
 export type PauseItem = (typeof PAUSE_ITEMS)[number];
 
-/** Resume, Controls, Quit to title. Back resumes. */
+/** Resume, Controls, Quit (to the title). Back resumes. */
 export class PauseMenu {
   cursor = 0;
 

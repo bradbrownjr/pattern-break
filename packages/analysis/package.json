@@ -14,6 +14,7 @@
     "test": "vitest run --project node",
     "analyze": "node scripts/analyze.ts",
     "bench:sim": "node scripts/bench-sim.ts",
+    "bench:sim:max": "node scripts/bench-sim-max.ts",
     "test:browser": "vitest run --project browser"
   },
   "dependencies": {

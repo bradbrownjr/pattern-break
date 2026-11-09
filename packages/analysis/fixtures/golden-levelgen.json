@@ -1,6 +1,6 @@
 {
   "genVersion": 5,
-  "simVersion": 9,
+  "simVersion": 10,
   "fixtures": {
     "pb-fixture-01.mod": {
       "easy": {

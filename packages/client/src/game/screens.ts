@@ -60,7 +60,7 @@ export class TitleScreen {
   #menu = new Container();
   #press = new PixelText('Press any key', CYAN).place(CENTER, 120, 'center');
   /** Shown on the start screen after a gamepad press: browsers start sound only on a key or click. */
-  #padHint = new PixelText('A key or a click turns on the sound first', GREY).place(CENTER, 136, 'center');
+  #padHint = new PixelText('Key or click for sound', GREY).place(CENTER, 136, 'center');
   #marker = new PixelText('>', AMBER);
   #labels: PixelText[] = [];
   #values: PixelText[] = [];
@@ -130,9 +130,10 @@ export class DemoBanner {
   readonly container = new Container();
   #press = new PixelText('Press any key', CYAN).place(CENTER, 196, 'center');
 
-  constructor() {
-    const shadow = new PixelText('Demo', MAGENTA, 2).place(CENTER + 1, 10 + 1, 'center');
-    const label = new PixelText('Demo', WHITE, 2).place(CENTER, 10, 'center');
+  /** `text` is the banner: Demo, or Replay when a replay plays. */
+  constructor(text = 'Demo') {
+    const shadow = new PixelText(text, MAGENTA, 2).place(CENTER + 1, 10 + 1, 'center');
+    const label = new PixelText(text, WHITE, 2).place(CENTER, 10, 'center');
     this.container.addChild(shadow, label, this.#press);
   }
 
@@ -304,10 +305,10 @@ export class MessageScreen {
   }
 }
 
-const PAUSE_LABELS: Record<PauseItem, string> = { resume: 'Resume', controls: 'Controls', quit: 'Quit to title' };
+const PAUSE_LABELS: Record<PauseItem, string> = { resume: 'Resume', controls: 'Controls', quit: 'Quit' };
 const PAUSE_ROW = 13;
 
-/** "Paused" over the frozen game, with Resume, Controls and Quit to title. */
+/** "Paused" over the frozen game, with Resume, Controls and Quit. */
 export class PauseScreen {
   readonly container = new Container();
   #marker = new PixelText('>', AMBER);

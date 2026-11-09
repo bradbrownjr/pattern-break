@@ -244,8 +244,10 @@ every bar of every generated level.
   instrument. A **streak multiplier** adds 1 for every 10 kills without losing a life, up
   to 4. Reaching the end of the song adds 1000 a life left. Game over before the song ends
   keeps the partial score.
-- **Replay format:** a header `{ moduleHash, difficulty, GEN_VERSION, SIM_VERSION }` plus
-  run-length-encoded input bits per tick. That is all the server needs.
+- **Replay format:** a header `{ moduleHash, difficulty, GEN_VERSION, SIM_VERSION, score }`
+  plus run-length-encoded input bits per tick. That is all the server needs. A player can
+  watch a run's replay and save it as a `.pbreplay` file (2026-11-09; the byte layout is in
+  `DEVELOPMENT.md`, "Replays").
 
 ## 8. Audio and timing (`packages/client/audio`)
 

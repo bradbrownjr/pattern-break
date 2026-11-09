@@ -18,6 +18,7 @@
     "serve": "pnpm --filter @game/server start",
     "build": "pnpm -r --if-present build",
     "screenshots": "node tools/screenshots/capture.ts",
+    "record:replay": "node tools/record-replay.ts",
     "test:browser": "pnpm --filter @game/analysis --filter @game/client test:browser",
     "check:music": "node tools/validate-manifest.ts"
   },

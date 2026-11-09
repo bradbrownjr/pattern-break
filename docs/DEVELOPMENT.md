@@ -26,10 +26,12 @@ pnpm install
 | `pnpm lint` | Oxlint over the repo, including the core determinism rules. |
 | `pnpm typecheck` | `tsc` (TypeScript 7) in each package, then in `tools/`. |
 | `pnpm test` | Vitest in each package, in Node. |
-| `pnpm test:browser` | The golden LevelData, level and sim tests and the client's audio and renderer tests in real browsers (see "Tests"). |
+| `pnpm test:browser` | The golden LevelData, level and sim tests, the recorded replay, and the client's audio and renderer tests in real browsers (see "Tests"). |
 | `pnpm --filter @game/analysis analyze <file>` | Analyzes one module (a song file made in a music tracker) and prints its LevelData hash and a summary. |
 | `pnpm screenshots` | Regenerates every figure in `docs/img/` (see "Screenshots"). |
 | `pnpm --filter @game/analysis bench:sim [file]` | Builds each difficulty's level, flies it with the autopilot, and prints sim ticks per second. |
+| `pnpm --filter @game/analysis bench:sim:max [file] [difficulty]` | The sim at its busiest, and what a server-side replay check costs (see "Simulation", "Speed"). |
+| `pnpm record:replay` | Records the replay fixture in headless Chromium (see "Replays"). `--no-build` reuses `packages/client/dist`. |
 | `pnpm check:docs` | The writing-rules check (`tools/check-docs.ts`). |
 | `pnpm check:music` | Checks `music/manifest.json` against the files in `music/` (`tools/validate-manifest.ts`; see "Bundled songs"). |
 | `pnpm gen:tables` | Regenerates `packages/core/src/spectrum/tables.generated.ts`. |
@@ -490,8 +492,12 @@ formation count and that many u8 sizes.
   `state.safeUntil`, 240 ticks on. The last life sets `state.dead` and `state.deathTick`.
 - **Running a log:** `runInputLog(level, inputs, state?)` runs from the state's current
   tick until the log ends, the last life is lost, or the song ends. `resetSimState` reuses
-  a state; `tick()` sizes its enemy arrays to the level on the first tick, the only time it
-  allocates.
+  a state: it clears `state.enemiesReady`, and the next `tick()` sets the per-enemy arrays
+  up from the level (`setUpEnemies()`), each enemy's next shot at its first fire tick. It
+  allocates only when the level's enemy or formation count differs from the last. Until
+  `SIM_VERSION` 10 a reset zeroed the fire indexes instead, so a retry on the same level
+  fired the wrong shots: the first replay played back in the game showed it (1900 points
+  against 34 800), and `sim.test.ts` now checks that a reset state plays like a fresh one.
 - **Autopilot:** `autopilotInputs(level)` in `sim/autopilot.ts` flies a level by looking
   24 ticks ahead through the walls from `solidWalls()`, so it steers clear of turrets and
   tank tracks, holds fire, and presses bomb when it can drop one and a tank or floor
@@ -506,7 +512,38 @@ formation count and that many u8 sizes.
   reaches the end; tests use that to show the path exists.
 - **Speed:** `pnpm --filter @game/analysis bench:sim` on the fixture ran 12.5 to 13.7
   million ticks per second in Node 26 in the cloud development container (checked
-  2026-11-08, before enemies), about 100 000 times real time.
+  2026-11-08, before enemies). With enemies and power-ups it runs 0.5 to 0.6 million, 4000
+  to 4800 times real time (Node 26.13 on a Xeon E5-2640 from 2012, 2026-11-09).
+  `bench:sim:max` plays The_Epic_Chip on hard, the densest level (604 enemies), with a ship
+  that can't be hit, double, two options and the missile, fire held and bomb and missile
+  pressed every other tick. At most 11 enemies, 36 of 36 shots, 12 of 16 bullets, 3 of 3
+  missiles and 2 of 4 capsules were on screen at once; its busiest 10 000 ticks took 55 ms,
+  5.5 us a tick. A server-side check of a replay of the whole 198 s song costs 4.1 s of
+  analysis, 46 ms of level generation and 105 ms of sim on the same machine: analysis is
+  what to cache by module hash (2026-11-09).
+
+### Replays
+
+`sim/replay.ts` holds a run as a `Replay`: the song file's SHA-256, the difficulty,
+`GEN_VERSION`, `SIM_VERSION`, the score it ended with, and the input bits of every tick.
+`encodeReplay` writes it little-endian: magic `PBRP`, u32 format version (1), u32
+genVersion, u32 simVersion, 32 bytes of hash, u8 difficulty id, i32 score, u32 tick count,
+u32 run count, then each run of equal bits as u16 bits and its length as an unsigned
+LEB128 varint. `decodeReplay` throws on a wrong magic or format, an unknown difficulty,
+truncation, run lengths that don't add up to the tick count, and trailing bytes. The level
+isn't stored: it is rebuilt from the song, which is why the hash is there. The level-1 run
+in the fixture is 10 477 ticks in 3 136 bytes.
+
+In the game (`game.ts`), each run that ends in game over or level complete keeps its
+replay, for a bundled song (its hash comes from `music/manifest.json`). On those screens R
+(or Y on a pad) watches it and S saves it as
+`pattern-break-<song>-<difficulty>-<score>.pbreplay`. A replay plays in the `replay` mode:
+the song from the start at the replay's tempo, the sim fed the replay's inputs against the
+song clock as in play, and "Replay" over it. Any key stops it. At the end it shows the
+score and "Score matches", the recorded score when they differ, or "Stopped", then returns
+to the screen it came from. A `.pbreplay` file dropped on the title screen plays the same
+way if its hash names a bundled song; one from other versions of the level or sim says
+which.
 
 ## Versions to bump
 
@@ -516,7 +553,8 @@ formation count and that many u8 sizes.
 - **`SIM_VERSION`**: bump when simulation output changes for any input.
 
 Leaderboards are keyed on `GEN_VERSION`, so a bump starts fresh boards. Update the golden
-snapshots in the same commit as the bump. Both are 0 until the first release.
+snapshots and re-record the replay fixture (`pnpm record:replay`) in the same commit as the
+bump. Both are 0 until the first release.
 
 ## Tests
 
@@ -535,6 +573,12 @@ and a fixed zigzag log (which loses its lives, the last at the recorded
 alone. The same test checks them in Node and in the browsers. A Level hash
 changes only with a `GEN_VERSION` bump, a sim hash only with a `SIM_VERSION` bump.
 
+**Recorded replay.** `packages/analysis/fixtures/replay-numenchip-normal.pbreplay` is a run
+of level 1 (Numen in Da Chip on normal) recorded by the game in Chromium.
+`test/replay.test.ts` checks that it names this `GEN_VERSION` and `SIM_VERSION` and the song
+file's SHA-256, builds the level from `music/numenchip.xm`, runs the inputs, and gets the
+recorded score (34 800) on the recorded last tick, in Node and in every browser.
+
 **Bundled songs.** `packages/analysis/test/music.test.ts` analyzes every song in
 `music/manifest.json`, builds its level on each difficulty, and checks that it has enemies,
 that the path check passes with them, and that the autopilot reaches the end of the
@@ -542,7 +586,7 @@ terrain alone. It runs in Node only and takes about a minute
 for the nine songs, so a levelgen change that makes a real song unplayable fails `pnpm test`.
 
 **Browsers.** The analysis package's `vitest.config.ts` has two projects. `node` runs every
-test in Node and is what `pnpm test` runs. `browser` runs the golden test in real browsers
+test in Node and is what `pnpm test` runs. `browser` runs the golden and replay tests in real browsers
 through Vitest browser mode and Playwright, and is what `pnpm test:browser` runs. Every
 engine has to produce the committed hash, which is how we know Node and the browsers build
 identical levels.
@@ -844,9 +888,10 @@ Run `pnpm dev` and open the URL it prints.
   a bomb (one per press, 1 s to reload after it bursts), C or L launch a missile once
   bought, V or ; (semicolon) nuke, F or ' (quote) buy the highlighted power-up, Shift
   boosts once bought, and Esc pauses (a gamepad is below). Losing the last of three
-  lives is game over: any key retries the level, Esc goes to the title. Game over and level complete ignore keys for 0.7 s, so a key still held from
+  lives is game over: any key retries the level, Esc goes to the title, and R and S watch
+  and save the run's replay (see "Replays"). Game over and level complete ignore keys for 0.7 s, so a key still held from
   play doesn't skip them. The game pauses when the window loses focus or the tab is hidden.
-- **Pause menu:** "Paused" over the frozen game, with Resume, Controls and Quit to title,
+- **Pause menu:** "Paused" over the frozen game, with Resume, Controls and Quit,
   worked like the title menu. Esc (or Backspace) resumes, as does Start on a pad, from any
   item; Q, or Select on a pad, quits to the title. The cursor starts on Resume each time.
 - **Controls** (`controls.ts`), from the title menu or the pause menu: a keyboard page and a
@@ -877,7 +922,7 @@ Run `pnpm dev` and open the URL it prints.
   screen on a fresh page: browsers start sound only after a user activation, and the HTML
   spec's activation-triggering input events are keydown, mousedown, pointer and touch
   events, not gamepad presses. So unless `navigator.userActivation.hasBeenActive`, a pad
-  press there shows "A key or a click turns on the sound first".
+  press there shows "Key or click for sound".
 - **Jukebox:** the nine songs and Back, with a 24-bar spectrum of what is playing under
   them, and the song's title, credit and time below that. Enter plays the song under the
   cursor or stops it if it is playing, a song that ends hands over to the next, and Esc or
@@ -1068,7 +1113,7 @@ input log and crash tick are kept in `Game.lastRun` for the replays in M2.
 bytes and the difficulty's tempo to
 `analysis-worker.ts`, a module worker that runs `loadOpenMpt()` and `analyze()` and sends
 back the serialized LevelData as a transferred buffer. The main thread deserializes it and
-calls `generateLevel()` for the chosen difficulty. The screen reads "Analyzing song..." until
+calls `generateLevel()` for the chosen difficulty. The screen reads "Loading" until
 both the analysis and the audio player are ready. Each song's bytes, its LevelData per tempo
 and its levels are kept for the session, so a second run of a song starts at once. The
 player loads a run's song at its difficulty's tempo (`player.load(bytes, tempoPermille)`);
@@ -1106,9 +1151,9 @@ step.
 
 ## Changelog and roadmap
 
-**Until the finished game is published, the changelog gets no new entries** (Brad,
-2026-11-09): a finished item stays in `ROADMAP.md` with its stage. The rules below apply
-from the release on.
+`CHANGELOG.md` is the project's history, kept by whoever finishes the work; its wording
+needs no approval. Player-facing release notes wait until the finished game is published
+(Brad, 2026-11-09).
 
 - **A finished roadmap item leaves `ROADMAP.md`**, its "At a glance" row and its section
   together, and becomes an entry in `CHANGELOG.md`. A milestone is finished only when its
@@ -1124,4 +1169,3 @@ from the release on.
   and fixed before anyone could hit it.
 - **Sections:** **Milestones** until the game is playable; after that, **New Features**,
   **Improvements**, and **Bug Fixes**, in that order.
-- **Brad approves changelog wording** before it reaches `main`.

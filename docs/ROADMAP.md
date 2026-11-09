@@ -16,7 +16,7 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 | [Title music, demo, and levels](#title-music-demo-and-levels) | Title music, an attract demo, menu sounds, an arcade run of levels, and game-over music. | Built; Brad to play-test |
 | [Cavern terrain](#cavern-terrain) | A cave that squeezes on every hit and winds with the melody; difficulty sets the song's speed and the cave's width. | Built; Brad to play-test |
 | [Eight levels](#eight-levels) | Six more songs, so the arcade run has eight levels. | Built; Brad to play-test |
-| [M2: enemies and scoring](#m2-enemies-and-scoring) | Notes become enemies; shooting, scoring, lives, power-ups, gamepad support, and replays that give the same score in every browser. | Enemies, shooting, scoring, the gamepad, bomb and nuke, power-ups, controls screen built; Brad to play-test |
+| [M2: enemies and scoring](#m2-enemies-and-scoring) | Notes become enemies; shooting, scoring, lives, power-ups, gamepad support, and replays that give the same score in every browser. | Enemies, shooting, scoring, the gamepad, bomb and nuke, power-ups, controls screen, replays built; Brad to play-test |
 | [M3: effects and look](#m3-effects-and-look) | Particles, big explosions, sound effects, copper bars, starfield, CRT filter, title and results screens, accessibility options. | Planned |
 | [M4: library, offline, music pack](#m4-library-offline-music-pack) | Import your own songs, install the game, and play with no connection; a bundled, credited music pack. | Planned |
 | [M5: leaderboards](#m5-leaderboards) | A global board per song, with scores checked by replaying them on the server. | Planned |
@@ -268,7 +268,7 @@ it", "Renderer").
 
 - [x] A Controls item on the title menu opens a keyboard page and a gamepad page, each a
       drawing with the keys or buttons used filled in their action's colour, over a
-      legend. The pause menu (Resume, Controls, Quit to title) opens it too.
+      legend. The pause menu (Resume, Controls, Quit) opens it too.
 - [x] The title and jukebox lose their control hints. The jukebox's list and spectrum no
       longer overlap with nine songs.
 - [x] Capture scenes and screenshots for the jukebox, both controls pages, and the pause
@@ -279,17 +279,34 @@ it", "Renderer").
 
 **Docs:** `DEVELOPMENT.md` ("Capture mode", "Playing it", "Renderer").
 
+### Replays and determinism
+
+- [x] A replay format: the song's SHA-256, difficulty, `GEN_VERSION`, `SIM_VERSION`, score,
+      and run-length-encoded inputs. Every run that ends keeps one; R watches it and S
+      saves it; a saved replay dropped on the title screen plays.
+- [x] A replay recorded by the game in Chromium is a fixture that Node, Chromium, Firefox
+      and WebKit all score the same (34 800), with `pnpm record:replay` to record it again.
+- [x] Watching the first replay in the game found that `resetSimState` broke enemy fire,
+      so every retry played differently from a fresh start; fixed, with a test
+      (`SIM_VERSION` 10).
+- [x] `bench:sim:max`: the busiest 10 000 ticks take 55 ms; a server check of a 198 s song
+      takes 4.1 s of analysis and 0.15 s of level generation and sim. `bench:sim` works
+      again (it analyzed every difficulty at one tempo).
+- [x] On-screen text cut to arcade prompts ("R Replay  S Save", "Esc Title  Any key
+      Retry").
+
+**Acceptance:** a replay recorded in Chromium reproduces the same score in Firefox, WebKit,
+and Node: `test/replay.test.ts` passes in all four (2026-11-09). Brad watches a replay of
+his own run and it plays out as he played it.
+
+**Docs:** `PLAN.md` ("Simulation"), `DEVELOPMENT.md` ("Simulation", "Replays", "Versions to
+bump", "Tests", "Commands", "Playing it"), `DOC-STYLE.md` ("Voice").
+
 ### Still to come
 
 - [ ] Pads and arcade sticks without the Gamepad API's standard mapping, which need a
-      way to assign their buttons.
-- [ ] Replay recording and playback.
-- [ ] Cross-engine determinism tests in Vitest browser mode.
-- [ ] The headless sim benchmark (10 000 ticks, maximum entities), which also gives the
-      first number for what a server-side replay check costs.
-
-**Acceptance:** a replay recorded in Chromium reproduces the same score in Firefox, WebKit,
-and Node.
+      way to assign their buttons. Left for when there is such a pad to test with: without
+      one, only hand-made gamepad objects could check it.
 
 ## M3: effects and look
 

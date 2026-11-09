@@ -1,18 +1,25 @@
 // The game flow: the start screen, the title menu with its music and attract demo, the
 // jukebox, and runs (the arcade levels in order, or one song in practice) with their intro
-// cards, pause, game over, and level complete. The song clock drives the sim
-// (docs/DEVELOPMENT.md, "Renderer and game loop").
+// cards, pause, game over, and level complete, and replays of finished runs. The song
+// clock drives the sim (docs/DEVELOPMENT.md, "Renderer and game loop").
 
 import {
   Difficulty,
+  GEN_VERSION,
+  InputBit,
+  SIM_VERSION,
   SAMPLES_PER_TICK,
   SAMPLE_RATE,
   Q8,
   autopilotInputs,
   createSimState,
+  decodeReplay,
+  runInputLog,
+  encodeReplay,
   generateLevel,
   resetSimState,
   type DifficultyName,
+  type Replay,
   type Level,
   type LevelData,
 } from '@game/core';
@@ -46,6 +53,7 @@ import {
   TITLE_SONG_ID,
   fetchSongBytes,
   songById,
+  songBySha256,
   type BundledSong,
 } from './songs.ts';
 
@@ -59,6 +67,7 @@ type Mode =
   | 'intro'
   | 'play'
   | 'paused'
+  | 'replay'
   | 'gameover'
   | 'complete'
   | 'error';
@@ -108,15 +117,23 @@ const FFT_SIZE = 1024;
 const SPECTRUM_LOW_HZ = 60;
 const SPECTRUM_HIGH_HZ = 14_000;
 
-/** One finished run: what M2's replays will store. */
-export interface RunRecord {
-  difficulty: DifficultyName;
-  inputs: Uint16Array;
-  /** The tick the ship crashed on, or -1 if it reached the end. */
-  deathTick: number;
-  /** Points scored, the lives bonus included. */
-  score: number;
+/** A replay playing: its level, and the screen it returns to when it ends. */
+interface Playback {
+  replay: Replay;
+  song: BundledSong;
+  level: Level;
+  from: 'gameover' | 'complete' | 'title';
 }
+
+/** What the level-complete screen shows, so it can be shown again after a replay. */
+interface CompleteView {
+  heading: string;
+  lines: string[];
+  after: () => void;
+}
+
+/** Shown on game over and level complete when the run has a replay. */
+const REPLAY_HINT = 'R Replay  S Save';
 
 export interface GameOptions {
   /** The songs Practice and the jukebox offer, in menu order. */
@@ -191,8 +208,15 @@ export class Game {
   #runScore = 0;
   /** What a key does on the level-complete screen. */
   #afterComplete: (() => void) | null = null;
-  /** The last finished run, kept for M2's replays. */
-  lastRun: RunRecord | null = null;
+  /** The last finished run's replay; null for the test song, which has no hash. */
+  #lastReplay: Replay | null = null;
+  #playback: Playback | null = null;
+  readonly #replayBanner = new DemoBanner('Replay');
+  #completeView: CompleteView | null = null;
+  /** True while game over or level complete shows the run the last replay is of. */
+  #offerReplay = false;
+  /** The level-complete view to show again after a replay started from it. */
+  #completeAfterReplay: CompleteView | null = null;
 
   constructor(r: GameRenderer, options: GameOptions) {
     this.#r = r;
@@ -207,6 +231,7 @@ export class Game {
       this.#jukebox.container,
       this.#controls.container,
       this.#demoBanner.container,
+      this.#replayBanner.container,
       this.#message.container,
       this.#pauseScreen.container,
       this.#fade.container,
@@ -226,6 +251,13 @@ export class Game {
       if (document.visibilityState === 'hidden') void this.#pause();
     });
     window.addEventListener('resize', () => this.#r.resize());
+    // A replay file dropped on the title screen plays.
+    window.addEventListener('dragover', (e) => e.preventDefault());
+    window.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const file = e.dataTransfer?.files[0];
+      if (file) void this.#onDropReplay(file);
+    });
     requestAnimationFrame(this.#frame);
   }
 
@@ -239,16 +271,18 @@ export class Game {
     this.#controls.container.visible = mode === 'controls';
     this.#pauseScreen.container.visible = mode === 'paused';
     this.#demoBanner.container.visible = mode === 'demo';
+    this.#replayBanner.container.visible = mode === 'replay';
     this.#message.container.visible = mode === 'analyzing' || mode === 'error' || mode === 'intro';
     this.#r.world.visible =
       mode === 'demo' ||
       mode === 'intro' ||
       mode === 'play' ||
       mode === 'paused' ||
+      mode === 'replay' ||
       mode === 'gameover' ||
       mode === 'complete';
     this.#r.combat.hud.visible = this.#r.world.visible;
-    if (mode === 'analyzing') this.#message.show('', 0, ['Analyzing song...']);
+    if (mode === 'analyzing') this.#message.show('', 0, ['Loading']);
     if (mode === 'paused') this.#pauseScreen.update(this.#pauseMenu.cursor);
     if (mode === 'controls') this.#controls.show(this.#controlsPages.page);
   }
@@ -257,7 +291,7 @@ export class Game {
     console.error(err);
     const text = err instanceof Error ? err.message : String(err);
     this.#setMode('error');
-    this.#message.show('Something went wrong', MAGENTA, [text.slice(0, 60), 'Reload the page to try again']);
+    this.#message.show('Error', MAGENTA, [text.slice(0, 60), 'Reload to retry']);
   }
 
   /** Fades to black, runs `mid`, and fades back in. */
@@ -289,6 +323,9 @@ export class Game {
         // Any key leaves the demo and does nothing else.
         if (!e.repeat) this.#toTitle();
         return;
+      case 'replay':
+        if (!e.repeat) this.#endReplay(true);
+        return;
       case 'paused':
         // Q quits straight to the title, as before the pause menu.
         if (e.code === 'KeyQ') {
@@ -309,6 +346,11 @@ export class Game {
     if (e.code === 'Escape') {
       if (this.#mode === 'play') void this.#pause();
       else if (this.#mode === 'gameover' || this.#mode === 'complete') this.#toTitle();
+      return;
+    }
+    if ((e.code === 'KeyR' || e.code === 'KeyS') && this.#onEndScreen()) {
+      if (e.code === 'KeyR') this.#watchLastReplay();
+      else this.#saveReplay();
       return;
     }
     this.#onAnyKey();
@@ -342,6 +384,9 @@ export class Game {
       case 'demo':
         this.#toTitle();
         return;
+      case 'replay':
+        this.#endReplay(true);
+        return;
       case 'title':
       case 'jukebox':
       case 'controls': {
@@ -367,6 +412,7 @@ export class Game {
         // B or Select is Esc; any other button is any key. Directions don't count, so a
         // stick still leaning from play doesn't skip the screen.
         if (bit === PadBit.b || bit === PadBit.select) this.#toTitle();
+        else if (bit === InputBit.buy && this.#onEndScreen()) this.#watchLastReplay();
         else if ((bit & (PadBit.up | PadBit.down | PadBit.left | PadBit.right)) === 0) this.#onAnyKey();
         return;
       default:
@@ -377,6 +423,7 @@ export class Game {
   #onPointer(): void {
     if (this.#mode === 'start') this.#leaveStart();
     else if (this.#mode === 'demo') this.#toTitle();
+    else if (this.#mode === 'replay') this.#endReplay(true);
     else if (this.#mode === 'title' || this.#mode === 'jukebox' || this.#mode === 'paused' || this.#mode === 'controls') {
       this.#onMenu('confirm');
     }
@@ -773,23 +820,27 @@ export class Game {
     this.#setMode('play');
   }
 
+  /** Keeps the run's replay. */
   #finishRun(): void {
     const log = this.#log;
-    if (!log) return;
-    this.lastRun = {
-      difficulty: this.#difficulty,
-      inputs: log.toArray(),
-      deathTick: this.#state.dead ? this.#state.deathTick : -1,
-      score: this.#state.score,
-    };
+    const hash = this.#song.sha256;
+    this.#lastReplay =
+      log && hash
+        ? {
+            moduleHash: hash,
+            difficulty: this.#difficulty,
+            genVersion: GEN_VERSION,
+            simVersion: SIM_VERSION,
+            score: this.#state.score,
+            inputs: log.toArray(),
+          }
+        : null;
   }
 
   #onCrash(): void {
     this.#finishRun();
     this.#stopMusic();
-    const s = this.#state;
-    this.#r.explosion.start(s.shipX / Q8, s.shipY / Q8, seededRandom(this.#runs));
-    this.#setMode('gameover');
+    this.#showGameOver();
     // Game over plays the opening of a song and fades it out.
     void this.#playMusic(this.#gameOverSong, 'gameover').then((started) => {
       if (started) {
@@ -799,39 +850,205 @@ export class Game {
     });
   }
 
+  /** The crash's explosion, then the game-over message (drawn by the frame loop). */
+  #showGameOver(): void {
+    this.#offerReplay = true;
+    const s = this.#state;
+    this.#r.explosion.start(s.shipX / Q8, s.shipY / Q8, seededRandom(this.#runs));
+    this.#setMode('gameover');
+  }
+
   #onComplete(): void {
     this.#finishRun();
-    this.#setMode('complete');
-    this.#message.container.visible = true;
     const run = this.#run;
     const difficulty = DIFFICULTY_LABELS[this.#difficulty];
     const s = this.#state;
-    const score = [`Score ${s.score}, lives bonus ${s.survivalBonus}`];
+    const score = [`Score ${s.score}  Bonus ${s.survivalBonus}`];
     if (run?.kind === 'arcade') {
       this.#runScore += s.score;
-      score.push(`Run total ${this.#runScore}`);
+      score.push(`Total ${this.#runScore}`);
     }
+    if (this.#lastReplay) score.push(REPLAY_HINT);
     if (run?.kind === 'arcade' && run.level < this.#levelSongs.length - 1) {
-      this.#message.show(`Level ${run.level + 1} complete`, LIME, [
-        `${this.#song.title}, ${difficulty}`,
-        ...score,
-        `Press any key or button for level ${run.level + 2}`,
-      ]);
-      this.#afterComplete = () => {
-        this.#sound('start');
-        this.#run = { kind: 'arcade', level: run.level + 1 };
-        void this.#beginLevel();
+      this.#completeView = {
+        heading: `Level ${run.level + 1} clear`,
+        lines: [`${this.#song.title}, ${difficulty}`, ...score, 'Any key Next'],
+        after: () => {
+          this.#sound('start');
+          this.#run = { kind: 'arcade', level: run.level + 1 };
+          void this.#beginLevel();
+        },
       };
     } else if (run?.kind === 'arcade') {
-      this.#message.show('All levels complete', LIME, [
-        `Every level on ${difficulty}`,
-        ...score,
-        'Press any key or button to continue',
-      ]);
-      this.#afterComplete = () => this.#toTitle();
+      this.#completeView = {
+        heading: 'All clear',
+        lines: [difficulty, ...score, 'Any key Title'],
+        after: () => this.#toTitle(),
+      };
     } else {
-      this.#message.show('Song complete', LIME, [`${this.#song.title}, ${difficulty}`, ...score, 'Press any key or button to continue']);
-      this.#afterComplete = () => this.#toTitle();
+      this.#completeView = {
+        heading: 'Song clear',
+        lines: [`${this.#song.title}, ${difficulty}`, ...score, 'Any key Title'],
+        after: () => this.#toTitle(),
+      };
+    }
+    this.#showComplete(true);
+  }
+
+  /** Shows the level-complete screen with #completeView; `offerReplay` lets R and S act. */
+  #showComplete(offerReplay = false): void {
+    const view = this.#completeView;
+    if (!view) return;
+    this.#offerReplay = offerReplay;
+    this.#setMode('complete');
+    this.#message.container.visible = true;
+    this.#message.show(view.heading, LIME, view.lines);
+    this.#afterComplete = view.after;
+  }
+
+  // Replays -------------------------------------------------------------------------------
+
+  /** True on game over or level complete once keys count, with a replay to watch or save. */
+  #onEndScreen(): boolean {
+    return (
+      (this.#mode === 'gameover' || this.#mode === 'complete') &&
+      this.#offerReplay &&
+      this.#lastReplay !== null &&
+      performance.now() - this.#modeSince >= PROMPT_DELAY_MS
+    );
+  }
+
+  #watchLastReplay(): void {
+    const replay = this.#lastReplay;
+    if (!replay || (this.#mode !== 'gameover' && this.#mode !== 'complete')) return;
+    this.#sound('select');
+    this.#completeAfterReplay = this.#mode === 'complete' ? this.#completeView : null;
+    void this.#watchReplay(replay, this.#song, this.#mode);
+  }
+
+  /** Downloads the last run's replay as a file. */
+  #saveReplay(): void {
+    const replay = this.#lastReplay;
+    if (!replay) return;
+    this.#sound('select');
+    const blob = new Blob([encodeReplay(replay)], { type: 'application/octet-stream' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `pattern-break-${this.#song.id}-${replay.difficulty}-${replay.score}.pbreplay`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  /** A replay file dropped on the title screen: play it if its song is bundled. */
+  async #onDropReplay(file: File): Promise<void> {
+    if (this.#mode !== 'title') return;
+    let replay: Replay;
+    try {
+      replay = decodeReplay(new Uint8Array(await file.arrayBuffer()));
+    } catch (err) {
+      console.error(err);
+      this.#notice('Bad replay', ['Not a replay file']);
+      return;
+    }
+    const song = songBySha256(replay.moduleHash);
+    if (!song) {
+      this.#notice('Bad replay', ['Unknown song']);
+      return;
+    }
+    void this.#watchReplay(replay, song, 'title');
+  }
+
+  /** A message on the level-complete screen that any key dismisses back to the title. */
+  #notice(heading: string, lines: string[]): void {
+    this.#stopMusic();
+    this.#completeView = { heading, lines: [...lines, 'Any key Title'], after: () => this.#toTitle() };
+    this.#showComplete();
+  }
+
+  /** Plays `replay` from the start of its song, then returns to `from`. */
+  async #watchReplay(replay: Replay, song: BundledSong, from: Playback['from']): Promise<void> {
+    if (replay.genVersion !== GEN_VERSION || replay.simVersion !== SIM_VERSION) {
+      this.#notice('Old replay', [`Version ${replay.genVersion}.${replay.simVersion}, need ${GEN_VERSION}.${SIM_VERSION}`]);
+      return;
+    }
+    this.#stopMusic();
+    const request = ++this.#musicRequest;
+    try {
+      const tempo = Difficulty[replay.difficulty].tempoPermille;
+      const loading = this.#getPlayer().then(async (p) => {
+        await this.#loadSong(p, song, tempo);
+        return p;
+      });
+      const [player, level] = await Promise.all([loading, this.#levelFor(song, replay.difficulty)]);
+      if (request !== this.#musicRequest) return;
+      this.#playerReady = player;
+      this.#playback = { replay, song, level, from };
+      this.#r.terrain.setLevel(level);
+      resetSimState(this.#state);
+      this.#clock.reset();
+      this.#displaySamples = 0;
+      this.#r.explosion.hide();
+      this.#r.flash.hide();
+      this.#message.container.visible = false;
+      this.#setMode('replay');
+      this.#music = 'run';
+      player.setVolume(1);
+      await player.start();
+    } catch (err) {
+      this.#showError(err);
+    }
+  }
+
+  /** The level for `song` at `difficulty`, from the cache or built now. */
+  async #levelFor(song: BundledSong, difficulty: DifficultyName): Promise<Level> {
+    const cache = this.#cacheFor(song);
+    let entry = cache.levels.get(difficulty);
+    if (!entry) {
+      const level = generateLevel(await this.#levelData(song, difficulty), difficulty);
+      entry = { level, autopilot: this.#options.autopilot ? autopilotInputs(level) : null };
+      cache.levels.set(difficulty, entry);
+    }
+    return entry.level;
+  }
+
+  /**
+   * Ends the replay: shows the score, and whether it matches the one recorded unless the
+   * player stopped it early, then returns to where it was started from.
+   */
+  #endReplay(stopped: boolean): void {
+    const playback = this.#playback;
+    if (!playback || this.#mode !== 'replay') return;
+    this.#playback = null;
+    this.#stopMusic();
+    const { replay, song, from } = playback;
+    const score = this.#state.score;
+    const check = stopped ? 'Stopped' : score === replay.score ? 'Score matches' : `Recorded ${replay.score}`;
+    this.#completeView = {
+      heading: 'Replay end',
+      lines: [`${song.title}, ${DIFFICULTY_LABELS[replay.difficulty]}`, `Score ${score}`, check, 'Any key Back'],
+      after: () => this.#returnFromReplay(from),
+    };
+    this.#showComplete();
+  }
+
+  #returnFromReplay(from: Playback['from']): void {
+    if (from === 'title' || !this.#level) {
+      this.#toTitle();
+      return;
+    }
+    // The replay reproduced the run, so the sim state is the run's final state again,
+    // except when it was stopped early: rerun the log to the end to be sure.
+    const replay = this.#lastReplay;
+    if (replay) {
+      resetSimState(this.#state);
+      runInputLog(this.#level, replay.inputs, this.#state);
+    }
+    this.#r.terrain.setLevel(this.#level);
+    if (from === 'gameover') {
+      this.#showGameOver();
+    } else {
+      this.#completeView = this.#completeAfterReplay;
+      this.#showComplete(true);
     }
   }
 
@@ -913,6 +1130,20 @@ export class Game {
         drawPlay(r, level, this.#state, this.#displaySamples);
         break;
       }
+      case 'replay': {
+        const player = this.#playerReady;
+        const playback = this.#playback;
+        if (!player || !playback) break;
+        const { level, replay } = playback;
+        const clock = player.songTimeSamples();
+        catchUp(level, this.#state, targetTick(clock, level.tickCount), (tick) => replay.inputs[tick] ?? 0, null);
+        this.#displaySamples = this.#clock.update(now, clock, this.#state.tick);
+        if (this.#state.dead) this.#displaySamples = this.#state.deathTick * SAMPLES_PER_TICK;
+        drawPlay(r, level, this.#state, this.#displaySamples);
+        this.#replayBanner.update(blink);
+        if (this.#state.dead || this.#state.finished) this.#endReplay(false);
+        break;
+      }
       case 'gameover': {
         const elapsed = now - this.#modeSince;
         r.explosion.draw(elapsed);
@@ -921,8 +1152,8 @@ export class Game {
           this.#message.container.visible = true;
           this.#message.show('Game over', MAGENTA, [
             `Score ${this.#state.score}`,
-            'Esc or B returns to the title screen',
-            'Press any key or button to retry',
+            ...(this.#offerReplay && this.#lastReplay ? [REPLAY_HINT] : []),
+            'Esc Title  Any key Retry',
           ]);
         }
         const player = this.#playerReady;

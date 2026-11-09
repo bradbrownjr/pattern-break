@@ -37,6 +37,10 @@ practical, specific, never breathless. It has to read like a person wrote it.
   patterns of notes and beats. Use the terms freely after that. In player-facing text the
   default word is "song"; the file types appear next to it where they help ("Import songs:
   MOD, XM, S3M, or IT files").
+- **On-screen text is arcade terse** (Brad, 2026-11-09): like an old arcade or home
+  computer game with little memory for words. Labels and key prompts, not sentences: "R
+  Replay", "Esc Title", "Any key Next", not "R watches the replay". A line says one thing in
+  a few words; credits and licenses keep the words they need.
 - **Be honest about limits** where the reader will hit them, not in a footnote.
 
 ### Plain wording

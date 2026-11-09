@@ -53,3 +53,5 @@ export {
 } from './sim/sim.ts';
 export type { SimState } from './sim/sim.ts';
 export { autopilotInputs } from './sim/autopilot.ts';
+export { REPLAY_FORMAT_VERSION, decodeReplay, encodeReplay } from './sim/replay.ts';
+export type { Replay } from './sim/replay.ts';

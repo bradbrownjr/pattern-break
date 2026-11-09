@@ -18,10 +18,11 @@ import { analyze, loadOpenMpt } from '../src/index.ts';
 
 const file = process.argv[2] ?? new URL('../fixtures/pb-fixture-01.mod', import.meta.url).pathname;
 const openmpt = await loadOpenMpt();
-const levelData = analyze(openmpt, new Uint8Array(readFileSync(file)));
+const bytes = new Uint8Array(readFileSync(file));
 
 for (const name of Object.keys(Difficulty) as DifficultyName[]) {
-  const level = generateLevel(levelData, name);
+  // Each difficulty plays the song at its own tempo, so each needs its own LevelData.
+  const level = generateLevel(analyze(openmpt, bytes, Difficulty[name].tempoPermille), name);
   const inputs = autopilotInputs(level);
   const state = createSimState();
   // Warm up, then time enough full-song runs to take about a second.

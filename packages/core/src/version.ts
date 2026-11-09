@@ -17,9 +17,11 @@
  * press with a 1 s reload (2026-11-09). 7 = 6 shots in flight again (2026-11-09). 8 =
  * capsules, the power-up meter, and boost, double, laser, missile, option and shield
  * (2026-11-09). 9 = capsules scroll with the cave and fall to its floor (2026-11-09).
+ * 10 = resetSimState sets each enemy's next shot from the level, so a retry plays like a
+ * fresh start (2026-11-09).
  */
 export const GEN_VERSION = 5;
-export const SIM_VERSION = 9;
+export const SIM_VERSION = 10;
 
 /** Fixed simulation tick rate (docs/PLAN.md, "Simulation"). */
 export const TICK_HZ = 120;

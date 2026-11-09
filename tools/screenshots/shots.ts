@@ -97,7 +97,7 @@ export const shots: Shot[] = [
     alt:
       'A frame of play in an LED cavern, with a dark translucent panel in the middle. On the panel, ' +
       '"Paused" in large amber pixel letters, and below it a menu: "Resume" in amber with an amber ">" ' +
-      'before it, then "Controls" and "Quit to title" in grey. The HUD shows three ship icons, a bomb icon ' +
+      'before it, then "Controls" and "Quit" in grey. The HUD shows three ship icons, a bomb icon ' +
       'and "x2" in the top left, the score "0002200" in the top right, and the power-up meter along the ' +
       'bottom edge, all six cells dark.',
     caption: 'The pause menu over play. Not used in the README.',

@@ -157,6 +157,8 @@ export interface SimState {
   enemyY: Int32Array;
   /** Index into level.enemies.fireTick of each enemy's next shot. */
   enemyFire: Uint32Array;
+  /** False until tick() has set the per-enemy arrays up for the level: on the first tick, and after resetSimState. */
+  enemiesReady: boolean;
   /** The tick each enemy was destroyed or left the screen, or 0. */
   enemyEndTick: Int32Array;
   /** Points each enemy scored when shot down (0 if rammed or not destroyed), and whether on the beat. */
@@ -257,6 +259,7 @@ export function createSimState(): SimState {
     enemyX: new Int32Array(0),
     enemyY: new Int32Array(0),
     enemyFire: new Uint32Array(0),
+    enemiesReady: false,
     enemyEndTick: new Int32Array(0),
     enemyPoints: new Uint16Array(0),
     enemyOnBeat: new Uint8Array(0),
@@ -337,14 +340,8 @@ export function resetSimState(state: SimState): void {
   state.onBeatKills = 0;
   state.survivalBonus = 0;
   state.shotCooldown = 0;
-  state.enemyStatus.fill(0);
-  state.enemyHp.fill(0);
-  state.enemyX.fill(0);
-  state.enemyY.fill(0);
-  state.enemyFire.fill(0);
-  state.enemyEndTick.fill(0);
-  state.enemyPoints.fill(0);
-  state.enemyOnBeat.fill(0);
+  // The per-enemy arrays are set up from the level on the next tick (setUpEnemies).
+  state.enemiesReady = false;
   state.firstLive = 0;
   state.nextSpawn = 0;
   state.shotActive.fill(0);
@@ -371,8 +368,6 @@ export function resetSimState(state: SimState): void {
   state.missileReadyTick = 0;
   state.missileBlastTick.fill(-1);
   state.capsuleActive.fill(0);
-  state.formationShot.fill(0);
-  state.formationSpoiled.fill(0);
 }
 
 /** Every upgrade bought is lost (a new run, or a life lost). */
@@ -394,19 +389,40 @@ function resetTrail(state: SimState, x: number, y: number): void {
   state.optionY.fill(y);
 }
 
-function sizeEnemies(state: SimState, level: Level): void {
+/**
+ * Sets the per-enemy and per-formation arrays up for `level`: sized to it (allocating only
+ * when the size changed), cleared, and each enemy's next fire index at its first fire tick.
+ */
+function setUpEnemies(state: SimState, level: Level): void {
   const n = level.enemies.count;
-  state.enemyStatus = new Uint8Array(n);
-  state.enemyHp = new Uint8Array(n);
-  state.enemyX = new Int32Array(n);
-  state.enemyY = new Int32Array(n);
-  state.enemyFire = new Uint32Array(n);
-  state.enemyEndTick = new Int32Array(n);
-  state.enemyPoints = new Uint16Array(n);
-  state.enemyOnBeat = new Uint8Array(n);
+  const f = level.enemies.formationSize.length;
+  if (state.enemyStatus.length !== n) {
+    state.enemyStatus = new Uint8Array(n);
+    state.enemyHp = new Uint8Array(n);
+    state.enemyX = new Int32Array(n);
+    state.enemyY = new Int32Array(n);
+    state.enemyFire = new Uint32Array(n);
+    state.enemyEndTick = new Int32Array(n);
+    state.enemyPoints = new Uint16Array(n);
+    state.enemyOnBeat = new Uint8Array(n);
+  } else {
+    state.enemyStatus.fill(0);
+    state.enemyHp.fill(0);
+    state.enemyX.fill(0);
+    state.enemyY.fill(0);
+    state.enemyEndTick.fill(0);
+    state.enemyPoints.fill(0);
+    state.enemyOnBeat.fill(0);
+  }
   for (let i = 0; i < n; i++) state.enemyFire[i] = level.enemies.fireStart[i]!;
-  state.formationShot = new Uint8Array(level.enemies.formationSize.length);
-  state.formationSpoiled = new Uint8Array(level.enemies.formationSize.length);
+  if (state.formationShot.length !== f) {
+    state.formationShot = new Uint8Array(f);
+    state.formationSpoiled = new Uint8Array(f);
+  } else {
+    state.formationShot.fill(0);
+    state.formationSpoiled.fill(0);
+  }
+  state.enemiesReady = true;
 }
 
 /**
@@ -857,7 +873,9 @@ function loseLife(level: Level, state: SimState, t: number): void {
 export function tick(level: Level, state: SimState, input: number): void {
   if (state.dead || state.finished) return;
   const e = level.enemies;
-  if (state.enemyStatus.length !== e.count || state.formationShot.length !== e.formationSize.length) sizeEnemies(state, level);
+  if (!state.enemiesReady || state.enemyStatus.length !== e.count || state.formationShot.length !== e.formationSize.length) {
+    setUpEnemies(state, level);
+  }
   const pressed = input & ~state.prevInput;
 
   const dx = ((input & InputBit.right) !== 0 ? 1 : 0) - ((input & InputBit.left) !== 0 ? 1 : 0);
