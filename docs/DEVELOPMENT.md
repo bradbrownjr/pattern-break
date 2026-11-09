@@ -1156,8 +1156,9 @@ needs no approval. Player-facing release notes wait until the finished game is p
 (Brad, 2026-11-09).
 
 - **A finished roadmap item leaves `ROADMAP.md`**, its "At a glance" row and its section
-  together, and becomes an entry in `CHANGELOG.md`. A milestone is finished only when its
-  acceptance checks pass, and Brad confirms it before it's marked done.
+  together, and becomes an entry in `CHANGELOG.md`. A milestone is finished when the
+  acceptance checks the agent can run pass; it doesn't wait for Brad's play-test, and what
+  the play-test finds becomes new roadmap items (Brad, 2026-11-09).
 - **A new roadmap item** gets an "At a glance" row (one plain sentence and a stage) and, once
   planned, its own section with tasks, acceptance checks, and a **Docs:** line naming the
   files the work will change.

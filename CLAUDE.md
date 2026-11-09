@@ -27,8 +27,9 @@ in `docs/DEVELOPMENT.md`.
 
 ## Roadmap and changelog
 
-- Work the roadmap in order. A milestone is finished only when its acceptance checks pass.
-  **Ask Brad before marking one finished.**
+- Work the roadmap in order. A milestone is finished when the acceptance checks the agent
+  can run pass. **Don't wait for Brad's play-test** to move it to the changelog; what his
+  play-tests find becomes new roadmap items (Brad, 2026-11-09).
 - A finished item leaves `docs/ROADMAP.md` (its "At a glance" row and its section together)
   and becomes an entry in `docs/CHANGELOG.md`. Format and dating rules are in
   `docs/DEVELOPMENT.md`, "Changelog and roadmap".
@@ -72,8 +73,8 @@ forgotten next session.
 
 - On-screen text is arcade terse: labels and key prompts ("R Replay"), never sentences
   (Brad, 2026-11-09; see `docs/DOC-STYLE.md`, "On-screen text is arcade terse").
-- Completed roadmap items move to the changelog (Brad, 2026-11-08). The changelog's wording
-  needs no approval from Brad (2026-11-09).
+- Completed roadmap items move to the changelog without waiting for Brad's play-test, and
+  the changelog's wording needs no approval from him (Brad, 2026-11-08 and 2026-11-09).
 - The first mention of a module, mod, or tracker in anything a person reads says what it is:
   a song file made in a music tracker. Player-facing text calls them songs (Brad,
   2026-11-08; see `docs/DOC-STYLE.md`, "Say what a module is").

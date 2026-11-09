@@ -22,9 +22,10 @@ tanks from the bass, and ships from the other instruments, and each fires on its
 notes; you have three lives and a gun, and kills score double on their instrument's beat.
 A bomb takes out tanks on the floor, and a nuke earned by playing the beat clears the
 screen. Shooting down a whole formation drops a capsule for the power-up meter: boost,
-double shot, laser, missile, drone and shield. A gamepad works next to the keyboard.
-Level data comes out byte-for-byte the same in Node, Chromium, Firefox, and WebKit, which is
-what lets one song have one leaderboard.
+double shot, laser, missile, drone and shield. A gamepad works next to the keyboard. Every
+run can be watched again or saved as a replay file. Level data and replays come out
+byte-for-byte the same in Node, Chromium, Firefox, and WebKit, which is what lets one song
+have one leaderboard.
 
 - [Roadmap](docs/ROADMAP.md): what comes next
 - [Changelog](docs/CHANGELOG.md): what is finished
