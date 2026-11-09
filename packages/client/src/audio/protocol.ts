@@ -15,8 +15,11 @@ export interface ProcessorOptions {
 }
 
 export type ToProcessor =
-  /** Loads a module and prepares it to play from the start. Replaces any loaded module. */
-  | { type: 'load'; id: number; bytes: ArrayBuffer }
+  /**
+   * Loads a module and prepares it to play from the start at `tempoPermille` (the
+   * difficulty's tempo, in thousandths). Replaces any loaded module.
+   */
+  | { type: 'load'; id: number; bytes: ArrayBuffer; tempoPermille: number }
   /** Starts the prepared module at the next render quantum. */
   | { type: 'start'; id: number }
   /** Stops playback and prepares the loaded module to play from the start again. */

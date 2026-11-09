@@ -2,7 +2,7 @@
 // struct-of-arrays: entry i of a table is field[i] across that table's typed arrays.
 // docs/DEVELOPMENT.md, "LevelData", describes the binary format.
 
-export const LEVEL_DATA_FORMAT_VERSION = 1;
+export const LEVEL_DATA_FORMAT_VERSION = 2;
 
 /** The analysis parameters a LevelData was made with (see analysis-constants.ts). */
 export interface LevelDataParams {
@@ -18,6 +18,8 @@ export interface LevelDataParams {
   ledStepDb: number;
   vuScale: number;
   maxDurationSamples: number;
+  /** The tempo the song was rendered at, in thousandths (libopenmpt's play.tempo_factor). */
+  tempoPermille: number;
 }
 
 export interface LevelDataMeta {

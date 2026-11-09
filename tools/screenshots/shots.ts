@@ -55,11 +55,11 @@ export const shots: Shot[] = [
     id: 'gameplay',
     query: { scene: 'play', song: 'pb-fixture-01', t: '21.5', difficulty: 'normal', seed: '1' },
     alt:
-      'A frame of play in an LED cavern. Bands of dark grey stone run along the top and bottom edges. Columns ' +
-      'of small square LED segments hang from the top stone, lit green to yellow, and rise from the bottom ' +
-      'stone, green through yellow to orange, the floor taller than the ceiling. Near the left, a few ceiling ' +
-      'columns have nothing lit. A small cyan ship with a magenta engine flame flies on the left through the ' +
-      'dark passage between them, with faint blue stars behind.',
+      'A frame of play in an LED cavern. Columns of small square LED segments hang from the top edge and rise ' +
+      'from the bottom edge, lit green at the screen edges through yellow and orange to red at their tips, ' +
+      'leaving a dark passage about a third of the screen high across the middle. The tips step up and down ' +
+      'from column to column. A small cyan ship with a magenta engine flame flies on the left through the ' +
+      'passage, with faint blue stars behind.',
     caption: 'Pattern Break at 21.5 seconds into the test song on normal, with the ship flown by the autopilot.',
     usedIn: ['readme'],
   },
@@ -68,10 +68,11 @@ export const shots: Shot[] = [
     query: { scene: 'play', song: 'pb-fixture-01', difficulty: 'normal', seed: '1' },
     clip: { from: 29, to: 33, fps: 25 },
     alt:
-      'Four seconds of play in an LED cavern. Dark grey stone runs along the top and bottom edges, and columns ' +
-      'of square LED segments on it, lit green to orange, scroll from right to left, one column per row of the ' +
-      'song, rising and falling with the music. A small cyan ship with a flickering engine flame steers through ' +
-      'the dark passage between them, and faint blue stars drift more slowly behind.',
+      'Four seconds of play in an LED cavern. Columns of square LED segments, lit green at the screen edges ' +
+      'through yellow and orange to red at their tips, hang from the top and rise from the bottom and scroll ' +
+      'from right to left, one column per row of the song. The dark passage between them narrows on the beats ' +
+      'and drifts up and down the screen with the tune. A small cyan ship with a flickering engine flame ' +
+      'follows the passage, and faint blue stars drift more slowly behind.',
     caption: 'Four seconds of the test song on normal, flown by the autopilot through the sim.',
     usedIn: ['readme'],
   },

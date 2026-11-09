@@ -2,7 +2,8 @@
 // LevelData built from each, and the Level and sim runs built from that. This file runs in
 // Node (the `node` project) and in real browsers (the `browser` project), and every
 // environment must produce the committed hashes. Change a LevelData or Level hash only
-// together with a GEN_VERSION bump, and a sim hash only with a SIM_VERSION bump.
+// together with a GEN_VERSION bump, and a sim hash only with a SIM_VERSION bump. Each
+// difficulty plays the song at its own tempo, so each has its own LevelData.
 
 import {
   Difficulty,
@@ -41,12 +42,12 @@ describe('golden LevelData', () => {
     expect(golden.libopenmpt).toBe(openmpt.libraryVersion);
   });
 
-  for (const [name, expected] of Object.entries(golden.levelData)) {
-    it(`${name} hashes to the committed value`, async () => {
-      const openmpt = await loadOpenMpt();
-      const level = analyze(openmpt, await readFixture(name));
-      expect(await hashLevelData(level)).toBe(expected);
-    }, 60_000);
+  for (const [name, byDifficulty] of Object.entries(golden.levelData)) {
+    for (const difficulty of Object.keys(Difficulty) as DifficultyName[]) {
+      it(`${name} at ${difficulty}'s tempo hashes to the committed value`, async () => {
+        expect(await hashLevelData(await fixtureLevelData(name, difficulty))).toBe(byDifficulty[difficulty]);
+      }, 60_000);
+    }
   }
 });
 
@@ -64,11 +65,13 @@ function zigzagInputs(ticks: number): Uint8Array {
 }
 
 const levelDataCache = new Map<string, LevelData>();
-async function fixtureLevelData(name: string): Promise<LevelData> {
-  let data = levelDataCache.get(name);
+/** The fixture analyzed at `difficulty`'s tempo, once per run. */
+async function fixtureLevelData(name: string, difficulty: DifficultyName): Promise<LevelData> {
+  const key = `${name} ${difficulty}`;
+  let data = levelDataCache.get(key);
   if (!data) {
-    data = analyze(await loadOpenMpt(), await readFixture(name));
-    levelDataCache.set(name, data);
+    data = analyze(await loadOpenMpt(), await readFixture(name), Difficulty[difficulty].tempoPermille);
+    levelDataCache.set(key, data);
   }
   return data;
 }
@@ -83,7 +86,7 @@ describe('golden levels and sim runs', () => {
     for (const difficulty of Object.keys(Difficulty) as DifficultyName[]) {
       const want = byDifficulty[difficulty];
       it(`${name} ${difficulty}: the level, an autopilot run and a zigzag run match`, async () => {
-        const level = generateLevel(await fixtureLevelData(name), difficulty);
+        const level = generateLevel(await fixtureLevelData(name, difficulty), difficulty);
         const flown = runInputLog(level, autopilotInputs(level));
         const zigzag = runInputLog(level, zigzagInputs(level.tickCount));
         const got = {

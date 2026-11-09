@@ -60,7 +60,7 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
   }
   if (params.scene !== 'play') throw new Error(`unknown scene ${params.scene}`);
 
-  const level = generateLevel(await analyzeInWorker(await fetchSongBytes(song)), difficulty);
+  const level = generateLevel(await analyzeInWorker(await fetchSongBytes(song), Difficulty[difficulty].tempoPermille), difficulty);
   const inputs = autopilotInputs(level);
   const state = createSimState();
   r.terrain.setLevel(level);

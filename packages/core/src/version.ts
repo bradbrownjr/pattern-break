@@ -3,13 +3,12 @@
  * Bump SIM_VERSION whenever simulation output changes for any input.
  * Leaderboard key is (moduleHash, difficulty, GEN_VERSION); see docs/PLAN.md, "Determinism rules".
  *
- * GEN_VERSION 1 = peak dots off on hard (2026-11-08). 2 = cavern walls: bass floor, highs
- * ceiling, rock base, 40 px minimum gap, bar pitch by difficulty (2026-11-09).
- * SIM_VERSION 2 = collision reads the level's bar pitch (2026-11-09).
- * Pre-release: no scores are kept yet.
+ * GEN_VERSION 1 = peak dots off on hard (2026-11-08). 2 = walls squeeze on note hits and
+ * wind with the melody; difficulty sets the song's tempo and the cave's width
+ * (2026-11-09). Pre-release: no scores are kept yet.
  */
 export const GEN_VERSION = 2;
-export const SIM_VERSION = 2;
+export const SIM_VERSION = 1;
 
 /** Fixed simulation tick rate (docs/PLAN.md, "Simulation"). */
 export const TICK_HZ = 120;

@@ -3,37 +3,42 @@
 // coordinate conventions.
 
 /**
- * Per-difficulty settings. The walls are the same on every difficulty; difficulty sets the
- * scroll speed (2026-11-09). `barPitch` is the world x distance between bars in px, so a
- * bar crosses the screen faster on a harder difficulty and less of the song is in view.
- * Each bar is lit for `barPitch - BAR_OPEN_WIDTH` px. `solidPeaks` makes peak dots solid
- * and visible; it is off on every difficulty (2026-11-08). Peaks are still computed, so a
- * display option or solid peaks on hard can return (docs/ROADMAP.md, "Open decisions").
+ * Per-difficulty settings (2026-11-09). Difficulty sets the song's speed and how tight the
+ * cave is; the beat and the winding are the same on every difficulty.
+ * - `tempoPermille`: the song plays at this tempo, in thousandths (libopenmpt's tempo
+ *   factor, which keeps the pitch). Analysis renders at the same tempo, so each difficulty
+ *   has its own LevelData.
+ * - `baseGapPx`: the gap with no hits. `minGapPx`: the gap never closes below this.
+ * - `solidPeaks` makes peak dots solid and visible; it is off on every difficulty
+ *   (2026-11-08). Peaks are still computed, so a display option or solid peaks on hard can
+ *   return (docs/ROADMAP.md, "Open decisions").
  */
 export const Difficulty = {
-  easy: { id: 0, barPitch: 8, solidPeaks: false },
-  normal: { id: 1, barPitch: 10, solidPeaks: false },
-  hard: { id: 2, barPitch: 13, solidPeaks: false },
+  easy: { id: 0, tempoPermille: 900, baseGapPx: 104, minGapPx: 52, solidPeaks: false },
+  normal: { id: 1, tempoPermille: 1000, baseGapPx: 90, minGapPx: 44, solidPeaks: false },
+  hard: { id: 2, tempoPermille: 1150, baseGapPx: 76, minGapPx: 36, solidPeaks: false },
 } as const;
 export type DifficultyName = keyof typeof Difficulty;
 
 /**
- * How the walls are built (docs/PLAN.md, "Level generation"). The floor follows the bass
- * and the ceiling the highs, each read from both stereo channels. Every side has
- * `rockSegments` that are always solid, the cave wall, and a meter of up to
- * `meterSegments` on top of them: `gain * (LED level - threshold)` segments, clamped,
- * falling by at most `decaySegments` per bar so hits slam in and ease back.
+ * How the walls follow the music (docs/PLAN.md, "Level generation"):
+ * - **Hits:** a row's hit strength is the sum, over the song's channels, of how far each
+ *   channel's volume meter jumps in the row. Every `hitPerSegment` of it squeezes the cave
+ *   by one segment (7 px) from the base gap, up to the minimum gap. The squeeze falls back
+ *   by at most `releaseSegments` per bar.
+ * - **Winding:** the gap's centre follows the melody: the highest note started in the row
+ *   by an instrument that is not a drum, held until the next one. Each semitone above
+ *   `pivotNote` raises the centre `pxPerSemitone` px. A drum is an instrument whose three
+ *   commonest pitches make up at least `drumPitchPercent` of its notes.
+ * - Each side keeps at least `minSideSegments`, so the walls never vanish.
  */
 export const Terrain = {
-  /** The open gap between ceiling and floor never closes below this. */
-  minGapPx: 40,
-  rockSegments: 5,
-  meterSegments: 12,
-  decaySegments: 3,
-  /** Bands 0 to 4: about 40 to 260 Hz (kick and bass). */
-  floor: { firstBand: 0, lastBand: 4, threshold: 7, gain: 3 },
-  /** Bands 11 to 15: about 2.5 to 16 kHz (snare snap and hats). */
-  ceiling: { firstBand: 11, lastBand: 15, threshold: 5, gain: 3 },
+  hitPerSegment: 64,
+  releaseSegments: 6,
+  pivotNote: 72,
+  pxPerSemitone: 3,
+  drumPitchPercent: 95,
+  minSideSegments: 2,
 } as const;
 
 /** Bars a peak stays at its level before it starts to fall one segment per bar. */
@@ -46,19 +51,14 @@ export interface Level {
   totalSamples: number;
   /** One bar per played row. */
   barCount: number;
-  /** World x distance between bars, in px: the difficulty's `barPitch`. */
-  barPitch: number;
   /**
    * barStartSample[i] is row i's start (LevelData rows.timeSamples). Bar i lasts until
    * barStartSample[i + 1], and the last bar until totalSamples.
    */
   barStartSample: Uint32Array;
-  /**
-   * Solid ceiling segments per bar, hanging from y = 0: Terrain.rockSegments of rock, then
-   * the meter. Fairness-clamped, never below the rock.
-   */
+  /** Lit ceiling segments per bar, hanging from y = 0. Fairness-clamped. */
   ceiling: Uint8Array;
-  /** Solid floor segments per bar, rising from y = 216, as for the ceiling. */
+  /** Lit floor segments per bar, rising from y = 216. Fairness-clamped. */
   floor: Uint8Array;
   /**
    * Peak-hold level per bar, in the same segments. When it is above the bar's level, segment

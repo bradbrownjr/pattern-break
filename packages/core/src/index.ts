@@ -18,8 +18,9 @@ export { Difficulty, PEAK_HOLD_BARS, Terrain } from './levelgen/types.ts';
 export type { DifficultyName, Level } from './levelgen/types.ts';
 export {
   generateLevel,
+  findDrums,
   gapShiftLimitPx,
-  MAX_COMBINED_SEGMENTS,
+  maxCombinedSegments,
   playheadAtSample,
   MIN_GAP_OVERLAP_PX,
 } from './levelgen/generate.ts';

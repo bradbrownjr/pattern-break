@@ -2,14 +2,14 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-<img src="docs/img/gameplay-clip.gif" width="768" alt="Four seconds of play in an LED cavern. Dark grey stone runs along the top and bottom edges, and columns of square LED segments on it, lit green to orange, scroll from right to left, one column per row of the song, rising and falling with the music. A small cyan ship with a flickering engine flame steers through the dark passage between them, and faint blue stars drift more slowly behind.">
+<img src="docs/img/gameplay-clip.gif" width="768" alt="Four seconds of play in an LED cavern. Columns of square LED segments, lit green at the screen edges through yellow and orange to red at their tips, hang from the top and rise from the bottom and scroll from right to left, one column per row of the song. The dark passage between them narrows on the beats and drifts up and down the screen with the tune. A small cyan ship with a flickering engine flame follows the passage, and faint blue stars drift more slowly behind.">
 
 A side-scrolling neon tunnel shooter where every level is built from a song. The songs are
 tracker modules, often called mods: music files made in a tracker, a program that arranges
 short sound samples into patterns of notes and beats. The formats are MOD, XM, S3M, and IT.
 
-The terrain is a cavern of LED meter bars, one bar per row of the song: the floor pumps with
-the bass and the ceiling with the highs, so the tunnel moves with the beat. The notes in its patterns will
+The terrain is a cavern of LED meter bars, one bar per row of the song: the cave squeezes on
+every hit and winds up and down with the melody, so the tunnel moves with the music. The notes in its patterns will
 spawn the enemies. The same file always makes the same level, so every song gets its own
 leaderboard.
 

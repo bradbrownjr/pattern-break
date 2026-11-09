@@ -2,18 +2,17 @@
 // meters (docs/DEVELOPMENT.md, "Level and sim"). Every sprite is made once; draw() only
 // moves and recolours them.
 
-import { Difficulty, SEGMENT_LIT_HEIGHT, Terrain, type Level } from '@game/core';
+import { BAR_LIT_WIDTH, BAR_PITCH, Difficulty, SEGMENT_LIT_HEIGHT, type Level } from '@game/core';
 import { Container, Sprite, Texture } from 'pixi.js';
-import { LED_LIT, LED_PEAK, ROCK } from './palette.ts';
+import { LED_LIT, LED_PEAK } from './palette.ts';
 import {
   MAX_VISIBLE_BARS,
   SEGMENTS_PER_SIDE,
   SEGMENT_HIDDEN,
   SEGMENT_LIT,
-  SEGMENT_ROCK,
-  barLitWidth,
   ceilingSegmentY,
   floorSegmentY,
+  segmentColorIndex,
   segmentState,
   visibleBars,
   type BarRange,
@@ -36,31 +35,18 @@ class BarColumn {
       this.floor[k]!.visible = v;
     }
   }
-
-  set width(w: number) {
-    for (let k = 0; k < SEGMENTS_PER_SIDE; k++) {
-      this.ceiling[k]!.width = w;
-      this.floor[k]!.width = w;
-    }
-  }
 }
 
 function segment(parent: Container, y: number): Sprite {
   const s = new Sprite(Texture.WHITE);
+  s.width = BAR_LIT_WIDTH;
   s.height = SEGMENT_LIT_HEIGHT;
   s.y = y;
   parent.addChild(s);
   return s;
 }
 
-/** The colour of segment k in `state`; meter colours count from the top of the rock. */
-function colorFor(state: number, k: number): number {
-  if (state === SEGMENT_ROCK) return ROCK[k]!;
-  if (state === SEGMENT_LIT) return LED_LIT[k - Terrain.rockSegments]!;
-  return LED_PEAK;
-}
-
-/** Shows segment `s` at x in `state`, or hides it. */
+/** Shows segment `s` (segment k of its side) at x in `state`, or hides it. */
 function place(s: Sprite, x: number, state: number, k: number): void {
   if (state === SEGMENT_HIDDEN) {
     s.visible = false;
@@ -68,7 +54,7 @@ function place(s: Sprite, x: number, state: number, k: number): void {
   }
   s.visible = true;
   s.x = x;
-  s.tint = colorFor(state, k);
+  s.tint = state === SEGMENT_LIT ? LED_LIT[segmentColorIndex(k)]! : LED_PEAK;
 }
 
 export class TerrainView {
@@ -89,7 +75,6 @@ export class TerrainView {
     // would look like terrain.
     this.#showPeaks = level !== null && Difficulty[level.difficulty].solidPeaks;
     if (!level) for (const c of this.#columns) c.visible = false;
-    else for (const c of this.#columns) c.width = barLitWidth(level);
   }
 
   /** Draws the bars on screen with the screen's left edge at world x `scrollPx`. */
@@ -102,7 +87,7 @@ export class TerrainView {
     let n = 0;
     for (let i = first; i < end && n < this.#columns.length; i++, n++) {
       const column = this.#columns[n]!;
-      const x = i * level.barPitch - offset;
+      const x = i * BAR_PITCH - offset;
       const c = level.ceiling[i]!;
       const f = level.floor[i]!;
       // A peak equal to the level draws no dot.

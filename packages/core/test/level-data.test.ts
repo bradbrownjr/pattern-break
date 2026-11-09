@@ -23,6 +23,7 @@ function sample(): LevelData {
       ledStepDb: 5,
       vuScale: 255,
       maxDurationSamples: 43_200_000,
+      tempoPermille: 1150,
     },
     totalSamples: 2_500,
     hitDurationCap: false,
@@ -80,7 +81,7 @@ describe('LevelData serialization', () => {
 
   it('starts with the magic and the format version, little-endian', () => {
     const bytes = serializeLevelData(sample());
-    expect([...bytes.subarray(0, 8)]).toEqual([0x50, 0x42, 0x4c, 0x44, 1, 0, 0, 0]);
+    expect([...bytes.subarray(0, 8)]).toEqual([0x50, 0x42, 0x4c, 0x44, 2, 0, 0, 0]);
   });
 
   it('reads from a view with a byte offset', () => {
@@ -96,7 +97,7 @@ describe('LevelData serialization', () => {
     badMagic[0] = 0;
     expect(() => deserializeLevelData(badMagic)).toThrow(/magic/);
     const badVersion = bytes.slice();
-    badVersion[4] = 2;
+    badVersion[4] = 99;
     expect(() => deserializeLevelData(badVersion)).toThrow(/version/);
     expect(() => deserializeLevelData(bytes.subarray(0, bytes.length - 1))).toThrow(RangeError);
     const trailing = new Uint8Array(bytes.length + 1);

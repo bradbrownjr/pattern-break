@@ -4,6 +4,7 @@
 // (docs/DEVELOPMENT.md, "Renderer and game loop").
 
 import {
+  Difficulty,
   SAMPLES_PER_TICK,
   SAMPLE_RATE,
   Q8,
@@ -64,10 +65,13 @@ type Music = 'title' | 'jukebox' | 'run' | 'gameover' | null;
 /** A run: the arcade levels in order from `level` (0-based), or one song in practice. */
 type Run = { kind: 'arcade'; level: number } | { kind: 'practice'; song: BundledSong };
 
-/** A song's bytes, its LevelData once analyzed, and the levels made from it so far. */
+/**
+ * A song's bytes, its LevelData per tempo once analyzed (each difficulty plays the song at
+ * its own tempo), and the levels made from it so far.
+ */
 interface SongCache {
   bytes: Promise<Uint8Array>;
-  levelData: Promise<LevelData> | null;
+  levelData: Map<number, Promise<LevelData>>;
   levels: Map<DifficultyName, { level: Level; autopilot: Uint8Array | null }>;
 }
 
@@ -87,6 +91,7 @@ const DEMO_CUE_IDLE_MS = 5000;
 const DEMO_IDLE_MS = 20_000;
 /** The demo fades back to the title menu after this long. */
 const DEMO_LENGTH_MS = 30_000;
+/** Normal plays the song as written (tempo 1000), as the title music does. */
 const DEMO_DIFFICULTY: DifficultyName = 'normal';
 /** Each half of a fade: to black, then from black. */
 const FADE_HALF_MS = 400;
@@ -147,6 +152,7 @@ export class Game {
   #sfx: MenuSounds | null = null;
   /** The song the player has loaded, and its length. */
   #loaded: BundledSong | null = null;
+  #loadedTempo = 1000;
   #loadedSeconds = 0;
   #music: Music = null;
   /** Bumped by every change of music, so a slow load that a later one replaced doesn't start. */
@@ -390,19 +396,35 @@ export class Game {
   #cacheFor(song: BundledSong): SongCache {
     let cache = this.#cache.get(song);
     if (!cache) {
-      cache = { bytes: fetchSongBytes(song), levelData: null, levels: new Map() };
+      cache = { bytes: fetchSongBytes(song), levelData: new Map(), levels: new Map() };
       this.#cache.set(song, cache);
     }
     return cache;
   }
 
-  /** Loads `song` into the player unless it is the song already loaded. */
-  async #loadSong(player: AudioPlayer, song: BundledSong): Promise<void> {
+  /** `song`'s LevelData at `difficulty`'s tempo, analyzing it in the worker the first time. */
+  #levelData(song: BundledSong, difficulty: DifficultyName): Promise<LevelData> {
+    const cache = this.#cacheFor(song);
+    const tempo = Difficulty[difficulty].tempoPermille;
+    let data = cache.levelData.get(tempo);
+    if (!data) {
+      data = cache.bytes.then((b) => analyzeInWorker(b, tempo));
+      cache.levelData.set(tempo, data);
+    }
+    return data;
+  }
+
+  /**
+   * Loads `song` into the player to play at `tempoPermille` (1000: as written), unless it
+   * is already loaded at that tempo.
+   */
+  async #loadSong(player: AudioPlayer, song: BundledSong, tempoPermille = 1000): Promise<void> {
     const bytes = await this.#cacheFor(song).bytes;
-    if (this.#loaded === song && player.state !== 'empty') return;
+    if (this.#loaded === song && this.#loadedTempo === tempoPermille && player.state !== 'empty') return;
     this.#loaded = null;
-    const loaded = await player.load(bytes);
+    const loaded = await player.load(bytes, tempoPermille);
     this.#loaded = song;
+    this.#loadedTempo = tempoPermille;
     this.#loadedSeconds = loaded.durationSeconds;
   }
 
@@ -472,21 +494,16 @@ export class Game {
   /** Analyzes the title song and flies its level with the autopilot, for the demo; then level 1. */
   async #prepareDemo(): Promise<void> {
     try {
-      const cache = this.#cacheFor(this.#titleSong);
-      cache.levelData ??= cache.bytes.then((b) => analyzeInWorker(b));
-      const level = generateLevel(await cache.levelData, DEMO_DIFFICULTY);
+      const level = generateLevel(await this.#levelData(this.#titleSong, DEMO_DIFFICULTY), DEMO_DIFFICULTY);
       this.#demo = { level, inputs: autopilotInputs(level) };
     } catch (err) {
       // The game works without the demo; the title menu stays up.
       console.error('demo unavailable:', err);
     }
-    // Then analyze level 1 while the title plays, so Play starts without a wait.
+    // Then analyze level 1 at the chosen difficulty while the title plays, so Play starts
+    // without a wait.
     const first = this.#levelSongs[0];
-    if (first) {
-      const cache = this.#cacheFor(first);
-      cache.levelData ??= cache.bytes.then((b) => analyzeInWorker(b));
-      cache.levelData.catch(() => this.#cache.delete(first));
-    }
+    if (first) this.#levelData(first, this.#menu.difficulty).catch(() => this.#cache.delete(first));
   }
 
   #startDemo(): void {
@@ -545,12 +562,12 @@ export class Game {
     this.#setMode('analyzing');
     try {
       const cache = this.#cacheFor(song);
+      const tempo = Difficulty[difficulty].tempoPermille;
       const loading = this.#getPlayer().then(async (p) => {
-        await this.#loadSong(p, song);
+        await this.#loadSong(p, song, tempo);
         return p;
       });
-      cache.levelData ??= cache.bytes.then((b) => analyzeInWorker(b));
-      const [player, levelData] = await Promise.all([loading, cache.levelData]);
+      const [player, levelData] = await Promise.all([loading, this.#levelData(song, difficulty)]);
       if (request !== this.#musicRequest || this.#mode !== 'analyzing') return;
       this.#playerReady = player;
       this.#song = song;
@@ -584,7 +601,7 @@ export class Game {
     const request = ++this.#musicRequest;
     try {
       const player = await this.#getPlayer();
-      await this.#loadSong(player, this.#song);
+      await this.#loadSong(player, this.#song, Difficulty[this.#difficulty].tempoPermille);
       if (request !== this.#musicRequest) return;
       resetSimState(this.#state);
       this.#log?.reset();

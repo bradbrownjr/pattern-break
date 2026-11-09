@@ -26,13 +26,13 @@ function getWorker(): Worker {
   return w;
 }
 
-/** Analyzes a song file's bytes in the worker and returns its LevelData. */
-export function analyzeInWorker(bytes: Uint8Array): Promise<LevelData> {
+/** Analyzes a song file's bytes at `tempoPermille` in the worker and returns its LevelData. */
+export function analyzeInWorker(bytes: Uint8Array, tempoPermille: number): Promise<LevelData> {
   const id = nextId++;
   const copy = bytes.slice().buffer;
   return new Promise((resolve, reject) => {
     pending.set(id, { resolve, reject });
-    const request: AnalysisRequest = { id, bytes: copy };
+    const request: AnalysisRequest = { id, bytes: copy, tempoPermille };
     getWorker().postMessage(request, [copy]);
   });
 }

@@ -146,7 +146,7 @@ the test. Check that the new case fails with the rule turned off.
 
 ## LevelData
 
-`LevelData` is the output of the analysis pass: `analyze(openmpt, bytes)` in
+`LevelData` is the output of the analysis pass: `analyze(openmpt, bytes, tempoPermille)` in
 `packages/analysis/src/analyze.ts`. The types are in `packages/core/src/level-data/types.ts`,
 and `serializeLevelData` and `deserializeLevelData` are in
 `packages/core/src/level-data/serialize.ts`. `hashLevelData` in
@@ -162,9 +162,13 @@ LevelData records them in `params`.
   repeat count 0. Rendering stops when a read returns 0 or at 15 minutes
   (`hitDurationCap`). Volume ramping is 1 rather than libopenmpt's -1 ("recommended
   default"), because what -1 means can change between releases. Every playback ctl is set
-  explicitly too (`RENDER_CTLS` in `analyze.ts`): `play.at_end` is `stop`, because the
-  default `fadeout` renders a fade after the song ends; Amiga resampler emulation is on;
-  subsong 0 only.
+  explicitly too (`renderCtls(tempoPermille)` in `analyze.ts`): `play.at_end` is `stop`,
+  because the default `fadeout` renders a fade after the song ends; Amiga resampler
+  emulation is on; subsong 0 only. `play.tempo_factor` is the difficulty's tempo
+  (`Difficulty[d].tempoPermille / 1000`: 0.9, 1 or 1.15), which libopenmpt applies without
+  changing the pitch; `play.pitch_factor` stays 1. Each difficulty therefore has its own
+  LevelData, which records the tempo in `params.tempoPermille`, and the audio worklet plays
+  the song with the same ctls.
 - **Rows:** after each read, if the current (order, row) differs from the last one, a row
   entry is recorded with the read's start sample as `timeSamples`. The row started somewhere
   in that read, so a timestamp is up to one read (160 samples, 3.33 ms) early. Two limits:
@@ -215,11 +219,11 @@ its elements back to back; its length comes from the count before it.
 | Field | Encoding |
 |---|---|
 | Magic | the 4 bytes `PBLD` |
-| `formatVersion` (1), `genVersion` | u32 each |
+| `formatVersion` (2), `genVersion` | u32 each |
 | `libopenmptVersion` | str |
 | `params`: sampleRate, chunkFrames, hopFrames, fftSize, bandCount, bandLowHz, bandHighHz, ledLevels | u32 each |
 | `params.ledBottomDb` | i32 |
-| `params`: ledStepDb, vuScale, maxDurationSamples | u32 each |
+| `params`: ledStepDb, vuScale, maxDurationSamples, tempoPermille | u32 each |
 | `totalSamples` | u32 |
 | `hitDurationCap` | u8, 0 or 1 |
 | `meta`: title, artist, type, tracker | str each |
@@ -247,18 +251,17 @@ and "Simulation"; this section has the exact rules.
 - **Screen:** 384 x 216 px, origin top left, y down. Geometry constants are in
   `packages/core/src/playfield.ts`.
 - **Fixed point:** sim positions and the scroll table are Q24.8: px * 256 (`Q8`).
-- **World x:** bar i's left edge is at world x `i * p` px, where p is the level's
-  `barPitch` (`Difficulty[d].barPitch`: 8 on easy, 10 on normal, 13 on hard). It is solid
-  for `p - 2` px (`[p i, p i + p - 2)`); the other 2 px (`BAR_OPEN_WIDTH`) are open.
+- **World x:** bar i's left edge is at world x `i * 10` px. It is solid for 8 px
+  (`[10i, 10i + 8)`); the other 2 px are open.
 - **Segments:** ceiling segment k (from 0) is solid for y in `[7k, 7k + 6)`. Floor segment
   k is the mirror image: `[216 - 7k - 6, 216 - 7k)`. A side with level n has segments
-  0 to n - 1 solid: the first 5 (`Terrain.rockSegments`) are rock, the rest its meter. A peak p above the level makes segment p - 1 a peak dot, which is drawn
+  0 to n - 1 lit. A peak p above the level makes segment p - 1 a peak dot, which is drawn
   and solid only on a difficulty with `solidPeaks`. No difficulty sets it (2026-11-08).
 - **Scroll table:** `level.scroll[t]`, for t from 0 to `level.tickCount`, is the world x in
   Q8 of the screen's left edge at sim tick t (song sample `400 t`). It is
-  `playheadAtSample(400 t, p) - 64 * 256`. With `P = 256 p`, the playhead's world x is
-  `i * P + floor(P * (s - start[i]) / (end[i] - start[i]))` for the row i playing at
-  sample s (0 before the first row, `barCount * P` from the song's end on). So a bar's
+  `playheadAtSample(400 t) - 64 * 256`. The playhead's world x is
+  `i * 2560 + floor(2560 * (s - start[i]) / (end[i] - start[i]))` for the row i playing at
+  sample s (0 before the first row, `barCount * 2560` from the song's end on). So a bar's
   left edge is at screen x 64 (`PLAYHEAD_X`) when its row starts. To draw at tick t, a
   world x w goes to screen x `w - scroll[t] / 256`. Between ticks the renderer may
   interpolate the table; the sim only reads whole ticks.
@@ -268,48 +271,58 @@ and "Simulation"; this section has the exact rules.
 
 ### Level generation
 
-The settings are `Terrain` in `levelgen/types.ts`. They are the same on every difficulty,
-so every difficulty builds the same walls; only `barPitch` and the scroll table differ. For
-each bar in order, with the previous bar's final values:
+The settings are `Difficulty` and `Terrain` in `levelgen/types.ts`. Difficulty sets the
+tempo the LevelData was analyzed at (`generateLevel` throws on a mismatch), the base gap
+(104, 90, 76 px on easy, normal, hard) and the minimum gap (52, 44, 36 px). Before the
+bars, `findDrums()` marks each instrument whose three commonest pitches make up at least
+95% of its notes (`drumPitchPercent`). Then, for each bar in order, with the previous
+bar's final values:
 
-1. **Readings:** the floor reads bands 0 to 4 and the ceiling bands 11 to 15, the highest
-   LED level among those bands on either channel. A frame f belongs to the row spanning
-   `[start, end)` if its window centre `(f + 1) * 800 - 1024` is in it; the reading is the
-   maximum over those frames. With none, the frame whose centre is nearest `start` is used
-   (the earlier on a tie).
-2. **Meters:** a reading r gives `min(12, max(0, 3 (r - t)))` meter segments, with t = 7
-   for the floor and 5 for the ceiling. The meter is the larger of that and the previous
-   bar's meter minus 3 (`decaySegments`). Meters are kept before any cut below, so a cut
-   bar doesn't change the next one's meter. Each side is then 5 rock segments plus its
-   meter.
-3. **Minimum gap:** the ceiling and floor together may have at most
-   `floor((216 - 40) / 7)` = 25 segments (`MAX_COMBINED_SEGMENTS`), a gap of at least
-   41 px. Above that, the ceiling becomes `floor((2 c M + (c + f)) / (2 (c + f)))`, which
-   is `c M / (c + f)` rounded half up, and the floor gets `M - ceiling`. A cut needs
-   `c + f > 25` with each side at most 17, so both sides keep at least 9 segments.
-4. **Gap movement:** twice the gap centre is `7 (c - f) + 216`. It may move from the
-   previous bar's by at most twice `gapShiftLimitPx(previous row length)`: the ship's
-   straight travel in that time, `floor(384 * samples / (400 * 256))` px, but never more
-   than the 40 px minimum gap minus 10 px (`MIN_GAP_OVERLAP_PX`, the hitbox height plus
-   4), so consecutive gaps overlap by at least 10 px. If the gap moved down too far, the
-   ceiling loses segments until it fits or reaches its rock; if up, the floor does. A side
-   down to its rock leaves a gap that contains the previous one, since every bar has the
-   rock. Bar 0 reaches the ship on the first tick: it is measured from the ship's start
-   height (108, twice that is 216) with a limit of 0, so its larger side is cut to match
-   the other and its gap is centred on the ship.
-5. **Peak hold:** a level at or above the peak sets the peak and a 6-bar hold
+1. **Squeeze:** the row's hit is the sum over channels of how far the channel's meter (the
+   louder of `vuLeft` and `vuRight`) rises from the frame before the row to its loudest
+   frame in the row. VU frame f is read after `(f + 1) * 800` samples, so the row spanning
+   `[start, end)` holds frames `floor(start / 800)` up to `floor(end / 800)`, at least one.
+   The squeeze is `floor(hit / 64)` segments (`hitPerSegment`), or the previous bar's
+   squeeze minus 6 (`releaseSegments`) if that is larger. The target gap is the base gap
+   less 7 px per squeeze segment, never under the minimum.
+2. **Melody:** the highest note started in the row by an instrument that is not a drum, or
+   the melody so far (72 to begin with). Twice the target centre is
+   `216 - 6 (melody - 72)`: 3 px higher per semitone above C-5 (`pxPerSemitone`,
+   `pivotNote`).
+3. **Centre:** twice the centre is held to the previous bar's plus or minus twice
+   `gapShiftLimitPx(previous row length)`: the ship's straight travel in that time,
+   `floor(384 * samples / (400 * 256))` px, but never more than the minimum gap minus
+   10 px (`MIN_GAP_OVERLAP_PX`, the hitbox height plus 4). Bar 0 reaches the ship on the
+   first tick, so it is measured from the ship's start height (108; twice that is 216)
+   with a limit of 0. Then the gap is kept at least 2 segments (`minSideSegments`) from
+   each edge.
+4. **Segments:** the ceiling is `round((centre2 - gap) / 14)` and the floor
+   `round((432 - centre2 - gap) / 14)`, halves rounding up, each at least 2. While the two
+   exceed `floor((216 - minimum gap) / 7)` (`maxCombinedSegments`), the larger loses one,
+   the ceiling on a tie.
+5. **Gap movement, exactly:** rounding can move the centre past the limit, so if twice the
+   centre `7 (c - f) + 216` moved down too far the ceiling loses segments until it fits or
+   reaches 2; if up, the floor does. A side down to 2 leaves a gap that contains the
+   previous one, since every bar has at least 2.
+6. **Three in a row:** the hitbox (10 px) is as wide as a bar's pitch, so it touches two
+   bars nearly all the time and passes from bars `(i - 2, i - 1)` to `(i - 1, i)` in a
+   fifth of a row. Gaps `i - 2`, `i - 1` and `i` must share 10 px; while they don't, bar
+   i's side that blocks it loses a segment, down to 2. A bar with 2 on both sides contains
+   the two previous gaps, which already share 10 px.
+7. **Peak hold:** a level at or above the peak sets the peak and a 6-bar hold
    (`PEAK_HOLD_BARS`). Otherwise the hold counts down, and once it is 0 the peak drops one
    segment per bar. Peaks are never below their levels.
-6. **Peak gap:** if the two peaks together exceed the segment budget of step 3, the
-   ceiling peak is lowered first (down to its level), then the floor peak.
-7. **Solid peaks only** (no difficulty, for now): step 4 runs again on the peaks, down to
-   the rock. A peak is lowered first; once it equals its level, both go down together.
+8. **Peak gap:** if the two peaks together exceed `maxCombinedSegments`, the ceiling peak
+   is lowered first (down to its level), then the floor peak.
+9. **Solid peaks only** (no difficulty, for now): step 5 runs again on the peaks. Step 6
+   would need to apply to them too before solid peaks return.
 
 `findPathViolation(level)` in `levelgen/path-check.ts` checks the guarantee: every bar's
-solid gap (peaks where they are solid, levels otherwise) is at least 40 px, bar 0's gap is
-centred on the ship's start height, and every later centre move is within the limit unless
-the new gap contains the old one. Tests run it on random loud
-songs at every difficulty and on each fixture.
+solid gap (peaks where they are solid, levels otherwise) is at least the difficulty's
+minimum, bar 0's gap is centred on the ship's start height, every later centre move is
+within the limit unless the new gap contains the old one, and every three consecutive gaps
+share 10 px. Tests run it on random loud songs at every difficulty, on each fixture, and on
+every bundled song.
 
 ### Simulation
 
@@ -351,8 +364,8 @@ Vitest runs per package. Packages with no tests yet run with `--passWithNoTests`
 flag when a package gets its first test.
 
 **Golden hashes.** `packages/analysis/fixtures/golden.json` pins the SHA-256 of the
-serialized LevelData for each fixture, with the `GEN_VERSION` and libopenmpt version it was
-made with. `test/golden.test.ts` analyzes each fixture and compares. Change a hash only in
+serialized LevelData for each fixture at each difficulty's tempo, with the `GEN_VERSION`
+and libopenmpt version it was made with. `test/golden.test.ts` analyzes each fixture and compares. Change a hash only in
 the same commit as a `GEN_VERSION` bump.
 `packages/analysis/fixtures/golden-levelgen.json` pins, for each fixture and difficulty,
 the SHA-256 of `serializeLevel(level)` and of `serializeSimState` after two scripted runs:
@@ -753,14 +766,14 @@ the file's MD5 matching the one the page lists:
   on black by `index.html`.
 - **Layers,** back to front: the starfield, the world (terrain, ship, explosion), the death
   flash, and the UI (title screen, jukebox, demo banner, messages, and the fade).
-- **Terrain** (`terrain.ts`, geometry in `terrain-layout.ts`): 50 columns
-  (`MAX_VISIBLE_BARS`, enough for easy's 8 px pitch) of 34 sprites each, one per segment,
-  made once. `setLevel()` sets their width to the level's pitch minus 2. Each frame moves
-  the columns to the bars `visibleBars()` lists and tints each sprite: rock segment k is
-  `ROCK[k]` (dark stone), meter segment k is `LED_LIT[k - 5]` (green at the rock, through
-  amber, to red towards the gap), and a peak dot, drawn only where peaks are solid, is
-  white. Unlit meter segments are hidden, so the passage is plain background. The scroll is rounded to a whole pixel once per
-  frame, so bars never shift against each other.
+- **Terrain** (`terrain.ts`, geometry in `terrain-layout.ts`): 41 columns
+  (`MAX_VISIBLE_BARS`) of 50 sprites each, 25 a side (`SEGMENTS_PER_SIDE`, the most hard's
+  36 px minimum gap allows), made once. Each frame moves the columns to the bars
+  `visibleBars()` lists and tints each sprite: lit segment k is
+  `LED_LIT[segmentColorIndex(k)]` (green at the screen edge, through amber, to red 12
+  segments in, and red beyond), and a peak dot, drawn only where peaks are solid, is white.
+  Unlit segments are hidden, so the passage is plain background. The scroll is rounded to a
+  whole pixel once per frame, so bars never shift against each other.
 - **Ship** (`ship.ts`): a 16x8 sprite built from a character map, centred on the sim's
   `shipX` and `shipY`. The engine flame changes length every 1440 song samples (30 ms).
 - **Starfield** (`starfield.ts`): 112 stars in three layers placed by `seededRandom(seed)`,
@@ -808,12 +821,16 @@ crash tick, and the explosion and flash play on the wall clock. A retry calls
 `state.finished` is set, the "Song complete" message shows. Either way the run's difficulty,
 input log and crash tick are kept in `Game.lastRun` for the replays in M2.
 
-**Analysis.** `analyzeInWorker(bytes)` (`analysis.ts`) sends the song file's bytes to
+**Analysis.** `analyzeInWorker(bytes, tempoPermille)` (`analysis.ts`) sends the song file's
+bytes and the difficulty's tempo to
 `analysis-worker.ts`, a module worker that runs `loadOpenMpt()` and `analyze()` and sends
 back the serialized LevelData as a transferred buffer. The main thread deserializes it and
 calls `generateLevel()` for the chosen difficulty. The screen reads "Analyzing song..." until
-both the analysis and the audio player are ready. Each song's bytes, LevelData and levels
-are kept for the session, so a second run of a song starts at once. The AudioContext is
+both the analysis and the audio player are ready. Each song's bytes, its LevelData per tempo
+and its levels are kept for the session, so a second run of a song starts at once. The
+player loads a run's song at its difficulty's tempo (`player.load(bytes, tempoPermille)`);
+the title music, jukebox and game-over music play at 1000, the song as written. The demo
+uses normal, whose tempo is also 1000, so it matches the title music. The AudioContext is
 created inside the key press that starts play or opens the jukebox, because browsers only
 let audio start from a key press or click.
 

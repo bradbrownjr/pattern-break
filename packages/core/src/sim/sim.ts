@@ -3,7 +3,8 @@
 
 import { Difficulty, type Level } from '../levelgen/types.ts';
 import {
-  BAR_OPEN_WIDTH,
+  BAR_LIT_WIDTH,
+  BAR_PITCH,
   PLAYFIELD_HEIGHT,
   Q8,
   SEGMENT_LIT_HEIGHT,
@@ -27,6 +28,8 @@ const MIN_X = SHIP_MIN_X * Q8;
 const MAX_X = SHIP_MAX_X * Q8;
 const MIN_Y = HALF_H;
 const MAX_Y = PLAYFIELD_HEIGHT * Q8 - HALF_H;
+const BAR_PITCH_Q8 = BAR_PITCH * Q8;
+const BAR_LIT_Q8 = BAR_LIT_WIDTH * Q8;
 const SEG_PITCH_Q8 = SEGMENT_PITCH * Q8;
 const SEG_LIT_Q8 = SEGMENT_LIT_HEIGHT * Q8;
 const HEIGHT_Q8 = PLAYFIELD_HEIGHT * Q8;
@@ -92,7 +95,7 @@ function sideHits(top: number, bottom: number, level: number, peak: number, soli
 /**
  * True if the ship's hitbox, with its centre at screen (x, y) Q8 at sim tick `t`, overlaps
  * a solid part of the terrain: a lit segment of any bar it overlaps horizontally (bars are
- * solid for level.barPitch - BAR_OPEN_WIDTH px from their left edge), or a peak dot on difficulties with
+ * solid for BAR_LIT_WIDTH px from their left edge), or a peak dot on difficulties with
  * solid peaks. The hitbox is the half-open box [x - 5, x + 5) x [y - 3, y + 3) px.
  */
 export function shipCollides(level: Level, t: number, x: number, y: number): boolean {
@@ -101,15 +104,13 @@ export function shipCollides(level: Level, t: number, x: number, y: number): boo
   const top = y - HALF_H;
   const bottom = y + HALF_H;
   const solidPeaks = Difficulty[level.difficulty].solidPeaks;
-  const pitchQ8 = level.barPitch * Q8;
-  const litQ8 = (level.barPitch - BAR_OPEN_WIDTH) * Q8;
-  let first = Math.floor(wx0 / pitchQ8);
+  let first = Math.floor(wx0 / BAR_PITCH_Q8);
   if (first < 0) first = 0;
-  let last = Math.floor((wx1 - 1) / pitchQ8);
+  let last = Math.floor((wx1 - 1) / BAR_PITCH_Q8);
   if (last > level.barCount - 1) last = level.barCount - 1;
   for (let i = first; i <= last; i++) {
-    const barX = i * pitchQ8;
-    if (!(wx0 < barX + litQ8 && wx1 > barX)) continue;
+    const barX = i * BAR_PITCH_Q8;
+    if (!(wx0 < barX + BAR_LIT_Q8 && wx1 > barX)) continue;
     if (sideHits(top, bottom, level.ceiling[i]!, level.ceilingPeak[i]!, solidPeaks)) return true;
     // The floor is the ceiling mirrored: y measured up from the bottom edge.
     if (sideHits(HEIGHT_Q8 - bottom, HEIGHT_Q8 - top, level.floor[i]!, level.floorPeak[i]!, solidPeaks)) {

@@ -8,7 +8,7 @@ import {
   serializeLevelData,
 } from '@game/core';
 import { describe, expect, it } from 'vitest';
-import { RENDER_CTLS, RENDER_PARAMS, analyze } from '../src/analyze.ts';
+import { RENDER_PARAMS, analyze, renderCtls } from '../src/analyze.ts';
 import { hashLevelData, sha256Hex } from '../src/hash.ts';
 import { RenderParam } from '../src/openmpt-types.ts';
 import { EMPTY, FakeOpenMpt, fakeVu, type FakeCell, type FakeSong } from './fake-openmpt.ts';
@@ -74,9 +74,19 @@ describe('analyze', () => {
     const firstRead = mod.calls.findIndex((c) => c.name === 'readFloatStereo');
     const before = mod.calls.slice(0, firstRead);
     expect(before.filter((c) => c.name === 'ctlSet').map((c) => c.args)).toEqual(
-      RENDER_CTLS.map(([k, v]) => [k, v]),
+      renderCtls(1000).map(([k, v]) => [k, v]),
     );
     expect(mod.calls.slice(firstRead).every((c) => c.name !== 'ctlSet')).toBe(true);
+  });
+
+  it("plays at the given tempo and records it, keeping the pitch", () => {
+    expect(renderCtls(1150)).toContainEqual(['play.tempo_factor', '1.15']);
+    expect(renderCtls(900)).toContainEqual(['play.tempo_factor', '0.9']);
+    expect(renderCtls(1000)).toContainEqual(['play.tempo_factor', '1']);
+    for (const t of [900, 1000, 1150]) expect(renderCtls(t)).toContainEqual(['play.pitch_factor', '1']);
+    expect(() => renderCtls(0)).toThrow(RangeError);
+    expect(() => renderCtls(1000.5)).toThrow(RangeError);
+    expect(() => renderCtls(4001)).toThrow(RangeError);
   });
 
   it('reads at 48 kHz in chunks of at most 160 frames and frees the module', () => {
@@ -157,7 +167,7 @@ describe('analyze', () => {
 
   it('records structure, metadata, and versions', () => {
     const { level } = run();
-    expect(level.formatVersion).toBe(1);
+    expect(level.formatVersion).toBe(2);
     expect(level.genVersion).toBe(GEN_VERSION);
     expect(level.libopenmptVersion).toBe('0.0.0-fake');
     expect([...level.orderPatterns]).toEqual([0, 1, 0, 1]);
@@ -187,6 +197,7 @@ describe('analyze', () => {
       ledStepDb: 5,
       vuScale: 255,
       maxDurationSamples: MAX_DURATION_SAMPLES,
+      tempoPermille: 1000,
     });
   });
 
@@ -202,7 +213,7 @@ describe('analyze', () => {
   it('matches the golden hash for the fake song', async () => {
     // Update only together with a GEN_VERSION bump (or before the first release).
     expect(await hashLevelData(run().level)).toBe(
-      '68b04c17b2510f23596d3e1dad6d8f85cb3bb52316855841d073246c87fa2652',
+      'ac884adedb5bc933965f0583a06529d71f10617f05795f8a7718b83389bfb274',
     );
   });
 

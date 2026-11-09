@@ -2,7 +2,7 @@
 // that generated levels are passable and to pin sim results; it holds x and steers y.
 
 import { Difficulty, type Level } from '../levelgen/types.ts';
-import { BAR_OPEN_WIDTH, PLAYFIELD_HEIGHT, Q8, SEGMENT_PITCH } from '../playfield.ts';
+import { BAR_LIT_WIDTH, BAR_PITCH, PLAYFIELD_HEIGHT, Q8, SEGMENT_PITCH } from '../playfield.ts';
 import { InputBit, SHIP_HITBOX_HEIGHT, SHIP_HITBOX_WIDTH, SHIP_SPEED_Q8 } from './constants.ts';
 import { createSimState, tick } from './sim.ts';
 
@@ -21,13 +21,12 @@ function clearRange(level: Level, t: number, x: number, range: number[]): void {
   const solidPeaks = Difficulty[level.difficulty].solidPeaks;
   const wx0 = level.scroll[t]! + x - HALF_W;
   const wx1 = wx0 + 2 * HALF_W;
-  const pitch = level.barPitch * Q8;
-  const lit = (level.barPitch - BAR_OPEN_WIDTH) * Q8;
+  const pitch = BAR_PITCH * Q8;
   const first = Math.max(0, Math.floor(wx0 / pitch));
   const last = Math.min(level.barCount - 1, Math.floor((wx1 - 1) / pitch));
   for (let i = first; i <= last; i++) {
     const barX = i * pitch;
-    if (!(wx0 < barX + lit && wx1 > barX)) continue;
+    if (!(wx0 < barX + BAR_LIT_WIDTH * Q8 && wx1 > barX)) continue;
     const c = solidPeaks ? level.ceilingPeak[i]! : level.ceiling[i]!;
     const f = solidPeaks ? level.floorPeak[i]! : level.floor[i]!;
     // The last lit segment of a side with s segments ends SEGMENT_PITCH * s - 1 px in.

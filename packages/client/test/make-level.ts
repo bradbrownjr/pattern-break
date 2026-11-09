@@ -1,7 +1,7 @@
 // A hand-made Level for client tests, built by the rules in docs/DEVELOPMENT.md, "Level and
 // sim", so tests don't need libopenmpt.
 
-import { Difficulty, PLAYHEAD_X, Q8, SAMPLES_PER_TICK, playheadAtSample, type DifficultyName, type Level } from '@game/core';
+import { PLAYHEAD_X, Q8, SAMPLES_PER_TICK, playheadAtSample, type DifficultyName, type Level } from '@game/core';
 
 export interface LevelSpec {
   /** Lit ceiling and floor segments per bar; peaks default to the levels. */
@@ -16,8 +16,6 @@ export interface LevelSpec {
 
 export function makeLevel(spec: LevelSpec): Level {
   const barCount = spec.ceiling.length;
-  const difficulty = spec.difficulty ?? 'normal';
-  const barPitch = Difficulty[difficulty].barPitch;
   const rowSamples = spec.rowSamples ?? 4800;
   const barStartSample = new Uint32Array(barCount);
   for (let i = 0; i < barCount; i++) barStartSample[i] = i * rowSamples;
@@ -25,14 +23,13 @@ export function makeLevel(spec: LevelSpec): Level {
   const tickCount = Math.ceil(totalSamples / SAMPLES_PER_TICK);
   const scroll = new Int32Array(tickCount + 1);
   for (let t = 0; t <= tickCount; t++) {
-    scroll[t] = playheadAtSample(barStartSample, totalSamples, t * SAMPLES_PER_TICK, barPitch) - PLAYHEAD_X * Q8;
+    scroll[t] = playheadAtSample(barStartSample, totalSamples, t * SAMPLES_PER_TICK) - PLAYHEAD_X * Q8;
   }
   return {
     genVersion: 0,
-    difficulty,
+    difficulty: spec.difficulty ?? 'normal',
     totalSamples,
     barCount,
-    barPitch,
     barStartSample,
     ceiling: Uint8Array.from(spec.ceiling),
     floor: Uint8Array.from(spec.floor),

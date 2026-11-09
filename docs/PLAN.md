@@ -12,8 +12,8 @@ A horizontal-scrolling tunnel shooter in the Gradius mould, with more neon. **Ev
 generated from a tracker module (MOD/XM/S3M/IT): a song file made in a music tracker, a
 program that arranges short samples into patterns of notes and beats.** Modules are often
 called mods; in player-facing text they are songs (see `DOC-STYLE.md`). The terrain is a cavern of
-segmented LED meter bars, like an old stereo's visualizer: the floor pumps with the bass and
-the ceiling with the highs. Notes in the song's pattern data spawn enemies. A given module file
+segmented LED meter bars, like an old stereo's visualizer: it squeezes on every hit and
+winds up and down with the melody. Notes in the song's pattern data spawn enemies. A given module file
 always produces the same level, so each song has its own global leaderboard.
 
 Aesthetic: Amiga and arcade. Low-res pixel art, copper-bar gradients, chunky LED meters,
@@ -71,7 +71,9 @@ Read before writing core code.
   engine (NaN bit patterns aside), but different libopenmpt versions can mix differently.
   Don't build with relaxed SIMD, whose results may vary by engine.
 - **Offline render at a fixed 48 000 Hz**, with fixed render parameters (stereo separation,
-  interpolation filter, volume ramping). Set them explicitly; don't rely on defaults.
+  interpolation filter, volume ramping). Set them explicitly; don't rely on defaults. The
+  one setting that varies is the tempo factor, which is fixed per difficulty and recorded
+  in the LevelData; playback uses the same one.
 - **No transcendental JS Math in core.** Precompute FFT twiddle factors and dB-to-LED-segment
   thresholds at build time with `/tools` and commit them as constant typed-array data. At
   runtime use only `+ - * /`, `Math.sqrt`, `Math.floor`, comparisons, and integer ops.
@@ -84,8 +86,8 @@ Read before writing core code.
 
 ## 5. Analysis pipeline (`packages/analysis`, runs in a Web Worker)
 
-Input: module bytes. Output: `LevelData` (serializable, cached in IndexedDB under
-`hash + GEN_VERSION`).
+Input: module bytes and the difficulty's tempo. Output: `LevelData` (serializable, cached in
+IndexedDB under `hash + tempo + GEN_VERSION`).
 
 1. Load the module into libopenmpt. Read metadata: title, artist (if present), channel
    count, orders, patterns, instruments and samples.
@@ -119,44 +121,50 @@ the ship, even when it is hard to fly. The path is a hard guarantee, checked by 
 every bar of every generated level.
 
 - **One bar per played row.** The terrain is a row of LED bars, one for each row
-  libopenmpt played, in play order. Bars are a difficulty's pitch apart (10 px on normal),
-  lit for all but the last 2 px, so bar i sits at world x i * pitch.
+  libopenmpt played, in play order. Bars are 10 px apart (8 px lit, 2 px open), so bar i
+  sits at world x i * 10.
 - **Scroll follows the rows.** Between the starts of consecutive rows the scroll position
   moves linearly from one bar to the next; the last row ends at the song's end. A faster
   tempo scrolls faster, and every bar sits on the music's grid. A bar reaches the playhead
   (screen x 64) when its row starts.
-- **Ceiling and floor (2026-11-09):**
-  - The floor follows the bass and the ceiling the highs: the floor reads bands 0 to 4
-    (about 40 to 260 Hz, kick and bass) and the ceiling bands 11 to 15 (about 2.5 to
-    16 kHz, snare and hats), the loudest of them on either stereo channel.
-  - A side's reading for a bar is the highest LED level over the analysis frames inside the
-    row. A row shorter than a frame uses the frame nearest its start.
-  - Each side is a cave wall: 5 rock segments that are always solid, then an LED meter of
-    up to 12 segments. The meter lights 3 segments per LED level above a threshold (7 for
-    the bass, 5 for the highs; the highs read lower). A louder row sets the meter at once;
-    a quieter one lets it fall at most 3 segments per bar, so hits slam the wall in and it
-    eases back, like a VU meter.
-  - The playfield is 384 x 216 px. Segments are 7 px apart (6 px lit), so the rock reaches
-    35 px from each edge and a full meter 119 px.
+- **Ceiling and floor (2026-11-09):** the walls come from the song's pattern data and its
+  channel meters, not its spectrum. On 2026-11-09 a spectrum-driven wall barely changed on
+  the beat (1.04 to 1.16 times as closed on beat rows), while the channel meters jump 3.6
+  to 6.9 times as hard on beat rows.
+  - **Hits squeeze the cave.** Every tracker channel has a volume meter, which jumps when
+    a note starts. A row's hit is the sum of those jumps; the cave narrows by one segment
+    (7 px) per 64 of hit, both walls together, from the difficulty's base gap down to its
+    minimum, and opens again by up to 6 segments per bar.
+  - **The cave winds with the melody.** The gap's centre follows the highest note a
+    non-drum instrument starts, 3 px higher per semitone above C-5 (MIDI 72), held until
+    the next note. A drum is an instrument whose three commonest pitches make up 95% of
+    its notes; drums play a sound rather than a tune.
+  - Each side keeps at least 2 segments, so the walls never vanish.
+  - The playfield is 384 x 216 px. Segments are 7 px apart (6 px lit).
 - **Always a path:**
-  - The gap between ceiling and floor is never under 40 px, against the ship's 6 px
-    hitbox. A bar that would close it has both sides cut in proportion.
+  - The gap between ceiling and floor is never under the difficulty's minimum (52, 44 or
+    36 px), against the ship's 6 px hitbox.
   - From one bar to the next the gap's centre moves no further than the ship can travel
     vertically in the earlier bar's row, and consecutive gaps always overlap by more than
     the ship's height. Levels are cut further where needed. A gap that grows to contain
     the previous one needs no cut, since the ship can stay where it is.
+  - The ship's hitbox is as wide as a bar's pitch, so it touches two bars nearly all the
+    time and passes from one pair to the next almost at once. Every three consecutive gaps
+    therefore share at least 10 px.
   - The first bar reaches the ship on the first tick, so its gap is centred on the ship's
     start height.
 - **Peak hold:** each side keeps a peak level that holds for 6 bars and then falls one
   segment per bar. Peak dots are off on every difficulty (2026-11-08): the peaks are
   computed but not drawn or solid. A difficulty can turn them on with `solidPeaks`, which
   makes them solid and visible and applies the path rules to them too.
-- **Difficulty sets the scroll speed, not the walls (2026-11-09).** The walls are the same
-  on every difficulty. The bars are 8 px apart on easy, 10 on normal and 13 on hard, so on
-  a harder difficulty the terrain rushes past faster and less of the song is in view.
-  Enemies (M2) add the rest of the challenge. Difficulty is a constant object (`easy`,
-  `normal`, `hard`); the numbers and the exact rounding rules are in
-  `docs/DEVELOPMENT.md`, "Level and sim".
+- **Difficulty sets the song's speed and the cave's width (2026-11-09).** The song plays at
+  0.9 times its tempo on easy, as written on normal, and 1.15 times on hard, without
+  changing its pitch (libopenmpt's tempo factor), so the cave scrolls faster as well. The
+  base gap is 104, 90 and 76 px and the minimum 52, 44 and 36 px. The beat and the winding
+  are the same on every difficulty; enemies (M2) add the rest of the challenge. Each
+  difficulty is analyzed at its own tempo, so it has its own LevelData. Difficulty is a
+  constant object (`easy`, `normal`, `hard`); the numbers and the exact rounding rules are
+  in `docs/DEVELOPMENT.md`, "Level and sim".
 - **Enemies (from note events):**
   - Map instrument to enemy archetype. The default heuristic, overridable per song in a
     sidecar JSON later: low-pitched or percussive samples (short, low note) become heavy,
@@ -226,10 +234,9 @@ every bar of every generated level.
 
 - Internal resolution **384x216** (16:9), integer-scaled with nearest-neighbour filtering
   and letterboxed. An optional 320x256 "Amiga PAL" mode later.
-- Palette: near-black background with neon cyan, magenta, lime, and amber accents. Rock
-  segments are dark stone; LED meter segments go green to amber to red with height above
-  the rock. Unlit meter segments are not drawn, so the passage is plain background
-  (2026-11-09).
+- Palette: near-black background with neon cyan, magenta, lime, and amber accents. LED
+  segments go green at the screen edge to amber to red 12 segments in, and stay red beyond.
+  Unlit segments are not drawn, so the passage is plain background (2026-11-09).
   White peak-hold dots are drawn only on a difficulty with solid peaks (none, for now).
 - Backgrounds: animated copper-bar gradients (horizontal colour bands) and a parallax
   starfield. The bars can pulse with the bass channel's VU.

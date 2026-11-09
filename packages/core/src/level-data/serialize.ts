@@ -173,6 +173,7 @@ export function serializeLevelData(level: LevelData): Uint8Array {
   w.u32(p.ledStepDb);
   w.u32(p.vuScale);
   w.u32(p.maxDurationSamples);
+  w.u32(p.tempoPermille);
 
   w.u32(level.totalSamples);
   w.u8(level.hitDurationCap ? 1 : 0);
@@ -270,6 +271,7 @@ export function deserializeLevelData(bytes: Uint8Array): LevelData {
     ledStepDb: r.u32(),
     vuScale: r.u32(),
     maxDurationSamples: r.u32(),
+    tempoPermille: r.u32(),
   };
 
   const totalSamples = r.u32();

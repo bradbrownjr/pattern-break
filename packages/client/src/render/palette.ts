@@ -19,12 +19,6 @@ export const LED_LIT: readonly number[] = [
   0xff2030,
 ];
 
-/**
- * Rock segments, the always-solid cave wall under the meters, from the screen edge in:
- * dark stone that lightens slightly toward the meter.
- */
-export const ROCK: readonly number[] = [0x2a2530, 0x332c38, 0x3b3340, 0x443a48, 0x4c4150];
-
 /** Peak-hold dots are white. */
 export const LED_PEAK = WHITE;
 

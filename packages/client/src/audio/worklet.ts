@@ -1,13 +1,14 @@
 // The AudioWorklet processor that plays a module (a song file made in a music tracker)
 // through the vendored libopenmpt build.
 // Vite bundles this file on its own (player.ts imports it with `?worker&url`). It renders
-// with the same ctls and render parameters as the analysis pass (RENDER_CTLS and
-// RENDER_PARAMS from @game/analysis), so it plays what the analysis analyzed.
+// with the same ctls and render parameters as the analysis pass (renderCtls() and
+// RENDER_PARAMS from @game/analysis), at the same tempo, so it plays what the analysis
+// analyzed.
 //
 // An AudioWorklet can't fetch, so the player hands in the wasm bytes as processorOptions.
 // Nothing here may throw out of process(): a throw stops the processor for good.
 
-import { loadOpenMpt, RENDER_CTLS, RENDER_PARAMS, type OpenMpt, type OpenMptModule } from '@game/analysis';
+import { loadOpenMpt, renderCtls, RENDER_PARAMS, type OpenMpt, type OpenMptModule } from '@game/analysis';
 import { PROCESSOR_NAME, type FromProcessor, type ProcessorOptions, type ToProcessor } from './protocol.ts';
 
 // AudioWorkletGlobalScope, which TypeScript's DOM lib doesn't describe.
@@ -24,6 +25,7 @@ declare function registerProcessor(
 class LibopenmptProcessor extends AudioWorkletProcessor {
   #openmpt: OpenMpt | null = null;
   #bytes: Uint8Array | null = null;
+  #tempoPermille = 1000;
   #mod: OpenMptModule | null = null;
   #playing = false;
   #started = false;
@@ -59,6 +61,7 @@ class LibopenmptProcessor extends AudioWorkletProcessor {
     switch (message.type) {
       case 'load':
         this.#bytes = new Uint8Array(message.bytes);
+        this.#tempoPermille = message.tempoPermille;
         this.#loadId = message.id;
         if (this.#openmpt) this.#prepare();
         break;
@@ -90,7 +93,7 @@ class LibopenmptProcessor extends AudioWorkletProcessor {
     this.#mod = null;
     try {
       const mod = this.#openmpt!.load(this.#bytes!);
-      for (const [key, value] of RENDER_CTLS) mod.ctlSet(key, value);
+      for (const [key, value] of renderCtls(this.#tempoPermille)) mod.ctlSet(key, value);
       for (const [param, value] of RENDER_PARAMS) mod.setRenderParam(param, value);
       mod.setRepeatCount(0);
       this.#mod = mod;

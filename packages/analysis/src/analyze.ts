@@ -43,18 +43,29 @@ export const RENDER_PARAMS: ReadonlyArray<readonly [RenderParam, number]> = [
  * default, `fadeout`, renders a fade after the song ends. Amiga resampler emulation stays
  * on, as upstream ships it, so MODs sound like an Amiga. `subsong` 0 plays the first
  * subsong only. `dither` only affects integer output, which analysis doesn't use; it is set
- * for completeness.
+ * for completeness. `play.tempo_factor` is the difficulty's tempo (Difficulty.tempoPermille
+ * in thousandths): libopenmpt plays faster or slower without changing the pitch. The pitch
+ * factor stays 1.
  */
-export const RENDER_CTLS: ReadonlyArray<readonly [key: string, value: string]> = [
-  ['subsong', '0'],
-  ['play.at_end', 'stop'],
-  ['play.tempo_factor', '1'],
-  ['play.pitch_factor', '1'],
-  ['render.resampler.emulate_amiga', '1'],
-  ['render.resampler.emulate_amiga_type', 'auto'],
-  ['render.opl.volume_factor', '1'],
-  ['dither', '0'],
-];
+export function renderCtls(tempoPermille: number): ReadonlyArray<readonly [key: string, value: string]> {
+  // libopenmpt accepts a tempo factor in (0, 4].
+  if (!Number.isInteger(tempoPermille) || tempoPermille < 1 || tempoPermille > 4000) {
+    throw new RangeError(`tempo ${tempoPermille} is not a whole number of thousandths in 1..4000`);
+  }
+  return [
+    ['subsong', '0'],
+    ['play.at_end', 'stop'],
+    ['play.tempo_factor', String(tempoPermille / 1000)],
+    ['play.pitch_factor', '1'],
+    ['render.resampler.emulate_amiga', '1'],
+    ['render.resampler.emulate_amiga_type', 'auto'],
+    ['render.opl.volume_factor', '1'],
+    ['dither', '0'],
+  ];
+}
+
+/** The tempo when none is given: the song as written (normal difficulty). */
+export const DEFAULT_TEMPO_PERMILLE = 1000;
 
 /** Appends floor(v) to `out`; throws if that is outside 0..max, so a bad value never wraps. */
 function pushInt(out: number[], v: number, max: number, name: string): void {
@@ -92,11 +103,11 @@ class ByteColumn {
   }
 }
 
-/** Loads `bytes` with `openmpt`, analyzes the module, and frees it. */
-export function analyze(openmpt: OpenMpt, bytes: Uint8Array): LevelData {
+/** Loads `bytes` with `openmpt`, analyzes the module at `tempoPermille`, and frees it. */
+export function analyze(openmpt: OpenMpt, bytes: Uint8Array, tempoPermille = DEFAULT_TEMPO_PERMILLE): LevelData {
   const mod = openmpt.load(bytes);
   try {
-    return analyzeModule(mod, openmpt.libraryVersion);
+    return analyzeModule(mod, openmpt.libraryVersion, tempoPermille);
   } finally {
     mod.destroy();
   }
@@ -107,8 +118,12 @@ export function analyze(openmpt: OpenMpt, bytes: Uint8Array): LevelData {
  * beginning) to the song's end or MAX_DURATION_SAMPLES, whichever comes first. The caller
  * keeps ownership of `mod`.
  */
-export function analyzeModule(mod: OpenMptModule, libopenmptVersion: string): LevelData {
-  for (const [key, value] of RENDER_CTLS) mod.ctlSet(key, value);
+export function analyzeModule(
+  mod: OpenMptModule,
+  libopenmptVersion: string,
+  tempoPermille = DEFAULT_TEMPO_PERMILLE,
+): LevelData {
+  for (const [key, value] of renderCtls(tempoPermille)) mod.ctlSet(key, value);
   for (const [param, value] of RENDER_PARAMS) mod.setRenderParam(param, value);
   mod.setRepeatCount(0);
 
@@ -234,6 +249,7 @@ export function analyzeModule(mod: OpenMptModule, libopenmptVersion: string): Le
       ledStepDb: LED_STEP_DB,
       vuScale: VU_SCALE,
       maxDurationSamples: MAX_DURATION_SAMPLES,
+      tempoPermille,
     },
     totalSamples: total,
     hitDurationCap: total >= MAX_DURATION_SAMPLES,

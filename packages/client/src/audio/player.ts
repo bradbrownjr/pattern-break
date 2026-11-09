@@ -51,8 +51,11 @@ export interface AudioPlayer {
   readonly libraryVersion: string;
   readonly state: PlayerState;
 
-  /** Loads module bytes, replacing any loaded song, and stops playback. */
-  load(bytes: Uint8Array): Promise<LoadedSong>;
+  /**
+   * Loads module bytes to play at `tempoPermille` (thousandths; 1000, the default, is the
+   * song as written), replacing any loaded song, and stops playback.
+   */
+  load(bytes: Uint8Array, tempoPermille?: number): Promise<LoadedSong>;
   /**
    * Plays the loaded song from its start, restarting it if it is playing, paused or ended.
    * Resumes the context if it is suspended. Resolves once the worklet has rendered the first
@@ -267,7 +270,7 @@ class Player implements AudioPlayer {
     }
   }
 
-  async load(bytes: Uint8Array): Promise<LoadedSong> {
+  async load(bytes: Uint8Array, tempoPermille = 1000): Promise<LoadedSong> {
     this.#clock.stop();
     this.#endedAt = null;
     this.#lastPosition = null;
@@ -275,7 +278,7 @@ class Player implements AudioPlayer {
     const id = this.#nextId++;
     const copy = bytes.slice().buffer;
     const reply = this.#wait('loaded', id);
-    this.#post({ type: 'load', id, bytes: copy }, [copy]);
+    this.#post({ type: 'load', id, bytes: copy, tempoPermille }, [copy]);
     const m = await reply;
     if (m.type !== 'loaded') throw new Error('unexpected reply');
     this.#state = 'loaded';

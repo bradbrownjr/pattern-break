@@ -19,20 +19,16 @@ import {
   shipCollides,
   tick,
 } from '../src/sim/sim.ts';
-import { lcg, syntheticLevelData } from './level-fixtures.ts';
+import { lcg, randomSong, syntheticLevelData } from './level-fixtures.ts';
 
 const Q = 256;
 
-/**
- * A hand-made level: bars at world x 0, pitch, 2 pitch, ... (pitch 10 unless given);
- * scroll[t] = scrollPx * 256 for every t.
- */
+/** A hand-made level: bars at world x 0, 10, 20, ...; scroll[t] = scrollPx * 256 for every t. */
 function handLevel(
   difficulty: DifficultyName,
   bars: Array<[ceiling: number, floor: number, ceilingPeak?: number, floorPeak?: number]>,
   scrollPx = 0,
   tickCount = 100,
-  barPitch = 10,
 ): Level {
   const n = bars.length;
   return {
@@ -40,7 +36,6 @@ function handLevel(
     difficulty,
     totalSamples: tickCount * 400,
     barCount: n,
-    barPitch,
     barStartSample: Uint32Array.from(bars, (_, i) => i * 400),
     ceiling: Uint8Array.from(bars, (b) => b[0]),
     floor: Uint8Array.from(bars, (b) => b[1]),
@@ -109,19 +104,6 @@ describe('collision', () => {
     for (let y = 3 * Q; y <= 20 * Q; y += 64) expect(shipCollides(level, 0, 4 * Q, y)).toBe(true);
   });
 
-  it("places bars by the level's pitch, each solid for pitch - 2 px", () => {
-    // Pitch 13: bar 1 is solid for world x [13, 24).
-    const wide = handLevel('hard', [
-      [0, 0],
-      [3, 0],
-    ], 0, 100, 13);
-    expect(shipCollides(wide, 0, 18 * Q, 10 * Q)).toBe(true);
-    expect(shipCollides(wide, 0, 29 * Q, 10 * Q)).toBe(false); // left edge at 24 misses
-    expect(shipCollides(wide, 0, 29 * Q - 1, 10 * Q)).toBe(true);
-    expect(shipCollides(wide, 0, 8 * Q, 10 * Q)).toBe(false); // right edge at 13 misses
-    expect(shipCollides(wide, 0, 8 * Q + 1, 10 * Q)).toBe(true);
-  });
-
   it('uses the scroll table for world x', () => {
     const scrolled = handLevel('easy', [[3, 2]], -100);
     // World x = scroll + screen x, so the bar is at screen x 100..108.
@@ -182,17 +164,7 @@ describe('tick', () => {
 describe('autopilot', () => {
   it.each(Object.keys(Difficulty) as DifficultyName[])('survives random loud songs (%s)', (d) => {
     for (let seed = 1; seed <= 10; seed++) {
-      const rand = lcg(seed * 31);
-      const lengths = Array.from({ length: 250 }, () => 160 * (1 + Math.floor(rand() * 40)));
-      const levels = Array.from({ length: 8000 }, () => 6 + Math.floor(rand() * 7));
-      const level = generateLevel(
-        syntheticLevelData({
-          rowLengths: lengths,
-          left: (f, b) => levels[(f * 16 + b) % levels.length]!,
-          right: (f, b) => levels[(f * 16 + b + 4001) % levels.length]!,
-        }),
-        d,
-      );
+      const level = generateLevel(syntheticLevelData(randomSong(lcg(seed * 31), 250, 8), d), d);
       const s = runInputLog(level, autopilotInputs(level));
       expect(s.dead, `seed ${seed} died at tick ${s.deathTick}`).toBe(false);
       expect(s.finished).toBe(true);
