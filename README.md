@@ -9,9 +9,9 @@ tracker modules, often called mods: music files made in a tracker, a program tha
 short sound samples into patterns of notes and beats. The formats are MOD, XM, S3M, and IT.
 
 The terrain is a cavern of LED meter bars, one bar per row of the song: the cave squeezes on
-every hit and winds up and down with the melody, so the tunnel moves with the music. The notes in its patterns will
-spawn the enemies. The same file always makes the same level, so every song gets its own
-leaderboard.
+every hit and winds up and down with the melody, so the tunnel moves with the music. The
+notes in its patterns will spawn the enemies. The same file always makes the same level, so
+every song gets its own leaderboard.
 
 ## Status
 
@@ -43,9 +43,19 @@ player reads, read the [writing guide](docs/DOC-STYLE.md).
 ## License
 
 Pattern Break is free and open source. The code is [MIT](LICENSE). Bundled music keeps its
-own licenses, listed in `music/manifest.json` and shown in the game. The three songs so far
-are Public Domain:
+own licenses, listed in `music/manifest.json` and shown in the game. The nine songs so far
+are Public Domain, by [JAM](https://modarchive.org/member.php?81691) and
+[Drozerix](https://modarchive.org/member.php?84702):
 
-- [Numen in Da Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=169046) by [JAM](https://modarchive.org/member.php?81691)
-- [The_Epic_Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=172424) by [Drozerix](https://modarchive.org/member.php?84702)
-- [Keygen 9000](https://modarchive.org/index.php?request=view_by_moduleid&query=173938) by [Drozerix](https://modarchive.org/member.php?84702)
+- [The_Epic_Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=172424) by Drozerix (title music)
+- [Numen in Da Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=169046) by JAM
+- [FastLane](https://modarchive.org/index.php?request=view_by_moduleid&query=208417) by JAM
+- [CHiP_OVERTURE](https://modarchive.org/index.php?request=view_by_moduleid&query=172185) by Drozerix
+- [The_Dim_Dungeon](https://modarchive.org/index.php?request=view_by_moduleid&query=172732) by Drozerix
+- [4_RNDD!](https://modarchive.org/index.php?request=view_by_moduleid&query=172898) by Drozerix
+- [Girl From Mars](https://modarchive.org/index.php?request=view_by_moduleid&query=173935) by Drozerix
+- [Wrath_of_the_Djinn](https://modarchive.org/index.php?request=view_by_moduleid&query=173080) by Drozerix
+- [Keygen 9000](https://modarchive.org/index.php?request=view_by_moduleid&query=173938) by Drozerix
+
+Every song considered, and why the others weren't used, is in the
+[song digest](docs/SONG-DIGEST.md).

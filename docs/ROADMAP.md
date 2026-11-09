@@ -1,6 +1,6 @@
 # Roadmap
 
-*Last updated: 2026-11-08*
+*Last updated: 2026-11-09*
 
 ## At a glance
 
@@ -15,8 +15,8 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 | [Songs and jukebox](#songs-and-jukebox) | Three bundled songs to pick from on a title menu, and a jukebox to listen to them. | Built; Brad to play-test |
 | [Title music, demo, and levels](#title-music-demo-and-levels) | Title music, an attract demo, menu sounds, an arcade run of levels, and game-over music. | Built; Brad to play-test |
 | [Cavern terrain](#cavern-terrain) | A cave that squeezes on every hit and winds with the melody; difficulty sets the song's speed and the cave's width. | Built; Brad to play-test |
-| [Eight levels](#eight-levels) | Six more songs, so the arcade run has eight levels. | Next |
-| [M2: enemies and scoring](#m2-enemies-and-scoring) | Notes become enemies; shooting, scoring, lives, power-ups, gamepad support, and replays that give the same score in every browser. | Planned |
+| [Eight levels](#eight-levels) | Six more songs, so the arcade run has eight levels. | Built; Brad to play-test |
+| [M2: enemies and scoring](#m2-enemies-and-scoring) | Notes become enemies; shooting, scoring, lives, power-ups, gamepad support, and replays that give the same score in every browser. | Next |
 | [M3: effects and look](#m3-effects-and-look) | Particles, big explosions, sound effects, copper bars, starfield, CRT filter, title and results screens, accessibility options. | Planned |
 | [M4: library, offline, music pack](#m4-library-offline-music-pack) | Import your own songs, install the game, and play with no connection; a bundled, credited music pack. | Planned |
 | [M5: leaderboards](#m5-leaderboards) | A global board per song, with scores checked by replaying them on the server. | Planned |
@@ -145,15 +145,19 @@ sim", "Rendering"), the README, the "Decided" list below.
 **Goal:** the arcade run Brad wants to begin with: the practice and demo song plus levels 1
 to 8 (2026-11-08).
 
-- [ ] Find six songs for levels 2 to 7: PD, CC0 or CC BY, checked on their Mod Archive pages,
-      no covers. Brad listens and picks.
-- [ ] Order the levels by difficulty (gap sizes, tight bars, rows per second), with Numen in
-      Da Chip first and the full Keygen 9000 last.
-- [ ] Each song passes the bundled-songs test and gets complete `manifest.json` entries.
+- [x] Find six songs for levels 2 to 7: PD, CC0 or CC BY, checked on their Mod Archive pages,
+      no covers. Brad listens and picks. 34 Public Domain songs by Drozerix and JAM were
+      measured and 13 shortlisted; Brad took the suggested six (2026-11-09).
+- [x] Order the levels by difficulty (gap sizes, tight bars, rows per second), with Numen in
+      Da Chip first and the full Keygen 9000 last: FastLane, CHiP_OVERTURE,
+      The_Dim_Dungeon, 4_RNDD!, Girl From Mars, Wrath_of_the_Djinn.
+- [x] Each song passes the bundled-songs test and gets complete `manifest.json` entries.
+- [x] `SONG-DIGEST.md` records every song considered, with its numbers, and why the others
+      were left out, for adding levels later (Brad, 2026-11-09).
 
 **Acceptance:** the arcade run has eight levels, each playable on every difficulty.
 
-**Docs:** `DEVELOPMENT.md` ("Bundled songs"), the README music credits.
+**Docs:** `DEVELOPMENT.md` ("Bundled songs"), `SONG-DIGEST.md`, the README music credits.
 
 ## M2: enemies and scoring
 

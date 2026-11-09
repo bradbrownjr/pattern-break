@@ -375,8 +375,8 @@ changes only with a `GEN_VERSION` bump, a sim hash only with a `SIM_VERSION` bum
 
 **Bundled songs.** `packages/analysis/test/music.test.ts` analyzes every song in
 `music/manifest.json`, builds its level on each difficulty, and checks that the path check
-passes and the autopilot reaches the end. It runs in Node only and takes about 30 s for
-the three songs, so a levelgen change that makes a real song unplayable fails `pnpm test`.
+passes and the autopilot reaches the end. It runs in Node only and takes about a minute
+for the nine songs, so a levelgen change that makes a real song unplayable fails `pnpm test`.
 
 **Browsers.** The analysis package's `vitest.config.ts` has two projects. `node` runs every
 test in Node and is what `pnpm test` runs. `browser` runs the golden test in real browsers
@@ -698,8 +698,8 @@ adding the file and its entry. The generated test song (`pb-fixture-01.mod`) sta
 The part each song plays is set in `songs.ts`, not the manifest:
 
 - `TITLE_SONG_ID`: the title and demo music, and Practice's first song (The_Epic_Chip).
-- `LEVEL_SONG_IDS`: the arcade levels in order (Numen in Da Chip, then Keygen 9000). Eight
-  are planned; new levels go in between, and the last song stays last.
+- `LEVEL_SONG_IDS`: the eight arcade levels in order, by scroll speed, from Numen in Da Chip
+  to Keygen 9000.
 - `GAME_OVER_MUSIC`: game over plays Keygen 9000's first 8 s, its two sparse opening
   patterns (about 3 to 5 notes per second; the third pattern jumps to 17), fading out over
   the last 1.5 s.
@@ -710,14 +710,24 @@ credit field is empty or a link isn't https, or a license is off the allowlist (
 Domain, CC0, CC BY). A CC BY-SA entry fails until it has a `"reviewed"` field saying who
 reviewed it and when.
 
-The three songs so far (2026-11-08), each marked Public Domain on its Mod Archive page, with
-the file's MD5 matching the one the page lists:
+The nine songs so far (2026-11-09), each marked Public Domain on its Mod Archive page, with
+the file's MD5 matching the one the page lists. The files are named after the archive's,
+without the artist prefix and the `!` (`4_rndd.xm`), since the name becomes the song's id
+in URLs. Their numbers, the songs that were considered and not used, and the checks a new
+song goes through are in [`SONG-DIGEST.md`](SONG-DIGEST.md); keep it current when a song
+is added.
 
-| Song | File | Author | Length | Rows per second |
-|---|---|---|---|---|
-| Numen in Da Chip | `numenchip.xm` | JAM | 1:48 | 8.3 |
-| The_Epic_Chip | `the_epic_chip.xm` | Drozerix | 3:48 | 10.7 |
-| Keygen 9000 | `keygen_9000.xm` | Drozerix | 3:20 | 16.0 |
+| Song | File | Author | Part |
+|---|---|---|---|
+| The_Epic_Chip | `the_epic_chip.xm` | Drozerix | Title, demo |
+| Numen in Da Chip | `numenchip.xm` | JAM | Level 1 |
+| FastLane | `fastlane.xm` | JAM | Level 2 |
+| CHiP_OVERTURE | `chip_overture.xm` | Drozerix | Level 3 |
+| The_Dim_Dungeon | `the_dim_dungeon.xm` | Drozerix | Level 4 |
+| 4_RNDD! | `4_rndd.xm` | Drozerix | Level 5 |
+| Girl From Mars | `girl_from_mars.xm` | Drozerix | Level 6 |
+| Wrath_of_the_Djinn | `wrath_of_the_djinn.xm` | Drozerix | Level 7 |
+| Keygen 9000 | `keygen_9000.xm` | Drozerix | Level 8, game over |
 
 ### Menus and the jukebox
 

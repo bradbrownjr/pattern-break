@@ -20,6 +20,66 @@
     "sha256": "94416b54f724debfd2393756d4ac70fe4c904da1688325ec377514f9bf41976d"
   },
   {
+    "file": "fastlane.xm",
+    "title": "FastLane",
+    "author": "JAM",
+    "authorUrl": "https://modarchive.org/member.php?81691",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=208417",
+    "license": "Public Domain",
+    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
+    "sha256": "5e713be004cbc61f55f7fed27ec4c58adbba2ce55926b7e6b7effa413830c2d7"
+  },
+  {
+    "file": "chip_overture.xm",
+    "title": "CHiP_OVERTURE",
+    "author": "Drozerix",
+    "authorUrl": "https://modarchive.org/member.php?84702",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=172185",
+    "license": "Public Domain",
+    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
+    "sha256": "060dfb9143611e48d45a0a26960d147fac669fbce5cba2d890c0d367b798068d"
+  },
+  {
+    "file": "the_dim_dungeon.xm",
+    "title": "The_Dim_Dungeon",
+    "author": "Drozerix",
+    "authorUrl": "https://modarchive.org/member.php?84702",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=172732",
+    "license": "Public Domain",
+    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
+    "sha256": "7cb0dc8247341bc731d4462c89cf8c5437d0c183d3f40baa1225c84a083095af"
+  },
+  {
+    "file": "4_rndd.xm",
+    "title": "4_RNDD!",
+    "author": "Drozerix",
+    "authorUrl": "https://modarchive.org/member.php?84702",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=172898",
+    "license": "Public Domain",
+    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
+    "sha256": "f2f69f75c140c9c3c86c85a6be8318ed8185372669d645132d8885567ae99310"
+  },
+  {
+    "file": "girl_from_mars.xm",
+    "title": "Girl From Mars",
+    "author": "Drozerix",
+    "authorUrl": "https://modarchive.org/member.php?84702",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=173935",
+    "license": "Public Domain",
+    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
+    "sha256": "3378aa34ddfbf7ee19003ca337f7711f28d16938bf734565026cb0bb7b61756c"
+  },
+  {
+    "file": "wrath_of_the_djinn.xm",
+    "title": "Wrath_of_the_Djinn",
+    "author": "Drozerix",
+    "authorUrl": "https://modarchive.org/member.php?84702",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=173080",
+    "license": "Public Domain",
+    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
+    "sha256": "d79d2158d7e8217cbf489d0e53243c7dd79f3f921cce76416ffd12cba1e26ced"
+  },
+  {
     "file": "keygen_9000.xm",
     "title": "Keygen 9000",
     "author": "Drozerix",

@@ -10,6 +10,8 @@ tracker. The docs, each with one job:
 - **`docs/DEVELOPMENT.md`**: setup, commands, layout, TypeScript conventions, the
   determinism lint, and how the changelog and roadmap are kept.
 - **`docs/DOC-STYLE.md`**: the writing rules.
+- **`docs/SONG-DIGEST.md`**: every song considered for the game, its numbers and license
+  checks, and why the unused ones were left out.
 
 ## Writing
 
