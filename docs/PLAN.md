@@ -142,8 +142,8 @@ every bar of every generated level.
   - Each side keeps at least 2 segments, so the walls never vanish.
   - The playfield is 384 x 216 px. Segments are 7 px apart (6 px lit).
 - **Always a path:**
-  - The gap between ceiling and floor is never under the difficulty's minimum (52, 44 or
-    36 px), against the ship's 6 px hitbox.
+  - The gap between ceiling and floor is never under the difficulty's minimum (66, 58 or
+    50 px), against the ship's 6 px hitbox.
   - From one bar to the next the gap's centre moves no further than the ship can travel
     vertically in the earlier bar's row, and consecutive gaps always overlap by more than
     the ship's height. Levels are cut further where needed. A gap that grows to contain
@@ -160,7 +160,8 @@ every bar of every generated level.
 - **Difficulty sets the song's speed and the cave's width (2026-11-09).** The song plays at
   0.9 times its tempo on easy, as written on normal, and 1.15 times on hard, without
   changing its pitch (libopenmpt's tempo factor), so the cave scrolls faster as well. The
-  base gap is 104, 90 and 76 px and the minimum 52, 44 and 36 px. The beat and the winding
+  base gap is 118, 104 and 90 px and the minimum 66, 58 and 50 px (14 px wider since
+  2026-11-10, when level 1 played too tight). The beat and the winding
   are the same on every difficulty; enemies (M2) add the rest of the challenge. Each
   difficulty is analyzed at its own tempo, so it has its own LevelData. Difficulty is a
   constant object (`easy`, `normal`, `hard`); the numbers and the exact rounding rules are

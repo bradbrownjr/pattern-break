@@ -281,7 +281,7 @@ and "Simulation"; this section has the exact rules.
 
 The settings are `Difficulty` and `Terrain` in `levelgen/types.ts`. Difficulty sets the
 tempo the LevelData was analyzed at (`generateLevel` throws on a mismatch), the base gap
-(104, 90, 76 px on easy, normal, hard) and the minimum gap (52, 44, 36 px). Before the
+(118, 104, 90 px on easy, normal, hard) and the minimum gap (66, 58, 50 px). Before the
 bars, `findDrums()` marks each instrument whose three commonest pitches make up at least
 95% of its notes (`drumPitchPercent`). Then, for each bar in order, with the previous
 bar's final values:
@@ -538,7 +538,7 @@ u32 run count, then each run of equal bits as u16 bits and its length as an unsi
 LEB128 varint. `decodeReplay` throws on a wrong magic or format, an unknown difficulty,
 truncation, run lengths that don't add up to the tick count, and trailing bytes. The level
 isn't stored: it is rebuilt from the song, which is why the hash is there. The level-1 run
-in the fixture is 10 477 ticks in 3 136 bytes.
+in the fixture is 12 903 ticks in 3 657 bytes.
 
 In the game (`game.ts`), each run that ends in game over or level complete keeps its
 replay, for a bundled song (its hash comes from `music/manifest.json`). On those screens R
@@ -583,7 +583,7 @@ changes only with a `GEN_VERSION` bump, a sim hash only with a `SIM_VERSION` bum
 of level 1 (Numen in Da Chip on normal) recorded by the game in Chromium.
 `test/replay.test.ts` checks that it names this `GEN_VERSION` and `SIM_VERSION` and the song
 file's SHA-256, builds the level from `music/numenchip.xm`, runs the inputs, and gets the
-recorded score (34 800) on the recorded last tick, in Node and in every browser.
+recorded score (50 300) on the recorded last tick, in Node and in every browser.
 
 **Bundled songs.** `packages/analysis/test/music.test.ts` analyzes every song in
 `music/manifest.json`, builds its level on each difficulty, and checks that it has enemies,
@@ -1143,8 +1143,8 @@ is added.
   the UI (title screen, jukebox, controls, demo banner, messages, the pause menu, and the
   fade).
 - **Terrain** (`terrain.ts`, geometry in `terrain-layout.ts`): 41 columns
-  (`MAX_VISIBLE_BARS`) of 50 sprites each, 25 a side (`SEGMENTS_PER_SIDE`, the most hard's
-  36 px minimum gap allows), made once. Each frame moves the columns to the bars
+  (`MAX_VISIBLE_BARS`) of 46 sprites each, 23 a side (`SEGMENTS_PER_SIDE`, the most hard's
+  50 px minimum gap allows), made once. Each frame moves the columns to the bars
   `visibleBars()` lists and tints each sprite: lit segment k is
   `LED_LIT[segmentColorIndex(k)]` (green at the screen edge, through amber, to red 12
   segments in, and red beyond), and a peak dot, drawn only where peaks are solid, is white.

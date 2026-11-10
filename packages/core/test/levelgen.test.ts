@@ -27,22 +27,23 @@ const rowOfFrame = (f: number): number => Math.floor(((f + 1) * 800 - 1) / ROW);
 describe('generateLevel', () => {
   it('squeezes the cave on a hit and lets it open by releaseSegments per bar', () => {
     // Every channel's meter jumps from 0 to 255 in row 2 and drops back in row 3: a hit of
-    // 4 * 255 = 1020, so 15 squeeze segments, more than normal's base gap (90 px) allows
-    // above its minimum (44 px). With the melody at the pivot the gap stays centred.
+    // 4 * 255 = 1020, so 15 squeeze segments, more than normal's base gap (104 px) allows
+    // above its minimum (58 px). With the melody at the pivot the gap stays centred.
     const vu = (f: number): number => (rowOfFrame(f) === 2 ? 255 : 0);
     const level = generateLevel(syntheticLevelData({ rowLengths: repeat(8, ROW), vu }), 'normal');
     expect(Terrain.hitPerSegment).toBe(64);
     expect(Terrain.releaseSegments).toBe(6);
-    // No squeeze: a 90 px gap, 63 px each side. Squeeze 15 or 9: the 44 px minimum, rounded
-    // to 12 segments a side (48 px). Squeeze 3: 69 px, 73.5 px a side, rounded up to 11.
+    // No squeeze: a 104 px gap, 56 px each side. Squeeze 15 or 9: the 58 px minimum,
+    // rounded to 11 segments a side (62 px). Squeeze 3: 83 px, 66.5 px a side, rounded up
+    // to 10.
     expect([0, 1, 2, 3, 4, 5, 6].map((i) => sides(level, i))).toEqual([
-      [9, 9],
-      [9, 9],
-      [12, 12],
-      [12, 12],
+      [8, 8],
+      [8, 8],
       [11, 11],
-      [9, 9],
-      [9, 9],
+      [11, 11],
+      [10, 10],
+      [8, 8],
+      [8, 8],
     ]);
     expectAlwaysAPath(level);
   });
@@ -112,13 +113,13 @@ describe('generateLevel', () => {
   });
 
   it('holds peaks for PEAK_HOLD_BARS bars, then drops them one segment per bar', () => {
-    // The hit of the first test, in row 1: the ceiling goes 9, 12, 12, 11, 9, ...
+    // The hit of the first test, in row 1: the ceiling goes 8, 11, 11, 10, 8, ...
     const vu = (f: number): number => (rowOfFrame(f) === 1 ? 255 : 0);
     const level = generateLevel(syntheticLevelData({ rowLengths: repeat(16, ROW), vu }), 'normal');
-    expect(Array.from(level.ceiling.subarray(0, 6))).toEqual([9, 12, 12, 11, 9, 9]);
+    expect(Array.from(level.ceiling.subarray(0, 6))).toEqual([8, 11, 11, 10, 8, 8]);
     // Bar 2 equals the peak, which restarts the hold; it then falls from bar 9.
     expect(PEAK_HOLD_BARS).toBe(6);
-    expect(Array.from(level.ceilingPeak.subarray(0, 13))).toEqual([9, 12, 12, 12, 12, 12, 12, 12, 12, 11, 10, 9, 9]);
+    expect(Array.from(level.ceilingPeak.subarray(0, 13))).toEqual([8, 11, 11, 11, 11, 11, 11, 11, 11, 10, 9, 8, 8]);
   });
 
   it('builds the scroll table from row times', () => {
@@ -154,31 +155,31 @@ describe('generateLevel', () => {
   it('findPathViolation catches a closed gap and a jump', () => {
     const base = generateLevel(syntheticLevelData({ rowLengths: [400, 400, 400] }), 'normal');
     expect(findPathViolation(base)).toBe('');
-    expect(Array.from(base.ceiling)).toEqual([9, 9, 9]);
+    expect(Array.from(base.ceiling)).toEqual([8, 8, 8]);
     // 13 + 13 segments leave 216 - 182 = 34 px.
-    const closed = { ...base, ceiling: Uint8Array.from([13, 9, 9]), ceilingPeak: Uint8Array.from([13, 13, 13]) };
-    closed.floor = Uint8Array.from([13, 9, 9]);
+    const closed = { ...base, ceiling: Uint8Array.from([13, 8, 8]), ceilingPeak: Uint8Array.from([13, 13, 13]) };
+    closed.floor = Uint8Array.from([13, 8, 8]);
     closed.floorPeak = Uint8Array.from([13, 13, 13]);
-    expect(findPathViolation(closed)).toMatch(/bar 0: gap 34 px is under 44 px/);
-    const jump = { ...base, ceiling: Uint8Array.from([9, 13, 9]), ceilingPeak: Uint8Array.from([9, 13, 13]) };
+    expect(findPathViolation(closed)).toMatch(/bar 0: gap 34 px is under 58 px/);
+    const jump = { ...base, ceiling: Uint8Array.from([8, 12, 8]), ceilingPeak: Uint8Array.from([8, 12, 12]) };
     expect(findPathViolation(jump)).toMatch(/bar 1: gap centre moves 14 px, limit 1 px/);
   });
 
   it('findPathViolation catches three gaps that step away from each other', () => {
-    // Long rows, so only the 34 px cap limits each move. Gaps [63, 153], [77, 125],
-    // [105, 153], [126, 181]: every gap is at least 44 px, each centre moves under 34 px,
+    // Long rows, so only the 48 px cap limits each move. Gaps [56, 160], [42, 111],
+    // [70, 132], [112, 174]: every gap is at least 58 px, each centre moves under 48 px,
     // and each pair overlaps by at least 10 px, but bars 1 to 3 share nothing: the hitbox,
-    // touching two bars at once, would have to jump from [105, 125] to [126, 153].
+    // touching two bars at once, would have to jump from [70, 111] to [112, 132].
     const base = generateLevel(syntheticLevelData({ rowLengths: repeat(4, ROW) }), 'normal');
-    const steps = { ...base, ceiling: Uint8Array.from([9, 11, 15, 18]), floor: Uint8Array.from([9, 13, 9, 5]) };
+    const steps = { ...base, ceiling: Uint8Array.from([8, 6, 10, 16]), floor: Uint8Array.from([8, 15, 12, 6]) };
     steps.ceilingPeak = steps.ceiling.slice();
     steps.floorPeak = steps.floor.slice();
     expect(findPathViolation(steps)).toBe('bar 3: bars 1 to 3 share -1 px, under 10 px');
-    steps.ceiling[3] = 17;
-    steps.ceilingPeak[3] = 17;
+    steps.ceiling[3] = 15;
+    steps.ceilingPeak[3] = 15;
     expect(findPathViolation(steps)).toBe('bar 3: bars 1 to 3 share 6 px, under 10 px');
-    steps.ceiling[3] = 16;
-    steps.ceilingPeak[3] = 16;
+    steps.ceiling[3] = 14;
+    steps.ceilingPeak[3] = 14;
     expect(findPathViolation(steps)).toBe('');
   });
 

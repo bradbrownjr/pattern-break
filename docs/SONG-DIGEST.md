@@ -28,7 +28,8 @@ listed in `music/manifest.json`; how to add one is in `DEVELOPMENT.md`, "Bundled
 - **Rating:** the member rating on The Mod Archive, out of 10.
 
 Measured 2026-11-09 with `GEN_VERSION` 2. A levelgen change can move the gap numbers; the
-rest come from the song.
+rest come from the song. `GEN_VERSION` 6 (2026-11-10) opens most gaps 14 px wider, one
+segment a side; a side already at its 2-segment minimum keeps it.
 
 ## Bundled
 

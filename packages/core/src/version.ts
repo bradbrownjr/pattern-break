@@ -7,8 +7,8 @@
  * wind with the melody; difficulty sets the song's tempo and the cave's width
  * (2026-11-09). 3 = turrets, tanks and ships from the drums, bass and other instruments
  * (2026-11-09). 4 = each instrument's note ticks in the Level, for the on-beat bonus
- * (2026-11-09). 5 = each ship's formation, for power-up capsules (2026-11-09). Pre-release:
- * no scores are kept yet.
+ * (2026-11-09). 5 = each ship's formation, for power-up capsules (2026-11-09). 6 = every
+ * gap 14 px wider, one segment a side (2026-11-10). Pre-release: no scores are kept yet.
  *
  * SIM_VERSION 1 = the ship and terrain (M1). 2 = enemies, shots, enemy bullets and three
  * lives (2026-11-09). 3 = score: kill points, the on-beat bonus, the streak multiplier and
@@ -20,7 +20,7 @@
  * 10 = resetSimState sets each enemy's next shot from the level, so a retry plays like a
  * fresh start (2026-11-09).
  */
-export const GEN_VERSION = 5;
+export const GEN_VERSION = 6;
 export const SIM_VERSION = 10;
 
 /** Fixed simulation tick rate (docs/PLAN.md, "Simulation"). */

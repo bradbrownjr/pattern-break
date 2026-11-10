@@ -86,8 +86,8 @@ describe('terrain layout', () => {
     expect(segmentColorIndex(0)).toBe(0);
     expect(segmentColorIndex(11)).toBe(11);
     expect(segmentColorIndex(SEGMENTS_PER_SIDE - 1)).toBe(11);
-    // Hard's 36 px minimum gap allows 25 segments between the two sides.
-    expect(SEGMENTS_PER_SIDE).toBe(25);
+    // Hard's 50 px minimum gap allows 23 segments between the two sides.
+    expect(SEGMENTS_PER_SIDE).toBe(23);
   });
 
   it('mirrors floor segments onto ceiling segments', () => {

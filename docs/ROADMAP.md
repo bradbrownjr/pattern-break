@@ -1,6 +1,6 @@
 # Roadmap
 
-*Last updated: 2026-11-09*
+*Last updated: 2026-11-10*
 
 ## At a glance
 
@@ -11,7 +11,8 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 
 | Item | What it delivers | Stage |
 |---|---|---|
-| [M3: effects and look](#m3-effects-and-look) | Particles, big explosions, sound effects, copper bars, starfield, CRT filter, the results screen, accessibility options. | Next |
+| [Play-test, November 10](#play-test-november-10) | A wider cave, a gentler respawn, power-ups without buying, a better demo, clearer controls, and three secrets. | Next |
+| [M3: effects and look](#m3-effects-and-look) | Particles, big explosions, sound effects, copper bars, starfield, CRT filter, the results screen, accessibility options. | Planned |
 | [M4: library, offline, music pack](#m4-library-offline-music-pack) | Import your own songs, install the game, and play with no connection; a bundled, credited music pack. | Planned |
 | [M5: leaderboards](#m5-leaderboards) | A global board per song, with scores checked by replaying them on the server. | Planned |
 | [M6: mobile and polish](#m6-mobile-and-polish) | Touch controls, latency calibration, phone performance, tuned difficulty. | Planned |
@@ -26,6 +27,46 @@ yet.
 
 Each milestone is finished only when its acceptance checks pass. Work them in order; don't
 start the next until the current one is done.
+
+---
+
+## Play-test, November 10
+
+**Goal:** fix what Brad's play-test of level 1 found, and add the secrets he and his son
+asked for. Decided with Brad on 2026-11-10.
+
+- [ ] **A wider cave.** Numen in Da Chip, level 1, squeezes to 48 px from about 23 s, and
+      at 9.6 s climbs from the middle to the ceiling in 0.7 s while squeezed. Every
+      difficulty's base and minimum gap grow by 14 px: one LED segment fewer on each side.
+      `GEN_VERSION` bump.
+- [ ] **A gentler respawn.** The ship came back in the middle of the cave but couldn't hit
+      the walls for 2 s, so it could drift into one. It now flies in from the left along
+      the cave's centre with the controls locked, then has the rest of its safe time
+      against enemies and bullets only. `SIM_VERSION` bump.
+- [ ] **Power-ups unlock on pickup.** Buying in flight was impossible. Each capsule unlocks
+      the next power-up in a fixed order: double shot, missile, shield, drone, laser, boost.
+      The Buy button goes. `SIM_VERSION` bump.
+- [ ] **A better demo.** The demo never picked up a power-up, dropped a bomb or fired a
+      missile. The autopilot steers for capsules, and the demo is checked for all three.
+- [ ] **Controls in three pages:** arrows with Z, X, C, V and Shift; WASD with J, K, L, ;
+      and '; then the gamepad. Each keyboard page lights only its own keys.
+- [ ] **Konami code:** up, up, down, down, left, right, left, right, B, A on the title
+      screen gives infinite lives. The run's replay is marked, the M5 boards refuse it, and
+      the screen shows it.
+- [ ] **God mode:** holding Esc, or Start on a pad, while choosing Play starts with a
+      shield that never breaks and every power-up, kept after losing a life. Marked like
+      the Konami code.
+- [ ] **Impossible:** stepping the difficulty through easy, normal and hard three times
+      shows Impossible after the third hard. Play on it is one level, Crush by Drozerix
+      (Public Domain, 24 rows a second, 1.5 times level 8's speed) with hard's cave.
+
+**Acceptance:** `pnpm check` passes with the goldens and the replay fixture updated; the
+autopilot finishes every bundled song on every difficulty; a capture of the demo shows a
+capsule picked up, a bomb and a missile; a test enters the Konami code and the Impossible
+steps through the menu, and a replay with either cheat is marked.
+
+**Docs:** `DEVELOPMENT.md` ("Playing it", "Replays", the sim's order of a tick), `PLAN.md`
+(power-ups, lives, difficulty), `SONG-DIGEST.md` (Crush), the help and controls screens.
 
 ---
 

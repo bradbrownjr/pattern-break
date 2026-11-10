@@ -8,15 +8,16 @@
  * - `tempoPermille`: the song plays at this tempo, in thousandths (libopenmpt's tempo
  *   factor, which keeps the pitch). Analysis renders at the same tempo, so each difficulty
  *   has its own LevelData.
- * - `baseGapPx`: the gap with no hits. `minGapPx`: the gap never closes below this.
+ * - `baseGapPx`: the gap with no hits. `minGapPx`: the gap never closes below this. Both
+ *   grew 14 px, one segment a side, after level 1 played too tight (Brad, 2026-11-10).
  * - `solidPeaks` makes peak dots solid and visible; it is off on every difficulty
  *   (2026-11-08). Peaks are still computed, so a display option or solid peaks on hard can
  *   return (docs/ROADMAP.md, "Open decisions").
  */
 export const Difficulty = {
-  easy: { id: 0, tempoPermille: 900, baseGapPx: 104, minGapPx: 52, solidPeaks: false },
-  normal: { id: 1, tempoPermille: 1000, baseGapPx: 90, minGapPx: 44, solidPeaks: false },
-  hard: { id: 2, tempoPermille: 1150, baseGapPx: 76, minGapPx: 36, solidPeaks: false },
+  easy: { id: 0, tempoPermille: 900, baseGapPx: 118, minGapPx: 66, solidPeaks: false },
+  normal: { id: 1, tempoPermille: 1000, baseGapPx: 104, minGapPx: 58, solidPeaks: false },
+  hard: { id: 2, tempoPermille: 1150, baseGapPx: 90, minGapPx: 50, solidPeaks: false },
 } as const;
 export type DifficultyName = keyof typeof Difficulty;
 
