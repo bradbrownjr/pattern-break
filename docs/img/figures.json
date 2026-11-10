@@ -1,7 +1,7 @@
 {
   "title-screen": {
     "path": "docs/img/title-screen.png",
-    "alt": "The title screen on a near-black background with faint blue stars. \"Pattern Break\" in large cyan pixel letters with a magenta shadow, over a row of small LED segments shading from green to red. Below it, a menu in small pixel type: \"Play\" in amber with an amber \">\" before it, then \"Practice\" with \"The_Epic_Chip\", \"Difficulty\" with \"Normal\", \"Jukebox\", \"Controls\" and \"Settings\", in grey. Under the menu, \"Music: The_Epic_Chip by Drozerix. Public Domain.\"",
+    "alt": "The title screen on a near-black background with faint blue stars. \"Pattern Break\" in large cyan pixel letters with a magenta shadow, over a row of small LED segments shading from green to red. Below it, a menu in small pixel type: \"Play\" in amber with an amber \">\" before it, then \"Practice\" with \"The_Epic_Chip\", \"Difficulty\" with \"Normal\", \"Jukebox\", \"Controls\", \"Help\" and \"Settings\", in grey. Under the menu, \"Music: The_Epic_Chip by Drozerix. Public Domain.\"",
     "caption": "The title menu. Not used in the README.",
     "usedIn": []
   },
@@ -23,6 +23,18 @@
     "caption": "The controls screen, gamepad page. Not used in the README.",
     "usedIn": []
   },
+  "help": {
+    "path": "docs/img/help.png",
+    "alt": "\"Help\" in large cyan pixel letters with a magenta shadow, over a list with a grey scroll bar on the right, its thumb at the top. Cyan section names, then rows of an icon, a white label and a value on the right. Enemies: the magenta ship sprite, Ship, 100 in amber; the turret, Turret, 200; the lime tank, \"Tank 3 hits\", 300; the magenta bullet, Bullet, \"Dodge\" in grey. Score: an amber \"200\", \"Kill on the beat\", x2; an amber \"x2\", \"10 kills no hit\", \"+1 Max x4\"; the cyan player ship, \"Life left at end\", 1000; the amber nuke icon, \"10 beat kills\", \"+1 Nuke Max 3\". Weapons: a cyan dash, Shot, \"Hold fire\" in grey.",
+    "caption": "The help screen at its top. Not used in the README.",
+    "usedIn": []
+  },
+  "help-end": {
+    "path": "docs/img/help-end.png",
+    "alt": "The help screen scrolled to its end, the scroll bar thumb at the bottom. Rows of an icon, a white label and a grey value: a small angled cyan shot, Double, \"Angled shot\"; a white bar, Laser, \"Pierces\"; the missile, Missile, \"Air to air\"; the cyan drone orb, Drone, \"Copies fire Max 2\"; the player ship inside a cyan ring, Shield, \"3 hits\"; no icon, \"Life lost\", \"Upgrades lost\" in magenta. Then the cyan section name Display: the player ship, Lives, \"3 to start\"; the amber bomb icon, \"Bomb ready\", Fills; the missile icon, \"Missile ready\", Fills; an amber \"x3\", Multiplier; the amber nuke icon, \"Nukes held\".",
+    "caption": "The help screen scrolled to its end. Not used in the README.",
+    "usedIn": []
+  },
   "settings": {
     "path": "docs/img/settings.png",
     "alt": "\"Settings\" in large cyan pixel letters with a magenta shadow. Below it, three rows in small pixel type. \"Music\" in amber with an amber \">\" before it, then \"<\", five LED cells lit green, yellow-green, yellow, orange and red, and \">\". \"Effects\" in grey with four of its five cells lit and the fifth dim red. \"Back\" in grey.",
@@ -31,7 +43,7 @@
   },
   "paused": {
     "path": "docs/img/paused.png",
-    "alt": "A frame of play in an LED cavern, with a dark translucent panel in the middle. On the panel, \"Paused\" in large amber pixel letters, and below it a menu: \"Resume\" in amber with an amber \">\" before it, then \"Controls\" and \"Quit\" in grey. The HUD shows three ship icons, a bomb icon and \"x2\" in the top left, the score \"0002200\" in the top right, and the power-up meter along the bottom edge, all six cells dark.",
+    "alt": "A frame of play in an LED cavern, with a dark translucent panel in the middle. On the panel, \"Paused\" in large amber pixel letters, and below it a menu: \"Resume\" in amber with an amber \">\" before it, then \"Controls\", \"Help\" and \"Quit\" in grey. The HUD shows three ship icons, a bomb icon and \"x2\" in the top left, the score \"0002200\" in the top right, and the power-up meter along the bottom edge, all six cells dark.",
     "caption": "The pause menu over play. Not used in the README.",
     "usedIn": []
   },

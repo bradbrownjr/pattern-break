@@ -9,11 +9,11 @@ import { VOLUME_LEVELS, type Settings } from './settings.ts';
 export const DIFFICULTY_LABELS: Record<DifficultyName, string> = { easy: 'Easy', normal: 'Normal', hard: 'Hard' };
 export const DIFFICULTY_ORDER = Object.keys(Difficulty) as DifficultyName[];
 
-export const TITLE_ITEMS = ['play', 'practice', 'difficulty', 'jukebox', 'controls', 'settings'] as const;
+export const TITLE_ITEMS = ['play', 'practice', 'difficulty', 'jukebox', 'controls', 'help', 'settings'] as const;
 export type TitleItem = (typeof TITLE_ITEMS)[number];
 
 /** What one action did on the title menu: what the game plays a sound for or opens. */
-export type TitleEvent = 'moved' | 'changed' | 'play' | 'practice' | 'jukebox' | 'controls' | 'settings' | null;
+export type TitleEvent = 'moved' | 'changed' | 'play' | 'practice' | 'jukebox' | 'controls' | 'help' | 'settings' | null;
 
 /** Steps `i` by `step` through `count` values, wrapping at both ends. */
 function wrap(i: number, step: number, count: number): number {
@@ -21,7 +21,7 @@ function wrap(i: number, step: number, count: number): number {
 }
 
 /**
- * Play, Practice, Difficulty, Jukebox, Controls, Settings. Up and down move the cursor; left and right change
+ * Play, Practice, Difficulty, Jukebox, Controls, Help, Settings. Up and down move the cursor; left and right change
  * Practice's song or the difficulty under it. Confirm on Difficulty steps it forward, so a
  * single button or a click can reach every choice.
  */
@@ -120,10 +120,10 @@ export class JukeboxMenu {
   }
 }
 
-export const PAUSE_ITEMS = ['resume', 'controls', 'quit'] as const;
+export const PAUSE_ITEMS = ['resume', 'controls', 'help', 'quit'] as const;
 export type PauseItem = (typeof PAUSE_ITEMS)[number];
 
-/** Resume, Controls, Quit (to the title). Back resumes. */
+/** Resume, Controls, Help, Quit (to the title). Back resumes. */
 export class PauseMenu {
   cursor = 0;
 
@@ -218,6 +218,50 @@ export class SettingsMenu {
         if (item === 'back') return 'back';
         this.values[item] = wrap(this.values[item], 1, VOLUME_LEVELS + 1);
         return 'changed';
+      case 'back':
+        return 'back';
+    }
+  }
+}
+
+/**
+ * A list taller than the screen, scrolled a row at a time: the help screen. Up and down
+ * scroll a row, left and right a page. Confirm pages down and leaves from the end, so a click
+ * alone reads it all; back leaves.
+ */
+export class Scroller {
+  top = 0;
+  readonly rows: number;
+  readonly visible: number;
+
+  constructor(rows: number, visible: number) {
+    this.rows = rows;
+    this.visible = visible;
+  }
+
+  /** The highest `top`: the last row at the bottom of the view. */
+  get maxTop(): number {
+    return Math.max(0, this.rows - this.visible);
+  }
+
+  /** Scrolls by `rows`, clamped; true if it moved. */
+  scroll(rows: number): boolean {
+    const top = Math.max(0, Math.min(this.maxTop, this.top + rows));
+    if (top === this.top) return false;
+    this.top = top;
+    return true;
+  }
+
+  apply(action: MenuAction): 'moved' | 'back' | null {
+    switch (action) {
+      case 'up':
+      case 'down':
+        return this.scroll(action === 'up' ? -1 : 1) ? 'moved' : null;
+      case 'left':
+      case 'right':
+        return this.scroll(action === 'left' ? -(this.visible - 1) : this.visible - 1) ? 'moved' : null;
+      case 'confirm':
+        return this.scroll(this.visible - 1) ? 'moved' : 'back';
       case 'back':
         return 'back';
     }

@@ -2,7 +2,8 @@
 // `t`, and the ship flown by the autopilot's input log replayed through the sim up to `t`.
 // Everything on screen is a function of the query parameters. Scenes: title, jukebox (the
 // first song playing, its spectrum dark), controls-keyboard, controls-gamepad, settings (at
-// the defaults), play, and paused (play with the pause menu over it).
+// the defaults), help and help-end (scrolled to the top and to the end), play, and paused
+// (play with the pause menu over it).
 
 import {
   Difficulty,
@@ -26,6 +27,7 @@ import { drawPlay } from './play-view.ts';
 import { ControlsScreen } from './controls.ts';
 import { JukeboxScreen, PauseScreen, SPECTRUM_BARS, SettingsScreen, TitleScreen } from './screens.ts';
 import { DEFAULT_SETTINGS } from './settings.ts';
+import { HelpScreen } from './help.ts';
 import { SONGS, TITLE_SONG_ID, fetchSongBytes, findSong, songById } from './songs.ts';
 
 declare global {
@@ -78,6 +80,13 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
       const controls = new ControlsScreen();
       controls.show(params.scene === 'controls-keyboard' ? 'keyboard' : 'gamepad');
       return menuScene(controls.container);
+    }
+    case 'help':
+    case 'help-end': {
+      const help = new HelpScreen();
+      if (params.scene === 'help-end') help.scroller.top = help.scroller.maxTop;
+      help.update();
+      return menuScene(help.container);
     }
     case 'settings': {
       const settings = new SettingsScreen();

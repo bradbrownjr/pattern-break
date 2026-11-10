@@ -45,6 +45,9 @@ start the next until the current one is done.
       which to change.
 - [ ] The results screen. (Attract mode and the menu sounds came earlier; see the
       changelog, November 8.)
+- [x] A help screen (Brad, 2026-11-10), from the title and pause menus: a key to every
+      sprite and HUD icon, drawn with the game's sprites, and what each enemy and bonus
+      scores, from the sim's constants. It scrolls.
 - [ ] Accessibility toggles: reduce flashing (on by default), shake, colour-blind-safe LED
       palette, remappable controls. Remapping also covers pads and arcade sticks without
       the Gamepad API's standard mapping (moved from M2), tested once there is such a pad:

@@ -713,7 +713,7 @@ The client reads query parameters; `packages/client/src/capture.ts` parses them
 | Parameter | Meaning |
 |---|---|
 | `capture` | `1` turns capture mode on. Without it the page behaves normally. |
-| `scene` | Which screen to show: `title`, `jukebox`, `controls-keyboard`, `controls-gamepad`, `settings`, `play`, or `paused`. |
+| `scene` | Which screen to show: `title`, `jukebox`, `controls-keyboard`, `controls-gamepad`, `help`, `help-end`, `settings`, `play`, or `paused`. |
 | `song` | Song id: a bundled song's file name without its extension (`numenchip`), or `pb-fixture-01` for the test song. |
 | `t` | Song clock in seconds. |
 | `difficulty` | Difficulty name. |
@@ -737,8 +737,9 @@ In capture mode the renderer must:
   difficulty chosen, and the cursor steady instead of blinking. The stars sit where `t` puts them.
 - **`scene=jukebox`** draws the jukebox with the first song playing at `t`, its length from
   an analysis of the song, and the spectrum dark. **`scene=controls-keyboard`** and
-  **`scene=controls-gamepad`** draw the two controls pages, and **`scene=settings`** the
-  settings at their defaults. All of these show the stars as the title does.
+  **`scene=controls-gamepad`** draw the two controls pages, **`scene=help`** and
+  **`scene=help-end`** the help screen scrolled to its top and its end, and
+  **`scene=settings`** the settings at their defaults. All of these show the stars as the title does.
 - **`scene=paused`** is `scene=play` with the pause menu over it, the cursor on Resume.
 - **`scene=play`** analyzes the song in the analysis worker, builds the level for
   `difficulty`, records `autopilotInputs(level)`, and runs the sim from tick 0 to
@@ -907,7 +908,7 @@ Run `pnpm dev` and open the URL it prints.
 
 - **Start screen:** the logo and "Press any key". Browsers let a page play sound only after
   a key press or click, so the first press starts the title music and opens the menu.
-- **Title menu:** Play, Practice, Difficulty, Jukebox, Controls, Settings, over the title song. Up and down
+- **Title menu:** Play, Practice, Difficulty, Jukebox, Controls, Help, Settings, over the title song. Up and down
   (arrows or W and S) move the cursor, left and right change Practice's song or the
   difficulty, and Enter or Space selects. A click selects too, and Enter on Difficulty steps
   it forward, so one button reaches every choice.
@@ -925,7 +926,7 @@ Run `pnpm dev` and open the URL it prints.
   lives is game over: any key retries the level, Esc goes to the title, and R and S watch
   and save the run's replay (see "Replays"). Game over and level complete ignore keys for 0.7 s, so a key still held from
   play doesn't skip them. The game pauses when the window loses focus or the tab is hidden.
-- **Pause menu:** "Paused" over the frozen game, with Resume, Controls and Quit,
+- **Pause menu:** "Paused" over the frozen game, with Resume, Controls, Help and Quit,
   worked like the title menu. Esc (or Backspace) resumes, as does Start on a pad, from any
   item; Q, or Select on a pad, quits to the title. The cursor starts on Resume each time.
 - **Controls** (`controls.ts`), from the title menu or the pause menu: a keyboard page and a
@@ -936,6 +937,13 @@ Run `pnpm dev` and open the URL it prints.
   to the next page and leaves from the last (so a click alone sees both), and Esc goes
   back to where it was opened. The title and jukebox show no control hints of their own
   (Brad, 2026-11-09).
+- **Help** (`help.ts`), from the title menu or the pause menu: a key to what's on screen,
+  each row the game's own sprite (`getTextures()` in `render/combat.ts`, `shipTexture()`),
+  a label, and a value: enemies and their points, the score bonuses, the weapons, the
+  power-ups, and the HUD. The numbers come from `@game/core`'s constants. It is taller than
+  the screen, so it scrolls a row at a time (`Scroller` in `menu.ts`): up and down a row,
+  left and right a page, the mouse wheel a row; Enter pages down and leaves from the end;
+  Esc goes back to where it was opened.
 - **Settings** (`settings.ts`, `SettingsMenu`, `SettingsScreen`), from the title menu: Music
   and Effects volume as five LED cells each, off to 5, then Back. Left and right change a
   volume and stop at the ends; Enter steps it up and wraps to off. Each step halves the gain.

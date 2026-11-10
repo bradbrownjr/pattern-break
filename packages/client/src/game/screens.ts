@@ -28,6 +28,7 @@ const TITLE_LABELS: Record<TitleItem, string> = {
   difficulty: 'Difficulty',
   jukebox: 'Jukebox',
   controls: 'Controls',
+  help: 'Help',
   settings: 'Settings',
 };
 const MENU_TOP = 78;
@@ -307,7 +308,7 @@ export class MessageScreen {
   }
 }
 
-const PAUSE_LABELS: Record<PauseItem, string> = { resume: 'Resume', controls: 'Controls', quit: 'Quit' };
+const PAUSE_LABELS: Record<PauseItem, string> = { resume: 'Resume', controls: 'Controls', help: 'Help', quit: 'Quit' };
 const PAUSE_ROW = 13;
 
 /** "Paused" over the frozen game, with Resume, Controls and Quit. */

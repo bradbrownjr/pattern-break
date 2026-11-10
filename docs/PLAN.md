@@ -329,6 +329,8 @@ every bar of every generated level.
   stored in IndexedDB.
 - Song select: metadata, difficulty, personal best, the global top 10 when online, and
   attribution.
+- Help, from the title and pause menus: a key to every sprite and HUD icon, and what each
+  enemy and bonus scores (built 2026-11-10).
 - Settings, from the title menu: Music and Effects volume (built); to come, audio latency
   calibration, controls (keyboard, gamepad through the Gamepad API, a touch overlay on
   mobile), visual options, accessibility.

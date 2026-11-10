@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ControlsPages, JukeboxMenu, PauseMenu, SettingsMenu, TitleMenu } from '../src/game/menu.ts';
+import { ControlsPages, JukeboxMenu, PauseMenu, Scroller, SettingsMenu, TitleMenu } from '../src/game/menu.ts';
 
 describe('TitleMenu', () => {
   it('moves the cursor with up and down, wrapping at both ends', () => {
@@ -28,7 +28,7 @@ describe('TitleMenu', () => {
     expect(m.difficulty).toBe('easy');
   });
 
-  it('opens play, practice, the jukebox, the controls or the settings on confirm, and steps the difficulty forward', () => {
+  it('opens play, practice, the jukebox, the controls, help or the settings on confirm, and steps the difficulty forward', () => {
     const m = new TitleMenu(3, 1, 'easy');
     expect(m.apply('confirm')).toBe('play');
     m.apply('down');
@@ -40,6 +40,8 @@ describe('TitleMenu', () => {
     expect(m.apply('confirm')).toBe('jukebox');
     m.apply('down');
     expect(m.apply('confirm')).toBe('controls');
+    m.apply('down');
+    expect(m.apply('confirm')).toBe('help');
     m.apply('down');
     expect(m.apply('confirm')).toBe('settings');
     expect(m.apply('back')).toBeNull();
@@ -82,11 +84,13 @@ describe('JukeboxMenu', () => {
 });
 
 describe('PauseMenu', () => {
-  it('moves through Resume, Controls and Quit, wrapping; back resumes', () => {
+  it('moves through Resume, Controls, Help and Quit, wrapping; back resumes', () => {
     const m = new PauseMenu();
     expect(m.apply('confirm')).toBe('resume');
     expect(m.apply('down')).toBe('moved');
     expect(m.apply('confirm')).toBe('controls');
+    m.apply('down');
+    expect(m.apply('confirm')).toBe('help');
     m.apply('down');
     expect(m.apply('confirm')).toBe('quit');
     m.apply('down');
@@ -141,5 +145,40 @@ describe('SettingsMenu', () => {
     const start = { music: 3, effects: 3 };
     new SettingsMenu(start).apply('left');
     expect(start.music).toBe(3);
+  });
+});
+
+describe('Scroller', () => {
+  it('scrolls a row with up and down and a page with left and right, within the list', () => {
+    const s = new Scroller(30, 10);
+    expect(s.maxTop).toBe(20);
+    expect(s.apply('up')).toBeNull();
+    expect(s.apply('down')).toBe('moved');
+    expect(s.top).toBe(1);
+    s.apply('right');
+    expect(s.top).toBe(10);
+    s.apply('right');
+    s.apply('right');
+    expect(s.top).toBe(20);
+    expect(s.apply('down')).toBeNull();
+    s.apply('left');
+    expect(s.top).toBe(11);
+  });
+
+  it('pages down on confirm and leaves from the end, and back leaves anywhere', () => {
+    const s = new Scroller(25, 10);
+    expect(s.apply('confirm')).toBe('moved');
+    expect(s.apply('confirm')).toBe('moved');
+    expect(s.top).toBe(15);
+    expect(s.apply('confirm')).toBe('back');
+    s.top = 3;
+    expect(s.apply('back')).toBe('back');
+  });
+
+  it('has nothing to scroll when everything fits', () => {
+    const s = new Scroller(5, 10);
+    expect(s.maxTop).toBe(0);
+    expect(s.apply('down')).toBeNull();
+    expect(s.apply('confirm')).toBe('back');
   });
 });

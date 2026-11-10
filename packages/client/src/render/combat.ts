@@ -167,7 +167,7 @@ const POPUP_RISE_PX = 8;
 const SCORE_DIGITS = 7;
 const HUD_PAD = 2;
 
-interface Textures {
+export interface Textures {
   turret: Texture;
   turretCeiling: Texture;
   tank: Texture;
@@ -198,7 +198,8 @@ function bottomRows(texture: Texture, width: number, height: number): Texture[] 
 
 let textures: Textures | null = null;
 
-function getTextures(): Textures {
+/** The combat sprites' textures, made once. The help screen draws its key with them. */
+export function getTextures(): Textures {
   textures ??= {
     turret: mapTexture(TURRET_MAP, COLORS, 'turret'),
     turretCeiling: mapTexture(flipRows(TURRET_MAP), COLORS, 'turret-ceiling'),

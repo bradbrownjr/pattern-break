@@ -38,6 +38,7 @@ import { InputSampler, keyToMenuAction, type MenuAction } from './input.ts';
 import { DisplayClock, InputLog, catchUp, targetTick } from './loop.ts';
 import { ControlsScreen } from './controls.ts';
 import { SoundCues, type Cue } from './cues.ts';
+import { HelpScreen } from './help.ts';
 import { ControlsPages, DIFFICULTY_LABELS, JukeboxMenu, PauseMenu, SettingsMenu, TitleMenu, type TitleEvent } from './menu.ts';
 import type { PerfMeter } from './perf.ts';
 import { drawPlay } from './play-view.ts';
@@ -70,6 +71,7 @@ type Mode =
   | 'jukebox'
   | 'controls'
   | 'settings'
+  | 'help'
   | 'analyzing'
   | 'intro'
   | 'play'
@@ -172,6 +174,9 @@ export class Game {
   readonly #controlsPages = new ControlsPages();
   readonly #controls = new ControlsScreen();
   readonly #settingsScreen = new SettingsScreen();
+  readonly #help = new HelpScreen();
+  /** Where the help screen returns to. */
+  #helpFrom: 'title' | 'paused' = 'title';
   #settingsMenu: SettingsMenu;
   #settings: Settings = loadSettings(browserStorage());
   /** Where the controls screen returns to. */
@@ -251,6 +256,7 @@ export class Game {
       this.#jukebox.container,
       this.#controls.container,
       this.#settingsScreen.container,
+      this.#help.container,
       this.#demoBanner.container,
       this.#replayBanner.container,
       this.#message.container,
@@ -272,6 +278,11 @@ export class Game {
       if (document.visibilityState === 'hidden') void this.#pause();
     });
     window.addEventListener('resize', () => this.#r.resize());
+    // The mouse wheel scrolls the help screen.
+    window.addEventListener('wheel', (e) => {
+      if (this.#mode !== 'help' || e.deltaY === 0) return;
+      if (this.#help.scroller.scroll(e.deltaY > 0 ? 1 : -1)) this.#help.update();
+    });
     // A replay file dropped on the title screen plays.
     window.addEventListener('dragover', (e) => e.preventDefault());
     window.addEventListener('drop', (e) => {
@@ -291,6 +302,7 @@ export class Game {
     this.#jukebox.container.visible = mode === 'jukebox';
     this.#controls.container.visible = mode === 'controls';
     this.#settingsScreen.container.visible = mode === 'settings';
+    this.#help.container.visible = mode === 'help';
     this.#pauseScreen.container.visible = mode === 'paused';
     this.#demoBanner.container.visible = mode === 'demo';
     this.#replayBanner.container.visible = mode === 'replay';
@@ -361,6 +373,7 @@ export class Game {
       case 'jukebox':
       case 'controls':
       case 'settings':
+      case 'help':
         this.#menuKey(e);
         return;
       default:
@@ -414,7 +427,8 @@ export class Game {
       case 'title':
       case 'jukebox':
       case 'controls':
-      case 'settings': {
+      case 'settings':
+      case 'help': {
         const action = padMenuAction(bit);
         if (action) this.#onMenu(action);
         return;
@@ -454,7 +468,8 @@ export class Game {
       this.#mode === 'jukebox' ||
       this.#mode === 'paused' ||
       this.#mode === 'controls' ||
-      this.#mode === 'settings'
+      this.#mode === 'settings' ||
+      this.#mode === 'help'
     ) {
       this.#onMenu('confirm');
     }
@@ -487,6 +502,15 @@ export class Game {
     }
     if (this.#mode === 'settings') {
       this.#onSettingsMenu(action);
+      return;
+    }
+    if (this.#mode === 'help') {
+      const event = this.#help.scroller.apply(action);
+      if (event === 'moved') this.#help.update();
+      else if (event === 'back') {
+        this.#sound('back');
+        this.#leaveHelp();
+      }
       return;
     }
     if (this.#mode === 'controls') {
@@ -553,6 +577,10 @@ export class Game {
         this.#sound('select');
         this.#openControls('title');
         break;
+      case 'help':
+        this.#sound('select');
+        this.#openHelp('title');
+        break;
       case 'settings':
         this.#sound('select');
         this.#settingsMenu.cursor = 0;
@@ -575,6 +603,10 @@ export class Game {
       case 'controls':
         this.#sound('select');
         this.#openControls('paused');
+        break;
+      case 'help':
+        this.#sound('select');
+        this.#openHelp('paused');
         break;
       case 'quit':
         this.#sound('back');
@@ -609,6 +641,22 @@ export class Game {
         return;
     }
     this.#settingsScreen.update(this.#settingsMenu.cursor, this.#settingsMenu.values);
+  }
+
+  /** Opens the help screen at its top. */
+  #openHelp(from: 'title' | 'paused'): void {
+    this.#helpFrom = from;
+    this.#help.scroller.top = 0;
+    this.#help.update();
+    this.#setMode('help');
+  }
+
+  #leaveHelp(): void {
+    if (this.#helpFrom === 'paused') this.#setMode('paused');
+    else {
+      this.#lastInput = performance.now();
+      this.#setMode('title');
+    }
   }
 
   /** Opens the controls on the page for the last thing pressed: the keyboard or a pad. */
@@ -1202,6 +1250,14 @@ export class Game {
       case 'controls': {
         // From the title the stars drift on; from the pause the game stays frozen.
         if (this.#controlsFrom === 'title') r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
+        break;
+      }
+      case 'settings': {
+        r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
+        break;
+      }
+      case 'help': {
+        if (this.#helpFrom === 'title') r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
         break;
       }
       case 'intro': {
