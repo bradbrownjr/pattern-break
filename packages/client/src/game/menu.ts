@@ -18,7 +18,7 @@ export const DIFFICULTY_ORDER = Object.keys(Difficulty) as DifficultyName[];
 /** Passes through easy, normal and hard that show Impossible after the last hard. */
 export const IMPOSSIBLE_PASSES = 3;
 
-export const TITLE_ITEMS = ['play', 'practice', 'difficulty', 'jukebox', 'controls', 'help', 'settings'] as const;
+export const TITLE_ITEMS = ['play', 'practice', 'difficulty', 'jukebox', 'controls', 'settings', 'help'] as const;
 export type TitleItem = (typeof TITLE_ITEMS)[number];
 
 /**

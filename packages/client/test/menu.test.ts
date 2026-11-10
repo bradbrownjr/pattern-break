@@ -7,7 +7,7 @@ describe('TitleMenu', () => {
     const m = new TitleMenu(3);
     expect(m.item).toBe('play');
     expect(m.apply('up')).toBe('moved');
-    expect(m.item).toBe('settings');
+    expect(m.item).toBe('help');
     m.apply('down');
     m.apply('down');
     expect(m.item).toBe('practice');
@@ -29,7 +29,7 @@ describe('TitleMenu', () => {
     expect(m.difficulty).toBe('easy');
   });
 
-  it('opens play, practice, the jukebox, the controls, help or the settings on confirm, and steps the difficulty forward', () => {
+  it('opens play, practice, the jukebox, the controls, the settings or help on confirm, and steps the difficulty forward', () => {
     const m = new TitleMenu(3, 1, 'easy');
     expect(m.apply('confirm')).toBe('play');
     m.apply('down');
@@ -42,9 +42,9 @@ describe('TitleMenu', () => {
     m.apply('down');
     expect(m.apply('confirm')).toBe('controls');
     m.apply('down');
-    expect(m.apply('confirm')).toBe('help');
-    m.apply('down');
     expect(m.apply('confirm')).toBe('settings');
+    m.apply('down');
+    expect(m.apply('confirm')).toBe('help');
     expect(m.apply('back')).toBeNull();
   });
 
@@ -219,9 +219,9 @@ describe('SettingsMenu', () => {
     expect(m.values.shake).toBe(true);
     m.apply('down');
     expect(m.item).toBe('crt');
-    expect(m.apply('left')).toBeNull();
-    expect(m.apply('right')).toBe('changed');
-    expect(m.values.crt).toBe(true);
+    expect(m.apply('right')).toBeNull();
+    expect(m.apply('left')).toBe('changed');
+    expect(m.values.crt).toBe(false);
     m.apply('down');
     expect(m.item).toBe('leds');
     expect(m.apply('confirm')).toBe('changed');

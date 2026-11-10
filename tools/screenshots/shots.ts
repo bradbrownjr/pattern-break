@@ -45,7 +45,7 @@ export const shots: Shot[] = [
       'The title screen on a near-black background with faint blue stars. "Pattern Break" in large cyan pixel ' +
       'letters with a magenta shadow, over a row of small LED segments shading from green to red. Below it, a ' +
       'menu in small pixel type: "Play" in amber with an amber ">" before it, then "Practice" with ' +
-      '"The_Epic_Chip", "Difficulty" with "Normal", "Jukebox", "Controls", "Help" and "Settings", in grey. Under the menu, ' +
+      '"The_Epic_Chip", "Difficulty" with "Normal", "Jukebox", "Controls", "Settings" and "Help", in grey. Under the menu, ' +
       '"Music: The_Epic_Chip by Drozerix. Public Domain."',
     caption: 'The title menu. Not used in the README.',
     usedIn: [],
@@ -137,7 +137,7 @@ export const shots: Shot[] = [
       '"Settings" in large cyan pixel letters with a magenta shadow. Below it, five rows in small pixel ' +
       'type. "Music" in amber with an amber ">" before it, then "<", five LED cells lit green, yellow-green, ' +
       'yellow, orange and red, and ">". "Effects" in grey with four of its five cells lit and the fifth dim ' +
-      'red. "Flashing" with "Reduced", "Shake" with "On", "CRT" with "Off", "LEDs" with "Neon", "Keys", and ' +
+      'red. "Flashing" with "Reduced", "Shake" with "On", "CRT" with "On", "LEDs" with "Neon", "Keys", and ' +
       '"Back", all in grey.',
     caption: 'The settings screen at the defaults. Not used in the README.',
     usedIn: [],

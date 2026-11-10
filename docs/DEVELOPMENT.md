@@ -993,7 +993,7 @@ Run `pnpm dev` and open the URL it prints.
 
 - **Start screen:** the logo and "Press any key". Browsers let a page play sound only after
   a key press or click, so the first press starts the title music and opens the menu.
-- **Title menu:** Play, Practice, Difficulty, Jukebox, Controls, Help, Settings, over the title song. Up and down
+- **Title menu:** Play, Practice, Difficulty, Jukebox, Controls, Settings, Help, over the title song. Up and down
   (arrows or W and S) move the cursor, left and right change Practice's song or the
   difficulty, and Enter or Space selects. A click selects too, and Enter on Difficulty steps
   it forward, so one button reaches every choice.
@@ -1091,7 +1091,7 @@ Run `pnpm dev` and open the URL it prints.
   screen; then Back. Left and right
   change a value and stop at the ends; Enter steps a volume up and wraps to off, and flips
   the others. Each volume step halves the gain. The defaults are Music 5, Effects 4,
-  Flashing Reduced, Shake On, CRT Off and LEDs Neon.
+  Flashing Reduced, Shake On, CRT On (Brad, 2026-11-10) and LEDs Neon.
   Changes take effect at once (a kill sound plays at the new effects level) and are kept in
   `localStorage` under `pattern-break.settings`; where storage is blocked, the defaults
   apply and changes last until the page closes. What Flashing and Shake do is under
@@ -1389,7 +1389,8 @@ is added.
   without reaching 0 (only tanks have more than one, `ENEMY_HP`) is drawn all white
   (`Textures.tankHit`) for 70 ms of song time. `CombatView` keeps each enemy's hits left
   from the last draw to see it, sized to the level, cleared when the song starts over.
-- **CRT** (`crt.ts`; `test/crt.test.ts`): off by default. The bloom is a GLSL filter on the
+- **CRT** (`crt.ts`; `test/crt.test.ts`): on by default (Brad, 2026-11-10); capture mode
+  leaves it off unless `crt=1`. The bloom is a GLSL filter on the
   root container at 384x216: each pixel adds 0.35 of its neighbours' bright parts
   (luminance through a smoothstep from 0.35 to 0.9), 12 taps out to 2 px. Its
   `uInputSize` and `uInputClamp` are `highp`, as in Pixi's default filter vertex shader;

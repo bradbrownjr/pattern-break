@@ -36,7 +36,7 @@ describe('settings', () => {
   it('reduces flashing, shakes, and has the CRT look off by default', () => {
     expect(DEFAULT_SETTINGS.flashing).toBe('reduced');
     expect(DEFAULT_SETTINGS.shake).toBe(true);
-    expect(DEFAULT_SETTINGS.crt).toBe(false);
+    expect(DEFAULT_SETTINGS.crt).toBe(true);
     expect(DEFAULT_SETTINGS.leds).toBe('neon');
   });
 

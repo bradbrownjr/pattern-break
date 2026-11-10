@@ -13,6 +13,9 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **Title menu and CRT, from Brad's play-test.** Help moves below Settings on the title
+  menu, and the CRT look is on by default. A player who has already saved settings keeps
+  their own CRT choice.
 * **M3: remappable controls. M3 is finished.** Settings has Keys: each action can have up
   to three keys, so the defaults still fit (Z, J and Space all fire), and menus follow
   them: the directions move, Fire confirms, Bomb backs out. Esc always pauses, and Enter,

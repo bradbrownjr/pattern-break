@@ -20,7 +20,7 @@ export interface Settings {
   leds: 'neon' | 'colourBlind';
 }
 
-export const DEFAULT_SETTINGS: Settings = { music: 5, effects: 4, flashing: 'reduced', shake: true, crt: false, leds: 'neon' };
+export const DEFAULT_SETTINGS: Settings = { music: 5, effects: 4, flashing: 'reduced', shake: true, crt: true, leds: 'neon' };
 
 const KEY = 'pattern-break.settings';
 

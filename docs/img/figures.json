@@ -1,7 +1,7 @@
 {
   "title-screen": {
     "path": "docs/img/title-screen.png",
-    "alt": "The title screen on a near-black background with faint blue stars. \"Pattern Break\" in large cyan pixel letters with a magenta shadow, over a row of small LED segments shading from green to red. Below it, a menu in small pixel type: \"Play\" in amber with an amber \">\" before it, then \"Practice\" with \"The_Epic_Chip\", \"Difficulty\" with \"Normal\", \"Jukebox\", \"Controls\", \"Help\" and \"Settings\", in grey. Under the menu, \"Music: The_Epic_Chip by Drozerix. Public Domain.\"",
+    "alt": "The title screen on a near-black background with faint blue stars. \"Pattern Break\" in large cyan pixel letters with a magenta shadow, over a row of small LED segments shading from green to red. Below it, a menu in small pixel type: \"Play\" in amber with an amber \">\" before it, then \"Practice\" with \"The_Epic_Chip\", \"Difficulty\" with \"Normal\", \"Jukebox\", \"Controls\", \"Settings\" and \"Help\", in grey. Under the menu, \"Music: The_Epic_Chip by Drozerix. Public Domain.\"",
     "caption": "The title menu. Not used in the README.",
     "usedIn": []
   },
@@ -25,7 +25,7 @@
   },
   "controls-gamepad": {
     "path": "docs/img/controls-gamepad.png",
-    "alt": "\"Controls\" in large cyan pixel letters with a magenta shadow. Below it, a drawing of a gamepad: a dark body with a grip under each end, a white D-pad on the left, a white ring for the left stick and a dim one for the right, two small buttons in the middle with \"Start\" under the right one, and four round face buttons: Y dim grey at the top, X red on the left, B amber on the right, A cyan at the bottom. Above the body, shoulder buttons: LT and LB violet on the left, RT cyan and RB magenta on the right. Under it, a legend in two columns: Fly, Stick, D-pad; Fire, A, RT; Bomb, B; Missile, RB; Nuke, X; Boost, LB, LT; Pause, Start. At the bottom, \"< Arrows  WASD  Gamepad >\" with \"Gamepad\" in cyan.",
+    "alt": "\"Controls\" in large cyan pixel letters with a magenta shadow. Below it, a drawing of a gamepad: a dark body with a grip under each end, a white D-pad on the left, a white ring for the left stick and a dim one for the right, two small buttons in the middle with \"Start\" under the right one, and four round face buttons: Y dim grey at the top, X red on the left, B amber on the right, A cyan at the bottom. Above the body, shoulder buttons: LT and LB violet on the left, RT cyan and RB magenta on the right. Under it, a legend in two columns: Fly, D-pad, Stick; Fire, A, RT; Bomb, B; Missile, RB; Nuke, X; Boost, LB, LT; Pause, Start. At the bottom, \"< Arrows  WASD  Gamepad >\" with \"Gamepad\" in cyan.",
     "caption": "The controls screen, gamepad page. Not used in the README.",
     "usedIn": []
   },
@@ -43,7 +43,7 @@
   },
   "settings": {
     "path": "docs/img/settings.png",
-    "alt": "\"Settings\" in large cyan pixel letters with a magenta shadow. Below it, five rows in small pixel type. \"Music\" in amber with an amber \">\" before it, then \"<\", five LED cells lit green, yellow-green, yellow, orange and red, and \">\". \"Effects\" in grey with four of its five cells lit and the fifth dim red. \"Flashing\" with \"Reduced\", \"Shake\" with \"On\", \"CRT\" with \"Off\", \"LEDs\" with \"Neon\", \"Keys\", and \"Back\", all in grey.",
+    "alt": "\"Settings\" in large cyan pixel letters with a magenta shadow. Below it, five rows in small pixel type. \"Music\" in amber with an amber \">\" before it, then \"<\", five LED cells lit green, yellow-green, yellow, orange and red, and \">\". \"Effects\" in grey with four of its five cells lit and the fifth dim red. \"Flashing\" with \"Reduced\", \"Shake\" with \"On\", \"CRT\" with \"On\", \"LEDs\" with \"Neon\", \"Keys\", and \"Back\", all in grey.",
     "caption": "The settings screen at the defaults. Not used in the README.",
     "usedIn": []
   },
