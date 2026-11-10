@@ -20,6 +20,8 @@ export interface StoredSong {
   fileName: string;
   /** The song's own title, or the file name when it has none. */
   title: string;
+  /** The artist the song names, or ''. */
+  artist: string;
   bytes: ArrayBuffer;
   /** When it was imported, in ms since the epoch. */
   added: number;
@@ -41,6 +43,17 @@ interface LibrarySchema extends DBSchema {
 
 export const DB_NAME = 'pattern-break';
 const DB_VERSION = 1;
+
+/**
+ * SHA-256 of `bytes` as lower-case hex, or null where the page can't hash: WebCrypto's
+ * `crypto.subtle` exists only in secure contexts (HTTPS or localhost).
+ */
+export async function sha256Hex(bytes: Uint8Array): Promise<string | null> {
+  const subtle = globalThis.crypto?.subtle;
+  if (!subtle) return null;
+  const digest = new Uint8Array(await subtle.digest('SHA-256', bytes as Uint8Array<ArrayBuffer>));
+  return Array.from(digest, (b) => b.toString(16).padStart(2, '0')).join('');
+}
 
 /** The level cache's key for a song at a tempo, under a GEN_VERSION. */
 export function levelKey(sha256: string, tempoPermille: number, genVersion: number = GEN_VERSION): string {

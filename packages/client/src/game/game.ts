@@ -37,7 +37,7 @@ import { seededRandom } from '../render/random.ts';
 import type { GameRenderer } from '../render/renderer.ts';
 import { barBinEdges, barLevels } from '../render/spectrum.ts';
 import { analyzeSerializedInWorker } from './analysis.ts';
-import { openLibrary, type Library } from './library.ts';
+import { openLibrary, sha256Hex, type Library, type StoredSong } from './library.ts';
 import {
   STANDARD_PROFILE,
   assign,
@@ -83,7 +83,11 @@ import {
   TITLE_SONG_ID,
   fetchSongBytes,
   songById,
-  songBySha256,
+  FOLDER_PICKER,
+  IMPORT_EXTENSIONS,
+  importedSong,
+  isSongFileName,
+  titleFromFileName,
   type BundledSong,
 } from './songs.ts';
 import { REPLAY_HINT, bestKey, recordBest, resultRow, resultRows, scoreBreakdown } from './results.ts';
@@ -182,6 +186,11 @@ const PAN_WIDTH = 0.6;
 const HANGAR_SKIP_DELAY_MS = 300;
 
 /** Shown on game over and level complete when the run has a replay. */
+/** The largest song file the game imports. The biggest bundled song is under 200 KB. */
+const MAX_IMPORT_BYTES = 32 * 1024 * 1024;
+/** How long the jukebox shows an import's result, and how long a first Del waits for the second. */
+const JUKEBOX_NOTE_MS = 3000;
+const REMOVE_ARM_MS = 3000;
 
 export interface GameOptions {
   /** The songs Practice and the jukebox offer, in menu order. */
@@ -197,7 +206,13 @@ export class Game {
   readonly #r: GameRenderer;
   /** The on-screen controls, made in start(). */
   #touch: TouchControls | null = null;
-  readonly #songs: readonly BundledSong[];
+  /** The songs Practice and the jukebox offer: the bundled ones, then the imported ones. */
+  readonly #songs: BundledSong[];
+  /** The jukebox's note line: an import's progress or result, or a removal, until `until`. */
+  #jukeboxNote: { text: string; warn: boolean; until: number } | null = null;
+  #importing = false;
+  /** The imported song a first Del (or Select) picked for removal, until `until`. */
+  #removeArmed: { song: BundledSong; until: number } | null = null;
   readonly #levelSongs: readonly BundledSong[] = LEVEL_SONG_IDS.map(songById);
   readonly #impossibleSongs: readonly BundledSong[] = IMPOSSIBLE_SONG_IDS.map(songById);
   /** The Konami code on the title screen, and whether it has turned infinite lives on. */
@@ -323,12 +338,12 @@ export class Game {
 
   constructor(r: GameRenderer, options: GameOptions) {
     this.#r = r;
-    this.#songs = options.songs;
+    this.#songs = [...options.songs];
     this.#song = options.song;
     this.#options = options;
     this.#menu = new TitleMenu(options.songs.length, Math.max(0, options.songs.indexOf(options.song)));
-    this.#jukeboxMenu = new JukeboxMenu(options.songs.length);
-    this.#jukebox = new JukeboxScreen(options.songs);
+    this.#jukeboxMenu = new JukeboxMenu(options.songs.length, FOLDER_PICKER);
+    this.#jukebox = new JukeboxScreen(this.#songs, FOLDER_PICKER);
     this.#settingsMenu = new SettingsMenu(this.#settings);
     this.#input.keys = new KeyMap(this.#bindings.keys);
     this.#applyLook();
@@ -383,13 +398,21 @@ export class Game {
       if (this.#mode !== 'help' || e.deltaY === 0) return;
       if (this.#help.scroller.scroll(e.deltaY > 0 ? 1 : -1)) this.#help.update();
     });
-    // A replay file dropped on the title screen plays.
+    // A replay file dropped on the title screen plays; song files dropped on the title or
+    // the jukebox are imported.
     window.addEventListener('dragover', (e) => e.preventDefault());
     window.addEventListener('drop', (e) => {
       e.preventDefault();
-      const file = e.dataTransfer?.files[0];
-      if (file) void this.#onDropReplay(file);
+      const files = [...(e.dataTransfer?.files ?? [])];
+      const songs = files.filter((f) => isSongFileName(f.name));
+      if (songs.length > 0) {
+        if (this.#mode === 'title') this.#openJukebox();
+        if (this.#mode === 'jukebox') void this.#importFiles(songs);
+      } else if (files[0]) {
+        void this.#onDropReplay(files[0]);
+      }
     });
+    void this.#loadImported();
     // The hangar intro's art: a few KB, ready long before anyone presses Play.
     loadHangarArt().then(
       (art) => {
@@ -506,6 +529,12 @@ export class Game {
         }
         return;
       case 'jukebox':
+        if (e.code === 'Delete') {
+          if (!e.repeat) this.#removePress();
+        } else {
+          this.#menuKey(e);
+        }
+        return;
       case 'controls':
       case 'settings':
       case 'help':
@@ -581,6 +610,13 @@ export class Game {
         return;
       }
       case 'jukebox':
+        if (bit === PadBit.select) {
+          this.#removePress();
+          return;
+        }
+        const jukeboxAction = padMenuAction(bit);
+        if (jukeboxAction) this.#onMenu(jukeboxAction);
+        return;
       case 'controls':
       case 'settings':
       case 'keys':
@@ -699,6 +735,10 @@ export class Game {
       case 'play':
         this.#sound('select');
         void this.#jukeboxPlay(command.song);
+        break;
+      case 'import':
+      case 'folder':
+        this.#openFilePicker(command.type === 'folder');
         break;
       case 'stop':
         this.#sound('back');
@@ -1257,6 +1297,169 @@ export class Game {
     this.#setMode('jukebox');
   }
 
+  /** The imported songs saved in the library, added after the bundled ones at start. */
+  async #loadImported(): Promise<void> {
+    const library = await this.#library;
+    if (!library) return;
+    try {
+      const stored = await library.songs();
+      const known = new Set(this.#songs.map((s) => s.sha256));
+      this.#addSongs(stored.filter((s) => !known.has(s.sha256)).map(importedSong), false);
+    } catch (err) {
+      console.warn('imported songs unavailable:', err);
+    }
+  }
+
+  /** Adds songs to Practice and the jukebox; with `focus`, the jukebox's cursor goes to the first. */
+  #addSongs(songs: readonly BundledSong[], focus: boolean): void {
+    if (songs.length === 0) return;
+    this.#songs.push(...songs);
+    this.#menu.addSongs(songs.length);
+    this.#jukeboxMenu.addSongs(songs.length, focus);
+    this.#jukebox.setSongs(this.#songs);
+  }
+
+  #jukeboxNoteShow(text: string, warn = false, ms = JUKEBOX_NOTE_MS): void {
+    this.#jukeboxNote = { text, warn, until: performance.now() + ms };
+  }
+
+  /**
+   * Opens the browser's file picker for songs, or a folder. Browsers open it only during a
+   * key press, click or tap (user activation), so a gamepad press gets a note instead.
+   */
+  #openFilePicker(folder: boolean): void {
+    if (navigator.userActivation && !navigator.userActivation.isActive) {
+      this.#jukeboxNoteShow('Import: keys or touch', true);
+      return;
+    }
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    if (folder) input.webkitdirectory = true;
+    else input.accept = IMPORT_EXTENSIONS.join(',');
+    input.addEventListener('change', () => {
+      const files = [...(input.files ?? [])];
+      if (files.length > 0) void this.#importFiles(files);
+    });
+    input.click();
+  }
+
+  /**
+   * Imports song files: each is hashed, analyzed at normal's tempo to check that it plays
+   * (its level goes in the cache), and stored in the library. A file that isn't a song, is
+   * too big, or is already in the list is skipped and counted in the note.
+   */
+  async #importFiles(files: readonly File[]): Promise<void> {
+    if (this.#importing) return;
+    const candidates = files.filter((f) => isSongFileName(f.name));
+    if (candidates.length === 0) {
+      this.#jukeboxNoteShow('No songs found', true);
+      return;
+    }
+    this.#importing = true;
+    const library = await this.#library;
+    const added: BundledSong[] = [];
+    let already = 0;
+    let bad = 0;
+    let big = 0;
+    let unsaved = 0;
+    try {
+      for (const [n, file] of candidates.entries()) {
+        this.#jukeboxNoteShow(`Importing ${n + 1}/${candidates.length}`, false, Infinity);
+        if (file.size > MAX_IMPORT_BYTES) {
+          big++;
+          continue;
+        }
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        const hash = await sha256Hex(bytes);
+        if (hash === null) {
+          this.#jukeboxNoteShow('Import needs HTTPS', true);
+          return;
+        }
+        if (this.#songs.some((s) => s.sha256 === hash) || added.some((s) => s.sha256 === hash)) {
+          already++;
+          continue;
+        }
+        const tempo = Difficulty.normal.tempoPermille;
+        let serialized: Uint8Array;
+        try {
+          serialized = await analyzeSerializedInWorker(bytes, tempo);
+        } catch (err) {
+          console.warn(`${file.name} is not a song:`, err);
+          bad++;
+          continue;
+        }
+        const meta = deserializeLevelData(serialized).meta;
+        const stored: StoredSong = {
+          sha256: hash,
+          fileName: file.name,
+          title: meta.title.trim() || titleFromFileName(file.name),
+          artist: meta.artist.trim(),
+          bytes: bytes.buffer as ArrayBuffer,
+          added: Date.now(),
+        };
+        if (library) {
+          try {
+            await library.putSong(stored);
+            await library.putLevel(hash, tempo, serialized);
+          } catch (err) {
+            console.warn('song not saved:', err);
+            unsaved++;
+          }
+        } else {
+          unsaved++;
+        }
+        added.push(importedSong(stored));
+      }
+      this.#addSongs(added, true);
+      const parts = [`${added.length} added`];
+      if (already) parts.push(`${already} already here`);
+      if (bad) parts.push(`${bad} not songs`);
+      if (big) parts.push(`${big} too big`);
+      if (unsaved) parts.push(`${unsaved} not saved`);
+      this.#jukeboxNoteShow(parts.join(', '), added.length === 0 || unsaved > 0);
+      if (added.length > 0) this.#sound('select');
+    } finally {
+      this.#importing = false;
+    }
+  }
+
+  /** Del, or a pad's Select, on an imported song: the first press arms, the second removes. */
+  #removePress(): void {
+    const row = this.#jukeboxMenu.row;
+    const song = row.kind === 'song' ? this.#songs[row.song] : undefined;
+    if (!song?.imported || this.#importing) return;
+    const armed = this.#removeArmed;
+    if (armed && armed.song === song && performance.now() < armed.until) {
+      this.#removeArmed = null;
+      void this.#removeSong(song);
+    } else {
+      this.#removeArmed = { song, until: performance.now() + REMOVE_ARM_MS };
+      this.#sound('move');
+    }
+  }
+
+  async #removeSong(song: BundledSong): Promise<void> {
+    const index = this.#songs.indexOf(song);
+    if (index < 0 || !song.imported || !song.sha256) return;
+    try {
+      await (await this.#library)?.deleteSong(song.sha256);
+    } catch (err) {
+      console.warn('song not removed from storage:', err);
+    }
+    const at = this.#songs.indexOf(song);
+    if (at < 0) return;
+    this.#songs.splice(at, 1);
+    this.#menu.removeSong(at);
+    if (this.#jukeboxMenu.removeSong(at)) this.#stopMusic();
+    if (this.#loaded === song) this.#loaded = null;
+    this.#cache.delete(song);
+    URL.revokeObjectURL(song.url);
+    this.#jukebox.setSongs(this.#songs);
+    this.#jukeboxNoteShow(`Removed ${song.title}`);
+    this.#sound('back');
+  }
+
   async #jukeboxPlay(index: number): Promise<void> {
     const player = await this.#getPlayer().catch(() => null);
     if (!player) return;
@@ -1581,7 +1784,7 @@ export class Game {
       this.#notice('Bad replay', ['Not a replay file']);
       return;
     }
-    const song = songBySha256(replay.moduleHash);
+    const song = this.#songs.find((s) => s.sha256 === replay.moduleHash) ?? null;
     if (!song) {
       this.#notice('Bad replay', ['Unknown song']);
       return;
@@ -1915,12 +2118,24 @@ export class Game {
       analyser.getByteFrequencyData(this.#analyserBins);
       barLevels(this.#analyserBins, this.#barEdges, SPECTRUM_SEGMENTS, this.#barLevels);
     }
+    const now = performance.now();
+    const note = this.#jukeboxNote && now < this.#jukeboxNote.until ? this.#jukeboxNote : null;
+    const row = this.#jukeboxMenu.row;
+    const song = row.kind === 'song' ? this.#songs[row.song] : undefined;
+    const armed = this.#removeArmed;
+    const isArmed = armed !== null && armed.song === song && now < armed.until;
+    if (armed && !isArmed) this.#removeArmed = null;
+    const key = this.#lastPressPad ? 'Select' : 'Del';
     this.#jukebox.update({
       cursor: this.#jukeboxMenu.cursor,
       playing,
       seconds: playing === null ? 0 : (this.#playerReady?.songTimeSeconds() ?? 0),
       durationSeconds: this.#loadedSeconds,
       levels: this.#barLevels,
+      note: note?.text ?? '',
+      warn: note?.warn ?? false,
+      removeHint: song?.imported ? `${key} ${isArmed ? 'Confirm' : 'Remove'}` : '',
+      removeArmed: isArmed,
     });
   }
 }

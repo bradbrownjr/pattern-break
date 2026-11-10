@@ -13,6 +13,10 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **M4: import songs.** The Jukebox has Import and Import folder rows, and song files can
+  be dropped on the title or the Jukebox. Each `.mod .xm .s3m .it` file is hashed, checked
+  by analyzing it, and kept in the browser; imported songs join Practice and the Jukebox,
+  and Del (twice) removes one. The Jukebox list now scrolls, with a scroll bar.
 * **M4: level cache.** Analyzed levels are kept in the browser's IndexedDB, keyed by the
   song's hash, the difficulty's tempo and `GEN_VERSION`, so each song is analyzed once per
   difficulty instead of on every visit. Entries from an older `GEN_VERSION` are deleted.

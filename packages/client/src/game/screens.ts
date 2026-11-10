@@ -183,13 +183,22 @@ export interface JukeboxView {
   seconds: number;
   durationSeconds: number;
   levels: Uint8Array;
+  /** A message in place of the now-playing line (an import's progress or result), or ''. */
+  note: string;
+  /** The note is a warning (magenta), not news (cyan). */
+  warn: boolean;
+  /** On an imported song under the cursor, the key that removes it ("Del Remove"), or ''. */
+  removeHint: string;
+  /** The first press came; the hint asks for the second ("Del Confirm", magenta). */
+  removeArmed: boolean;
 }
 
 export const SPECTRUM_BARS = 24;
 export const SPECTRUM_SEGMENTS = LED_LIT.length;
 // The spectrum's 12 segments are 2 px tall on a 3 px pitch, so it ends above the
-// now-playing lines. The list's rows close up from 11 px to fit above it: ten songs and
-// Back take 10 px (2026-11-10: at 11, Back ran into the spectrum once Crush was added).
+// now-playing lines. The list's rows close up from 11 px to fit above it, down to 10 px
+// for 11 rows (2026-11-10: at 11, Back ran into the spectrum once Crush was added); a
+// longer list scrolls, with a bar like the help screen's.
 const LIST_TOP = 34;
 const LIST_ROW = 11;
 const LIST_LEFT = 88;
@@ -212,6 +221,22 @@ export function jukeboxRowY(i: number, rows: number): number {
   return LIST_TOP + i * jukeboxRow(rows);
 }
 
+/** The most rows the list shows at once (at 10 px); a longer list scrolls. */
+export const JUKEBOX_VISIBLE_ROWS = 11;
+
+/**
+ * The first row in view for a list of `rows` rows with the cursor on `cursor`, scrolled as
+ * little as possible from `top` to keep the cursor in view.
+ */
+export function jukeboxTop(top: number, cursor: number, rows: number): number {
+  const visible = Math.min(rows, JUKEBOX_VISIBLE_ROWS);
+  let t = Math.min(top, cursor);
+  if (cursor >= t + visible) t = cursor - visible + 1;
+  return Math.max(0, Math.min(t, rows - visible));
+}
+
+const SCROLL_BAR_X = LIST_RIGHT + 6;
+
 /** Where the list's last row ends and the spectrum starts, for tests. */
 export const JUKEBOX_LIMITS = { spectrumTop: SPECTRUM_TOP, textHeight: TEXT_HEIGHT };
 const NOW_Y = 188;
@@ -225,30 +250,41 @@ function clockText(seconds: number): string {
 /** The bundled songs with their authors, a spectrum of what is playing, and its credit. */
 export class JukeboxScreen {
   readonly container = new Container();
-  readonly #songs: readonly BundledSong[];
+  #songs: readonly BundledSong[] = [];
+  readonly #folder: boolean;
   #marker = new PixelText('>', AMBER);
+  /** One title and one right-hand text per visible row, filled from `#top`. */
   #titles: PixelText[] = [];
-  #authors: PixelText[] = [];
+  #rights: PixelText[] = [];
+  #track = new Sprite(Texture.WHITE);
+  #thumb = new Sprite(Texture.WHITE);
+  #top = 0;
   #segments: Sprite[] = [];
-  /** The song playing and its credit, on one line. */
+  /** The song playing and its credit, on one line, or a note. */
   #nowTitle = new PixelText('', GREY);
   #nowTime = new PixelText('', CYAN);
-  #drawn = { cursor: -1, playing: -2 };
+  /** What the list last showed, so an unchanged frame skips the text work. */
+  #drawn = '';
 
-  constructor(songs: readonly BundledSong[]) {
-    this.#songs = songs;
+  /** `folder`: show the Import folder row. */
+  constructor(songs: readonly BundledSong[], folder = false) {
+    this.#folder = folder;
     const shadow = new PixelText('Jukebox', MAGENTA, 2).place(CENTER + 1, 12 + 1, 'center');
     const heading = new PixelText('Jukebox', CYAN, 2).place(CENTER, 12, 'center');
     this.container.addChild(shadow, heading, this.#marker);
-    for (let i = 0; i <= songs.length; i++) {
-      const y = jukeboxRowY(i, songs.length + 1);
-      const song = songs[i];
-      const title = new PixelText(song ? song.title : 'Back').place(LIST_LEFT, y);
-      const author = new PixelText(song ? song.author : '', DIM_GREY).place(LIST_RIGHT, y, 'right');
+    for (let i = 0; i < JUKEBOX_VISIBLE_ROWS; i++) {
+      const title = new PixelText('');
+      const right = new PixelText('', DIM_GREY);
       this.#titles.push(title);
-      this.#authors.push(author);
-      this.container.addChild(title, author);
+      this.#rights.push(right);
+      this.container.addChild(title, right);
     }
+    this.#track.tint = DIM_GREY;
+    this.#track.alpha = 0.4;
+    this.#track.width = 2;
+    this.#thumb.tint = GREY;
+    this.#thumb.width = 2;
+    this.container.addChild(this.#track, this.#thumb);
     const left = CENTER - (SPECTRUM_BARS * 10 - 2) / 2;
     for (let b = 0; b < SPECTRUM_BARS; b++) {
       for (let k = 0; k < SPECTRUM_SEGMENTS; k++) {
@@ -262,6 +298,32 @@ export class JukeboxScreen {
       }
     }
     this.container.addChild(this.#nowTitle, this.#nowTime);
+    this.setSongs(songs);
+  }
+
+  /** The songs to list, after an import or a removal. */
+  setSongs(songs: readonly BundledSong[]): void {
+    this.#songs = songs;
+    this.#drawn = '';
+  }
+
+  /** Rows in the list: the songs, Import, Import folder if shown, and Back. */
+  get rowCount(): number {
+    return this.#songs.length + (this.#folder ? 3 : 2);
+  }
+
+  /** The first row in view. */
+  get top(): number {
+    return this.#top;
+  }
+
+  #label(i: number): { title: string; right: string; song: BundledSong | null } {
+    const song = this.#songs[i];
+    if (song) return { title: song.title, right: song.author, song };
+    const extra = i - this.#songs.length;
+    if (extra === 0) return { title: 'Import', right: '', song: null };
+    if (extra === 1 && this.#folder) return { title: 'Import folder', right: '', song: null };
+    return { title: 'Back', right: '', song: null };
   }
 
   update(view: JukeboxView): void {
@@ -271,22 +333,52 @@ export class JukeboxScreen {
         this.#segments[b * SPECTRUM_SEGMENTS + k]!.tint = k < lit ? LED_LIT[k]! : LED_DIM[k]!;
       }
     }
-    const song = view.playing === null ? null : this.#songs[view.playing]!;
+    const song = view.playing === null ? null : (this.#songs[view.playing] ?? null);
     if (song) {
       this.#nowTime.text = `${clockText(view.seconds)} / ${clockText(view.durationSeconds)}`;
       this.#nowTime.place(CENTER, NOW_Y + 12, 'center');
     }
-    const d = this.#drawn;
-    const playing = view.playing ?? -1;
-    if (d.cursor === view.cursor && d.playing === playing) return;
-    d.cursor = view.cursor;
-    d.playing = playing;
-    for (let i = 0; i < this.#titles.length; i++) {
-      this.#titles[i]!.color = i === view.playing ? LIME : i === view.cursor ? AMBER : GREY;
+    const key = `${view.cursor}|${view.playing}|${view.note}|${view.warn}|${view.removeHint}|${view.removeArmed}`;
+    if (key === this.#drawn) return;
+    this.#drawn = key;
+    const rows = this.rowCount;
+    const visible = Math.min(rows, JUKEBOX_VISIBLE_ROWS);
+    this.#top = jukeboxTop(this.#top, view.cursor, rows);
+    for (let slot = 0; slot < JUKEBOX_VISIBLE_ROWS; slot++) {
+      const title = this.#titles[slot]!;
+      const right = this.#rights[slot]!;
+      const i = this.#top + slot;
+      title.visible = right.visible = slot < visible;
+      if (slot >= visible) continue;
+      const y = jukeboxRowY(slot, visible);
+      const row = this.#label(i);
+      const onCursor = i === view.cursor;
+      title.text = row.title;
+      title.color = i === view.playing ? LIME : onCursor ? AMBER : GREY;
+      title.place(LIST_LEFT, y);
+      const hint = onCursor && row.song?.imported ? view.removeHint : '';
+      right.text = hint || row.right;
+      right.color = hint ? (view.removeArmed ? MAGENTA : AMBER) : DIM_GREY;
+      right.place(LIST_RIGHT, y, 'right');
     }
-    this.#marker.place(LIST_LEFT - 10, jukeboxRowY(view.cursor, this.#songs.length + 1));
-    this.#nowTime.visible = song !== null;
-    this.#nowTitle.text = song ? `${song.title} ${song.credit}` : '';
+    this.#marker.place(LIST_LEFT - 10, jukeboxRowY(view.cursor - this.#top, visible));
+    // The scroll bar, when the list doesn't fit: a dim track and a thumb as tall as the
+    // share of rows in view.
+    const scrolls = rows > visible;
+    this.#track.visible = this.#thumb.visible = scrolls;
+    if (scrolls) {
+      const trackTop = LIST_TOP - 2;
+      const trackHeight = jukeboxRowY(visible - 1, visible) + TEXT_HEIGHT + 2 - trackTop;
+      this.#track.position.set(SCROLL_BAR_X, trackTop);
+      this.#track.height = trackHeight;
+      const height = Math.max(4, Math.round((trackHeight * visible) / rows));
+      const maxTop = rows - visible;
+      this.#thumb.height = height;
+      this.#thumb.position.set(SCROLL_BAR_X, trackTop + Math.round(((trackHeight - height) * this.#top) / maxTop));
+    }
+    this.#nowTime.visible = song !== null && !view.note;
+    this.#nowTitle.text = view.note || (song ? `${song.title} ${song.credit}` : '');
+    this.#nowTitle.color = view.note ? (view.warn ? MAGENTA : CYAN) : GREY;
     this.#nowTitle.place(CENTER, NOW_Y, 'center');
   }
 }

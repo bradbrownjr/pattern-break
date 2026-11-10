@@ -32,18 +32,16 @@ start the next until the current one is done.
 
 **Goal:** bring your own music, play anywhere.
 
-- [ ] Module import (file picker, drag and drop, directory import on Chromium) and
-      IndexedDB storage. Imported songs are managed in the Jukebox: an Import row, and Del
-      removes one (Brad, 2026-11-10). They join Practice and the Jukebox, not the run.
+- [x] Module import (file picker, drag and drop, folder import) and IndexedDB storage,
+      managed in the Jukebox; imported songs join Practice and the Jukebox, not the run
+      (2026-11-10; `DEVELOPMENT.md`, "Menus and the jukebox").
 - [x] Level caching by hash and `GEN_VERSION` (2026-11-10; `DEVELOPMENT.md`, "Library").
 - [ ] PWA install and full offline play.
 - [ ] The bundled music pack: Augmented_Emotions, The_Dim_Dungeon_2, Chica-pop!, Cabin
-      Fever! and Peachy Chip (Brad, 2026-11-10; Drozerix only), attribution with author and source links on
-      song cards and level intros, and a credits screen.
+      Fever! and Peachy Chip (Brad, 2026-11-10; Drozerix only), attribution with author and
+      source links on song cards and level intros, and a credits screen.
       `tools/validate-manifest.ts` is already in CI.
-- [ ] A scroll bar on the jukebox's list, like the help screen's, once the songs no longer
-      fit above the spectrum (Brad, 2026-11-10). With ten songs the rows closed up from 11 px
-      to 10.
+- [x] A scroll bar on the jukebox's list, like the help screen's (2026-11-10).
 
 **Acceptance:** install as a PWA, turn on airplane mode, import a new module, and play it.
 

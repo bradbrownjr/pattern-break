@@ -29,7 +29,7 @@ const HASH_A = 'a'.repeat(64);
 const HASH_B = 'b'.repeat(64);
 
 function song(sha256: string, added: number, title = 'Song'): StoredSong {
-  return { sha256, fileName: `${title}.xm`, title, bytes: new Uint8Array([1, 2, 3]).buffer, added };
+  return { sha256, fileName: `${title}.xm`, title, artist: '', bytes: new Uint8Array([1, 2, 3]).buffer, added };
 }
 
 describe('level cache', () => {

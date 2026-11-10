@@ -82,6 +82,62 @@ describe('JukeboxMenu', () => {
     expect(j.next(0)).toBe(1);
     expect(j.next(2)).toBe(0);
   });
+
+  it('lists Import, then Import folder where the browser has it, then Back', () => {
+    const plain = new JukeboxMenu(2);
+    expect([0, 1, 2, 3].map((i) => plain.rowAt(i).kind)).toEqual(['song', 'song', 'import', 'back']);
+    plain.cursor = 2;
+    expect(plain.apply('confirm')).toEqual({ type: 'import' });
+    const folder = new JukeboxMenu(2, true);
+    expect(folder.rowCount).toBe(5);
+    folder.cursor = 3;
+    expect(folder.apply('confirm')).toEqual({ type: 'folder' });
+    folder.apply('down');
+    expect(folder.onBack).toBe(true);
+  });
+
+  it('puts the cursor on the first imported song, or keeps it on its row', () => {
+    const j = new JukeboxMenu(3);
+    j.addSongs(2);
+    expect(j.songCount).toBe(5);
+    expect(j.cursor).toBe(3);
+    j.cursor = 5; // Import
+    j.addSongs(1, false);
+    expect(j.row).toEqual({ kind: 'import' });
+    j.cursor = 1;
+    j.addSongs(1, false);
+    expect(j.cursor).toBe(1);
+  });
+
+  it('keeps the cursor and the playing song in place when a song is removed', () => {
+    const j = new JukeboxMenu(5);
+    j.cursor = 4;
+    j.playing = 3;
+    expect(j.removeSong(1)).toBe(false);
+    expect([j.cursor, j.playing]).toEqual([3, 2]);
+    // The cursor on the removed song moves onto the next one; playing it stops it.
+    expect(j.removeSong(2)).toBe(true);
+    expect([j.cursor, j.playing]).toEqual([2, null]);
+    // Removing the last song leaves the cursor on Import.
+    j.cursor = 2;
+    j.removeSong(2);
+    expect(j.row).toEqual({ kind: 'import' });
+  });
+});
+
+describe('TitleMenu song list', () => {
+  it("keeps Practice's song as songs are added and removed", () => {
+    const m = new TitleMenu(3, 2);
+    m.addSongs(2);
+    m.removeSong(0);
+    expect(m.song).toBe(1);
+    m.removeSong(1);
+    // Its own song went: Practice takes the next one.
+    expect(m.song).toBe(1);
+    m.song = 2;
+    m.removeSong(2);
+    expect(m.song).toBe(0);
+  });
 });
 
 describe('PauseMenu', () => {

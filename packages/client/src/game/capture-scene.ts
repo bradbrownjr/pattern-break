@@ -40,7 +40,7 @@ import { DEFAULT_SETTINGS } from './settings.ts';
 import { ColourFlood, HangarIntro, WIPE_MS, loadHangarArt } from './hangar.ts';
 import { HelpScreen } from './help.ts';
 import { DIFFICULTY_LABELS, type ControlPage } from './menu.ts';
-import { SONGS, TITLE_SONG_ID, fetchSongBytes, findSong, songById } from './songs.ts';
+import { FOLDER_PICKER, SONGS, TITLE_SONG_ID, fetchSongBytes, findSong, songById } from './songs.ts';
 
 declare global {
   interface Window {
@@ -83,10 +83,10 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
       return menuScene(title.container);
     }
     case 'jukebox': {
-      const jukebox = new JukeboxScreen(SONGS);
+      const jukebox = new JukeboxScreen(SONGS, FOLDER_PICKER);
       const data = await analyzeInWorker(await fetchSongBytes(SONGS[0]!), 1000);
       const durationSeconds = data.totalSamples / SAMPLE_RATE;
-      jukebox.update({ cursor: 0, playing: 0, seconds: params.t, durationSeconds, levels: new Uint8Array(SPECTRUM_BARS) });
+      jukebox.update({ cursor: 0, playing: 0, seconds: params.t, durationSeconds, levels: new Uint8Array(SPECTRUM_BARS), note: '', warn: false, removeHint: '', removeArmed: false });
       return menuScene(jukebox.container);
     }
     case 'controls-arrows':

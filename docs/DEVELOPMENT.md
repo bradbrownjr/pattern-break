@@ -1182,10 +1182,32 @@ Run `pnpm dev` and open the URL it prints.
   2.5.5 Target Size), one column if not, and at the right edge over the picture if the
   bar is narrower still. Pointer Events track each finger by `pointerId`, so the stick and
   buttons work together; `Game.#pollPads` ORs the touch bits with the pads'.
-- **Jukebox:** the bundled songs and Back, with a 24-bar spectrum of what is playing under
-  them, and the song's title, credit and time below that. Enter plays the song under the
-  cursor or stops it if it is playing, a song that ends hands over to the next, and Esc or
-  Back returns to the title, where the title music starts again.
+- **Jukebox:** the bundled songs, then the imported ones, then Import, Import folder (where
+  the browser's file picker can pick a folder: `webkitdirectory`, Baseline since August
+  2025 per MDN) and Back, with a 24-bar spectrum of what is playing under them, and the
+  song's title, credit and time below that. Enter plays the song under the cursor or stops
+  it if it is playing, a song that ends hands over to the next, and Esc or Back returns to
+  the title, where the title music starts again. The list shows 11 rows at 10 px
+  (`JUKEBOX_VISIBLE_ROWS`); a longer one scrolls to keep the cursor in view
+  (`jukeboxTop`), with a scroll bar like the help screen's.
+- **Importing songs** (Brad, 2026-11-10: in the Jukebox, not a menu of its own): Import
+  opens the file picker for `.mod .xm .s3m .it` files, several at once; Import folder takes
+  every song file in a folder and its subfolders; song files dropped on the title or the
+  jukebox are imported too (a dropped replay file still plays). Browsers open a file picker
+  only during a key press, click or tap, so a pad's confirm on Import shows "Import: keys
+  or touch". Each file is hashed (SHA-256 through WebCrypto, which needs HTTPS or
+  localhost: elsewhere the note reads "Import needs HTTPS"), skipped if it's already in the
+  list, then analyzed at normal's tempo in the worker: a file libopenmpt can't open counts
+  as "not a song". The song, titled from its own title or else its file name, goes in the
+  library with its level, and joins Practice and the jukebox (not the arcade run); the
+  cursor moves to the first new song. The note line counts what happened ("2 added, 1
+  already here, 1 not songs"; also "too big" past 32 MB and "not saved" where storage
+  fails). An imported song's id is `imported-` and the first 12 hex digits of its hash, so
+  its personal best stays with it, and replays find it by hash.
+- **Removing an imported song:** on its row the right-hand column reads "Del Remove"
+  ("Select Remove" after a pad press); the first Del or Select turns it to "Del Confirm"
+  in magenta for 3 s, and a second removes the song and its cached levels. Touch has no
+  remove yet.
 
 Two query parameters help in development:
 
@@ -1278,8 +1300,10 @@ through `idb` 8.0.4, in the database `pattern-break` (version 1):
   the golden hashes, comes with a bump. On 2026-11-10 in headless Chromium, the title
   screen's two levels took 13 s to appear on the first load and 3 s after a reload, with no
   analysis worker started.
-- **`songs`**: imported song files (M4), keyed by SHA-256, with the file name, title, bytes
-  and import time. Deleting a song deletes its cached levels.
+- **`songs`**: imported song files, keyed by SHA-256, with the file name, title, artist,
+  bytes and import time (see "Importing songs" under "Menus and the jukebox"). Deleting a
+  song deletes its cached levels. At start the game adds the stored songs after the
+  bundled ones, with an object URL for each so they load like bundled songs.
 
 Songs without a hash (the generated test song) are never cached. Where IndexedDB is missing
 or fails to open, `openLibrary()` resolves to null and the game analyzes every time; a

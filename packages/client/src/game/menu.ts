@@ -69,6 +69,19 @@ export class TitleMenu {
     this.#impossible = difficulty === 'impossible';
   }
 
+  /** `count` songs were added at the end of the list; Practice's song stays as it was. */
+  addSongs(count: number): void {
+    this.#songCount += Math.max(0, count);
+  }
+
+  /** Song `song` was removed: Practice keeps its song, or takes the next (the first after the last). */
+  removeSong(song: number): void {
+    if (song < 0 || song >= this.#songCount) return;
+    this.#songCount--;
+    if (this.song > song) this.song--;
+    else if (this.song === song && this.song >= this.#songCount) this.song = 0;
+  }
+
   /** True once Impossible has been found. */
   get impossibleFound(): boolean {
     return this.#impossible;
@@ -134,36 +147,73 @@ export class TitleMenu {
   }
 }
 
-export type JukeboxCommand = { type: 'moved' } | { type: 'play'; song: number } | { type: 'stop' } | { type: 'back' };
+export type JukeboxCommand =
+  | { type: 'moved' }
+  | { type: 'play'; song: number }
+  | { type: 'stop' }
+  | { type: 'import' }
+  | { type: 'folder' }
+  | { type: 'back' };
+
+/** A row of the jukebox's list. */
+export type JukeboxRow = { kind: 'song'; song: number } | { kind: 'import' } | { kind: 'folder' } | { kind: 'back' };
 
 /**
- * The bundled songs, then Back. Confirm plays the song under the cursor, or stops it if it
- * is the one playing. Back, or confirm on Back, returns to the title.
+ * The songs (bundled, then imported), Import, Import folder where the browser can pick a
+ * folder, then Back. Confirm plays the song under the cursor, or stops it if it is the one
+ * playing; on Import it opens the file picker. Back, or confirm on Back, returns to the
+ * title. The song list grows and shrinks as songs are imported and removed.
  */
 export class JukeboxMenu {
   cursor = 0;
   /** The song playing, or null. The game sets it as playback starts and stops. */
   playing: number | null = null;
-  readonly songCount: number;
+  #songCount: number;
+  /** Whether the Import folder row is shown. */
+  readonly folder: boolean;
 
-  constructor(songCount: number) {
-    this.songCount = songCount;
+  constructor(songCount: number, folder = false) {
+    this.#songCount = songCount;
+    this.folder = folder;
   }
 
-  /** True when the cursor is on Back, the row after the songs. */
+  get songCount(): number {
+    return this.#songCount;
+  }
+
+  /** Every row: the songs, Import, Import folder (if shown) and Back. */
+  get rowCount(): number {
+    return this.#songCount + (this.folder ? 3 : 2);
+  }
+
+  rowAt(i: number): JukeboxRow {
+    if (i < this.#songCount) return { kind: 'song', song: i };
+    const extra = i - this.#songCount;
+    if (extra === 0) return { kind: 'import' };
+    if (extra === 1 && this.folder) return { kind: 'folder' };
+    return { kind: 'back' };
+  }
+
+  get row(): JukeboxRow {
+    return this.rowAt(this.cursor);
+  }
+
+  /** True when the cursor is on Back. */
   get onBack(): boolean {
-    return this.cursor === this.songCount;
+    return this.row.kind === 'back';
   }
 
   apply(action: MenuAction): JukeboxCommand | null {
     switch (action) {
       case 'up':
       case 'down':
-        this.cursor = wrap(this.cursor, action === 'up' ? -1 : 1, this.songCount + 1);
+        this.cursor = wrap(this.cursor, action === 'up' ? -1 : 1, this.rowCount);
         return { type: 'moved' };
-      case 'confirm':
-        if (this.onBack) return { type: 'back' };
-        return this.playing === this.cursor ? { type: 'stop' } : { type: 'play', song: this.cursor };
+      case 'confirm': {
+        const row = this.row;
+        if (row.kind === 'song') return this.playing === row.song ? { type: 'stop' } : { type: 'play', song: row.song };
+        return { type: row.kind === 'import' ? 'import' : row.kind === 'folder' ? 'folder' : 'back' };
+      }
       case 'back':
         return { type: 'back' };
       default:
@@ -173,7 +223,34 @@ export class JukeboxMenu {
 
   /** The song after `song`, wrapping, for playing on when one ends. */
   next(song: number): number {
-    return wrap(song, 1, this.songCount);
+    return wrap(song, 1, this.#songCount);
+  }
+
+  /**
+   * `count` songs were added at the end of the list. With `focus`, the cursor goes to the
+   * first of them; otherwise it stays on its row (Import and the rows after move down).
+   */
+  addSongs(count: number, focus = true): void {
+    if (count <= 0) return;
+    if (focus) this.cursor = this.#songCount;
+    else if (this.cursor >= this.#songCount) this.cursor += count;
+    this.#songCount += count;
+  }
+
+  /**
+   * Song `song` was removed: later rows move up one. A cursor on the removed song stays on
+   * its row (now the next song, or Import after the last); one further down follows its
+   * row, and playing follows its song. Returns true if the removed song was the one
+   * playing, which is now null.
+   */
+  removeSong(song: number): boolean {
+    if (song < 0 || song >= this.#songCount) return false;
+    this.#songCount--;
+    if (this.cursor > song) this.cursor--;
+    const wasPlaying = this.playing === song;
+    if (wasPlaying) this.playing = null;
+    else if (this.playing !== null && this.playing > song) this.playing--;
+    return wasPlaying;
   }
 }
 

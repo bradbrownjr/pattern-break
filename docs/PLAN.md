@@ -350,9 +350,10 @@ every bar of every generated level.
 - Game over plays the sparse opening of Keygen 9000 and fades out.
 - Jukebox: plays the bundled songs, with an LED spectrum and each song's title, author and
   license.
-- Library: bundled songs plus "Import songs" (file picker or drag and drop; directory
-  import through the File System Access API on Chromium as an extra). Imported files are
-  stored in IndexedDB.
+- Library: bundled songs plus imported ones, managed in the Jukebox (Brad, 2026-11-10):
+  Import (file picker or drag and drop), Import folder (the file picker's folder mode, in
+  every current browser), and Del to remove. Imported files are stored in IndexedDB
+  (built 2026-11-10).
 - Song select: metadata, difficulty, personal best, the global top 10 when online, and
   attribution.
 - Hangar intro before level 1 of each run from Play, skippable: in black and white, the

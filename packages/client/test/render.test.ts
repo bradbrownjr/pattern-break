@@ -3,7 +3,7 @@
 
 import { BAR_LIT_WIDTH, BAR_PITCH, PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH, Q8, SAMPLES_PER_TICK } from '@game/core';
 import { describe, expect, it } from 'vitest';
-import { JUKEBOX_LIMITS, jukeboxRow, jukeboxRowY } from '../src/game/screens.ts';
+import { JUKEBOX_LIMITS, JUKEBOX_VISIBLE_ROWS, jukeboxRow, jukeboxRowY, jukeboxTop } from '../src/game/screens.ts';
 import { SONGS } from '../src/game/songs.ts';
 import { FLASH_MS, flashAlpha } from '../src/render/flash.ts';
 import { ATLAS_HEIGHT, ATLAS_WIDTH, FIRST_CHAR, LAST_CHAR, buildAtlasPixels, glyphIndex, glyphRows, textWidth } from '../src/render/font.ts';
@@ -137,10 +137,21 @@ describe('cosmetics', () => {
 });
 
 describe('jukebox list', () => {
-  it('ends above the spectrum for every bundled song and Back', () => {
-    const rows = SONGS.length + 1;
+  it('ends above the spectrum with as many rows as it shows at once', () => {
+    const rows = JUKEBOX_VISIBLE_ROWS;
     expect(jukeboxRowY(rows - 1, rows) + JUKEBOX_LIMITS.textHeight).toBeLessThan(JUKEBOX_LIMITS.spectrumTop);
+    expect(jukeboxRow(rows)).toBe(10);
     // Short lists keep the 11 px rows.
     expect(jukeboxRow(10)).toBe(11);
+  });
+
+  it('scrolls as little as it can to keep the cursor in view', () => {
+    const rows = SONGS.length + 3; // the songs, Import, Import folder and Back
+    expect(jukeboxTop(0, 5, rows)).toBe(0);
+    expect(jukeboxTop(0, rows - 1, rows)).toBe(rows - JUKEBOX_VISIBLE_ROWS);
+    expect(jukeboxTop(rows - JUKEBOX_VISIBLE_ROWS, 0, rows)).toBe(0);
+    expect(jukeboxTop(2, 4, rows)).toBe(2);
+    // A list that fits never scrolls.
+    expect(jukeboxTop(3, 5, 8)).toBe(0);
   });
 });
