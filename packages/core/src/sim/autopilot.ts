@@ -2,8 +2,8 @@
 // that generated levels are passable and to pin sim results, and the attract demo flies
 // it. It holds x, steers y through the cave (turrets and tank tracks count as wall), holds
 // fire, bombs tanks and floor turrets ahead, dodges the enemy bullets and ships it can see
-// coming, and nukes when it can't. It buys double, missile, drone and shield when the
-// meter lands on them (it doesn't steer for capsules) and fires missiles at ships ahead.
+// coming, and nukes when it can't. It steers for capsules it can reach (each unlocks a
+// power-up) and fires missiles at ships ahead.
 
 import { solidWalls } from '../levelgen/path-check.ts';
 import { EnemyKind, EnemyTuning, type Level } from '../levelgen/types.ts';
@@ -17,7 +17,8 @@ import {
   SHIP_HITBOX_WIDTH,
   SHIP_SPEED_Q8,
 } from './constants.ts';
-import { BULLET_SLOTS, EnemyStatus, canBuy, createSimState, tick, type SimState } from './sim.ts';
+import { CAPSULE_SLOTS } from './constants.ts';
+import { BULLET_SLOTS, EnemyStatus, createSimState, tick, type SimState } from './sim.ts';
 
 const HALF_W = (SHIP_HITBOX_WIDTH * Q8) / 2;
 const HALF_H = (SHIP_HITBOX_HEIGHT * Q8) / 2;
@@ -31,11 +32,37 @@ const DODGE_MARGIN = 3 * Q8;
 const NUKE_TICKS = 2;
 const BULLET_HALF = (ENEMY_BULLET_SIZE * Q8) / 2;
 
-/** The upgrades the autopilot buys, by PowerUp: double, missile, drone and shield. */
-const AUTOPILOT_BUYS = [false, true, false, true, true, true];
 /** An enemy ship this far ahead (Q8) and this close in height is worth a missile. */
 const MISSILE_AHEAD_MAX = 240 * Q8;
 const MISSILE_HEIGHT_MAX = 12 * Q8;
+
+/** A capsule this far ahead of the ship (Q8) or nearer is worth steering for. */
+const CAPSULE_AHEAD_MAX = 160 * Q8;
+/** The autopilot steers for a capsule only with no enemy bullet this near (Q8, either axis). */
+const CAPSULE_CALM = 64 * Q8;
+
+/**
+ * The y (Q8) of the nearest capsule ahead within CAPSULE_AHEAD_MAX, held inside the
+ * cave's clear range [lo, hi] ahead, or null if there is none or an enemy bullet is
+ * within CAPSULE_CALM: near the floor, where capsules rest, the ship has little room to
+ * dodge.
+ */
+function capsuleTarget(state: SimState, lo: number, hi: number): number | null {
+  for (let b = 0; b < BULLET_SLOTS; b++) {
+    if (!state.bulletActive[b]) continue;
+    if (Math.abs(state.bulletX[b]! - state.shipX) < CAPSULE_CALM && Math.abs(state.bulletY[b]! - state.shipY) < CAPSULE_CALM) return null;
+  }
+  let best = -1;
+  for (let c = 0; c < CAPSULE_SLOTS; c++) {
+    if (!state.capsuleActive[c]) continue;
+    const ahead = state.capsuleX[c]! - state.shipX;
+    if (ahead < 0 || ahead > CAPSULE_AHEAD_MAX) continue;
+    if (best < 0 || state.capsuleX[c]! < state.capsuleX[best]!) best = c;
+  }
+  if (best < 0) return null;
+  const y = state.capsuleY[best]!;
+  return y < lo ? lo : y > hi ? hi : y;
+}
 
 /** True if a live enemy ship is ahead within MISSILE_AHEAD_MAX, near the ship's height. */
 function shipAhead(level: Level, state: SimState): boolean {
@@ -142,7 +169,7 @@ export function autopilotInputs(level: Level): Uint16Array {
       lo = ahead[0]!;
       hi = ahead[1]!;
     }
-    const target = Math.floor((lo + hi) / 2);
+    const target = capsuleTarget(state, lo, hi) ?? Math.floor((lo + hi) / 2);
     // Prefer the move that no bullet reaches soonest, then the one nearest the target.
     let best = 0;
     let bestHit = -1;
@@ -165,9 +192,6 @@ export function autopilotInputs(level: Level): Uint16Array {
       input |= InputBit.bomb;
     }
     if (bestHit <= NUKE_TICKS && state.nukes > 0) input |= InputBit.nuke;
-    if (state.meter >= 0 && AUTOPILOT_BUYS[state.meter] && canBuy(state, state.meter) && (state.prevInput & InputBit.buy) === 0) {
-      input |= InputBit.buy;
-    }
     if (
       state.missile &&
       !state.missileActive[0] &&

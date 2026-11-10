@@ -35,20 +35,20 @@ start the next until the current one is done.
 **Goal:** fix what Brad's play-test of level 1 found, and add the secrets he and his son
 asked for. Decided with Brad on 2026-11-10.
 
-- [ ] **A wider cave.** Numen in Da Chip, level 1, squeezes to 48 px from about 23 s, and
+- [x] **A wider cave.** Numen in Da Chip, level 1, squeezes to 48 px from about 23 s, and
       at 9.6 s climbs from the middle to the ceiling in 0.7 s while squeezed. Every
       difficulty's base and minimum gap grow by 14 px: one LED segment fewer on each side.
       `GEN_VERSION` bump.
-- [ ] **A gentler respawn.** The ship came back in the middle of the cave but couldn't hit
+- [x] **A gentler respawn.** The ship came back in the middle of the cave but couldn't hit
       the walls for 2 s, so it could drift into one. It now flies in from the left along
       the cave's centre with the controls locked, then has the rest of its safe time
       against enemies and bullets only. `SIM_VERSION` bump.
-- [ ] **Power-ups unlock on pickup.** Buying in flight was impossible. Each capsule unlocks
+- [x] **Power-ups unlock on pickup.** Buying in flight was impossible. Each capsule unlocks
       the next power-up in a fixed order: double shot, missile, shield, drone, laser, boost.
       The Buy button goes. `SIM_VERSION` bump.
-- [ ] **A better demo.** The demo never picked up a power-up, dropped a bomb or fired a
+- [x] **A better demo.** The demo never picked up a power-up, dropped a bomb or fired a
       missile. The autopilot steers for capsules, and the demo is checked for all three.
-- [ ] **Controls in three pages:** arrows with Z, X, C, V and Shift; WASD with J, K, L, ;
+- [x] **Controls in three pages:** arrows with Z, X, C, V and Shift; WASD with J, K, L, ;
       and '; then the gamepad. Each keyboard page lights only its own keys.
 - [ ] **Konami code:** up, up, down, down, left, right, left, right, B, A on the title
       screen gives infinite lives. The run's replay is marked, the M5 boards refuse it, and
@@ -184,15 +184,16 @@ These need Brad's answer before the work that depends on them. Don't guess.
 - **Enemies:** drums make turrets on the floor and ceiling, the bass makes tanks on the
   floor, and the other instruments make ships. Every enemy shot lands on a note of its
   instrument (2026-11-09).
-- **Lives:** three; a hit costs one and the ship comes back at the playhead (2026-11-09).
 - **M2 comes in slices,** enemies and shooting first, each play-tested (2026-11-09).
 - **Power-ups:** shooting down a whole formation of ships drops a capsule, which falls to
-  the cave's floor so collecting one means flying low. The meter is
-  boost, double shot, laser, missile, drone, shield. Boost is an afterburner on its
-  own button: the first buy unlocks it and more buys add fuel, since a permanent speed-up
-  made the ship too hard to steer. The missile is the bomb for air to air: its own button,
-  one per press, area damage, a reload. The gun is the standard weapon and sprays freely.
-  Losing a life loses every power-up bought (2026-11-09).
+  the cave's floor so collecting one means flying low (2026-11-09). Each capsule unlocks
+  the next power-up in order: double shot, missile, shield, drone, laser, boost; there is
+  no buy button (2026-11-10). Boost is an afterburner on its own button, more unlocks
+  adding fuel, since a permanent speed-up made the ship too hard to steer. The missile is
+  the bomb for air to air: its own button, one per press, area damage, a reload. The gun is
+  the standard weapon and sprays freely. Losing a life loses every power-up (2026-11-09).
+- **Lives:** three; a hit costs one and the ship flies back in at the playhead (2026-11-09,
+  the fly-in 2026-11-10).
 - **Bomb:** its own button from the start; a concussive bomb falls to the floor and
   destroys the tanks and turrets near where it bursts (2026-11-09).
 - **Nuke:** a last resort on its own button that clears the screen of enemies and

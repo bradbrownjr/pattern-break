@@ -147,7 +147,7 @@ export class PauseMenu {
   }
 }
 
-export const CONTROL_PAGES = ['keyboard', 'gamepad'] as const;
+export const CONTROL_PAGES = ['arrows', 'wasd', 'gamepad'] as const;
 export type ControlPage = (typeof CONTROL_PAGES)[number];
 
 /**

@@ -202,16 +202,22 @@ every bar of every generated level.
   ticks to catch up. Never skip ticks.
 - Player ship: 8-way movement, a fire button (hold for auto-fire: 15 shots a second, up to 6
   in flight; the gun sprays freely, and the bomb and missile have reloads), a bomb button,
-  a nuke button, a buy button for the power-up meter, and boost and missile buttons that
-  work once those are bought. Shots pass through the LED walls, so turrets on
+  a nuke button, and boost and missile buttons that work once those are unlocked. Shots pass through the LED walls, so turrets on
   the bar tips can be hit, and stop on the first enemy they hit. Turrets and ships take one
   hit, tanks three.
 - Collision: ship against lit LED segments, enemies, and enemy bullets. Integer AABB
   (axis-aligned bounding box) or small hitboxes. Enemy bullets stop on the walls. Bullets
   are aimed with `Math.sqrt`, which IEEE 754 rounds the same in every engine.
 - **Lives (2026-11-09):** three. A hit costs one; ramming an enemy destroys it too. The
-  music can't rewind, so the ship comes back at the playhead, in the middle of the cave
-  there, can't be hit for 2 s, and the enemy bullets in flight are cleared.
+  music can't rewind, so the ship comes back at the playhead: the enemy bullets in flight
+  are cleared, it flies in from the left along the middle of the cave for 0.5 s with the
+  controls locked, and enemies and bullets can't hit it for 2 s from the hit. The walls
+  count again once it has control (2026-11-10; it used to appear at once and ignore the
+  walls for 2 s, so it could drift into one).
+- **Cheats (2026-11-10):** the Konami code on the title screen gives infinite lives;
+  holding Esc or Start while choosing Play gives god mode (every power-up, kept after a
+  life, and a shield that never breaks). The replay records them and the boards refuse
+  such runs.
 - **Bomb (2026-11-09):** each press of the bomb button drops a concussive bomb, one in the
   air at a time and 1 s to reload after it bursts, so bombs are timed, not held down.
   Never more than one tank is on screen at once (measured on all 27 levels). It falls in
@@ -221,25 +227,26 @@ every bar of every generated level.
   the enemy bullets. One charges per 10 kills on the beat, up to 3 held, kept when a life
   is lost; a level starts with none. Its kills score their points times the multiplier,
   never doubled.
-- **Power-ups (2026-11-09):** a Gradius-style meter, drawn as a row of VU meter LEDs along
-  the bottom. Shooting down every ship of a formation, by any weapon, drops a capsule; a
-  ship that gets away or is rammed spoils it. The capsule falls with the bomb's gravity to
-  the cave's floor and scrolls away on it, so collecting one means flying low. Each
-  capsule picked up moves the highlight
-  one slot, wrapping after the last, and a buy press buys the highlighted upgrade and
-  clears the highlight. In order:
-  - **Boost:** an afterburner on its own button, 1.67 times the ship's speed. The first
-    buy unlocks it with 1 s of fuel; each further buy adds 1 s, up to 3. Fuel refills at
-    a third of the rate it burns.
-  - **Double:** a second shot angled 45 degrees up. Double and laser replace each other.
-  - **Laser:** a beam 1.5 times as fast as a shot that goes through every enemy in line.
+- **Power-ups (2026-11-09):** a meter drawn as a row of VU meter LEDs along the bottom,
+  each cell lit while the ship has that power-up. Shooting down every ship of a formation,
+  by any weapon, drops a capsule; a ship that gets away or is rammed spoils it. The
+  capsule falls with the bomb's gravity to the cave's floor and scrolls away on it, so
+  collecting one means flying low. Each capsule picked up unlocks the next power-up in
+  this order that isn't at its most, wrapping round (2026-11-10: until then it moved a
+  Gradius-style highlight that a buy button bought, which was impossible to do in
+  flight):
+  - **Double:** a second shot angled 45 degrees up. It stacks with the laser.
   - **Missile:** the bomb for air to air, on its own button: one per press, it bursts on
     the first enemy it touches and destroys every enemy within 20 px, then reloads for 1 s.
+  - **Shield:** takes 3 hits from bullets or enemies. The walls still cost a life.
   - **Drone:** follows the ship's path 16 ticks behind (the second 32), can't
     be hit, and fires the ship's shots and missiles. Up to 2.
-  - **Shield:** takes 3 hits from bullets or enemies. The walls still cost a life.
+  - **Laser:** a beam 1.5 times as fast as a shot that goes through every enemy in line.
+  - **Boost:** an afterburner on its own button, 1.67 times the ship's speed. The first
+    unlock gives 1 s of fuel; each further one adds 1 s, up to 3. Fuel refills at a third
+    of the rate it burns.
 
-  Losing a life loses every upgrade bought; the highlight stays.
+  Losing a life loses every power-up and starts the order again.
 - **Scoring (2026-11-09):** a shot-down ship is 100, a turret 200, a tank 300; ramming scores
   nothing. The **on-beat bonus** doubles a kill within 25 ms of a note of that enemy's
   instrument. A **streak multiplier** adds 1 for every 10 kills without losing a life, up

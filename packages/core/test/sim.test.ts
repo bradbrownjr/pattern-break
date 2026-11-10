@@ -8,7 +8,10 @@ import {
   ENEMY_HP,
   InputBit,
   MAX_SHOTS,
+  RESPAWN_FLY_TICKS,
+  RESPAWN_FROM_X,
   RESPAWN_SAFE_TICKS,
+  Cheat,
   SHIP_DIAGONAL_SPEED_Q8,
   SHIP_MAX_X,
   SHIP_MIN_X,
@@ -50,9 +53,9 @@ describe('ship movement', () => {
     expect(SHIP_SPEED_Q8).toBe(384);
   });
 
-  it('cancels opposite directions and ignores bomb and buy', () => {
+  it('cancels opposite directions and ignores bomb', () => {
     const s = createSimState();
-    tick(open, s, InputBit.up | InputBit.down | InputBit.left | InputBit.right | InputBit.bomb | InputBit.buy);
+    tick(open, s, InputBit.up | InputBit.down | InputBit.left | InputBit.right | InputBit.bomb);
     expect([s.shipX, s.shipY]).toEqual([SHIP_START_X * Q, SHIP_START_Y * Q]);
     expect(s.tick).toBe(1);
   });
@@ -132,7 +135,7 @@ describe('tick', () => {
   const wall = (): Level =>
     handLevel('easy', Array.from({ length: 7 }, (_, i) => (i === 6 ? [0, 12] : [0, 0])), 0, 1000);
 
-  it('a hit costs a life: the ship comes back mid-cave at the playhead, safe for 2 s', () => {
+  it('a hit costs a life: the ship flies in along the cave, then the walls count again', () => {
     const level = wall();
     const s = createSimState();
     expect(s.lives).toBe(3);
@@ -140,22 +143,37 @@ describe('tick', () => {
     // The floor's top segment starts at y 133, so the hitbox (bottom y + 3) hits once
     // y > 130. From y 108 at 1.5 px per tick that is tick 15 (y 130.5).
     expect([s.hitTick, s.lives, s.dead]).toEqual([15, 2, false]);
-    // Bar 6's gap is y 0 to 132, so its middle is 66.
-    expect([s.shipX, s.shipY]).toEqual([SHIP_START_X * Q, 66 * Q]);
-    expect(s.safeUntil).toBe(15 + RESPAWN_SAFE_TICKS);
-    // Flying into the floor while safe costs nothing; the first tick after does.
+    // It starts off the left edge, on the middle of bar 0's gap (y 108).
+    expect([s.shipX, s.shipY]).toEqual([RESPAWN_FROM_X * Q, 108 * Q]);
+    expect([s.flyInUntil, s.safeUntil]).toEqual([15 + RESPAWN_FLY_TICKS, 15 + RESPAWN_SAFE_TICKS]);
+    // Flying in, the controls are ignored; it ends at the start x, on the middle of bar
+    // 6's gap (y 0 to 132).
+    for (let k = 0; k < RESPAWN_FLY_TICKS; k++) tick(level, s, InputBit.down | InputBit.left);
+    expect([s.tick, s.shipX, s.shipY, s.lives]).toEqual([15 + RESPAWN_FLY_TICKS, SHIP_START_X * Q, 66 * Q, 2]);
+    // From there the walls count, though enemies and bullets still can't hit it: 43 ticks
+    // down from y 66 reach y 130.5, as in the first hit.
     while (s.lives === 2) tick(level, s, InputBit.down);
-    expect(s.hitTick).toBe(15 + RESPAWN_SAFE_TICKS);
+    expect(s.hitTick).toBe(15 + RESPAWN_FLY_TICKS + 43);
+    expect(s.hitTick).toBeLessThan(15 + RESPAWN_SAFE_TICKS);
   });
 
   it('the last life ends the run, and then tick does nothing', () => {
     const level = wall();
     const s = createSimState();
     while (!s.dead) tick(level, s, InputBit.down);
-    expect([s.lives, s.deathTick]).toEqual([0, 15 + 2 * RESPAWN_SAFE_TICKS]);
+    expect([s.lives, s.deathTick]).toEqual([0, 15 + 2 * (RESPAWN_FLY_TICKS + 43)]);
     const before = serializeSimState(s);
     tick(level, s, InputBit.up);
     expect(serializeSimState(s)).toEqual(before);
+  });
+
+  it('with the infinite-lives cheat a hit costs no life', () => {
+    const level = wall();
+    const s = createSimState(Cheat.infiniteLives);
+    for (let k = 0; k < 600; k++) tick(level, s, InputBit.down);
+    expect([s.lives, s.dead, s.hitTick > 15]).toEqual([3, false, true]);
+    resetSimState(s);
+    expect(s.cheats).toBe(Cheat.infiniteLives);
   });
 
   it('finishes at the end of the song', () => {

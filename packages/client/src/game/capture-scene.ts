@@ -1,8 +1,8 @@
 // Capture mode (docs/DEVELOPMENT.md, "Screenshots"): no audio, the song clock pinned to
 // `t`, and the ship flown by the autopilot's input log replayed through the sim up to `t`.
 // Everything on screen is a function of the query parameters. Scenes: title, jukebox (the
-// first song playing, its spectrum dark), controls-keyboard, controls-gamepad, settings (at
-// the defaults), help and help-end (scrolled to the top and to the end), hangar (the intro,
+// first song playing, its spectrum dark), controls-arrows, controls-wasd and
+// controls-gamepad, settings (at the defaults), help and help-end (scrolled to the top and to the end), hangar (the intro,
 // `t` seconds from its start, for `song` as level 1), play, run-start (play from the
 // hangar: the canopy closing and the colour flooding in), and paused (play with the pause
 // menu over it).
@@ -31,7 +31,7 @@ import { JukeboxScreen, PauseScreen, SPECTRUM_BARS, SettingsScreen, TitleScreen 
 import { DEFAULT_SETTINGS } from './settings.ts';
 import { ColourFlood, HangarIntro, WIPE_MS, loadHangarArt } from './hangar.ts';
 import { HelpScreen } from './help.ts';
-import { DIFFICULTY_LABELS } from './menu.ts';
+import { DIFFICULTY_LABELS, type ControlPage } from './menu.ts';
 import { SONGS, TITLE_SONG_ID, fetchSongBytes, findSong, songById } from './songs.ts';
 
 declare global {
@@ -79,10 +79,11 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
       jukebox.update({ cursor: 0, playing: 0, seconds: params.t, durationSeconds, levels: new Uint8Array(SPECTRUM_BARS) });
       return menuScene(jukebox.container);
     }
-    case 'controls-keyboard':
+    case 'controls-arrows':
+    case 'controls-wasd':
     case 'controls-gamepad': {
       const controls = new ControlsScreen();
-      controls.show(params.scene === 'controls-keyboard' ? 'keyboard' : 'gamepad');
+      controls.show(params.scene.slice('controls-'.length) as ControlPage);
       return menuScene(controls.container);
     }
     case 'help':

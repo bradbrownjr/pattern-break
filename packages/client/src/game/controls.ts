@@ -1,11 +1,13 @@
 // The controls screen, opened from the title menu or the pause menu (docs/DEVELOPMENT.md,
-// "Playing it"). Two pages: a keyboard and a gamepad, each drawn with the keys or buttons
-// the game uses filled in their action's colour, over a legend of the actions. Built once;
+// "Playing it"). Three pages: the keyboard with the arrows and Z, X, C, V (right hand
+// flies), the keyboard with WASD and J, K, L, ; (left hand flies), and a gamepad (Brad,
+// 2026-11-10: one keyboard page showed too many keys). Each is drawn with its keys or
+// buttons filled in their action's colour, over a legend of the actions. Built once;
 // show() picks the page.
 
 import { PLAYFIELD_WIDTH } from '@game/core';
 import { Container, Sprite, Texture } from 'pixi.js';
-import { AMBER, BACKGROUND, CYAN, DIM_GREY, GREY, LED_LIT, LIME, MAGENTA, VIOLET, WHITE } from '../render/palette.ts';
+import { AMBER, BACKGROUND, CYAN, DIM_GREY, GREY, LED_LIT, MAGENTA, VIOLET, WHITE } from '../render/palette.ts';
 import { mapTexture } from '../render/pixels.ts';
 import { PixelText } from '../render/text.ts';
 import { CONTROL_PAGES, type ControlPage } from './menu.ts';
@@ -15,54 +17,60 @@ const RED = LED_LIT[LED_LIT.length - 1]!;
 /** An unused key or button. */
 const UNUSED = 0x161a28;
 
-type Action = 'fly' | 'fire' | 'bomb' | 'missile' | 'nuke' | 'buy' | 'boost' | 'pause';
+type Action = 'fly' | 'fire' | 'bomb' | 'missile' | 'nuke' | 'boost' | 'pause';
+/** The two keyboard pages. */
+type Layout = 'arrows' | 'wasd';
 
-const ACTIONS: readonly { id: Action; label: string; color: number; keys: string; pad: string }[] = [
-  { id: 'fly', label: 'Fly', color: WHITE, keys: 'Arrows, WASD', pad: 'Stick, D-pad' },
-  { id: 'fire', label: 'Fire', color: CYAN, keys: 'Space, Z, J', pad: 'A, RT' },
-  { id: 'bomb', label: 'Bomb', color: AMBER, keys: 'X, K', pad: 'B' },
-  { id: 'missile', label: 'Missile', color: MAGENTA, keys: 'C, L', pad: 'RB' },
-  { id: 'nuke', label: 'Nuke', color: RED, keys: 'V, ;', pad: 'X' },
-  { id: 'buy', label: 'Buy', color: LIME, keys: "F, '", pad: 'Y' },
-  { id: 'boost', label: 'Boost', color: VIOLET, keys: 'Shift', pad: 'LB, LT' },
-  { id: 'pause', label: 'Pause', color: GREY, keys: 'Esc', pad: 'Start' },
+const ACTIONS: readonly { id: Action; label: string; color: number; legend: Record<ControlPage, string> }[] = [
+  { id: 'fly', label: 'Fly', color: WHITE, legend: { arrows: 'Arrows', wasd: 'WASD', gamepad: 'Stick, D-pad' } },
+  { id: 'fire', label: 'Fire', color: CYAN, legend: { arrows: 'Z, Space', wasd: 'J, Space', gamepad: 'A, RT' } },
+  { id: 'bomb', label: 'Bomb', color: AMBER, legend: { arrows: 'X', wasd: 'K', gamepad: 'B' } },
+  { id: 'missile', label: 'Missile', color: MAGENTA, legend: { arrows: 'C', wasd: 'L', gamepad: 'RB' } },
+  { id: 'nuke', label: 'Nuke', color: RED, legend: { arrows: 'V', wasd: ';', gamepad: 'X' } },
+  { id: 'boost', label: 'Boost', color: VIOLET, legend: { arrows: 'Shift', wasd: "'", gamepad: 'LB, LT' } },
+  { id: 'pause', label: 'Pause', color: GREY, legend: { arrows: 'Esc', wasd: 'Esc', gamepad: 'Start' } },
 ];
+/** Each page's tab. */
+const TAB_LABELS: Record<ControlPage, string> = { arrows: 'Arrows', wasd: 'WASD', gamepad: 'Gamepad' };
 const COLOR = Object.fromEntries(ACTIONS.map((a) => [a.id, a.color])) as Record<Action, number>;
 
 // Keyboard ---------------------------------------------------------------------------------
 
-/** A key: its label, its width in key units, and the action it does in play. */
-type Key = readonly [label: string, width: number, action?: Action];
+/**
+ * A key: its label, its width in key units, the action it does in play, and the page that
+ * lights it (both pages if none).
+ */
+type Key = readonly [label: string, width: number, action?: Action, layout?: Layout];
 const one = (labels: string): Key[] => [...labels].map((c): Key => [c, 1]);
 
 /** A 60% keyboard: Esc, then five rows each 15 units wide. */
 const KEY_ROWS: readonly (readonly Key[])[] = [
   [['Esc', 1.5, 'pause']],
   [...one('`1234567890-='), ['', 2]],
-  [['Tab', 1.5], ['Q', 1], ['W', 1, 'fly'], ...one('ERTYUIOP[]'), ['', 1.5]],
+  [['Tab', 1.5], ['Q', 1], ['W', 1, 'fly', 'wasd'], ...one('ERTYUIOP[]'), ['', 1.5]],
   [
     ['', 1.75],
-    ['A', 1, 'fly'],
-    ['S', 1, 'fly'],
-    ['D', 1, 'fly'],
-    ['F', 1, 'buy'],
+    ['A', 1, 'fly', 'wasd'],
+    ['S', 1, 'fly', 'wasd'],
+    ['D', 1, 'fly', 'wasd'],
+    ['F', 1],
     ['G', 1],
     ['H', 1],
-    ['J', 1, 'fire'],
-    ['K', 1, 'bomb'],
-    ['L', 1, 'missile'],
-    [';', 1, 'nuke'],
-    ["'", 1, 'buy'],
+    ['J', 1, 'fire', 'wasd'],
+    ['K', 1, 'bomb', 'wasd'],
+    ['L', 1, 'missile', 'wasd'],
+    [';', 1, 'nuke', 'wasd'],
+    ["'", 1, 'boost', 'wasd'],
     ['Enter', 2.25],
   ],
   [
-    ['Shift', 2.25, 'boost'],
-    ['Z', 1, 'fire'],
-    ['X', 1, 'bomb'],
-    ['C', 1, 'missile'],
-    ['V', 1, 'nuke'],
+    ['Shift', 2.25, 'boost', 'arrows'],
+    ['Z', 1, 'fire', 'arrows'],
+    ['X', 1, 'bomb', 'arrows'],
+    ['C', 1, 'missile', 'arrows'],
+    ['V', 1, 'nuke', 'arrows'],
     ...one('BNM,./'),
-    ['Shift', 2.75, 'boost'],
+    ['Shift', 2.75],
   ],
   [['', 1.25], ['', 1.25], ['', 1.25], ['Space', 6.25, 'fire'], ['', 1.25], ['', 1.25], ['', 1.25], ['', 1.25]],
 ];
@@ -96,16 +104,17 @@ function keycap(parent: Container, label: string, x0: number, x1: number, y: num
   if (label) parent.addChild(new PixelText(label, action ? BACKGROUND : DIM_GREY).place(Math.round((left + right) / 2), y + 3, 'center'));
 }
 
-function buildKeyboard(): Container {
+/** The keyboard with only `layout`'s keys lit. */
+function buildKeyboard(layout: Layout): Container {
   const c = new Container();
   KEY_ROWS.forEach((row, r) => {
     let x = 0;
-    for (const [label, width, action] of row) {
-      keycap(c, label, x, x + width, rowY(r), action);
+    for (const [label, width, action, only] of row) {
+      keycap(c, label, x, x + width, rowY(r), only === undefined || only === layout ? action : undefined);
       x += width;
     }
   });
-  for (const [label, col, row] of ARROW_KEYS) keycap(c, label, col, col + 1, rowY(row), 'fly');
+  for (const [label, col, row] of ARROW_KEYS) keycap(c, label, col, col + 1, rowY(row), layout === 'arrows' ? 'fly' : undefined);
   return c;
 }
 
@@ -204,15 +213,16 @@ function buildPad(): Container {
   // Sticks: the left flies, the right does nothing.
   c.addChild(placed(tex.stick, ...at(78, 48), COLOR.fly), placed(tex.stick, ...at(122, 48), DIM_GREY));
   // Face buttons, in the standard mapping's places.
-  const face: [string, number, number, Action][] = [
-    ['Y', 150, 18, 'buy'],
+  // Y does nothing in play (it watches the replay on the end screens).
+  const face: [string, number, number, Action | undefined][] = [
+    ['Y', 150, 18, undefined],
     ['X', 138, 30, 'nuke'],
     ['B', 162, 30, 'bomb'],
     ['A', 150, 42, 'fire'],
   ];
   for (const [label, x, y, action] of face) {
     const [cx, cy] = at(x, y);
-    c.addChild(placed(tex.button, cx, cy, COLOR[action]));
+    c.addChild(placed(tex.button, cx, cy, action ? COLOR[action] : DIM_GREY));
     c.addChild(new PixelText(label, BACKGROUND).place(cx - 2, cy - 3));
   }
   // Select does nothing in play; Start pauses.
@@ -238,7 +248,7 @@ function buildLegend(page: ControlPage): Container {
     const y = LEGEND_TOP + (i % 4) * LEGEND_ROW;
     c.addChild(rect(x, y, 7, 7, a.color));
     c.addChild(new PixelText(a.label, GREY).place(x + 12, y));
-    c.addChild(new PixelText(page === 'keyboard' ? a.keys : a.pad, WHITE).place(x + LEGEND_KEYS_X, y));
+    c.addChild(new PixelText(a.legend[page], WHITE).place(x + LEGEND_KEYS_X, y));
   });
   return c;
 }
@@ -254,19 +264,26 @@ export class ControlsScreen {
     this.container.addChild(shadow, heading);
     for (const page of CONTROL_PAGES) {
       const c = new Container();
-      c.addChild(page === 'keyboard' ? buildKeyboard() : buildPad(), buildLegend(page));
+      c.addChild(page === 'gamepad' ? buildPad() : buildKeyboard(page), buildLegend(page));
       this.#pages.push(c);
       this.container.addChild(c);
     }
-    // Tabs: "< Keyboard  Gamepad >", the page shown in cyan.
-    const keyboard = new PixelText('Keyboard').place(CENTER - 8, TABS_Y, 'right');
-    const gamepad = new PixelText('Gamepad').place(CENTER + 8, TABS_Y);
-    this.#tabs.push(keyboard, gamepad);
+    // Tabs: "< Arrows  WASD  Gamepad >", centred, the page shown in cyan.
+    const tabs = CONTROL_PAGES.map((page) => new PixelText(TAB_LABELS[page]));
+    const gap = 16;
+    const width = tabs.reduce((sum, t) => sum + t.textWidth, 0) + gap * (tabs.length - 1);
+    let x = Math.round(CENTER - width / 2);
+    for (const t of tabs) {
+      t.place(x, TABS_Y);
+      x += t.textWidth + gap;
+    }
+    this.#tabs.push(...tabs);
+    const first = tabs[0]!;
+    const last = tabs[tabs.length - 1]!;
     this.container.addChild(
-      new PixelText('<', DIM_GREY).place(keyboard.x - 12, TABS_Y),
-      keyboard,
-      gamepad,
-      new PixelText('>', DIM_GREY).place(gamepad.x + gamepad.textWidth + 6, TABS_Y),
+      new PixelText('<', DIM_GREY).place(first.x - 12, TABS_Y),
+      ...tabs,
+      new PixelText('>', DIM_GREY).place(last.x + last.textWidth + 6, TABS_Y),
     );
   }
 

@@ -25,6 +25,8 @@ export const PadBit = {
   b: 1 << 17,
   select: 1 << 18,
   start: 1 << 19,
+  /** Y: watches the replay on the end screens. */
+  y: 1 << 20,
 } as const;
 
 /** How far the stick must lean on an axis to count as that direction. */
@@ -60,7 +62,7 @@ export function padBits(pad: PadSnapshot): number {
   if (down(0)) bits |= PadBit.a;
   if (down(1)) bits |= PadBit.b | InputBit.bomb;
   if (down(2)) bits |= InputBit.nuke;
-  if (down(3)) bits |= InputBit.buy;
+  if (down(3)) bits |= PadBit.y;
   if (down(4) || down(6)) bits |= InputBit.boost;
   if (down(5)) bits |= InputBit.missile;
   if (down(8)) bits |= PadBit.select;

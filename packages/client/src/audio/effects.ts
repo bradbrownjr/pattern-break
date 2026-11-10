@@ -23,7 +23,7 @@ export type Effect =
   | 'lifeLost'
   | 'shield'
   | 'pickup'
-  | 'buy'
+  | 'unlock'
   | 'nukeReady'
   | 'boost'
   | 'step'
@@ -193,8 +193,8 @@ export const EFFECTS: Record<Effect, EffectSpec> = {
     ],
     priority: 5,
   },
-  // sfxr's powerUp: a rising sweep, repeated, from the song's note.
-  buy: {
+  // A power-up unlocked. sfxr's powerUp: a rising sweep, repeated, from the song's note.
+  unlock: {
     layers: (p) => [
       { wave: 'square', freq: note(p, C5), slide: 2.5, repeat: 0.075, duty: 0.25, sustain: 0.26, decay: 0.12, volume: 0.22 },
     ],

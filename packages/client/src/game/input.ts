@@ -1,6 +1,8 @@
-// Keyboard to sim input bits, and to menu actions. Arrows and WASD move; Space, Z and J
-// fire; X and K drop bombs; C and L fire missiles; V and ; (semicolon) nuke; F and '
-// (quote) buy from the power-up meter; Shift boosts. A gamepad's bits (gamepad.ts) join in through setPad(). The sampler is read once
+// Keyboard to sim input bits, and to menu actions, in two layouts that both work at once:
+// arrows with Z, X, C, V and Shift, or WASD with J, K, L, ; and ' (quote). Arrows and WASD
+// move; Space, Z and J fire; X and K drop bombs; C and L fire missiles; V and ;
+// (semicolon) nuke; Shift and ' boost. A gamepad's bits (gamepad.ts) join in through
+// setPad(). The sampler is read once
 // per sim tick; a key pressed and released between two reads still counts for one tick, so
 // a quick tap is never lost.
 
@@ -34,11 +36,9 @@ export function keyToBit(code: string): number {
     case 'KeyC':
     case 'KeyL':
       return InputBit.missile;
-    case 'KeyF':
-    case 'Quote':
-      return InputBit.buy;
     case 'ShiftLeft':
     case 'ShiftRight':
+    case 'Quote':
       return InputBit.boost;
     default:
       return 0;

@@ -139,7 +139,7 @@ the page doesn't stall, and the pitched ones on first use at each pitch.
 
 ### Pitched to the song
 
-The on-beat chime, the capsule pickup, the buy sound, and the nuke charge take their pitch
+The on-beat chime, the capsule pickup, the unlock sound, and the nuke charge take their pitch
 from the music:
 
 - **Which note.** The chime takes the latest note at or before the kill of the instrument
@@ -206,7 +206,7 @@ heard time.
 | `lifeLost` | a life lost | a boom over a falling, wavering square | |
 | `shield` | the shield takes a hit | a ringing triangle with a shimmer | |
 | `pickup` | a capsule picked up | saw with punch, jumping a fifth, from the song's note | `pickupCoin` |
-| `buy` | an upgrade bought | square rising, repeated, from the song's note | `powerUp` |
+| `unlock` | a power-up unlocked by a capsule | square rising, repeated, from the song's note | `powerUp` |
 | `nukeReady` | a nuke charged | root, fifth, octave, twelfth from the song's note | |
 | `boost` | boost starts | band-limited noise, falling a little | |
 | `step` | a footstep in the hangar intro | a short low-passed noise thud with a short-mode tick, in reverb | |

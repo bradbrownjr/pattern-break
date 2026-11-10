@@ -104,11 +104,15 @@ describe('PauseMenu', () => {
 describe('ControlsPages', () => {
   it('switches pages with left and right; confirm steps on and leaves from the last page', () => {
     const p = new ControlsPages();
-    expect(p.page).toBe('keyboard');
+    expect(p.page).toBe('arrows');
     expect(p.apply('right')).toBe('moved');
+    expect(p.page).toBe('wasd');
+    expect(p.apply('left')).toBe('moved');
+    expect(p.apply('left')).toBe('moved');
     expect(p.page).toBe('gamepad');
     expect(p.apply('right')).toBe('moved');
-    expect(p.page).toBe('keyboard');
+    expect(p.page).toBe('arrows');
+    expect(p.apply('confirm')).toBe('moved');
     expect(p.apply('confirm')).toBe('moved');
     expect(p.page).toBe('gamepad');
     expect(p.apply('confirm')).toBe('back');

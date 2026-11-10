@@ -122,7 +122,7 @@ export class SoundCues {
     if (hit) cue('lifeLost', shipX);
     else {
       if (state.shieldHits < this.#shieldHits) cue('shield', shipX);
-      if (this.#meter >= 0 && state.meter < 0) cue('buy', shipX);
+      if (state.meter !== this.#meter && state.meter >= 0) cue('unlock', shipX);
     }
     if (state.capsules > this.#capsules) cue('pickup', shipX);
     const boosting = state.boostFuel < this.#boostFuel;

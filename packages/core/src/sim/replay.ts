@@ -3,21 +3,25 @@
 // named by the SHA-256 of its file, so the level can be rebuilt from the same bytes.
 //
 // Binary form, little-endian, no padding: magic 'PBRP', u32 format version, u32
-// genVersion, u32 simVersion, 32 bytes moduleHash, u8 difficulty id, i32 score, u32 tick
+// genVersion, u32 simVersion, 32 bytes moduleHash, u8 difficulty id, u8 cheats (Cheat
+// flags; format 2 on), i32 score, u32 tick
 // count, u32 run count, then each run of equal input bits as u16 bits and its length in
 // ticks as an unsigned LEB128 varint (1 to 5 bytes, at least 1). The runs' lengths add up
 // to the tick count. decodeReplay throws on anything else.
 
 import { Difficulty, type DifficultyName } from '../levelgen/types.ts';
+import { Cheat } from './constants.ts';
 
-export const REPLAY_FORMAT_VERSION = 1;
+export const REPLAY_FORMAT_VERSION = 2;
 const MAGIC = [0x50, 0x42, 0x52, 0x50];
-const HEADER_BYTES = 4 + 4 + 4 + 4 + 32 + 1 + 4 + 4 + 4;
+const HEADER_BYTES = 4 + 4 + 4 + 4 + 32 + 1 + 1 + 4 + 4 + 4;
 
 export interface Replay {
   /** SHA-256 of the song file, 64 lowercase hex digits. */
   moduleHash: string;
   difficulty: DifficultyName;
+  /** Cheat flags the run had (0 for none); a replay with any is kept off the boards. */
+  cheats: number;
   genVersion: number;
   simVersion: number;
   /** The score the recorded run ended with, the lives bonus included. */
@@ -86,6 +90,7 @@ export function encodeReplay(replay: Replay): Uint8Array<ArrayBuffer> {
   out.set(hash, p);
   p += 32;
   out[p++] = Difficulty[replay.difficulty].id;
+  out[p++] = replay.cheats;
   view.setInt32(p, replay.score, true);
   view.setUint32(p + 4, replay.inputs.length, true);
   view.setUint32(p + 8, bits.length, true);
@@ -117,9 +122,11 @@ export function decodeReplay(bytes: Uint8Array): Replay {
   const moduleHash = hashHex(bytes.subarray(16, 48));
   const difficulty = difficultyById(bytes[48]!);
   if (difficulty === null) return fail(`unknown difficulty id ${bytes[48]}`);
-  const score = view.getInt32(49, true);
-  const tickCount = view.getUint32(53, true);
-  const runCount = view.getUint32(57, true);
+  const cheats = bytes[49]!;
+  if ((cheats & ~(Cheat.infiniteLives | Cheat.god)) !== 0) fail(`unknown cheat flags ${cheats}`);
+  const score = view.getInt32(50, true);
+  const tickCount = view.getUint32(54, true);
+  const runCount = view.getUint32(58, true);
   if (runCount > tickCount) fail('more runs than ticks');
   const inputs = new Uint16Array(tickCount);
   let p = HEADER_BYTES;
@@ -143,5 +150,5 @@ export function decodeReplay(bytes: Uint8Array): Replay {
   }
   if (t !== tickCount) fail('run lengths do not add up to the tick count');
   if (p !== bytes.length) fail('trailing bytes');
-  return { moduleHash, difficulty, genVersion, simVersion, score, inputs };
+  return { moduleHash, difficulty, cheats, genVersion, simVersion, score, inputs };
 }

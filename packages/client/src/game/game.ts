@@ -6,7 +6,6 @@
 import {
   Difficulty,
   GEN_VERSION,
-  InputBit,
   SIM_VERSION,
   SAMPLES_PER_TICK,
   SAMPLE_RATE,
@@ -485,7 +484,7 @@ export class Game {
         // B or Select is Esc; any other button is any key. Directions don't count, so a
         // stick still leaning from play doesn't skip the screen.
         if (bit === PadBit.b || bit === PadBit.select) this.#toTitle();
-        else if (bit === InputBit.buy && this.#onEndScreen()) this.#watchLastReplay();
+        else if (bit === PadBit.y && this.#onEndScreen()) this.#watchLastReplay();
         else if ((bit & (PadBit.up | PadBit.down | PadBit.left | PadBit.right)) === 0) this.#onAnyKey();
         return;
       default:
@@ -1063,6 +1062,7 @@ export class Game {
         ? {
             moduleHash: hash,
             difficulty: this.#difficulty,
+            cheats: this.#state.cheats,
             genVersion: GEN_VERSION,
             simVersion: SIM_VERSION,
             score: this.#state.score,

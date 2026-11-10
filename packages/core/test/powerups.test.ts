@@ -1,12 +1,13 @@
-// Power-ups (sim.ts): capsules from whole formations, which fall to the cave's floor, the
-// meter and buying, and each upgrade: boost, double, laser, missile, drone, shield. Losing
-// a life loses them all.
+// Power-ups (sim.ts): capsules from whole formations, which fall to the cave's floor, each
+// unlocking the next power-up in order, and each power-up: double, missile, shield, drone,
+// laser, boost. Losing a life loses them all; the god cheat keeps them.
 
 import { describe, expect, it } from 'vitest';
 import { EnemyKind } from '../src/levelgen/types.ts';
 import {
   BOOST_FUEL_PER_LEVEL,
   BOOST_SPEED_Q8,
+  Cheat,
   DOUBLE_SPEED_Q8,
   InputBit,
   MISSILE_RELOAD_TICKS,
@@ -65,7 +66,7 @@ describe('capsules', () => {
     // The ship, held still in the middle, misses it; flying down to the floor picks it up.
     expect(s.capsules).toBe(0);
     while (s.capsules === 0 && s.capsuleActive[0] === 1) tick(level, s, InputBit.down);
-    expect([s.capsules, s.meter, s.lives]).toEqual([1, PowerUp.boost, 3]);
+    expect([s.capsules, s.meter, s.double, s.lives]).toEqual([1, PowerUp.double, true, 3]);
   });
 
   it("don't drop when a ship of the formation gets away", () => {
@@ -83,7 +84,7 @@ describe('capsules', () => {
     expect([s.capsules, s.formationSpoiled[0], s.capsuleActive.every((a) => a === 0)]).toEqual([0, 1, true]);
   });
 
-  it('each one picked up moves the highlight a slot, wrapping after the last', () => {
+  it('each one picked up unlocks the next power-up in order, skipping those at their most', () => {
     const s = createSimState();
     const seen: number[] = [];
     for (let k = 0; k <= POWER_UP_COUNT; k++) {
@@ -91,58 +92,57 @@ describe('capsules', () => {
       tick(open, s, 0);
       seen.push(s.meter);
     }
-    expect(seen).toEqual([0, 1, 2, 3, 4, 5, 0]);
+    // Double, missile, shield, drone, laser, boost; then double, missile and the shield are
+    // at their most, so the seventh gives the second drone.
+    expect(seen).toEqual([0, 1, 2, 3, 4, 5, 3]);
+    expect([s.double, s.missile, s.shieldHits, s.drones, s.laser, s.boostLevel]).toEqual([true, true, SHIELD_HITS, 2, true, 1]);
   });
 });
 
-describe('buying', () => {
-  it('a press buys the highlighted upgrade and clears the highlight; holding buys once', () => {
+describe('unlocking', () => {
+  it('with every power-up at its most, a capsule does nothing', () => {
     const s = createSimState();
-    s.meter = PowerUp.double;
-    tick(open, s, InputBit.buy);
-    expect([s.double, s.meter]).toEqual([true, -1]);
-    s.meter = PowerUp.laser;
-    tick(open, s, InputBit.buy);
-    expect([s.laser, s.meter]).toEqual([false, PowerUp.laser]);
+    Object.assign(s, { double: true, laser: true, missile: true, drones: 2, boostLevel: 3, shieldHits: SHIELD_HITS, meter: 2 });
+    capsuleOnShip(s);
     tick(open, s, 0);
-    tick(open, s, InputBit.buy);
-    // Laser and double replace each other.
-    expect([s.laser, s.double, s.meter]).toEqual([true, false, -1]);
+    expect([s.capsules, s.meter, s.boostLevel, s.drones]).toEqual([1, 2, 3, 2]);
   });
 
-  it("an upgrade at its most can't be bought, and the highlight stays", () => {
+  it('losing a life loses every power-up and starts the order again', () => {
     const s = createSimState();
-    s.drones = 2;
-    s.meter = PowerUp.drone;
-    tick(open, s, InputBit.buy);
-    expect([s.drones, s.meter]).toEqual([2, PowerUp.drone]);
-  });
-
-  it('losing a life loses every upgrade, and keeps the highlight', () => {
-    const s = createSimState();
-    Object.assign(s, { double: true, missile: true, drones: 2, boostLevel: 2, boostFuel: 50, meter: PowerUp.missile });
+    Object.assign(s, { double: true, missile: true, drones: 2, boostLevel: 2, boostFuel: 50, meter: PowerUp.drone });
     bulletOnShip(s);
     tick(open, s, 0);
-    expect([s.lives, s.double, s.missile, s.drones, s.boostLevel, s.boostFuel, s.meter]).toEqual([
-      2,
-      false,
-      false,
-      0,
-      0,
-      0,
-      PowerUp.missile,
-    ]);
+    expect([s.lives, s.double, s.missile, s.drones, s.boostLevel, s.boostFuel, s.meter]).toEqual([2, false, false, 0, 0, 0, -1]);
+  });
+
+  it('the god cheat starts with every power-up, keeps them after a life, and the shield never breaks', () => {
+    const s = createSimState(Cheat.god);
+    expect([s.double, s.laser, s.missile, s.drones, s.boostLevel, s.shieldHits]).toEqual([true, true, true, 2, 3, SHIELD_HITS]);
+    for (let k = 0; k < 10; k++) {
+      bulletOnShip(s);
+      tick(open, s, 0);
+    }
+    expect([s.lives, s.shieldHits]).toEqual([3, SHIELD_HITS]);
+    // A wall still costs a life, but not the power-ups.
+    const level = handLevel('easy', Array.from({ length: 20 }, (_, i): [number, number] => (i >= 5 && i <= 8 ? [0, 20] : [0, 0])), 0, 100);
+    const g = createSimState(Cheat.god);
+    tick(level, g, 0);
+    expect([g.lives, g.double, g.laser, g.missile, g.drones, g.shieldHits]).toEqual([2, true, true, true, 2, SHIELD_HITS]);
   });
 });
 
 describe('boost', () => {
-  it('each buy adds 1 s of fuel, burnt while held for 1.67 times the speed, refilled every 3 ticks', () => {
+  it('each unlock adds 1 s of fuel, burnt while held for 1.67 times the speed, refilled every 3 ticks', () => {
     const s = createSimState();
     tick(open, s, InputBit.down | InputBit.boost);
-    // Not bought yet: the normal speed.
+    // Not unlocked yet: the normal speed.
     expect(s.shipY).toBe(108 * Q + SHIP_SPEED_Q8);
-    s.meter = PowerUp.boost;
-    tick(open, s, InputBit.buy);
+    // Boost comes after the laser.
+    s.meter = PowerUp.laser;
+    s.laser = true;
+    capsuleOnShip(s);
+    tick(open, s, 0);
     expect([s.boostLevel, s.boostFuel]).toEqual([1, BOOST_FUEL_PER_LEVEL]);
     const y = s.shipY;
     tick(open, s, InputBit.up | InputBit.boost);
@@ -234,8 +234,11 @@ describe('drones', () => {
 describe('shield', () => {
   it('takes 3 hits from bullets; the next costs a life', () => {
     const s = createSimState();
-    s.meter = PowerUp.shield;
-    tick(open, s, InputBit.buy);
+    // The shield comes after the missile.
+    s.meter = PowerUp.missile;
+    s.missile = true;
+    capsuleOnShip(s);
+    tick(open, s, 0);
     expect(s.shieldHits).toBe(SHIELD_HITS);
     for (let k = 0; k < SHIELD_HITS; k++) {
       bulletOnShip(s);

@@ -401,14 +401,14 @@ formation count and that many u8 sizes.
   run, so the state shows song sample `400 * state.tick`. `tick()` does nothing once
   `state.dead` or `state.finished` is set. Otherwise, in order: move and clamp the ship,
   increment `state.tick`, and place the drones; spawn enemies whose tick has come and move
-  every live one; buy, nuke, fire and move shots and test them against enemies; the bomb;
+  every live one; nuke, fire and move shots and test them against enemies; the bomb;
   missiles; fire enemies' scheduled shots and move bullets; move capsules and pick up any
-  the ship touches; then, unless the ship is in its safe time, test it against the
-  terrain, live enemies and bullets.
+  the ship touches; then test the ship against the terrain unless it is flying in, and
+  against live enemies and bullets unless it is in its safe time.
 - **Input bits** (`InputBit`, a u16 per tick, so input logs are `Uint16Array`s): up 1, down
-  2, left 4, right 8, fire 16, bomb 32, buy 64, nuke 128, boost 256, missile 512. Opposite
-  directions cancel. `state.prevInput` keeps the last tick's bits, so a buy, bomb, missile
-  or nuke goes off once per press.
+  2, left 4, right 8, fire 16, bomb 32, nuke 128, boost 256, missile 512; 64 was buy until
+  `SIM_VERSION` 11. Opposite directions cancel. `state.prevInput` keeps the last tick's
+  bits, so a bomb, missile or nuke goes off once per press.
 - **Ship:** 384 Q8 (1.5 px) per tick straight. Diagonals move 272 Q8 on each axis
   (384 / sqrt 2, rounded), about 1.503 px per tick in total. The centre stays within
   x 16 to 160 and y 3 to 213, so the hitbox never leaves the screen. It starts at (64, 108).
@@ -458,21 +458,23 @@ formation count and that many u8 sizes.
   the bars under it, which it then rides; it goes at the left edge. So collecting one
   means flying low (Brad, 2026-11-09; until then capsules drifted along the cave's centre
   line, and the autopilot collected 17 to 60 a level on normal). One the ship's hitbox
-  overlaps moves `state.meter` (-1 for none) one
-  slot along boost 0, double 1, laser 2, missile 3, drone 4, shield 5 (`PowerUp`),
-  wrapping from shield to boost. A new buy press buys the highlighted upgrade and sets the
-  meter to -1, unless `canBuy()` says it is at its most, when nothing happens and the
-  highlight stays. Losing a life loses every upgrade (`loseUpgrades()`); the highlight and
-  the nukes stay.
-- **Boost:** each buy raises `state.boostLevel` (to 3) and fills `state.boostFuel` to 120
+  overlaps unlocks `nextUnlock(state)`: the first power-up after `state.meter` (the last
+  one unlocked, -1 for none) in the order double 0, missile 1, shield 2, drone 3, laser 4,
+  boost 5 (`PowerUp`), wrapping round, that `canUnlock()` says isn't at its most; with all
+  at their most it does nothing (Brad, 2026-11-10: until `SIM_VERSION` 11 a capsule moved
+  a highlight along the meter and a buy button bought it, which was impossible to do in
+  flight). Losing a life loses every power-up and sets the meter to -1
+  (`loseUpgrades()`); the nukes stay.
+- **Boost:** each unlock raises `state.boostLevel` (to 3) and fills `state.boostFuel` to 120
   ticks a level. Holding boost with fuel moves the ship 640 Q8 per tick (453 on each axis
   diagonally) and burns a tick of fuel; otherwise fuel refills a tick's worth on every
   third tick. `state.boosting` tells the client to lengthen the flame.
-- **Double and laser,** which replace each other: double adds a shot from the top of the
+- **Double and laser,** which stack (until `SIM_VERSION` 11 each replaced the other, which
+  unlocks in a cycle would swap back and forth): double adds a shot from the top of the
   ship's nose angled 45 degrees up, 724 Q8 per tick on each axis. Laser replaces the
   straight shot with a 16x2 px beam at 1536 Q8 (6 px) per tick that passes through
   enemies, taking a hit off each it overlaps every tick, so a tank in its path takes 3.
-- **Missile:** a new press of the missile bit, once bought, launches one from the ship's
+- **Missile:** a new press of the missile bit, once unlocked, launches one from the ship's
   nose and one from each drone, if the ship's (slot 0) is not in flight and
   `state.missileReadyTick` has come. A missile (8x4 px) flies right 768 Q8 per tick
   through the walls and bursts on the first live enemy it overlaps, destroying every live
@@ -483,8 +485,8 @@ formation count and that many u8 sizes.
 - **Drones:** `state.trailX` and `trailY` keep the ship's last 64 positions; drone k sits
   where the ship was 16 x (k + 1) ticks ago (`droneX`, `droneY`). Drones can't be hit
   and pass through walls. A life lost refills the trail with the new position, so drones
-  bought later start on the ship.
-- **Shield:** a buy sets `state.shieldHits` to 3. A bullet or enemy that touches the ship
+  unlocked later start on the ship.
+- **Shield:** an unlock sets `state.shieldHits` to 3. A bullet or enemy that touches the ship
   then costs a shield hit instead of a life; a rammed enemy is still destroyed, scoring
   nothing, and the streak is kept. The terrain always costs a life.
 - **Nuke:** a new press (`input & ~prevInput`) with `state.nukes` above 0 destroys every
@@ -492,10 +494,19 @@ formation count and that many u8 sizes.
   move that tick. Its kills score base points times the multiplier, never on the beat.
   Each kill on the beat adds to `state.nukeCharge`; at 10 it becomes a nuke, while fewer
   than 3 are held (`NUKE_CHARGE_KILLS`, `MAX_NUKES`). Nukes stay when a life is lost.
-- **Lives:** 3 (`START_LIVES`). A hit costs one, every upgrade bought, and the streak:
-  `state.hitTick` records it. Ramming an enemy destroys it (and counts in `state.kills`). With lives left the ship goes to x 64 at
-  the middle of the cave's gap there, every bullet is cleared, and it can't be hit until
-  `state.safeUntil`, 240 ticks on. The last life sets `state.dead` and `state.deathTick`.
+- **Lives:** 3 (`START_LIVES`). A hit costs one, every power-up, and the streak:
+  `state.hitTick` records it. Ramming an enemy destroys it (and counts in `state.kills`).
+  With lives left every bullet is cleared and the ship flies in: for 60 ticks
+  (`RESPAWN_FLY_TICKS`, until `state.flyInUntil`) it moves in a straight line from x -16 to
+  x 64 on the middle of the cave's gap under it, ignoring the input and the walls. Enemies
+  and bullets can't hit it until `state.safeUntil`, 240 ticks after the hit. Until
+  `SIM_VERSION` 11 it appeared at x 64 at once and ignored the walls for all 240 ticks, so
+  it could drift into one and die the moment its safe time ended (Brad, 2026-11-10). The
+  last life sets `state.dead` and `state.deathTick`.
+- **Cheats** (`Cheat`, `state.cheats`, set by `createSimState(cheats)` and kept by
+  `resetSimState`): `infiniteLives` (1) means a hit costs no life; `god` (2) gives every
+  power-up at their most from the start and after each life lost, and shield hits are never
+  used up, though the walls still cost a life. A replay records them (see "Replays").
 - **Running a log:** `runInputLog(level, inputs, state?)` runs from the state's current
   tick until the log ends, the last life is lost, or the song ends. `resetSimState` reuses
   a state: it clears `state.enemiesReady`, and the next `tick()` sets the per-enemy arrays
@@ -507,11 +518,14 @@ formation count and that many u8 sizes.
 - **Autopilot:** `autopilotInputs(level)` in `sim/autopilot.ts` flies a level by looking
   24 ticks ahead through the walls from `solidWalls()`, so it steers clear of turrets and
   tank tracks, holds fire, and presses bomb when it can drop one and a tank or floor
-  turret is 60 to 140 px ahead. It doesn't steer for capsules, but buys double, missile,
-  drone and shield when the meter lands on them, and launches a missile at an enemy ship
-  up to 240 px ahead and within 12 px of its height. On the nine songs (2026-11-09) it
-  picks up 0 to 5 capsules a level on easy and 0 to 8 on normal, only those that fall
-  onto its path, so it rarely has an upgrade. Of its three moves (up, down, none) it takes the one
+  turret is 60 to 140 px ahead. It steers for the nearest capsule up to 160 px ahead,
+  held inside the clear range, while no enemy bullet is within 64 px (near the floor,
+  where capsules rest, it has little room to dodge: chasing every capsule cost the title
+  song's demo all three lives in 23 s), and launches a missile at an enemy ship up to
+  240 px ahead and within 12 px of its height. On normal (2026-11-10) it picks up 16
+  capsules on The_Epic_Chip, 30 on Numen in Da Chip and 5 to 13 on the next three levels;
+  in the demo's 30 s it picks up two, fires missiles from 13.8 s and bombs at 17.3 s
+  (Brad's play-test: the demo used to show none of these). Of its three moves (up, down, none) it takes the one
   no bullet or ship would hit soonest within 16 ticks, then the one nearest its target; if
   even that one is hit within 2 ticks and it holds a nuke, it nukes. It
   never moves horizontally. On the terrain alone (`withoutEnemies(level)`) it always
@@ -530,15 +544,18 @@ formation count and that many u8 sizes.
 
 ### Replays
 
-`sim/replay.ts` holds a run as a `Replay`: the song file's SHA-256, the difficulty,
-`GEN_VERSION`, `SIM_VERSION`, the score it ended with, and the input bits of every tick.
-`encodeReplay` writes it little-endian: magic `PBRP`, u32 format version (1), u32
-genVersion, u32 simVersion, 32 bytes of hash, u8 difficulty id, i32 score, u32 tick count,
+`sim/replay.ts` holds a run as a `Replay`: the song file's SHA-256, the difficulty, the
+cheats the run had, `GEN_VERSION`, `SIM_VERSION`, the score it ended with, and the input
+bits of every tick. A replay with any cheat is for watching only: the M5 boards refuse it.
+`encodeReplay` writes it little-endian: magic `PBRP`, u32 format version (2), u32
+genVersion, u32 simVersion, 32 bytes of hash, u8 difficulty id, u8 cheats (the `Cheat`
+flags; added in format 2, 2026-11-10), i32 score, u32 tick count,
 u32 run count, then each run of equal bits as u16 bits and its length as an unsigned
-LEB128 varint. `decodeReplay` throws on a wrong magic or format, an unknown difficulty,
+LEB128 varint. `decodeReplay` throws on a wrong magic or format, an unknown difficulty or
+cheat flag,
 truncation, run lengths that don't add up to the tick count, and trailing bytes. The level
 isn't stored: it is rebuilt from the song, which is why the hash is there. The level-1 run
-in the fixture is 12 903 ticks in 3 657 bytes.
+in the fixture is 12 903 ticks in 3 087 bytes.
 
 In the game (`game.ts`), each run that ends in game over or level complete keeps its
 replay, for a bundled song (its hash comes from `music/manifest.json`). On those screens R
@@ -583,7 +600,7 @@ changes only with a `GEN_VERSION` bump, a sim hash only with a `SIM_VERSION` bum
 of level 1 (Numen in Da Chip on normal) recorded by the game in Chromium.
 `test/replay.test.ts` checks that it names this `GEN_VERSION` and `SIM_VERSION` and the song
 file's SHA-256, builds the level from `music/numenchip.xm`, runs the inputs, and gets the
-recorded score (50 300) on the recorded last tick, in Node and in every browser.
+recorded score (82 400) on the recorded last tick, in Node and in every browser.
 
 **Bundled songs.** `packages/analysis/test/music.test.ts` analyzes every song in
 `music/manifest.json`, builds its level on each difficulty, and checks that it has enemies,
@@ -719,7 +736,7 @@ The client reads query parameters; `packages/client/src/capture.ts` parses them
 | Parameter | Meaning |
 |---|---|
 | `capture` | `1` turns capture mode on. Without it the page behaves normally. |
-| `scene` | Which screen to show: `title`, `jukebox`, `controls-keyboard`, `controls-gamepad`, `help`, `help-end`, `settings`, `hangar`, `play`, `run-start`, or `paused`. |
+| `scene` | Which screen to show: `title`, `jukebox`, `controls-arrows`, `controls-wasd`, `controls-gamepad`, `help`, `help-end`, `settings`, `hangar`, `play`, `run-start`, or `paused`. |
 | `song` | Song id: a bundled song's file name without its extension (`numenchip`), or `pb-fixture-01` for the test song. |
 | `t` | Song clock in seconds. |
 | `difficulty` | Difficulty name. |
@@ -742,8 +759,8 @@ In capture mode the renderer must:
 - **`scene=title`** draws the title screen with the cursor on Play, the song and
   difficulty chosen, and the cursor steady instead of blinking. The stars sit where `t` puts them.
 - **`scene=jukebox`** draws the jukebox with the first song playing at `t`, its length from
-  an analysis of the song, and the spectrum dark. **`scene=controls-keyboard`** and
-  **`scene=controls-gamepad`** draw the two controls pages, **`scene=help`** and
+  an analysis of the song, and the spectrum dark. **`scene=controls-arrows`**,
+  **`scene=controls-wasd`** and **`scene=controls-gamepad`** draw the three controls pages, **`scene=help`** and
   **`scene=help-end`** the help screen scrolled to its top and its end, and
   **`scene=settings`** the settings at their defaults. All of these show the stars as the title does.
 - **`scene=hangar`** draws the hangar intro `t` seconds from its start, with `song` on the
@@ -902,7 +919,7 @@ The research and design are in [`SOUND-EFFECTS.md`](SOUND-EFFECTS.md). In code:
   one per `Level` (`#makeLevel`).
 - **`game/cues.ts`** (`SoundCues`) compares the sim state with what it saw last frame and
   lists what happened: the ship's volley, tank hits, kills (3 a frame at most), kills on the
-  beat, bombs, missiles, the nuke, a nuke charged, a life lost, shield hits, pickups, buys,
+  beat, bombs, missiles, the nuke, a nuke charged, a life lost, shield hits, pickups, unlocks,
   and boost. It only reads, and it starts over without cues when the level changes or the
   tick goes back (a retry, the demo looping). `Game.#playCues` runs it after each frame's
   `catchUp` in play, replays, and the demo.
@@ -957,22 +974,24 @@ Run `pnpm dev` and open the URL it prints.
   (footsteps, ladder, seat, cassette, Play key, tape hiss, then the canopy) are a timed
   list, `HANGAR_CUES`, that `Game.#drawHangar` plays as the intro's clock passes each one.
   Everything on screen is a function of the time, so capture mode can show any moment.
-- **In play,** arrows or WASD move, Space, Z or J fire (hold to keep firing), X or K drop
-  a bomb (one per press, 1 s to reload after it bursts), C or L launch a missile once
-  bought, V or ; (semicolon) nuke, F or ' (quote) buy the highlighted power-up, Shift
-  boosts once bought, and Esc pauses (a gamepad is below). Losing the last of three
+- **In play,** two keyboard layouts work at once: arrows with Z, X, C, V and Shift, or
+  WASD with J, K, L, ; (semicolon) and ' (quote). Arrows or WASD move; Space, Z or J fire
+  (hold to keep firing); X or K drop a bomb (one per press, 1 s to reload after it bursts);
+  C or L launch a missile once unlocked; V or ; nuke; Shift or ' boosts once unlocked; and
+  Esc pauses (a gamepad is below). Capsules unlock power-ups as they are picked up. Losing the last of three
   lives is game over: any key retries the level, Esc goes to the title, and R and S watch
   and save the run's replay (see "Replays"). Game over and level complete ignore keys for 0.7 s, so a key still held from
   play doesn't skip them. The game pauses when the window loses focus or the tab is hidden.
 - **Pause menu:** "Paused" over the frozen game, with Resume, Controls, Help and Quit,
   worked like the title menu. Esc (or Backspace) resumes, as does Start on a pad, from any
   item; Q, or Select on a pad, quits to the title. The cursor starts on Resume each time.
-- **Controls** (`controls.ts`), from the title menu or the pause menu: a keyboard page and a
-  gamepad page. Each draws the keyboard or pad with the keys or buttons used filled in
-  their action's colour (fly white, fire cyan, bomb amber, missile magenta, nuke red, buy
-  lime, boost violet, pause grey), over a legend of the actions and their keys. It opens on
-  the gamepad page if the last press was on a pad. Left and right switch pages, Enter goes
-  to the next page and leaves from the last (so a click alone sees both), and Esc goes
+- **Controls** (`controls.ts`), from the title menu or the pause menu: three pages, Arrows,
+  WASD and Gamepad (Brad, 2026-11-10: one keyboard page with both layouts showed too
+  many keys). Each draws the keyboard or pad with only that page's keys or buttons filled
+  in their action's colour (fly white, fire cyan, bomb amber, missile magenta, nuke red,
+  boost violet, pause grey), over a legend of the actions and their keys. It opens on the
+  gamepad page if the last press was on a pad. Left and right switch pages, Enter goes to
+  the next page and leaves from the last (so a click alone sees them all), and Esc goes
   back to where it was opened. The title and jukebox show no control hints of their own
   (Brad, 2026-11-09).
 - **Help** (`help.ts`), from the title menu or the pause menu: a key to what's on screen,
@@ -992,21 +1011,21 @@ Run `pnpm dev` and open the URL it prints.
   and clock").
 - **Score:** top right in play. Each kill shows its points where the enemy was, amber when
   on the beat. After the lives come the bomb, which empties when one drops and fills
-  again over its reload, the missile the same way once bought, the multiplier in amber
+  again over its reload, the missile the same way once unlocked, the multiplier in amber
   once it is above 1, and an amber ring for each nuke held. Level complete shows the score
   and the lives bonus, and in the arcade run the total of the levels finished; game over
   shows the score.
-- **Power-up meter:** six LED cells along the bottom, Boost to Shield, lit green to red
-  from the left up to the highlighted one. A label shows the count held for boost,
-  drones and shield, and turns darker grey when that upgrade is at its most; a cyan bar
-  in the Boost cell shows the fuel left.
+- **Power-up meter:** six LED cells along the bottom in the order capsules unlock them,
+  Double to Boost, each lit (green to red) while the ship has that power-up. A label shows
+  the count held for drones, shield and boost; the next capsule's power-up has a grey
+  label and the rest a darker one; a cyan bar in the Boost cell shows the fuel left.
 - **Gamepad:** any pad that reports the Gamepad API's "standard" mapping
   (https://w3c.github.io/gamepad/, "Remapping"), which fixes its button and axis numbers;
   other pads are ignored for now. In play the left stick (past half way) or the D-pad
-  flies; A and RT (buttons 0, 7) fire; B (1) drops bombs; X (2) nukes; Y (3) buys; LB
+  flies; A and RT (buttons 0, 7) fire; B (1) drops bombs; X (2) nukes; LB
   and LT (4, 6) boost; RB (5) launches a missile; Start pauses. In menus the stick or D-pad moves (held, it repeats after 400 ms, then
   every 100 ms), A or Start selects, and B or Select goes back. On game over and level
-  complete B or Select is Esc and any other button is any key. A pad can't leave the start
+  complete B or Select is Esc, Y (3) watches the replay, and any other button is any key. A pad can't leave the start
   screen on a fresh page: browsers start sound only after a user activation, and the HTML
   spec's activation-triggering input events are keydown, mousedown, pointer and touch
   events, not gamepad presses. So unless `navigator.userActivation.hasBeenActive`, a pad
@@ -1171,7 +1190,7 @@ is added.
   16x2 white bar. A missile is an 8x4 sprite; each slot's burst is a 28-particle cyan
   explosion over 500 ms. Drones are 6x6 orbs, capsules 8x8 amber pills marked P, and the
   shield a 22x14 ring around the ship, more opaque with more hits left (35, 55 and 80%),
-  blinking with the ship. The missile icon follows the bomb icon once bought and fills the
+  blinking with the ship. The missile icon follows the bomb icon once unlocked and fills the
   same way over `MISSILE_RELOAD_TICKS`.
 - **Meter** (`meter.ts`): `MeterView` draws six 62x11 cells on a dark backing at the
   bottom of the HUD, tinted from `LED_LIT` and `LED_DIM` green to red, with a label in each.

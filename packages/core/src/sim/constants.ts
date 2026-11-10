@@ -20,7 +20,10 @@ export const SHIP_START_Y = 108;
 export const SHIP_HITBOX_WIDTH = 10;
 export const SHIP_HITBOX_HEIGHT = 6;
 
-/** Input bits, 16 per tick (input logs are Uint16Arrays); bits 10 to 15 are unused. */
+/**
+ * Input bits, 16 per tick (input logs are Uint16Arrays); bit 6 (the buy button until
+ * 2026-11-10) and bits 10 to 15 are unused.
+ */
 export const InputBit = {
   up: 1,
   down: 2,
@@ -28,7 +31,6 @@ export const InputBit = {
   right: 8,
   fire: 16,
   bomb: 32,
-  buy: 64,
   nuke: 128,
   boost: 256,
   missile: 512,
@@ -37,8 +39,23 @@ export type InputBit = (typeof InputBit)[keyof typeof InputBit];
 
 /** Lives at the start of a run. */
 export const START_LIVES = 3;
-/** After losing a life the ship is back at the playhead and can't be hit for 2 s. */
+/**
+ * After losing a life the ship flies in from the left along the cave's centre for
+ * RESPAWN_FLY_TICKS (0.5 s), from RESPAWN_FROM_X to SHIP_START_X, ignoring the controls
+ * and the walls; enemies and bullets can't hit it until RESPAWN_SAFE_TICKS (2 s) after
+ * the hit (Brad, 2026-11-10: it used to appear at once and could drift into a wall).
+ */
+export const RESPAWN_FLY_TICKS = 60;
+export const RESPAWN_FROM_X = -16;
 export const RESPAWN_SAFE_TICKS = 240;
+
+/**
+ * Cheats, set on a run before it starts and recorded in its replay; a run with any is kept
+ * off the leaderboards. `infiniteLives`: a life lost isn't counted (the Konami code).
+ * `god`: every power-up from the start, kept after a life is lost, and a shield that never
+ * breaks (holding Esc or Start while choosing Play). Brad, 2026-11-10.
+ */
+export const Cheat = { infiniteLives: 1, god: 2 } as const;
 
 /**
  * Holding fire shoots every 8 ticks (15 a second), with at most 6 shots in flight. The gun
@@ -129,12 +146,12 @@ export const MAX_NUKES = 3;
 
 /**
  * Power-ups (Brad, 2026-11-09). Shooting down every ship of a formation drops a capsule,
- * which drifts left along the cave. Each capsule picked up moves the meter's highlight one
- * slot, wrapping from the last to the first; the buy button buys the highlighted upgrade
- * and clears the highlight. Losing a life loses every upgrade bought; the highlight stays.
- * The meter's slots, in order:
+ * which drifts left along the cave. Each capsule picked up unlocks the next power-up in
+ * this order that isn't at its most, wrapping from the last to the first (Brad,
+ * 2026-11-10: buying from a meter in flight was impossible). Losing a life loses every
+ * power-up and starts the order again. The order, which is also the meter's:
  */
-export const PowerUp = { boost: 0, double: 1, laser: 2, missile: 3, drone: 4, shield: 5 } as const;
+export const PowerUp = { double: 0, missile: 1, shield: 2, drone: 3, laser: 4, boost: 5 } as const;
 export const POWER_UP_COUNT = 6;
 export const CAPSULE_SLOTS = 4;
 export const CAPSULE_SIZE = 8;
@@ -145,8 +162,8 @@ export const CAPSULE_SIZE = 8;
  */
 
 /**
- * Boost: an afterburner on its own button. The first buy unlocks it, each of up to 3 buys
- * adds 1 s of fuel. Held with fuel left, the ship moves 640 Q8 per tick (1.67 times its
+ * Boost: an afterburner on its own button. The first unlock gives it, each of up to 3
+ * unlocks adds 1 s of fuel. Held with fuel left, the ship moves 640 Q8 per tick (1.67 times its
  * speed); otherwise the fuel refills one tick's worth every 3 ticks.
  */
 export const BOOST_MAX_LEVEL = 3;
@@ -156,12 +173,15 @@ export const BOOST_SPEED_Q8 = 640;
 /** 640 / sqrt 2, rounded. */
 export const BOOST_DIAGONAL_SPEED_Q8 = 453;
 
-/** Double: each volley adds a shot angled 45 degrees up, 4 px per tick (1024 / sqrt 2 per axis). */
+/**
+ * Double: each volley adds a shot angled 45 degrees up, 4 px per tick (1024 / sqrt 2 per
+ * axis). It stacks with the laser (2026-11-10; until then each replaced the other, which
+ * would make unlocks in a cycle swap them back and forth).
+ */
 export const DOUBLE_SPEED_Q8 = 724;
 /**
  * Laser: replaces the straight shot with a 16x2 px beam at 6 px per tick that goes through
- * enemies, taking a hit off each one it overlaps every tick. Double and laser replace each
- * other.
+ * enemies, taking a hit off each one it overlaps every tick.
  */
 export const LASER_WIDTH = 16;
 export const LASER_SPEED_Q8 = 1536;

@@ -1,8 +1,8 @@
 // The power-up meter along the bottom of the playfield, drawn as a row of VU meter LEDs
-// (docs/PLAN.md, "Simulation"): one cell per upgrade, lit from the left up to the
-// highlighted one, which the buy button buys. A cell shows how many of its upgrade the
-// ship has (boost level, drones, shield hits), dims its label when it can't be bought,
-// and the boost cell shows the fuel left. Text changes only when the state does.
+// (docs/PLAN.md, "Simulation"): one cell per power-up, in the order capsules unlock them,
+// lit while the ship has it. A cell shows how many the ship has (drones, shield hits, boost
+// level); the next capsule's power-up has a grey label, the rest a dim one; and the boost
+// cell shows the fuel left. Text changes only when the state does.
 
 import {
   BOOST_FUEL_PER_LEVEL,
@@ -11,14 +11,15 @@ import {
   PLAYFIELD_WIDTH,
   POWER_UP_COUNT,
   PowerUp,
-  canBuy,
+  nextUnlock,
   type SimState,
 } from '@game/core';
 import { Container, Sprite, Texture } from 'pixi.js';
 import { BACKGROUND, CYAN, DIM_GREY, GREY, LED_DIM, LED_LIT } from './palette.ts';
 import { PixelText } from './text.ts';
 
-const LABELS = ['Boost', 'Double', 'Laser', 'Missile', 'Drone', 'Shield'] as const;
+/** Labels in PowerUp order. */
+const LABELS = ['Double', 'Missile', 'Shield', 'Drone', 'Laser', 'Boost'] as const;
 const CELL_HEIGHT = 11;
 const CELL_GAP = 1;
 const MARGIN = 3;
@@ -28,7 +29,21 @@ const TOP = PLAYFIELD_HEIGHT - CELL_HEIGHT - MARGIN;
 const LIT = Array.from({ length: POWER_UP_COUNT }, (_, i) => LED_LIT[Math.round((i * (LED_LIT.length - 1)) / (POWER_UP_COUNT - 1))]!);
 const DIM = Array.from({ length: POWER_UP_COUNT }, (_, i) => LED_DIM[Math.round((i * (LED_DIM.length - 1)) / (POWER_UP_COUNT - 1))]!);
 
-/** How many of upgrade `slot` the ship has, shown after its label, or 0 for none shown. */
+/** True if the ship has power-up `slot`. */
+function has(state: SimState, slot: number): boolean {
+  switch (slot) {
+    case PowerUp.double:
+      return state.double;
+    case PowerUp.laser:
+      return state.laser;
+    case PowerUp.missile:
+      return state.missile;
+    default:
+      return count(state, slot) > 0;
+  }
+}
+
+/** How many of power-up `slot` the ship has, shown after its label, or 0 for none shown. */
 function count(state: SimState, slot: number): number {
   switch (slot) {
     case PowerUp.boost:
@@ -74,13 +89,14 @@ export class MeterView {
     }
     this.#fuel.tint = CYAN;
     this.#fuel.height = 1;
-    this.#fuel.position.set(MARGIN + 2, TOP + CELL_HEIGHT - 2);
+    this.#fuel.position.set(MARGIN + PowerUp.boost * (CELL_WIDTH + CELL_GAP) + 2, TOP + CELL_HEIGHT - 2);
     this.container.addChild(this.#fuel);
   }
 
   draw(state: SimState): void {
+    const next = nextUnlock(state);
     for (let i = 0; i < POWER_UP_COUNT; i++) {
-      const lit = i <= state.meter ? 1 : 0;
+      const lit = has(state, i) ? 1 : 0;
       if (lit !== this.#lit[i]) {
         this.#lit[i] = lit;
         this.#cells[i]!.tint = lit ? LIT[i]! : DIM[i]!;
@@ -92,8 +108,8 @@ export class MeterView {
         label.text = n > 0 ? `${LABELS[i]} ${n}` : LABELS[i]!;
         label.place(MARGIN + i * (CELL_WIDTH + CELL_GAP) + CELL_WIDTH / 2, TOP + 2, 'center');
       }
-      // Dark on a lit cell; dim grey when it can't be bought.
-      const color = lit ? BACKGROUND : canBuy(state, i) ? GREY : DIM_GREY;
+      // Dark on a lit cell; grey on the next to unlock, dim grey on the rest.
+      const color = lit ? BACKGROUND : i === next ? GREY : DIM_GREY;
       if (color !== this.#color[i]) {
         this.#color[i] = color;
         label.color = color;
