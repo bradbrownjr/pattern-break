@@ -20,6 +20,8 @@ beforeAll(async () => {
   await writeFile(join(root, 'assets', 'app-abc123.js'), 'export {};');
   await writeFile(join(root, 'assets', 'lib-abc123.wasm'), Buffer.from([0, 0x61, 0x73, 0x6d]));
   await writeFile(join(root, 'assets', 'song-abc123.mod'), Buffer.from([1, 2, 3]));
+  await writeFile(join(root, 'sw.js'), 'self;');
+  await writeFile(join(root, 'manifest.webmanifest'), '{}');
   await writeFile(join(dir, 'secret.txt'), 'secret');
   await symlink(join(dir, 'secret.txt'), join(root, 'link.txt'));
   server = createStaticServer({ root });
@@ -69,6 +71,17 @@ describe('static server', () => {
     expect(js.headers.get('content-type')).toBe('text/javascript; charset=utf-8');
     const mod = await fetch(`${base}/assets/song-abc123.mod`);
     expect(mod.headers.get('content-type')).toBe('application/octet-stream');
+  });
+
+  it('serves the service worker and web app manifest for revalidation, with their types', async () => {
+    // The service worker must not be cached for long, or a new build's worker would go
+    // unseen (src/sw.ts in the client).
+    const sw = await fetch(`${base}/sw.js`);
+    expect(sw.headers.get('content-type')).toBe('text/javascript; charset=utf-8');
+    expect(sw.headers.get('cache-control')).toBe('no-cache');
+    const manifest = await fetch(`${base}/manifest.webmanifest`);
+    expect(manifest.headers.get('content-type')).toBe('application/manifest+json; charset=utf-8');
+    expect(manifest.headers.get('cache-control')).toBe('no-cache');
   });
 
   it('answers 304 when the ETag matches', async () => {

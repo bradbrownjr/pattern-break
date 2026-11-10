@@ -29,6 +29,9 @@ from `localhost`. A plain `http://` address on your LAN is not secure. In Chromi
 shows as `Cannot read properties of undefined (reading 'addModule')`, because
 `audioWorklet` does not exist there (checked 2026-11-08 against the image).
 
+Installing the game as an app and playing offline need a secure context too: browsers run
+the service worker that caches the game only there.
+
 So put the container behind a reverse proxy that serves HTTPS. On Unraid, Nginx Proxy Manager
 and SWAG are the common choices. Point a proxy host at `<server-ip>:8080`, give it a
 certificate (a Let's Encrypt certificate needs a domain name, including one that only

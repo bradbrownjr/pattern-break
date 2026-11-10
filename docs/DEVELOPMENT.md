@@ -36,6 +36,8 @@ pnpm install
 | `pnpm record:replay` | Records the replay fixture in headless Chromium (see "Replays"). `--no-build` reuses `packages/client/dist`. |
 | `pnpm check:docs` | The writing-rules check (`tools/check-docs.ts`). |
 | `pnpm check:music` | Checks `music/manifest.json` against the files in `music/` (`tools/validate-manifest.ts`; see "Bundled songs"). |
+| `pnpm check:offline` | M4's acceptance check in headless Chromium: install, lose the network, import a song and play it (see "Install and offline"). Run `pnpm build` first. |
+| `node tools/make-icons.ts` | Redraws the app icons in `packages/client/public/icons/`. |
 | `pnpm gen:tables` | Regenerates `packages/core/src/spectrum/tables.generated.ts`. |
 | `pnpm check` | Lint, type-check, tests, the docs check, and the music check, in that order. |
 
@@ -85,6 +87,8 @@ pattern-break/
 │   │   ├── src/audio/             # the libopenmpt AudioWorklet player, the song clock, sound effects and their mixer
 │   │   ├── src/render/            # PixiJS renderer: terrain, ship, starfield, pixel font, effects
 │   │   ├── src/game/              # game flow, frame loop, keyboard and gamepad input, analysis worker, capture mode
+│   │   ├── src/sw.ts              # the service worker for install and offline play
+│   │   ├── public/icons/          # app icons, drawn by tools/make-icons.ts
 │   │   ├── audio-debug.html       # dev-server page that plays the fixture and shows the clock
 │   │   └── vitest.config.ts       # the node and browser test projects
 │   └── server/                    # @game/server: static file server now; leaderboard API and replay validator (M5)
@@ -98,6 +102,8 @@ pattern-break/
 │   ├── build-libopenmpt.sh        # rebuilds the vendored libopenmpt WASM
 │   ├── libopenmpt/*.patch         # our patches to libopenmpt (see "libopenmpt build")
 │   ├── make-fixture-mod.ts        # writes the test modules in packages/analysis/fixtures
+│   ├── make-icons.ts              # draws the app icons
+│   ├── offline-check.ts           # pnpm check:offline: install, offline, import and play
 │   ├── gen-spectrum-tables.ts     # writes core's spectrum tables
 │   ├── hangar-art.py              # makes the hangar intro's game-sized art from art/hangar
 │   └── lint/determinism-plugin.js # Oxlint JS plugin for core
@@ -118,7 +124,8 @@ import the source directly. `@game/analysis` also exports `./libopenmpt.wasm` an
 - `strict`, `noUncheckedIndexedAccess`, and `noPropertyAccessFromIndexSignature` are on.
 - Each package's `tsconfig.json` sets its own `lib` and `types`. Core and analysis get
   ES2022 only (no DOM, no Node), because both run in browsers as well as Node; the client
-  gets DOM and `vite/client`; the server gets Node. Core and analysis type-check their
+  gets DOM and `vite/client`, except its service worker, which gets WebWorker
+  (`tsconfig.sw.json`); the server gets Node. Core and analysis type-check their
   tests separately (`tsconfig.test.json`, with Node types), so test code can use `node:fs`
   without letting `src` use it.
 - TypeScript 7 has no compiler API yet (the package exports only its version), so no tool in
@@ -1312,6 +1319,42 @@ failed read or write, or an entry that won't deserialize, falls back to analyzin
 newer build in another tab asks to upgrade the database, this tab closes its connection
 rather than block it. `test/browser/library.test.ts` checks the cache, the pruning, and
 song storage in Chromium, Firefox and WebKit.
+
+### Install and offline
+
+The game installs as an app and plays with no connection (PLAN.md, "Offline-first"), through
+vite-plugin-pwa 2.0.0 and Workbox 7.4.1:
+
+- **Manifest.** `vite.config.ts` writes `manifest.webmanifest`: the name from
+  `config/brand.ts`, fullscreen, landscape, black, and the icons. `tools/make-icons.ts`
+  draws the icons from the game's pixel font: "PB" in cyan with a magenta shadow, as the
+  title draws its heading, inside the middle 80% circle a maskable icon keeps, so the 512
+  px icon serves as both kinds.
+- **Service worker.** `src/sw.ts`, built with the `injectManifest` strategy as a classic
+  script (`sw.js`). Workbox's precache takes every built file (the page, scripts, the
+  libopenmpt WASM, images and the bundled songs, 48 files and about 3.3 MB on 2026-11-10)
+  when the worker installs, so one online visit is enough. The WASM is about 1.6 MB, under
+  the 4 MiB limit the config sets (Workbox's default is 2 MiB). Files under `assets/` are
+  served from the cache; the page itself is fetched from the network first and falls back
+  to the cached copy when offline, on an error, or after 4 s, so a player online always
+  loads the newest build. A new build's worker takes over at once (`skipWaiting`,
+  `clientsClaim`) and deletes the old precache; a page already open keeps running the build
+  it loaded.
+- **Registration.** `main.ts` registers `/sw.js` in production builds only, and only in a
+  secure context: browsers allow service workers only on HTTPS or `localhost`, so over a
+  plain LAN address the game runs online only (docs/SELF-HOSTING.md). The dev server has no
+  service worker.
+- Imported songs and cached levels are in IndexedDB ("Library"), which a service worker
+  doesn't touch.
+
+`pnpm check:offline` (`tools/offline-check.ts`, also in CI's browsers job) is M4's
+acceptance check, in headless Chromium against `packages/client/dist`: Chromium's
+`Page.getInstallabilityErrors` finds nothing, the service worker takes control, the
+server stops and the browser goes offline, the page reloads from the cache, a song is
+imported in the Jukebox, and Practice starts a run on it. It follows the game's screens
+through `<html data-mode>`, which `Game.#setMode` keeps, rather than fixed waits.
+Chromium's file chooser for a folder (`webkitdirectory`) doesn't reach Playwright, so
+the check imports a file.
 
 ### Menus and the jukebox
 

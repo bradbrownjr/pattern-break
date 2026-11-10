@@ -13,6 +13,11 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **M4: install and offline play.** The game has a web app manifest and icons, and a
+  service worker that caches every built file, the bundled songs included, on the first
+  visit, so it installs as an app and plays with no connection; imported songs work
+  offline too. Online, the page always loads the newest build. `pnpm check:offline` (also
+  in CI) installs it in headless Chromium, cuts the network, imports a song and plays it.
 * **One Import row, from Brad's review.** Import and Import folder become one Jukebox row,
   "Import < File >", where left and right choose File or Folder.
 * **M4: import songs.** The Jukebox has Import and Import folder rows, and song files can

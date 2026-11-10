@@ -17,7 +17,8 @@ every song gets its own leaderboard.
 
 An early playable slice: title music with an attract demo, an arcade run of levels and a
 practice mode, the LED tunnel scrolling in time with the music, a ship you fly through it,
-game over and retry, and a jukebox for listening to the songs. Turrets come from the drums,
+game over and retry, and a jukebox for listening to the songs and importing your own. The
+game installs as an app and plays with no connection. Turrets come from the drums,
 tanks from the bass, and ships from the other instruments, and each fires on its own
 notes; you have three lives, a shield that takes a few hits and bounces you off the walls,
 and a gun, and kills score double on their instrument's beat. Every 20 000 points gives a

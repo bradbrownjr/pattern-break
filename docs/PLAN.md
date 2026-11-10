@@ -46,7 +46,7 @@ milestone.
 | Build | Vite 8 | Client only. |
 | Rendering | PixiJS 8 (WebGL, WebGPU when available) | Nearest-neighbour scaling, integer zoom. |
 | Module playback and analysis | libopenmpt 0.8.10, our own WebAssembly build | Built with emsdk 6.0.13 by `tools/build-libopenmpt.sh` and committed in `packages/analysis/vendor/libopenmpt/` (decided in S1). We carry one patch, which seeds libopenmpt's playback random number generator with a fixed value; upstream seeds it from the clock, so modules that use random effects render differently on every load. The same `.wasm` runs in Node, a browser worker, and an AudioWorklet. |
-| Offline / PWA | vite-plugin-pwa 2 (Workbox 7) | Precache the app shell and bundled modules. |
+| Offline / PWA | vite-plugin-pwa 2 (Workbox 7) | Precache the app shell and bundled modules (built 2026-11-10). |
 | Local storage | IndexedDB via `idb` 8 | User library, level cache, personal bests, replays. |
 | Tests | Vitest 5 | Unit tests in Node. Cross-engine determinism tests use Vitest browser mode with the Playwright provider (Chromium, Firefox, WebKit), so one test file runs in Node and in all three engines. |
 | End-to-end | Playwright 1.65 | PWA install and offline play, UI flows. |

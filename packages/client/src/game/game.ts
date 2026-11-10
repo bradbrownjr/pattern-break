@@ -429,6 +429,8 @@ export class Game {
 
   #setMode(mode: Mode): void {
     this.#mode = mode;
+    // The screen on show, for tools that drive the game (tools/offline-check.ts).
+    document.documentElement.dataset['mode'] = mode;
     this.#touch?.setStartScreen(mode === 'start');
     this.#modeSince = performance.now();
     this.#title.container.visible = mode === 'start' || mode === 'title';

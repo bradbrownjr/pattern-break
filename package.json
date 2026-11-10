@@ -20,7 +20,8 @@
     "screenshots": "node tools/screenshots/capture.ts",
     "record:replay": "node tools/record-replay.ts",
     "test:browser": "pnpm --filter @game/analysis --filter @game/client test:browser",
-    "check:music": "node tools/validate-manifest.ts"
+    "check:music": "node tools/validate-manifest.ts",
+    "check:offline": "node tools/offline-check.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

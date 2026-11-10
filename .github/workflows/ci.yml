@@ -47,3 +47,6 @@ jobs:
         env:
           PB_BROWSERS: chromium,firefox,webkit
           PB_FIREFOX_PULSE_SERVER: unix:/tmp/pb-pulse.sock
+      # M4's acceptance check: install, lose the network, import a song and play it.
+      - run: pnpm --filter @game/client build
+      - run: pnpm check:offline

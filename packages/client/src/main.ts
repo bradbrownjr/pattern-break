@@ -14,6 +14,15 @@ declare global {
 }
 
 document.title = BRAND.name;
+
+// The service worker that caches the game for offline play (src/sw.ts). Only production
+// builds have one; browsers allow it only on HTTPS or localhost, so elsewhere the game runs
+// online only.
+if (import.meta.env.PROD && 'serviceWorker' in navigator && window.isSecureContext) {
+  navigator.serviceWorker.register('/sw.js').catch((err: unknown) => {
+    console.warn('offline play unavailable:', err);
+  });
+}
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('#app is missing');
 

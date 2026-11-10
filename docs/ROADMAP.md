@@ -36,7 +36,8 @@ start the next until the current one is done.
       managed in the Jukebox; imported songs join Practice and the Jukebox, not the run
       (2026-11-10; `DEVELOPMENT.md`, "Menus and the jukebox").
 - [x] Level caching by hash and `GEN_VERSION` (2026-11-10; `DEVELOPMENT.md`, "Library").
-- [ ] PWA install and full offline play.
+- [x] PWA install and full offline play (2026-11-10; `DEVELOPMENT.md`, "Install and
+      offline"). `pnpm check:offline` runs the acceptance check in headless Chromium.
 - [ ] The bundled music pack: Augmented_Emotions, The_Dim_Dungeon_2, Chica-pop!, Cabin
       Fever! and Peachy Chip (Brad, 2026-11-10; Drozerix only), attribution with author and
       source links on song cards and level intros, and a credits screen.

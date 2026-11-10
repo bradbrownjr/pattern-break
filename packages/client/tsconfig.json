@@ -6,5 +6,7 @@
     "module": "ESNext",
     "moduleResolution": "Bundler"
   },
-  "include": ["src", "test"]
+  "include": ["src", "test"],
+  // The service worker runs in a ServiceWorkerGlobalScope, not a page: tsconfig.sw.json.
+  "exclude": ["src/sw.ts"]
 }
