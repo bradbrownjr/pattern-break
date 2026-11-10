@@ -13,6 +13,10 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **M3: the results screen.** Level complete and game over now break the score down into
+  kills, the beat bonus and the lives bonus, lined up in columns, and show the personal
+  best for the song and difficulty, kept in this browser; a new best shows in amber. A run
+  with a cheat never sets one. Replay and Save stay on the same screen.
 * **M3: the look.** Copper bars, bands of violet, cyan, lime, amber and magenta, sway
   behind the stars, glow brighter with the bass and pulse on each downbeat; with Flashing
   Reduced their brightness never swings far enough to count as a flash. Sparks fly off the

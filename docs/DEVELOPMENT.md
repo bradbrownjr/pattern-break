@@ -1089,9 +1089,19 @@ Run `pnpm dev` and open the URL it prints.
 - **Score:** top right in play. Each kill shows its points where the enemy was, amber when
   on the beat. After the lives come the bomb, which empties when one drops and fills
   again over its reload, the missile the same way once unlocked, the multiplier in amber
-  once it is above 1, and an amber ring for each nuke held. Level complete shows the score
-  and the lives bonus, and in the arcade run the total of the levels finished; game over
-  shows the score.
+  once it is above 1, and an amber ring for each nuke held.
+- **Results** (`results.ts`; `test/results.test.ts`): level complete and game over show the
+  score broken down, in rows 20 characters wide so the numbers line up in the monospaced
+  font: kills and their points (with the streak multiplier, without the beat's doubling),
+  the beat bonus (half of each on-beat kill's points), the lives bonus (level complete
+  only), and the score; then the personal best for the song and difficulty, or "New best"
+  in amber; in the arcade run, the total of the levels finished; then R Replay and S Save.
+  `scoreBreakdown` reads `enemyPoints` and `enemyOnBeat`; the sim adds to the score only
+  for kills and the survival bonus, which `analysis/test/golden.test.ts` checks on every
+  fixture run. Bests are kept in `localStorage` under `pattern-break.bests`, a map from
+  `songId:difficulty` to score. A run sets a best when it beats the old one, has no cheat
+  and scored above 0; game over counts. Watching a replay sets none, and the game-over
+  results are kept when you come back from watching its replay.
 - **Power-up meter:** six LED cells along the bottom in the order capsules unlock them,
   Double to Boost, each lit (green to red) while the ship has that power-up. A label shows
   the count held for drones, shield points and boost; the next capsule's power-up has a grey

@@ -5,8 +5,9 @@
 // controls-gamepad, settings (at the defaults), help and help-end (scrolled to the top and to the end), hangar (the intro,
 // `t` seconds from its start, for `song` as level 1), play (with `boom`, the ship blowing
 // up), run-start (play from the
-// hangar: the canopy closing and the colour flooding in), and paused (play with the pause
-// menu over it).
+// hangar: the canopy closing and the colour flooding in), paused (play with the pause
+// menu over it), and results (play with the results over it, as if the song ended at `t`,
+// the score a new best).
 
 import {
   Difficulty,
@@ -23,13 +24,15 @@ import {
 import type { Container } from 'pixi.js';
 import { markCaptureReady, type CaptureParams } from '../capture.ts';
 import { songLook } from '../render/copper.ts';
+import { LIME } from '../render/palette.ts';
 import { seededRandom } from '../render/random.ts';
 import type { GameRenderer } from '../render/renderer.ts';
 import { analyzeInWorker } from './analysis.ts';
 import { catchUp, targetTick } from './loop.ts';
 import { drawPlay } from './play-view.ts';
 import { ControlsScreen } from './controls.ts';
-import { JukeboxScreen, PauseScreen, SPECTRUM_BARS, SettingsScreen, TitleScreen } from './screens.ts';
+import { JukeboxScreen, MessageScreen, PauseScreen, SPECTRUM_BARS, SettingsScreen, TitleScreen } from './screens.ts';
+import { REPLAY_HINT, resultRows, scoreBreakdown } from './results.ts';
 import { DEFAULT_SETTINGS } from './settings.ts';
 import { ColourFlood, HangarIntro, WIPE_MS, loadHangarArt } from './hangar.ts';
 import { HelpScreen } from './help.ts';
@@ -124,10 +127,14 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
     case 'play':
     case 'paused':
     case 'run-start':
+    case 'results':
       break;
     default:
       throw new Error(`unknown scene ${params.scene}`);
   }
+  // The results as if the song ended at `t`, the score a new best.
+  const results = params.scene === 'results' ? new MessageScreen() : null;
+  if (results) r.ui.addChild(results.container);
   if (params.scene === 'paused') {
     const pause = new PauseScreen();
     pause.update(0);
@@ -160,6 +167,11 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
     const view = params.boom === null ? state : { ...state, shield: 0 };
     drawPlay(r, level, view, Math.max(0, Math.min(shown, level.tickCount * SAMPLES_PER_TICK)));
     drawCrash(r, state, samples, params.seed);
+    if (results) {
+      const rows = resultRows(scoreBreakdown(state), { previous: null, isNew: true });
+      const lines = [`${song.title}, ${DIFFICULTY_LABELS[difficulty]}`, ...rows, REPLAY_HINT, 'Any key Title'];
+      results.show('Song clear', LIME, lines, rows.length);
+    }
     if (params.boom !== null) {
       r.ship.visible = false;
       r.explosion.start(state.shipX / Q8, state.shipY / Q8, seededRandom(params.seed));

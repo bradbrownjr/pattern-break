@@ -113,6 +113,12 @@
     "caption": "The copper shot with the CRT setting on: bloom, scanlines and a vignette. Not used in the README.",
     "usedIn": []
   },
+  "results": {
+    "path": "docs/img/results.png",
+    "alt": "A dark translucent panel over a frame of play. \"Song clear\" in large lime pixel letters, then in small grey type \"pb fixture 01, Normal\" and four rows with labels on the left and numbers lined up on the right: \"Kills 29\" 6700, \"Beat bonus\" 400, \"Score\" 7100, and in amber \"New best\" 7100. Below them \"R Replay  S Save\" in grey and \"Any key Title\" in cyan.",
+    "caption": "The results over play, as if the test song ended at 40 seconds, the score a new best. Not used in the README.",
+    "usedIn": []
+  },
   "explosion": {
     "path": "docs/img/explosion.png",
     "alt": "A frame of play in an LED cavern, columns of LED segments lit green to red hanging from the top and rising from the bottom. On the left, where the ship was, a scatter of single cyan, white, magenta and amber pixels flies apart inside a large thin ring of dots, magenta along the top, teal on the right, lime at the bottom and amber on the left, over soft horizontal bands of violet, teal and olive. Cyan shots fly on to the right, where a magenta enemy ship comes in. The lives, bomb and score panels are at the top and the power-up meter along the bottom.",

@@ -97,6 +97,11 @@ describe('golden levels and sim runs', () => {
           zigzagDeathTick: zigzag.deathTick,
         };
         expect(findPathViolation(level)).toBe('');
+        // The score is each kill's points plus the survival bonus and nothing else: the
+        // client's results breakdown (client/src/game/results.ts) relies on it.
+        for (const run of [flown, zigzag]) {
+          expect(run.enemyPoints.reduce((sum, p) => sum + p, 0) + run.survivalBonus).toBe(run.score);
+        }
         // The autopilot run has enemies, so it pins their placement, movement, aim and
         // collisions in every engine. On the terrain alone the bot always reaches the end.
         const terrain = withoutEnemies(level);

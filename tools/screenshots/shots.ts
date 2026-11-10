@@ -281,6 +281,17 @@ export const shots: Shot[] = [
     usedIn: [],
   },
   {
+    id: 'results',
+    query: { scene: 'results', song: 'pb-fixture-01', t: '40', difficulty: 'normal', seed: '1' },
+    alt:
+      'A dark translucent panel over a frame of play. "Song clear" in large lime pixel letters, then in small ' +
+      'grey type "pb fixture 01, Normal" and four rows with labels on the left and numbers lined up on the ' +
+      'right: "Kills 29" 6700, "Beat bonus" 400, "Score" 7100, and in amber "New best" 7100. Below them ' +
+      '"R Replay  S Save" in grey and "Any key Title" in cyan.',
+    caption: 'The results over play, as if the test song ended at 40 seconds, the score a new best. Not used in the README.',
+    usedIn: [],
+  },
+  {
     id: 'explosion',
     query: { scene: 'play', song: 'pb-fixture-01', t: '21.5', difficulty: 'normal', seed: '1', boom: '200' },
     alt:

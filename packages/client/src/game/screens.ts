@@ -303,7 +303,11 @@ export class MessageScreen {
     this.container.addChild(this.#panel, this.#heading);
   }
 
-  show(heading: string, headingColor: number, lines: readonly string[]): void {
+  /**
+   * Shows `heading` over `lines`: grey, the last (the prompt) cyan, and line `highlight`
+   * (-1 for none) amber.
+   */
+  show(heading: string, headingColor: number, lines: readonly string[], highlight = -1): void {
     this.#heading.text = heading;
     this.#heading.color = headingColor;
     while (this.#lines.length < lines.length) {
@@ -325,7 +329,7 @@ export class MessageScreen {
       line.visible = i < lines.length;
       if (!line.visible) continue;
       line.text = lines[i]!;
-      line.color = i === lines.length - 1 ? CYAN : GREY;
+      line.color = i === lines.length - 1 ? CYAN : i === highlight ? AMBER : GREY;
       line.place(CENTER, y, 'center');
       width = Math.max(width, line.textWidth);
       y += 12;

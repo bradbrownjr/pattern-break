@@ -69,6 +69,7 @@ import {
   songBySha256,
   type BundledSong,
 } from './songs.ts';
+import { REPLAY_HINT, bestKey, recordBest, resultRow, resultRows, scoreBreakdown } from './results.ts';
 import { browserStorage, loadSettings, saveSettings, volumeGain, type Settings } from './settings.ts';
 
 type Mode =
@@ -147,6 +148,8 @@ interface Playback {
 interface CompleteView {
   heading: string;
   lines: string[];
+  /** A line to show in amber (a new best), or none. */
+  highlight?: number;
   after: () => void;
 }
 
@@ -157,7 +160,6 @@ const PAN_WIDTH = 0.6;
 const HANGAR_SKIP_DELAY_MS = 300;
 
 /** Shown on game over and level complete when the run has a replay. */
-const REPLAY_HINT = 'R Replay  S Save';
 
 export interface GameOptions {
   /** The songs Practice and the jukebox offer, in menu order. */
@@ -275,6 +277,8 @@ export class Game {
   #playback: Playback | null = null;
   readonly #replayBanner = new DemoBanner('Replay');
   #completeView: CompleteView | null = null;
+  /** The game over's results rows, made once when the run ends. */
+  #results: { rows: string[]; highlight: number } | null = null;
   /** True while game over or level complete shows the run the last replay is of. */
   #offerReplay = false;
   /** The level-complete view to show again after a replay started from it. */
@@ -1185,10 +1189,14 @@ export class Game {
     });
   }
 
-  /** The crash's explosion, then the game-over message (drawn by the frame loop). */
-  #showGameOver(): void {
+  /**
+   * The crash's explosion, then the game-over message (drawn by the frame loop). Back from
+   * watching the replay (`fresh` false), it keeps the results it had.
+   */
+  #showGameOver(fresh = true): void {
     this.#offerReplay = true;
     const s = this.#state;
+    if (fresh || !this.#results) this.#results = this.#resultLines();
     this.#r.explosion.start(s.shipX / Q8, s.shipY / Q8, seededRandom(this.#runs));
     this.#r.flash.start((s.deathTick * SAMPLES_PER_TICK * 1000) / SAMPLE_RATE);
     this.#setMode('gameover');
@@ -1200,16 +1208,20 @@ export class Game {
     const run = this.#run;
     const difficulty = DIFFICULTY_LABELS[this.#difficulty];
     const s = this.#state;
-    const score = [`Score ${s.score}  Bonus ${s.survivalBonus}`];
+    const results = this.#resultLines();
+    const score = [...results.rows];
     if (run?.kind === 'arcade') {
       this.#runScore += s.score;
-      score.push(`Total ${this.#runScore}`);
+      score.push(resultRow('Total', this.#runScore));
     }
     if (this.#lastReplay) score.push(REPLAY_HINT);
+    // The results rows follow one line of song and difficulty.
+    const highlight = results.highlight < 0 ? -1 : results.highlight + 1;
     if (run?.kind === 'arcade' && run.level < run.songs.length - 1) {
       this.#completeView = {
         heading: `Level ${run.level + 1} clear`,
         lines: [`${this.#song.title}, ${difficulty}`, ...score, 'Any key Next'],
+        highlight,
         after: () => {
           this.#sound('start');
           this.#run = { kind: 'arcade', level: run.level + 1, songs: run.songs };
@@ -1220,16 +1232,29 @@ export class Game {
       this.#completeView = {
         heading: 'All clear',
         lines: [difficulty, ...score, 'Any key Title'],
+        highlight,
         after: () => this.#toTitle(),
       };
     } else {
       this.#completeView = {
         heading: 'Song clear',
         lines: [`${this.#song.title}, ${difficulty}`, ...score, 'Any key Title'],
+        highlight,
         after: () => this.#toTitle(),
       };
     }
     this.#showComplete(true);
+  }
+
+  /**
+   * The results rows for the run just ended (results.ts), recording a personal best for the
+   * song and difficulty unless the run had a cheat. `highlight` is the row of a new best.
+   */
+  #resultLines(): { rows: string[]; highlight: number } {
+    const s = this.#state;
+    const best = recordBest(browserStorage(), bestKey(this.#song.id, this.#difficulty), s.score, s.cheats !== 0);
+    const rows = resultRows(scoreBreakdown(s), best);
+    return { rows, highlight: best.isNew ? rows.length - 1 : -1 };
   }
 
   /** Shows the level-complete screen with #completeView; `offerReplay` lets R and S act. */
@@ -1239,7 +1264,7 @@ export class Game {
     this.#offerReplay = offerReplay;
     this.#setMode('complete');
     this.#message.container.visible = true;
-    this.#message.show(view.heading, LIME, view.lines);
+    this.#message.show(view.heading, LIME, view.lines, view.highlight ?? -1);
     this.#afterComplete = view.after;
   }
 
@@ -1383,7 +1408,7 @@ export class Game {
     }
     this.#showLevel(this.#level);
     if (from === 'gameover') {
-      this.#showGameOver();
+      this.#showGameOver(false);
     } else {
       this.#completeView = this.#completeAfterReplay;
       this.#showComplete(true);
@@ -1507,11 +1532,13 @@ export class Game {
         r.shake(elapsed, this.#state.hitTick);
         if (elapsed >= PROMPT_DELAY_MS && !this.#message.container.visible) {
           this.#message.container.visible = true;
-          this.#message.show('Game over', MAGENTA, [
-            `Score ${this.#state.score}`,
-            ...(this.#offerReplay && this.#lastReplay ? [REPLAY_HINT] : []),
-            'Esc Title  Any key Retry',
-          ]);
+          const results = this.#results;
+          this.#message.show(
+            'Game over',
+            MAGENTA,
+            [...(results?.rows ?? [`Score ${this.#state.score}`]), ...(this.#offerReplay && this.#lastReplay ? [REPLAY_HINT] : []), 'Esc Title  Any key Retry'],
+            results?.highlight ?? -1,
+          );
         }
         const player = this.#playerReady;
         if (this.#music === 'gameover' && player && player.songTimeSeconds() >= GAME_OVER_MUSIC.seconds) {

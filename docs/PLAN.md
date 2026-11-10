@@ -362,8 +362,8 @@ every bar of every generated level.
 - Settings, from the title menu: Music and Effects volume (built); to come, audio latency
   calibration, control remapping, visual options, accessibility. Keyboard, gamepad
   (Gamepad API) and on-screen touch controls are built (touch 2026-11-10).
-- Results screen: score breakdown, personal best, submit to the leaderboard, save the
-  replay.
+- Results screen: score breakdown, personal best in this browser, watch or save the
+  replay (built 2026-11-10); submit to the leaderboard comes with M5.
 
 ## 12. Server (`packages/server`)
 

@@ -33,9 +33,9 @@ start the next until the current one is done.
 
 **Goal:** it looks and feels like the pitch.
 
-Order of work (2026-11-10): the results screen, then the rest of accessibility. The
-explosions and the look are done (changelog, November 10). The flashing and shake settings came first (see the changelog, November
-10); every new flash goes through `FlashGate` and every shake through `shakeOffset`.
+Left (2026-11-10): the rest of accessibility. The flashing and shake settings, the
+explosions, the look and the results screen are done (changelog, November 10); every new
+flash goes through `FlashGate` and every shake through `shakeOffset`.
 
 - [x] Sound effects, made in the browser (no sound files to license): shots, hits,
       kills, power-ups, and an explosion with a deep boom, echo, and reverb, from our own
@@ -43,11 +43,6 @@ explosions and the look are done (changelog, November 10). The flashing and shak
       Mixed under the music, with their own volume and an off switch in a new Settings
       screen (Music and Effects). Research in `SOUND-EFFECTS.md`. Brad listens and says
       which to change.
-- [ ] **The results screen** after a level and after game over: the score broken down
-      (kills, on-the-beat bonus, lives bonus), the personal best for the song and
-      difficulty (kept in the browser), and save or watch the replay. Submitting to a
-      leaderboard waits for M5. (Attract mode and the menu sounds came earlier; see the
-      changelog, November 8.)
 - [x] A help screen (Brad, 2026-11-10), from the title and pause menus: a key to every
       sprite and HUD icon, drawn with the game's sprites, and what each enemy and bonus
       scores, from the sim's constants. It scrolls.
