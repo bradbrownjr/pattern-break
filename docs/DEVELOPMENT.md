@@ -672,12 +672,14 @@ found then:
 - Firefox's `currentTime` on the main thread can trail the worklet's last position message
   by about one audio callback (512 frames in CI, 256 locally), where Chromium and WebKit
   are at or past it.
-- In CI, WebKit's first player in a page (`createAudioPlayer`, `load`, `start`) didn't
-  finish within 30 s, whatever ran before it (plain live contexts, open or closed, or an
-  offline one), and the next one always did. A plain `new AudioContext()` there stays
-  suspended after `resume()` (5 s and 60 s were tried), so it is no warm-up. The clock
-  tests' `beforeAll` sets one player up with 120 s to spare and logs each step's time and
-  the context's state every 5 s.
+- In CI, WebKit puts its first live context in a page in the "interrupted" state at once
+  (an `AudioContextState` WebKit implements; the context leaves it only when the
+  interruption ends), and `start()` waited more than 120 s. The worklet itself loaded in
+  0.2 s. In four runs, a new player started at once whenever an earlier stuck player was
+  still open; plain contexts left open didn't help, nor did closing the stuck one. The
+  clock tests' `beforeAll` opens players (5 s each, up to three) until one runs, keeps the
+  stuck ones open until `afterAll`, and logs each. If none runs, the clock tests skip and
+  log why. Locally, where WebKit's GStreamer has no output, they always skip.
 
 - `PB_BROWSERS` picks the engines: `chromium` by default; CI sets
   `chromium,firefox,webkit`.

@@ -36,8 +36,9 @@ Fixes**, in that order.
   on every push since November 8: Firefox had no sound server to play into, and WebKit
   rendered the worklet test's offline context before the worklet saw its start message. CI
   now gives Firefox a PulseAudio null sink, and the worklet test waits for the song to
-  start before rendering on. WebKit's first live player in a page still takes more than
-  30 s in CI; the clock tests now set one up first and log where the time goes.
+  start before rendering on. WebKit's first live context in CI is "interrupted" and never
+  starts; the clock tests open players until one runs, and skip with a logged reason if
+  none does.
 
 ---
 

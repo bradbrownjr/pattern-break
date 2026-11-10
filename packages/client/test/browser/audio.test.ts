@@ -5,7 +5,7 @@
 import { analyze, loadOpenMpt } from '@game/analysis';
 import fixtureUrl from '@game/analysis/fixtures/pb-fixture-01.mod?url';
 import { CHUNK_FRAMES, SAMPLE_RATE } from '@game/core';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, type TestContext } from 'vitest';
 import { createAudioPlayer, type AudioPlayer, type PositionMessage } from '../../src/audio/index.ts';
 
 const QUANTUM = 128;
@@ -82,27 +82,41 @@ describe('libopenmpt worklet', () => {
 });
 
 describe('song clock', () => {
-  // In CI, WebKit's first player in a page (createAudioPlayer, load, start) didn't finish
-  // within 30 s, whatever ran before it, and the next one always did. Set one up first with
-  // more time, logging how long each step took and the context's state while it waits.
+  // In CI, WebKit put its first live context in a page in the "interrupted" state
+  // (AudioContextState; a context leaves it only when the interruption ends) and start()
+  // never resolved, for 120 s. In four runs a new player started at once whenever an
+  // earlier stuck player was still open. So open players until one runs, keep the stuck
+  // ones open until the tests are done, and if none runs, skip the clock tests and say so.
+  const stuck: AudioPlayer[] = [];
+  let live = false;
   beforeAll(async () => {
-    const t0 = performance.now();
-    const ms = (): number => Math.round(performance.now() - t0);
-    const context = new AudioContext({ sampleRate: SAMPLE_RATE, latencyHint: 'interactive' });
-    const watch = setInterval(() => console.log(`first player: ${ms()} ms, context ${context.state}`), 5000);
-    try {
-      const player = await createAudioPlayer({ context });
-      console.log(`first player: created after ${ms()} ms, context ${context.state}`);
-      await player.load(await fixture());
-      console.log(`first player: loaded after ${ms()} ms`);
-      await player.start();
-      console.log(`first player: started after ${ms()} ms, context ${context.state}`);
-      await player.close();
-    } finally {
-      clearInterval(watch);
-      await context.close();
+    const bytes = await fixture();
+    for (let attempt = 1; attempt <= 3 && !live; attempt++) {
+      const player = await createAudioPlayer();
+      await player.load(bytes);
+      const t0 = performance.now();
+      await Promise.race([player.start(), sleep(5000)]);
+      const state = player.context.state;
+      console.log(`live player ${attempt}: context ${state} after ${Math.round(performance.now() - t0)} ms`);
+      live = state === 'running';
+      if (live) await player.close();
+      else stuck.push(player);
     }
-  }, 120_000);
+  }, 30_000);
+  afterAll(async () => {
+    for (const player of stuck) {
+      console.log(`stuck player at the end: context ${player.context.state}`);
+      await player.close();
+    }
+  });
+
+  /** Skips the test when no live context would run (see beforeAll). */
+  function needLive(ctx: TestContext): void {
+    if (!live) {
+      console.log('skipped: this browser kept every live audio context from running');
+      ctx.skip();
+    }
+  }
 
   async function playing(): Promise<AudioPlayer> {
     const player = await createAudioPlayer();
@@ -111,7 +125,8 @@ describe('song clock', () => {
     return player;
   }
 
-  it('advances while playing and tracks the worklet', async () => {
+  it('advances while playing and tracks the worklet', async (ctx) => {
+    needLive(ctx);
     const player = await playing();
     const leads: number[] = [];
     player.onPosition = (p) => {
@@ -142,7 +157,8 @@ describe('song clock', () => {
     await player.close();
   }, 30_000);
 
-  it('stops while paused and continues without a jump', async () => {
+  it('stops while paused and continues without a jump', async (ctx) => {
+    needLive(ctx);
     const player = await playing();
     await sleep(200);
     await player.pause();
@@ -159,7 +175,8 @@ describe('song clock', () => {
     await player.close();
   }, 30_000);
 
-  it('restarts from the beginning', async () => {
+  it('restarts from the beginning', async (ctx) => {
+    needLive(ctx);
     const player = await playing();
     await sleep(300);
     expect(player.songTimeSamples()).toBeGreaterThan(SAMPLE_RATE * 0.2);
