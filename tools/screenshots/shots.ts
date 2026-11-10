@@ -55,8 +55,8 @@ export const shots: Shot[] = [
     query: { scene: 'jukebox', song: 'the_epic_chip', t: '12' },
     alt:
       '"Jukebox" in large cyan pixel letters with a magenta shadow over a starfield. Below it, a list of ' +
-      'ten songs in grey pixel type with their authors right-aligned in dim grey: The_Epic_Chip, Numen in ' +
-      'Da Chip, FastLane, CHiP_OVERTURE, The_Dim_Dungeon, 4_RNDD!, Girl From Mars, Wrath_of_the_Djinn, ' +
+      'nine songs in grey pixel type with their authors right-aligned in dim grey: The_Epic_Chip, ' +
+      'RNDD_Keygen#1.0, CHiP_OVERTURE, The_Dim_Dungeon, 4_RNDD!, Girl From Mars, Wrath_of_the_Djinn, ' +
       'Keygen 9000 and Crush, then "Back". The first song is lime with an amber ">" before it. Under the list, a dim ' +
       'row of 24 LED bars, green at the bottom to red at the top, all unlit. At the bottom, "The_Epic_Chip ' +
       'by Drozerix. Public Domain." in grey and "0:12 / 3:48" in cyan.',
@@ -157,7 +157,7 @@ export const shots: Shot[] = [
   },
   {
     id: 'hangar-walk',
-    query: { scene: 'hangar', song: 'numenchip', difficulty: 'normal', t: '1.3' },
+    query: { scene: 'hangar', song: 'rndd_keygen_1', difficulty: 'normal', t: '1.3' },
     alt:
       'A hangar in shades of grey, in pixel art: a dark back wall with steel girders, a row of roof ' +
       'trusses, and three hanging work lights casting cones of light onto a grey floor with a dashed line. ' +
@@ -170,7 +170,7 @@ export const shots: Shot[] = [
   },
   {
     id: 'hangar-climb',
-    query: { scene: 'hangar', song: 'numenchip', difficulty: 'normal', t: '3.6' },
+    query: { scene: 'hangar', song: 'rndd_keygen_1', difficulty: 'normal', t: '3.6' },
     alt:
       'The grey hangar, closer in on the fighter. The pilot in the white helmet is near the top of the ' +
       'ladder, one arm reaching up, just below the raised canopy and the dark cockpit opening.',
@@ -179,7 +179,7 @@ export const shots: Shot[] = [
   },
   {
     id: 'hangar-cockpit',
-    query: { scene: 'hangar', song: 'numenchip', difficulty: 'normal', t: '6.3' },
+    query: { scene: 'hangar', song: 'rndd_keygen_1', difficulty: 'normal', t: '6.3' },
     alt:
       'Inside the cockpit, in shades of grey, in pixel art. Through the open canopy at the top, the dark ' +
       'hangar wall and its girders. Below, a riveted instrument panel: a row of small indicator lights, two ' +
@@ -187,34 +187,34 @@ export const shots: Shot[] = [
       'its bottom hinge, showing the dark deck and its two spindles behind it; under it, five keys marked ' +
       'rewind, play, fast forward, stop and eject. A padded grey glove on a dark sleeve reaches in from ' +
       'the right holding a cassette by its end, on its way into the open door: a dark shell, a white label ' +
-      'reading "Numen in Da" with a window across it showing two hubs, and a raised strip along the ' +
+      'reading "RNDD_Keygen#1" with a window across it showing two hubs, and a raised strip along the ' +
       'bottom with small openings.',
     caption: 'The hangar intro: the cassette goes into the open deck. Not used in the README.',
     usedIn: [],
   },
   {
     id: 'hangar-play',
-    query: { scene: 'hangar', song: 'numenchip', difficulty: 'normal', t: '8.2' },
+    query: { scene: 'hangar', song: 'rndd_keygen_1', difficulty: 'normal', t: '8.2' },
     alt:
-      'The cockpit with the cassette in the deck: through the door\'s window, its label reading "Numen in ' +
-      'Da" and its two hubs. Above the panel, "Level 1" in large white pixel letters, "Numen in Da Chip" in ' +
-      'light grey, and "by JAM. Public Domain.  Normal" in grey. The glove, coming in from the bottom ' +
+      'The cockpit with the cassette in the deck: through the door\'s window, its label reading "RNDD_Keygen#1" ' +
+      'and its two hubs. Above the panel, "Level 1" in large white pixel letters, "RNDD_Keygen#1.0" in ' +
+      'light grey, and "by Drozerix. Public Domain.  Normal" in grey. The glove, coming in from the bottom ' +
       'right, presses the Play key with its index finger, covering the keys to its right.',
     caption: 'The hangar intro: Play pressed. Not used in the README.',
     usedIn: [],
   },
   {
     id: 'hangar-clip',
-    query: { scene: 'hangar', song: 'numenchip', difficulty: 'normal' },
+    query: { scene: 'hangar', song: 'rndd_keygen_1', difficulty: 'normal' },
     clip: { from: 0, to: 8.3, fps: 10 },
     alt:
       'Eight seconds in shades of grey, in pixel art. A pilot in a white helmet walks across a hangar to a ' +
       'fighter with a needle nose and its canopy open, climbs the ladder as the view closes in on the ' +
       'cockpit, and drops into the seat until only the helmet shows. The view cuts to the instrument panel: ' +
       'a gloved finger presses the deck\'s eject key and the door tips open forward; the glove brings in a ' +
-      'cassette labelled "Numen in Da", lays it in the open door and pulls away, then a finger pushes the ' +
-      'door shut, leaving the label and hubs showing through the door\'s window. "Level 1", "Numen in Da ' +
-      'Chip", the credit and "Normal" appear above the panel, the finger presses Play, and the hubs start ' +
+      'cassette labelled "RNDD_Keygen#1", lays it in the open door and pulls away, then a finger pushes the ' +
+      'door shut, leaving the label and hubs showing through the door\'s window. "Level 1", "RNDD_Keygen#1.0", ' +
+      'the credit and "Normal" appear above the panel, the finger presses Play, and the hubs start ' +
       'to turn.',
     caption: 'The hangar intro from the start to Play. Not used in the README.',
     usedIn: [],
@@ -247,7 +247,7 @@ export const shots: Shot[] = [
   },
   {
     id: 'run-start',
-    query: { scene: 'run-start', song: 'numenchip', difficulty: 'normal', t: '0.25' },
+    query: { scene: 'run-start', song: 'rndd_keygen_1', difficulty: 'normal', t: '0.25' },
     alt:
       'The start of level 1. In the top quarter of the screen, through the cockpit glass, the LED cavern with ' +
       'its columns in pale, washed-out greens and the HUD: three ship icons and a bomb icon on the left, the ' +

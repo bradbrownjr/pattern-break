@@ -9,6 +9,7 @@
  * (2026-11-09). 4 = each instrument's note ticks in the Level, for the on-beat bonus
  * (2026-11-09). 5 = each ship's formation, for power-up capsules (2026-11-09). 6 = every
  * gap 14 px wider, one segment a side (2026-11-10). 7 = the impossible difficulty
+ * (2026-11-10). 8 = Amiga resampler emulation off, which changes MODs' analysis
  * (2026-11-10). Pre-release: no scores are kept yet.
  *
  * SIM_VERSION 1 = the ship and terrain (M1). 2 = enemies, shots, enemy bullets and three
@@ -24,7 +25,7 @@
  * god cheats (2026-11-10). 12 = a 6-point shield on every life, costs by what hits it, a
  * bounce off the walls, and an extra life every 20 000 points (2026-11-10).
  */
-export const GEN_VERSION = 7;
+export const GEN_VERSION = 8;
 export const SIM_VERSION = 12;
 
 /** Fixed simulation tick rate (docs/PLAN.md, "Simulation"). */

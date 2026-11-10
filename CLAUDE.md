@@ -80,6 +80,9 @@ forgotten next session.
 - The first mention of a module, mod, or tracker in anything a person reads says what it is:
   a song file made in a music tracker. Player-facing text calls them songs (Brad,
   2026-11-08; see `docs/DOC-STYLE.md`, "Say what a module is").
+- Bundled music is Drozerix only, in the techno and retro-futuristic style of the songs
+  already bundled (Brad, 2026-11-10; see `docs/SONG-DIGEST.md`, "How a song gets on this
+  list").
 - Impossible runs go on the leaderboards like any other difficulty; only a run with a cheat
   is kept off (Brad, 2026-11-10).
 - When a change is ready for Brad to play-test, push it, wait for the "Docker image" workflow

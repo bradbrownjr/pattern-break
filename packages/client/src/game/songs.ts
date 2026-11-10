@@ -43,13 +43,12 @@ export const SONGS: readonly BundledSong[] = manifest.map((entry) => {
 export const TITLE_SONG_ID = 'the_epic_chip';
 
 /**
- * The arcade run's eight levels, first to last, ordered by scroll speed. The mini boss ends
+ * The arcade run's levels, first to last, ordered by scroll speed. The mini boss ends
  * level 4 and the final boss level 8. Why each song was picked, and the ones that weren't,
  * are in docs/SONG-DIGEST.md.
  */
 export const LEVEL_SONG_IDS: readonly string[] = [
-  'numenchip',
-  'fastlane',
+  'rndd_keygen_1',
   'chip_overture',
   'the_dim_dungeon',
   '4_rndd',

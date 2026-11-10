@@ -40,8 +40,9 @@ export const RENDER_PARAMS: ReadonlyArray<readonly [RenderParam, number]> = [
 /**
  * Every playback ctl libopenmpt 0.8.10 can change after loading, set explicitly so a new
  * libopenmpt default can't change the output silently. `play.at_end` is `stop` because the
- * default, `fadeout`, renders a fade after the song ends. Amiga resampler emulation stays
- * on, as upstream ships it, so MODs sound like an Amiga. `subsong` 0 plays the first
+ * default, `fadeout`, renders a fade after the song ends. Amiga resampler emulation is off,
+ * as in this build's default: on, a 4-channel MOD took 15 times as long to render (18 s
+ * for a 3:45 song, against 1 s), and Brad found the sound without it fine (2026-11-10). `subsong` 0 plays the first
  * subsong only. `dither` only affects integer output, which analysis doesn't use; it is set
  * for completeness. `play.tempo_factor` is the difficulty's tempo (Difficulty.tempoPermille
  * in thousandths): libopenmpt plays faster or slower without changing the pitch. The pitch
@@ -57,7 +58,7 @@ export function renderCtls(tempoPermille: number): ReadonlyArray<readonly [key: 
     ['play.at_end', 'stop'],
     ['play.tempo_factor', String(tempoPermille / 1000)],
     ['play.pitch_factor', '1'],
-    ['render.resampler.emulate_amiga', '1'],
+    ['render.resampler.emulate_amiga', '0'],
     ['render.resampler.emulate_amiga_type', 'auto'],
     ['render.opl.volume_factor', '1'],
     ['dither', '0'],

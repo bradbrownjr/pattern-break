@@ -13,6 +13,13 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **Drozerix only.** The bundled music keeps to Drozerix's style, so JAM's two songs,
+  Numen in Da Chip and FastLane, leave the run. RNDD_Keygen#1.0 is the new level 1, and
+  the run has seven levels until a second new song is picked; Silicon Dancer was tried
+  and dropped as too funky. The recorded replay is now a run of RNDD_Keygen#1.0.
+* **Amiga resampler emulation off** (`GEN_VERSION` 8). With it on, a 4-channel MOD took
+  15 times as long to analyze (18 s for Silicon Dancer, against 1 s), and Brad found MODs
+  sound fine without it. Only MODs change; every bundled song is an XM.
 * **Title menu and CRT, from Brad's play-test.** Help moves below Settings on the title
   menu, and the CRT look is on by default. A player who has already saved settings keeps
   their own CRT choice.

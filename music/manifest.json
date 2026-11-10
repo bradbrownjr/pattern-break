@@ -10,24 +10,14 @@
     "sha256": "7cd184c5f9c6962c3d37df0b3e94709695c824a4ea17ed8b195d2fe3b9231882"
   },
   {
-    "file": "numenchip.xm",
-    "title": "Numen in Da Chip",
-    "author": "JAM",
-    "authorUrl": "https://modarchive.org/member.php?81691",
-    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=169046",
+    "file": "rndd_keygen_1.xm",
+    "title": "RNDD_Keygen#1.0",
+    "author": "Drozerix",
+    "authorUrl": "https://modarchive.org/member.php?84702",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=172896",
     "license": "Public Domain",
     "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
-    "sha256": "94416b54f724debfd2393756d4ac70fe4c904da1688325ec377514f9bf41976d"
-  },
-  {
-    "file": "fastlane.xm",
-    "title": "FastLane",
-    "author": "JAM",
-    "authorUrl": "https://modarchive.org/member.php?81691",
-    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=208417",
-    "license": "Public Domain",
-    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
-    "sha256": "5e713be004cbc61f55f7fed27ec4c58adbba2ce55926b7e6b7effa413830c2d7"
+    "sha256": "166e785aedc765077c81e874cbed8e7951cdd73c8fffacca2f01ab0bc8eae98a"
   },
   {
     "file": "chip_overture.xm",

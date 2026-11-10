@@ -57,13 +57,11 @@ player reads, read the [writing guide](docs/DOC-STYLE.md).
 ## License
 
 Pattern Break is free and open source. The code is [MIT](LICENSE). Bundled music keeps its
-own licenses, listed in `music/manifest.json` and shown in the game. The ten songs so far
-are Public Domain, by [JAM](https://modarchive.org/member.php?81691) and
-[Drozerix](https://modarchive.org/member.php?84702):
+own licenses, listed in `music/manifest.json` and shown in the game. The nine songs so far
+are Public Domain, all by [Drozerix](https://modarchive.org/member.php?84702):
 
 - [The_Epic_Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=172424) by Drozerix (title music)
-- [Numen in Da Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=169046) by JAM
-- [FastLane](https://modarchive.org/index.php?request=view_by_moduleid&query=208417) by JAM
+- [RNDD_Keygen#1.0](https://modarchive.org/index.php?request=view_by_moduleid&query=172896) by Drozerix
 - [CHiP_OVERTURE](https://modarchive.org/index.php?request=view_by_moduleid&query=172185) by Drozerix
 - [The_Dim_Dungeon](https://modarchive.org/index.php?request=view_by_moduleid&query=172732) by Drozerix
 - [4_RNDD!](https://modarchive.org/index.php?request=view_by_moduleid&query=172898) by Drozerix

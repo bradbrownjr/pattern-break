@@ -344,8 +344,8 @@ every bar of every generated level.
 - Title screen: chrome logo, the title song (The_Epic_Chip), a menu driven by up, down,
   left, right, confirm and back (the same actions on keyboard and gamepad), and an attract
   mode: on the song's change, the title song's level flown by the autopilot.
-- Arcade run: levels in a fixed order, eight planned (Numen in Da Chip first, the full
-  Keygen 9000 last), each opening with a card that credits its song. Practice plays any one
+- Arcade run: levels in a fixed order, eight planned (seven until a new level 1 is picked,
+  RNDD_Keygen#1.0 first for now, the full Keygen 9000 last), each opening with a card that credits its song. Practice plays any one
   song. A mini boss ends level 4 and the final boss ends level 8 (see "Level generation").
 - Game over plays the sparse opening of Keygen 9000 and fades out.
 - Jukebox: plays the bundled songs, with an LED spectrum and each song's title, author and

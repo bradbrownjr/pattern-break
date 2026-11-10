@@ -33,15 +33,20 @@ start the next until the current one is done.
 **Goal:** bring your own music, play anywhere.
 
 - [ ] Module import (file picker, drag and drop, directory import on Chromium) and
-      IndexedDB storage.
+      IndexedDB storage. Imported songs are managed in the Jukebox: an Import row, and Del
+      removes one (Brad, 2026-11-10). They join Practice and the Jukebox, not the run.
 - [ ] Level caching by hash and `GEN_VERSION`.
 - [ ] PWA install and full offline play.
-- [ ] The bundled music pack (more songs after the first three), attribution with author
-      and source links on song cards and level intros, and a credits screen.
+- [ ] The bundled music pack: Augmented_Emotions, The_Dim_Dungeon_2, Chica-pop! and Cabin
+      Fever! (Brad, 2026-11-10; Drozerix only), attribution with author and source links on
+      song cards and level intros, and a credits screen.
       `tools/validate-manifest.ts` is already in CI.
 - [ ] A scroll bar on the jukebox's list, like the help screen's, once the songs no longer
-      fit above the spectrum (Brad, 2026-11-10). At ten songs the rows have already closed
-      up from 11 px to 10.
+      fit above the spectrum (Brad, 2026-11-10). With ten songs the rows closed up from 11 px
+      to 10.
+- [ ] A new level 1: a Drozerix song in the same techno or retro-futuristic style, slower
+      than RNDD_Keygen#1.0, so the run has eight levels again (Brad, 2026-11-10; candidates
+      in `SONG-DIGEST.md`, "Where to look next").
 
 **Acceptance:** install as a PWA, turn on airplane mode, import a new module, and play it.
 

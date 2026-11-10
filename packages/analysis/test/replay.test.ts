@@ -19,10 +19,10 @@ async function read(url: URL): Promise<Uint8Array> {
 }
 
 describe('recorded replay', () => {
-  it('Numen in Da Chip on normal, recorded in Chromium, scores what it recorded', async () => {
-    const replay = decodeReplay(await read(new URL('../fixtures/replay-numenchip-normal.pbreplay', import.meta.url)));
+  it('RNDD_Keygen#1.0 on normal, recorded in Chromium, scores what it recorded', async () => {
+    const replay = decodeReplay(await read(new URL('../fixtures/replay-rndd_keygen_1-normal.pbreplay', import.meta.url)));
     expect([replay.genVersion, replay.simVersion]).toEqual([GEN_VERSION, SIM_VERSION]);
-    const song = await read(new URL('../../../music/numenchip.xm', import.meta.url));
+    const song = await read(new URL('../../../music/rndd_keygen_1.xm', import.meta.url));
     expect(await sha256Hex(song)).toBe(replay.moduleHash);
     const openmpt = await loadOpenMpt();
     const level = generateLevel(analyze(openmpt, song, Difficulty[replay.difficulty].tempoPermille), replay.difficulty);

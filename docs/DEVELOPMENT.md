@@ -172,7 +172,8 @@ LevelData records them in `params`.
   default"), because what -1 means can change between releases. Every playback ctl is set
   explicitly too (`renderCtls(tempoPermille)` in `analyze.ts`): `play.at_end` is `stop`,
   because the default `fadeout` renders a fade after the song ends; Amiga resampler
-  emulation is on; subsong 0 only. `play.tempo_factor` is the difficulty's tempo
+  emulation is off (it made a 4-channel MOD take 15 times as long to render; Brad,
+  2026-11-10); subsong 0 only. `play.tempo_factor` is the difficulty's tempo
   (`Difficulty[d].tempoPermille / 1000`: 0.9, 1 or 1.15), which libopenmpt applies without
   changing the pitch; `play.pitch_factor` stays 1. Each difficulty therefore has its own
   LevelData, which records the tempo in `params.tempoPermille`, and the audio worklet plays
@@ -543,7 +544,7 @@ formation count and that many u8 sizes.
   song's demo all three lives in 23 s), and launches a missile at an enemy ship up to
   240 px ahead and within 12 px of its height. On normal (2026-11-10, `SIM_VERSION` 11,
   before the shield) it picks up 16
-  capsules on The_Epic_Chip, 30 on Numen in Da Chip and 5 to 13 on the next three levels;
+  capsules on The_Epic_Chip, 30 on Numen in Da Chip (level 1 until 2026-11-10) and 5 to 13 on the next three levels;
   in the demo's 30 s it picks up two, fires missiles from 13.8 s and bombs at 17.3 s
   (Brad's play-test: the demo used to show none of these). Of its three moves (up, down, none) it takes the one
   no bullet or ship would hit soonest within 16 ticks, then the one nearest its target; if
@@ -616,17 +617,17 @@ and a fixed zigzag log (which loses its lives, the last at the recorded
 alone. The same test checks them in Node and in the browsers. A Level hash
 changes only with a `GEN_VERSION` bump, a sim hash only with a `SIM_VERSION` bump.
 
-**Recorded replay.** `packages/analysis/fixtures/replay-numenchip-normal.pbreplay` is a run
-of level 1 (Numen in Da Chip on normal) recorded by the game in Chromium.
+**Recorded replay.** `packages/analysis/fixtures/replay-rndd_keygen_1-normal.pbreplay` is a
+run of level 1 (RNDD_Keygen#1.0 on normal) recorded by the game in Chromium.
 `test/replay.test.ts` checks that it names this `GEN_VERSION` and `SIM_VERSION` and the song
-file's SHA-256, builds the level from `music/numenchip.xm`, runs the inputs, and gets the
-recorded score (82 400) on the recorded last tick, in Node and in every browser.
+file's SHA-256, builds the level from `music/rndd_keygen_1.xm`, runs the inputs, and gets the
+recorded score (49 300) on the recorded last tick, in Node and in every browser.
 
 **Bundled songs.** `packages/analysis/test/music.test.ts` analyzes every song in
 `music/manifest.json`, builds its level on each difficulty, and checks that it has enemies,
 that the path check passes with them, and that the autopilot reaches the end of the
 terrain alone. It runs in Node only and takes about a minute and a half
-for the ten songs on four difficulties, so a levelgen change that makes a real song unplayable fails `pnpm test`.
+for the bundled songs on four difficulties, so a levelgen change that makes a real song unplayable fails `pnpm test`.
 
 **Sound effects.** `packages/chipfx/test/chipfx.test.ts` checks the generator (lengths,
 levels, determinism, pitch, slides, jumps, the cutoff, punch, filtering, mixing, and the
@@ -787,7 +788,7 @@ The client reads query parameters; `packages/client/src/capture.ts` parses them
 |---|---|
 | `capture` | `1` turns capture mode on. Without it the page behaves normally. |
 | `scene` | Which screen to show: `title`, `jukebox`, `controls-arrows`, `controls-wasd`, `controls-gamepad`, `help`, `help-end`, `settings`, `keys`, `hangar`, `play`, `run-start`, `paused`, or `results`. |
-| `song` | Song id: a bundled song's file name without its extension (`numenchip`), or `pb-fixture-01` for the test song. |
+| `song` | Song id: a bundled song's file name without its extension (`chip_overture`), or `pb-fixture-01` for the test song. |
 | `t` | Song clock in seconds. |
 | `difficulty` | Difficulty name. |
 | `seed` | Integer seed for cosmetic randomness. Default 1. |
@@ -1180,7 +1181,7 @@ Run `pnpm dev` and open the URL it prints.
   2.5.5 Target Size), one column if not, and at the right edge over the picture if the
   bar is narrower still. Pointer Events track each finger by `pointerId`, so the stick and
   buttons work together; `Game.#pollPads` ORs the touch bits with the pads'.
-- **Jukebox:** the ten songs and Back, with a 24-bar spectrum of what is playing under
+- **Jukebox:** the bundled songs and Back, with a 24-bar spectrum of what is playing under
   them, and the song's title, credit and time below that. Enter plays the song under the
   cursor or stops it if it is playing, a song that ends hands over to the next, and Esc or
   Back returns to the title, where the title music starts again.
@@ -1229,8 +1230,8 @@ adding the file and its entry. The generated test song (`pb-fixture-01.mod`) sta
 The part each song plays is set in `songs.ts`, not the manifest:
 
 - `TITLE_SONG_ID`: the title and demo music, and Practice's first song (The_Epic_Chip).
-- `LEVEL_SONG_IDS`: the eight arcade levels in order, by scroll speed, from Numen in Da Chip
-  to Keygen 9000.
+- `LEVEL_SONG_IDS`: the arcade levels in order, by scroll speed, from RNDD_Keygen#1.0 to
+  Keygen 9000. Seven until a new level 1 is picked (`ROADMAP.md`).
 - `IMPOSSIBLE_SONG_IDS`: the secret Impossible difficulty's run, one level: Crush, the
   fastest song measured.
 - `GAME_OVER_MUSIC`: game over plays Keygen 9000's first 8 s, its two sparse opening
@@ -1243,8 +1244,9 @@ credit field is empty or a link isn't https, or a license is off the allowlist (
 Domain, CC0, CC BY). A CC BY-SA entry fails until it has a `"reviewed"` field saying who
 reviewed it and when.
 
-The ten songs so far (nine on 2026-11-09, Crush on 2026-11-10), each marked Public Domain on
-its Mod Archive page, with the file's MD5 matching the one the page lists. The files are named after the archive's,
+The nine songs so far, all by Drozerix (Brad, 2026-11-10: JAM's songs sound out of place
+beside his), each marked Public Domain on its Mod Archive page, with the file's MD5
+matching the one the page lists. The files are named after the archive's,
 without the artist prefix and the `!` (`4_rndd.xm`), since the name becomes the song's id
 in URLs. Their numbers, the songs that were considered and not used, and the checks a new
 song goes through are in [`SONG-DIGEST.md`](SONG-DIGEST.md); keep it current when a song
@@ -1253,14 +1255,13 @@ is added.
 | Song | File | Author | Part |
 |---|---|---|---|
 | The_Epic_Chip | `the_epic_chip.xm` | Drozerix | Title, demo |
-| Numen in Da Chip | `numenchip.xm` | JAM | Level 1 |
-| FastLane | `fastlane.xm` | JAM | Level 2 |
-| CHiP_OVERTURE | `chip_overture.xm` | Drozerix | Level 3 |
-| The_Dim_Dungeon | `the_dim_dungeon.xm` | Drozerix | Level 4 |
-| 4_RNDD! | `4_rndd.xm` | Drozerix | Level 5 |
-| Girl From Mars | `girl_from_mars.xm` | Drozerix | Level 6 |
-| Wrath_of_the_Djinn | `wrath_of_the_djinn.xm` | Drozerix | Level 7 |
-| Keygen 9000 | `keygen_9000.xm` | Drozerix | Level 8, game over |
+| RNDD_Keygen#1.0 | `rndd_keygen_1.xm` | Drozerix | Level 1 |
+| CHiP_OVERTURE | `chip_overture.xm` | Drozerix | Level 2 |
+| The_Dim_Dungeon | `the_dim_dungeon.xm` | Drozerix | Level 3 |
+| 4_RNDD! | `4_rndd.xm` | Drozerix | Level 4 |
+| Girl From Mars | `girl_from_mars.xm` | Drozerix | Level 5 |
+| Wrath_of_the_Djinn | `wrath_of_the_djinn.xm` | Drozerix | Level 6 |
+| Keygen 9000 | `keygen_9000.xm` | Drozerix | Level 7 (last), game over |
 
 ### Menus and the jukebox
 

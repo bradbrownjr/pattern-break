@@ -16,6 +16,9 @@ listed in `music/manifest.json`; how to add one is in `DEVELOPMENT.md`, "Bundled
 - **Playable:** the path check passes and the autopilot reaches the end on easy, normal,
   and hard (the same test `pnpm test` runs on bundled songs).
 - **Suitable:** no swearing, censored or not, and no adult themes in the title.
+- **Drozerix only** (Brad, 2026-11-10): the bundled music keeps one artist's style,
+  techno and retro-futuristic chiptune. JAM's songs sound out of place beside it, and so
+  does a funkier Drozerix song (Silicon Dancer, below).
 
 ## Columns
 
@@ -38,25 +41,29 @@ In the order of the arcade run. The_Epic_Chip is the title and demo music and is
 | Level | Song | Artist | Length | Rows/s | Notes/s | Gap | Rating |
 |---|---|---|---|---|---|---|---|
 | Title | [The_Epic_Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=172424) | Drozerix | 3:48 | 10.7 | 34.9 | 48 / 69 | 8 |
-| 1 | [Numen in Da Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=169046) | JAM | 1:48 | 8.3 | 18.9 | 48 / 76 | none |
-| 2 | [FastLane](https://modarchive.org/index.php?request=view_by_moduleid&query=208417) | JAM | 1:49 | 10.0 | 15.5 | 69 / 83 | none |
-| 3 | [CHiP_OVERTURE](https://modarchive.org/index.php?request=view_by_moduleid&query=172185) | Drozerix | 2:15 | 10.7 | 32.0 | 48 / 69 | 8 |
-| 4 | [The_Dim_Dungeon](https://modarchive.org/index.php?request=view_by_moduleid&query=172732) | Drozerix | 1:41 | 12.0 | 17.0 | 62 / 90 | 9 |
-| 5 | [4_RNDD!](https://modarchive.org/index.php?request=view_by_moduleid&query=172898) | Drozerix | 2:02 | 14.2 | 27.5 | 55 / 83 | 8 |
-| 6 | [Girl From Mars](https://modarchive.org/index.php?request=view_by_moduleid&query=173935) | Drozerix | 1:52 | 15.5 | 26.9 | 48 / 83 | 9 |
-| 7 | [Wrath_of_the_Djinn](https://modarchive.org/index.php?request=view_by_moduleid&query=173080) | Drozerix | 1:52 | 16.0 | 20.0 | 69 / 90 | 9 |
-| 8 | [Keygen 9000](https://modarchive.org/index.php?request=view_by_moduleid&query=173938) | Drozerix | 3:20 | 16.0 | 34.7 | 62 / 90 | 9 |
+| 1 | [RNDD_Keygen#1.0](https://modarchive.org/index.php?request=view_by_moduleid&query=172896) | Drozerix | 1:10 | 8.3 | 17.8 | 55 / 83 | 9 |
+| 2 | [CHiP_OVERTURE](https://modarchive.org/index.php?request=view_by_moduleid&query=172185) | Drozerix | 2:15 | 10.7 | 32.0 | 48 / 69 | 8 |
+| 3 | [The_Dim_Dungeon](https://modarchive.org/index.php?request=view_by_moduleid&query=172732) | Drozerix | 1:41 | 12.0 | 17.0 | 62 / 90 | 9 |
+| 4 | [4_RNDD!](https://modarchive.org/index.php?request=view_by_moduleid&query=172898) | Drozerix | 2:02 | 14.2 | 27.5 | 55 / 83 | 8 |
+| 5 | [Girl From Mars](https://modarchive.org/index.php?request=view_by_moduleid&query=173935) | Drozerix | 1:52 | 15.5 | 26.9 | 48 / 83 | 9 |
+| 6 | [Wrath_of_the_Djinn](https://modarchive.org/index.php?request=view_by_moduleid&query=173080) | Drozerix | 1:52 | 16.0 | 20.0 | 69 / 90 | 9 |
+| 7 | [Keygen 9000](https://modarchive.org/index.php?request=view_by_moduleid&query=173938) | Drozerix | 3:20 | 16.0 | 34.7 | 62 / 90 | 9 |
 | Impossible | [Crush](https://modarchive.org/index.php?request=view_by_moduleid&query=179581) | Drozerix | 2:05 | 24.0 | 54.0 | 48 / 83 | 10 |
 
 Crush is the secret Impossible difficulty's one level (Brad, 2026-11-10): the fastest song
-measured, 1.5 times level 8's speed, played at its own tempo with hard's cave. Checked again
+measured, 1.5 times the last level's speed, played at its own tempo with hard's cave. Checked again
 on 2026-11-10 before bundling: Public Domain on its page, the MD5 matches
 (1613a27c819396c6d4e74b426c21a36a), the comments praise it with no mention of a cover, and
 its only text is the artist's name banner and contact address.
 
-The run is about 16.5 minutes on normal. Levels are ordered by scroll speed, Keygen 9000
-last as Brad chose. The_Dim_Dungeon is level 4, before the mini boss. Wrath_of_the_Djinn's
-sample names read "A Grand Keygen Chipp ... Gott That Boss? :)", which leads into level 8.
+The run is seven levels, about 14 minutes on normal, until a new level 1 is picked
+(Brad, 2026-11-10; see "Dropped"). Levels are ordered by scroll speed, Keygen 9000 last as
+Brad chose. RNDD_Keygen#1.0 was checked again on 2026-11-10 before bundling: Public Domain
+on its page, the MD5 matches (d5c5e8661d259428a115537c536a59dc), the page has no comments,
+and its only text is the artist's banner, "Composed&Sampled By: Drozerix/M0n50n" and a
+contact address. With a new level 1, The_Dim_Dungeon is level 4 again, before the mini
+boss. Wrath_of_the_Djinn's sample names read "A Grand Keygen Chipp ... Gott That Boss? :)",
+which leads into the last level.
 
 ## Shortlisted, not used
 
@@ -64,9 +71,6 @@ Brad heard these on 2026-11-09. All are Public Domain and pass every check.
 
 | Song | Artist | Length | Rows/s | Notes/s | Gap | Rating | Notes |
 |---|---|---|---|---|---|---|---|
-| [City Patrol](https://modarchive.org/index.php?request=view_by_moduleid&query=206532) | JAM | 1:48 | 8.3 | 17.1 | 55 / 76 | none | |
-| [8-bit Castle](https://modarchive.org/index.php?request=view_by_moduleid&query=195782) | JAM | 2:11 | 8.3 | 16.1 | 48 / 83 | none | |
-| [Klopoty z Czasem](https://modarchive.org/index.php?request=view_by_moduleid&query=176492) | JAM | 2:12 | 12.3 | 10.3 | 76 / 90 | 9 | Hip-hop, few notes |
 | [Augmented_Emotions](https://modarchive.org/index.php?request=view_by_moduleid&query=172184) | Drozerix | 3:45 | 12.8 | 38.4 | 48 / 69 | 9 | Tight cave, long |
 | [The_Dim_Dungeon_2](https://modarchive.org/index.php?request=view_by_moduleid&query=172897) | Drozerix | 2:16 | 14.4 | 22.1 | 55 / 90 | 8 | Sequel to level 4 |
 | [Chica-pop!](https://modarchive.org/index.php?request=view_by_moduleid&query=189433) | Drozerix | 3:03 | 16.8 | 27.8 | 62 / 90 | 10 | Faster than level 8 |
@@ -82,13 +86,6 @@ the fast ones scroll well past the final level.
 
 | Song | Artist | Length | Rows/s | Notes/s | Gap | Rating |
 |---|---|---|---|---|---|---|
-| [Haunted Occult Mans](https://modarchive.org/index.php?request=view_by_moduleid&query=177399) | JAM | 4:25 | 5.6 | 7.0 | 48 / 76 | 9 |
-| [RNDD_Keygen#1.0](https://modarchive.org/index.php?request=view_by_moduleid&query=172896) | Drozerix | 1:10 | 8.3 | 17.8 | 55 / 83 | 9 |
-| [XLR8](https://modarchive.org/index.php?request=view_by_moduleid&query=205968) | JAM | 2:53 | 8.3 | 12.4 | 48 / 83 | none |
-| [Silicon Dancer](https://modarchive.org/index.php?request=view_by_moduleid&query=209692) | Drozerix | 3:45 | 8.3 | 11.8 | 62 / 83 | 8 |
-| [Highway Encounter](https://modarchive.org/index.php?request=view_by_moduleid&query=211660) | JAM | 3:04 | 8.3 | 12.2 | 48 / 76 | none |
-| [Chasing the UFO](https://modarchive.org/index.php?request=view_by_moduleid&query=176493) | JAM | 1:12 | 8.9 | 19.7 | 48 / 83 | none |
-| [NeuroTransfer](https://modarchive.org/index.php?request=view_by_moduleid&query=169083) | JAM | 3:33 | 11.8 | 31.0 | 48 / 69 | none |
 | [May is 4 Her](https://modarchive.org/index.php?request=view_by_moduleid&query=197296) | Drozerix | 2:05 | 12.5 | 14.3 | 76 / 90 | 9 |
 | [Bakin' Blueberry Pie](https://modarchive.org/index.php?request=view_by_moduleid&query=200041) | Drozerix | 1:12 | 15.1 | 26.2 | 62 / 90 | 8 |
 | [Bubble Machine](https://modarchive.org/index.php?request=view_by_moduleid&query=176020) | Drozerix | 1:49 | 16.0 | 66.5 | 48 / 76 | 9 |
@@ -101,6 +98,29 @@ the fast ones scroll well past the final level.
 | [Lost Without (Her)](https://modarchive.org/index.php?request=view_by_moduleid&query=177708) | Drozerix | 2:14 | 23.2 | 34.5 | 48 / 90 | 9 |
 | [Dream Candy](https://modarchive.org/index.php?request=view_by_moduleid&query=178565) | Drozerix | 3:52 | 23.5 | 76.8 | 48 / 83 | 8 |
 | [Leisurely Voice](https://modarchive.org/index.php?request=view_by_moduleid&query=183837) | Drozerix | 4:09 | 23.6 | 29.2 | 48 / 90 | 9 |
+
+## Dropped
+
+JAM's songs, bundled or measured, left on 2026-11-10 when Brad kept the music to Drozerix.
+Numen in Da Chip and FastLane were levels 1 and 2. Silicon Dancer was tried as the new
+level 1 the same day: Public Domain, and its sample names hold Drozerix's own lyrics ("Voice
+is my own. Samples from my mm8 and some old FL sample"), but Brad found it funkier than the
+others. Klopoty z Czasem is hip-hop with few notes. As a 4-channel MOD it also showed that Amiga resampler emulation made analysis 15
+times slower, which is why it is now off (`GEN_VERSION` 8).
+
+| Song | Artist | Length | Rows/s | Notes/s | Gap | Rating |
+|---|---|---|---|---|---|---|
+| [Numen in Da Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=169046) | JAM | 1:48 | 8.3 | 18.9 | 48 / 76 | none |
+| [FastLane](https://modarchive.org/index.php?request=view_by_moduleid&query=208417) | JAM | 1:49 | 10.0 | 15.5 | 69 / 83 | none |
+| [Silicon Dancer](https://modarchive.org/index.php?request=view_by_moduleid&query=209692) | Drozerix | 3:45 | 8.3 | 11.8 | 62 / 83 | 8 |
+| [City Patrol](https://modarchive.org/index.php?request=view_by_moduleid&query=206532) | JAM | 1:48 | 8.3 | 17.1 | 55 / 76 | none |
+| [8-bit Castle](https://modarchive.org/index.php?request=view_by_moduleid&query=195782) | JAM | 2:11 | 8.3 | 16.1 | 48 / 83 | none |
+| [Klopoty z Czasem](https://modarchive.org/index.php?request=view_by_moduleid&query=176492) | JAM | 2:12 | 12.3 | 10.3 | 76 / 90 | 9 |
+| [Haunted Occult Mans](https://modarchive.org/index.php?request=view_by_moduleid&query=177399) | JAM | 4:25 | 5.6 | 7.0 | 48 / 76 | 9 |
+| [XLR8](https://modarchive.org/index.php?request=view_by_moduleid&query=205968) | JAM | 2:53 | 8.3 | 12.4 | 48 / 83 | none |
+| [Highway Encounter](https://modarchive.org/index.php?request=view_by_moduleid&query=211660) | JAM | 3:04 | 8.3 | 12.2 | 48 / 76 | none |
+| [Chasing the UFO](https://modarchive.org/index.php?request=view_by_moduleid&query=176493) | JAM | 1:12 | 8.9 | 19.7 | 48 / 83 | none |
+| [NeuroTransfer](https://modarchive.org/index.php?request=view_by_moduleid&query=169083) | JAM | 3:33 | 11.8 | 31.0 | 48 / 69 | none |
 
 ## Ruled out
 
@@ -120,9 +140,5 @@ the fast ones scroll well past the final level.
 - **Drozerix** ([modules](https://modarchive.org/index.php?request=view_artist_modules&query=84702)):
   80 modules, 70 Public Domain. Every Public Domain song rated 8 or higher has been
   measured above; the unrated ones haven't.
-- **JAM** ([modules](https://modarchive.org/index.php?request=view_artist_modules&query=81691)):
-  93 modules, mostly unrated. Only the ones with game-like titles were checked; the newest
-  (2025 and later) are mostly CC BY-NC.
-- **By license:** The Mod Archive lists modules by license
-  ([Public Domain](https://modarchive.org/index.php?request=view_by_license&query=publicdomain)),
-  which is the way to find other artists.
+- **A new level 1** is needed: a Drozerix song in the same style, ideally slower than
+  RNDD_Keygen#1.0's 8.3 rows a second.
