@@ -58,7 +58,7 @@ player reads, read the [writing guide](docs/DOC-STYLE.md).
 ## License
 
 Pattern Break is free and open source. The code is [MIT](LICENSE). Bundled music keeps its
-own licenses, listed in `music/manifest.json` and shown in the game. The fifteen songs so far
+own licenses, listed in `music/manifest.json` and shown in the game. The sixteen songs so far
 are Public Domain, all by [Drozerix](https://modarchive.org/member.php?84702):
 
 - [The_Epic_Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=172424) by Drozerix (title music)
@@ -76,6 +76,7 @@ are Public Domain, all by [Drozerix](https://modarchive.org/member.php?84702):
 - [Cabin Fever!](https://modarchive.org/index.php?request=view_by_moduleid&query=174833) by Drozerix
 - [Chica-pop!](https://modarchive.org/index.php?request=view_by_moduleid&query=189433) by Drozerix
 - [Peachy Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=191437) by Drozerix
+- [Sleepy Snow](https://modarchive.org/index.php?request=view_by_moduleid&query=196372) by Drozerix (end credits)
 
 Every song considered, and why the others weren't used, is in the
 [song digest](docs/SONG-DIGEST.md).

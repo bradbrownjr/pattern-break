@@ -34,6 +34,11 @@ describe('hangar intro', () => {
     expect(introTime(HOLD_AT + 50, true)).toBe(HOLD_AT + 50);
     expect(introTime(60_000, true)).toBe(PLAY_AT);
   });
+
+  it('never reads below 0, when a frame began just before the press that started it', () => {
+    expect(introTime(-3, false)).toBe(0);
+    expect(introTime(-3, true)).toBe(0);
+  });
 });
 
 describe('labelText', () => {

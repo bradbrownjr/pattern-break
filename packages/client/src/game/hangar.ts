@@ -130,10 +130,14 @@ export function strobeAlpha(ms: number, peak: number): number {
 
 /**
  * The intro's clock for `ms` since it started: it stops with the hand over Play until the
- * level is `ready`, and at Play once it is.
+ * level is `ready`, and at Play once it is. It never reads below 0: a frame's timestamp is
+ * when the frame began, which can be a moment before the key press that started the
+ * intro, and a negative time picked a walk frame that doesn't exist and stopped the frame
+ * loop (found 2026-11-10: the game froze at a level's start, about one run in two in
+ * headless Chromium).
  */
 export function introTime(ms: number, ready: boolean): number {
-  return Math.min(ms, ready ? PLAY_AT : HOLD_AT);
+  return Math.max(0, Math.min(ms, ready ? PLAY_AT : HOLD_AT));
 }
 
 const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);

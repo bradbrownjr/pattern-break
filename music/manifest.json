@@ -148,5 +148,15 @@
     "license": "Public Domain",
     "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
     "sha256": "31ea4ac6380ad3571522153f05785a0dab7d8bb3e9ff13d00a266cbe67ef964d"
+  },
+  {
+    "file": "sleepy_snow.xm",
+    "title": "Sleepy Snow",
+    "author": "Drozerix",
+    "authorUrl": "https://modarchive.org/member.php?84702",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=196372",
+    "license": "Public Domain",
+    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
+    "sha256": "d1908346216549f72ba84bb7b78be51da6e10718ce9ec3bb171bd6c9a156693e"
   }
 ]

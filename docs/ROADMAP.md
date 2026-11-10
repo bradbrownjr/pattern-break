@@ -17,6 +17,7 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 | [Per-song enemy overrides](#later) | A sidecar file that changes which instrument spawns which enemy for one song. | Later |
 | [Amiga PAL mode](#later) | An optional 320x256 display mode. | Later |
 | [Player accounts](#later) | Sign-in by magic link in place of the anonymous device key. | Later |
+| [End scene](#later) | A short scene after the last level, before the credits. | Later |
 
 **Stages:** *Next* is being worked on or starts as soon as the current item is finished.
 *Planned* is settled and waiting its turn. *Later* comes after M6 and has no plan of its own
@@ -67,6 +68,8 @@ Ideas that come after M6. Each gets its own section here, with tasks, once it's 
   heuristic for one song.
 - **Amiga PAL mode:** an optional 320x256 internal resolution.
 - **Player accounts:** magic-link login, replacing or linking the anonymous device keypair.
+- **End scene:** a short scene after the last level, before the credits roll. Brad would
+  reserve AI Renaissance or May is 4 Her for it (2026-11-10).
 
 ## Open decisions
 
@@ -78,10 +81,6 @@ These need Brad's answer before the work that depends on them. Don't guess.
    Needed before M5.
 3. **Peak dots:** they are off on every difficulty (2026-11-08). They could come back as a
    display option, as solid obstacles on hard, or not at all.
-4. **Credits song:** the ending's credit roll wants a slow, satisfying, triumphant
-   Drozerix song of its own (Brad, 2026-11-10). Six previews went to Brad on 2026-11-10:
-   AI Renaissance, The Hawk's Claw, War Path, Mecanum Overdrive, May is 4 Her and Sleepy
-   Snow. Until he picks, the title song plays.
-5. **Shots through walls:** the player's shots pass through the LED walls, so turrets on
+4. **Shots through walls:** the player's shots pass through the LED walls, so turrets on
    the bar tips can be hit; enemy bullets stop on them (2026-11-09, for Brad's play-test).
    The other way, turrets are hard to reach behind taller bars.

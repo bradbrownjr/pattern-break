@@ -57,7 +57,7 @@ export const shots: Shot[] = [
       '"Jukebox" in large cyan pixel letters with a magenta shadow over a starfield. Below it, a list of ' +
       'songs in grey pixel type with their authors right-aligned in dim grey: The_Epic_Chip, ' +
       'Neon Techno, RNDD_Keygen#1.0, CHiP_OVERTURE, The_Dim_Dungeon, 4_RNDD!, Girl From Mars, Wrath_of_the_Djinn, ' +
-      'Keygen 9000, Crush and Augmented_Emotions; four more songs, "Import" and "Back" are below, out of view, and a thin ' +
+      'Keygen 9000, Crush and Augmented_Emotions; five more songs, "Import" and "Back" are below, out of view, and a thin ' +
       'scroll bar on the right has its grey thumb at the top. The first song is lime with an amber ">" before it. Under the list, a dim ' +
       'row of 24 LED bars, green at the bottom to red at the top, all unlit. At the bottom, "The_Epic_Chip ' +
       'by Drozerix" in grey and "0:12 / 3:48" in cyan.',
@@ -135,9 +135,10 @@ export const shots: Shot[] = [
     id: 'credits',
     query: { scene: 'credits', song: 'the_epic_chip', t: '18' },
     alt:
-      '"Credits" in large cyan pixel letters with a magenta shadow. Under it the roll, 18 seconds in: the ' +
-      'cyan section name Music near the top, then song titles in grey with "Drozerix" right-aligned in dim ' +
-      'grey, from The_Epic_Chip down to The_Dim_Dungeon_2, the lowest cut off at the bottom edge of the roll. ' +
+      '"Credits" in large cyan pixel letters with a magenta shadow. Under it the roll, 18 seconds in, the ' +
+      'Music section\'s heading already gone: song titles in grey with "Drozerix" right-aligned in dim ' +
+      'grey, The_Epic_Chip half gone under the heading, then Neon Techno down to Peachy Chip, and Sleepy Snow cut ' +
+      'off at the bottom edge of the roll. ' +
       'At the bottom, "Up Down Select" in dim grey.',
     caption: 'The title menu\'s credits, rolling. Not used in the README.',
     usedIn: [],

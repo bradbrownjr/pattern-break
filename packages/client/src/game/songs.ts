@@ -75,10 +75,10 @@ export const LEVEL_SONG_IDS: readonly string[] = [
 export const IMPOSSIBLE_SONG_IDS: readonly string[] = ['crush'];
 
 /**
- * The ending's credits roll plays this song, after the last level of a run. Null until
- * Brad picks one (2026-11-10: slow, satisfying, triumphant); the title song plays instead.
+ * The ending's credit roll plays this song, after the last level of a run (Brad,
+ * 2026-11-10: "the clear winner for the end credits"). Null would play the title song.
  */
-export const CREDITS_SONG_ID: string | null = null;
+export const CREDITS_SONG_ID: string | null = 'sleepy_snow';
 
 /** Game over plays the opening of a song, fading out at the end. */
 export const GAME_OVER_MUSIC = { songId: 'keygen_9000', seconds: 8, fadeSeconds: 1.5 } as const;

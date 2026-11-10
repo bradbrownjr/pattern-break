@@ -69,6 +69,20 @@ and its only text is the artist's banner, "Composed&Sampled By: Drozerix/M0n50n"
 contact address. The_Dim_Dungeon is level 4, before the mini boss. Wrath_of_the_Djinn's sample names read "A Grand Keygen Chipp ... Gott That Boss? :)",
 which leads into the last level.
 
+### Credits song
+
+[Sleepy Snow](https://modarchive.org/index.php?request=view_by_moduleid&query=196372)
+(Mar 2022, XM, 1:27, 4.1 rows/s, 5.8 notes/s, rated 9) plays under the ending's credit
+roll. On 2026-11-10 Brad heard six previews (AI Renaissance, The Hawk's Claw, War Path,
+Mecanum Overdrive, May is 4 Her and Sleepy Snow), liked AI Renaissance, May is 4 Her and
+Sleepy Snow best, and called Sleepy Snow "the clear winner for the end credits"; the other
+two are kept for an end scene before the credits. Checked again on 2026-11-10 before
+bundling: Public Domain on its page, the MD5 matches (d1e1acef4a54af310ade1160cd733890),
+its only text is "Drozerix 2022", and its two comments call it "very pretty and calming"
+and say it "reminds me of the game 'Baba is You'", a likeness of feel with no song named.
+It passes the playability test on every difficulty, so it is in Practice and the Jukebox
+too.
+
 ### Music pack
 
 Five more songs, in Practice and the Jukebox but not the run (M4; Brad, 2026-11-10). Each
@@ -173,13 +187,13 @@ autopilot died. Statuses:
 | [This is how we do it](https://modarchive.org/index.php?request=view_by_moduleid&query=192352) | Jul 2021 | XM |  |  |  |  | 10 | Not open | Mod Archive Distribution license |
 | [Cyber Spider](https://modarchive.org/index.php?request=view_by_moduleid&query=192354) | Jul 2021 | XM | 1:03 | 18.6 | 26.3 | 69 / 104 | 8 | Measured |  |
 | [Forgone Inamorata](https://modarchive.org/index.php?request=view_by_moduleid&query=196371) | Mar 2022 | XM | 1:08 | 17.1 | 17.4 | 76 / 104 | none | Measured |  |
-| [Sleepy Snow](https://modarchive.org/index.php?request=view_by_moduleid&query=196372) | Mar 2022 | XM | 1:27 | 4.1 | 5.8 | 62 / 83 | 9 | Measured | Calm and sparse (comments: "pretty and calming"); 6 KB |
-| [May is 4 Her](https://modarchive.org/index.php?request=view_by_moduleid&query=197296) | May 2022 | MOD | 2:05 | 12.5 | 14.3 | 90 / 104 | 9 | Measured |  |
+| [Sleepy Snow](https://modarchive.org/index.php?request=view_by_moduleid&query=196372) | Mar 2022 | XM | 1:27 | 4.1 | 5.8 | 62 / 83 | 9 | Bundled | The ending's credits (Brad, 2026-11-10); calm and sparse; 6 KB |
+| [May is 4 Her](https://modarchive.org/index.php?request=view_by_moduleid&query=197296) | May 2022 | MOD | 2:05 | 12.5 | 14.3 | 90 / 104 | 9 | Measured | Kept for an end scene before the credits (Brad, 2026-11-10) |
 | [The Hawk's Claw](https://modarchive.org/index.php?request=view_by_moduleid&query=197917) | Aug 2022 | MOD | 4:03 | 13.9 | 15.9 | 76 / 104 | none | Measured | Samples from Drozerix's Slayers of High Toro soundtrack |
 | [Alone](https://modarchive.org/index.php?request=view_by_moduleid&query=199968) | Feb 2023 | XM | 0:58 | 16.7 | 12.8 | 76 / 104 | 6 | Measured | One-hour compo; samples provided by Bravoman |
 | [Bakin' Blueberry Pie](https://modarchive.org/index.php?request=view_by_moduleid&query=200041) | Feb 2023 | XM | 1:12 | 15.1 | 26.2 | 76 / 104 | 8 | Measured |  |
 | [Fluxchip](https://modarchive.org/index.php?request=view_by_moduleid&query=200310) | Mar 2023 | XM | 1:09 | 18.7 | 17.4 | 76 / 104 | 8 | Measured |  |
-| [AI Renaissance](https://modarchive.org/index.php?request=view_by_moduleid&query=200847) | May 2023 | MOD | 3:56 | 15.8 | 28.3 | 83 / 104 | none | Measured |  |
+| [AI Renaissance](https://modarchive.org/index.php?request=view_by_moduleid&query=200847) | May 2023 | MOD | 3:56 | 15.8 | 28.3 | 83 / 104 | none | Measured | Kept for an end scene before the credits (Brad, 2026-11-10) |
 | [Stardust Jam](https://modarchive.org/index.php?request=view_by_moduleid&query=201039) | Jun 2023 | MOD | 5:54 | 8.5 | 13.9 | 69 / 90 | 5 | Measured | 5:54 long; a text-to-speech voice (comment: "the tiktok TTS") |
 | [My Dearest](https://modarchive.org/index.php?request=view_by_moduleid&query=205731) | Apr 2024 | XM | 1:24 | 13.7 | 24.5 | 62 / 90 | none | Measured |  |
 | [Keygen Wraith](https://modarchive.org/index.php?request=view_by_moduleid&query=207854) | Sep 2024 | XM | 1:33 | 13.7 | 23.7 | 69 / 97 | none | Measured |  |

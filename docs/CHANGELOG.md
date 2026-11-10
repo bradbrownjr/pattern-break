@@ -13,6 +13,14 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **Fixed: a freeze at a level's start.** The hangar intro could stop the game on its
+  first frame, the screen left on the title, about one start in two in headless Chromium.
+  A frame's timestamp can come a moment before the key press that started the intro, and
+  the negative time picked a walk frame that doesn't exist. The intro's clock now never
+  reads below 0.
+* **Sleepy Snow plays under the ending's credits,** Brad's pick from six Drozerix songs.
+  It is in Practice and the Jukebox too. AI Renaissance and May is 4 Her, his other two
+  favourites, are kept for an end scene before the credits (on the roadmap under Later).
 * **A credit roll, from Brad's review.** The credits roll slowly up the screen like a
   film's. Up, down or Enter stops the roll on a row, Enter opens its page, and after 4 s
   with no input it rolls on. From the title menu the roll loops over the title music.

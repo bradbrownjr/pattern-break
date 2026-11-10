@@ -2056,8 +2056,9 @@ export class Game {
         break;
       }
       case 'credits': {
-        // The time step is capped, so a tab left in the background doesn't jump the roll.
-        this.#creditsRoll?.tick(Math.min(100, now - this.#creditsAt));
+        // The time step is capped, so a tab left in the background doesn't jump the roll,
+        // and never below 0: a frame's timestamp can come before the press that opened it.
+        this.#creditsRoll?.tick(Math.max(0, Math.min(100, now - this.#creditsAt)));
         this.#creditsAt = now;
         const note = this.#creditsNote && now < this.#creditsNote.until ? this.#creditsNote.text : '';
         this.#credits.update(note);

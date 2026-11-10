@@ -1266,6 +1266,7 @@ The part each song plays is set in `songs.ts`, not the manifest:
   Keygen 9000.
 - `IMPOSSIBLE_SONG_IDS`: the secret Impossible difficulty's run, one level: Crush, the
   fastest song measured.
+- `CREDITS_SONG_ID`: the ending's credit roll, after the last level (Sleepy Snow).
 - `GAME_OVER_MUSIC`: game over plays Keygen 9000's first 8 s, its two sparse opening
   patterns (about 3 to 5 notes per second; the third pattern jumps to 17), fading out over
   the last 1.5 s.
@@ -1276,7 +1277,7 @@ credit field is empty or a link isn't https, or a license is off the allowlist (
 Domain, CC0, CC BY). A CC BY-SA entry fails until it has a `"reviewed"` field saying who
 reviewed it and when.
 
-The fifteen songs so far, all by Drozerix (Brad, 2026-11-10: JAM's songs sound out of place
+The sixteen songs so far, all by Drozerix (Brad, 2026-11-10: JAM's songs sound out of place
 beside Drozerix's), each marked Public Domain on its Mod Archive page, with the file's MD5
 matching the one the page lists. The files are named after the archive's,
 without the artist prefix and the `!` (`4_rndd.xm`), since the name becomes the song's id
@@ -1301,9 +1302,10 @@ is added.
 | Cabin Fever! | `cabin_fever.xm` | Drozerix | Pack |
 | Chica-pop! | `chica_pop.xm` | Drozerix | Pack |
 | Peachy Chip | `peachy_chip.xm` | Drozerix | Pack |
+| Sleepy Snow | `sleepy_snow.xm` | Drozerix | Ending's credits |
 
-The pack songs (M4) have no level in the run: they are in Practice and the Jukebox, like
-an imported song.
+The pack songs (M4) and Sleepy Snow have no level in the run: they are in Practice and the
+Jukebox, like an imported song.
 
 ### Library
 
@@ -1430,8 +1432,7 @@ like a film's, at `ROLL_PX_PER_S` (10 px a second; Brad, 2026-11-10). There are 
   It opens with "Thank you for playing" and the run's difficulty and total, then
   "Credits" and the sections, and stops on "The End" in the middle of the screen; any key
   then returns to the title. Esc jumps to The End. It plays `CREDITS_SONG_ID` from
-  `songs.ts`, looping, faded in over 2 s; until Brad picks the song (ROADMAP, "Open
-  decisions") it plays the title song. The run's level, effects and sounds are cleared
+  `songs.ts`, Sleepy Snow (Brad's pick from six, 2026-11-10), looping, faded in over 2 s. The run's level, effects and sounds are cleared
   first (`Game.#clearPlay`, shared with the way back to the title).
 
 `CreditsRoll` holds the roll's state, apart from the drawing, so the tests can step it.
