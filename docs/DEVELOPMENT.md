@@ -657,8 +657,7 @@ A live `AudioContext` needs somewhere to play. Without a sound server, Firefox's
 leaves "suspended" (`resume()` never resolves), so its clock tests time out. CI starts
 PulseAudio playing into a null sink on its own socket, `/tmp/pb-pulse.sock`, and
 `PB_FIREFOX_PULSE_SERVER` passes it to Firefox alone (as `PULSE_SERVER`, through
-Playwright's launch `env`): with the server at the default socket, WebKit's first live
-context hung in CI, while with none WebKit and Chromium play there anyway. Locally, run
+Playwright's launch `env`), since Chromium and WebKit play in CI without one. Locally, run
 PulseAudio the same way (no root needed: `pulseaudio -n -L "module-native-protocol-unix
 socket=..." -L module-null-sink`; keep the socket path under 108 bytes) and set
 `PB_FIREFOX_PULSE_SERVER=unix:<socket>`. On the development server WebKit's live context
@@ -671,7 +670,11 @@ found then:
   'start', so the test suspends the context after each quantum until the song starts
   (`holdUntil`). Firefox 159 has no `OfflineAudioContext.suspend`, and doesn't need it.
 - Firefox's `currentTime` on the main thread can trail the worklet's last position message
-  by up to two render quanta (256 frames), where Chromium and WebKit are at or past it.
+  by about one audio callback (512 frames in CI, 256 locally), where Chromium and WebKit
+  are at or past it.
+- In CI, WebKit's first live `AudioContext` in a page didn't start within 30 s, and every
+  later one started at once, with or without a sound server. The clock tests start one
+  first and wait up to 60 s for it (`beforeAll`), logging how long it took.
 
 - `PB_BROWSERS` picks the engines: `chromium` by default; CI sets
   `chromium,firefox,webkit`.

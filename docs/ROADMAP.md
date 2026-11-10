@@ -33,17 +33,31 @@ start the next until the current one is done.
 
 **Goal:** it looks and feels like the pitch.
 
-- [ ] Particles, copper bars, parallax starfield, CRT filter, hit flashes.
-- [ ] Big explosions: a destroyed ship breaks apart pixel by pixel, each pixel of its sprite
-      flying off as its own particle in its own colour, with a colourful shockwave ring and
-      a short screen shake. With "reduce flashing" on, the ring's brightness is capped.
+Order of work (2026-11-10): the flashing and shake settings first, since the explosions and
+flashes use them; then the explosions, the look, the results screen, and the rest of
+accessibility.
+
+- [ ] **Settings: reduce flashing and screen shake.** "Flashing" (Reduced by default, or
+      Full) caps every flash's strength and how often it can repeat: the crash flash, the
+      nuke, the hangar's strobe, and those below. "Shake" turns screen shake on or off.
+      Kept with the volumes.
+- [ ] **Big explosions:** a destroyed ship breaks apart pixel by pixel, each pixel of its
+      sprite flying off as its own particle in its own colour, with a colourful shockwave
+      ring and a short screen shake. With reduced flashing, the ring's brightness is capped.
+- [ ] **The look:** copper bars (horizontal colour bands) behind the starfield, pulsing with
+      the bass; a white hit flash on an enemy that takes a hit and survives; sparks off the
+      LED tips on note hits; a flash on downbeats; and a CRT filter (scanlines, slight
+      bloom, vignette) as a setting, off by default.
 - [x] Sound effects, made in the browser (no sound files to license): shots, hits,
       kills, power-ups, and an explosion with a deep boom, echo, and reverb, from our own
       sfxr-style generator (`@game/chipfx`), with pitched effects on the song's notes.
       Mixed under the music, with their own volume and an off switch in a new Settings
       screen (Music and Effects). Research in `SOUND-EFFECTS.md`. Brad listens and says
       which to change.
-- [ ] The results screen. (Attract mode and the menu sounds came earlier; see the
+- [ ] **The results screen** after a level and after game over: the score broken down
+      (kills, on-the-beat bonus, lives bonus), the personal best for the song and
+      difficulty (kept in the browser), and save or watch the replay. Submitting to a
+      leaderboard waits for M5. (Attract mode and the menu sounds came earlier; see the
       changelog, November 8.)
 - [x] A help screen (Brad, 2026-11-10), from the title and pause menus: a key to every
       sprite and HUD icon, drawn with the game's sprites, and what each enemy and bonus
@@ -54,10 +68,20 @@ start the next until the current one is done.
       the song, the canopy closes, and the level floods into colour with the song. The
       hangar, the fighter (in the player ship's shape), the cockpit, the captain and the
       glove are generated art (`art/hangar/README.md`).
-- [ ] Accessibility toggles: reduce flashing (on by default), shake, colour-blind-safe LED
-      palette, remappable controls. Remapping also covers pads and arcade sticks without
-      the Gamepad API's standard mapping (moved from M2), tested once there is such a pad:
-      without one, only hand-made gamepad objects could check it.
+- [ ] Accessibility: a colour-blind-safe LED palette, and remappable controls. Remapping
+      also covers pads and arcade sticks without the Gamepad API's standard mapping (moved
+      from M2), tested once there is such a pad: without one, only hand-made gamepad
+      objects could check it.
+
+**Acceptance:** `pnpm check` passes; with reduced flashing no flash exceeds the cap or
+repeats more than three times a second (tested); with shake off the stage never moves
+(tested); captures of an explosion, the copper bars, the CRT filter and the results screen
+are in `docs/img`; a personal best survives a reload.
+
+**Docs:** `DEVELOPMENT.md` ("Playing it" settings, rendering, the results screen), `PLAN.md`
+(visual spec, accessibility), `SOUND-EFFECTS.md` if sounds change, the help screen.
+
+---
 
 ## M4: library, offline, music pack
 
@@ -130,6 +154,9 @@ These need Brad's answer before the work that depends on them. Don't guess.
 4. **Shots through walls:** the player's shots pass through the LED walls, so turrets on
    the bar tips can be hit; enemy bullets stop on them (2026-11-09, for Brad's play-test).
    The other way, turrets are hard to reach behind taller bars.
+5. **Hit-stop:** PLAN.md lists a short freeze on a hit (cosmetic only). The picture follows
+   the song's clock, so a freeze would show the picture behind the music it lines up with.
+   Build it, or drop it from the plan (2026-11-10).
 
 ## Decided
 

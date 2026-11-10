@@ -5,7 +5,7 @@
 import { analyze, loadOpenMpt } from '@game/analysis';
 import fixtureUrl from '@game/analysis/fixtures/pb-fixture-01.mod?url';
 import { CHUNK_FRAMES, SAMPLE_RATE } from '@game/core';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { createAudioPlayer, type AudioPlayer, type PositionMessage } from '../../src/audio/index.ts';
 
 const QUANTUM = 128;
@@ -82,6 +82,16 @@ describe('libopenmpt worklet', () => {
 });
 
 describe('song clock', () => {
+  // In CI, WebKit's first live AudioContext in the page didn't start within 30 s, while every
+  // later one started at once. Start one first and wait for it, so the tests measure the clock.
+  beforeAll(async () => {
+    const context = new AudioContext({ sampleRate: SAMPLE_RATE });
+    const t0 = performance.now();
+    await Promise.race([context.resume(), sleep(60_000)]);
+    console.log(`first live context: ${context.state} after ${Math.round(performance.now() - t0)} ms`);
+    await context.close();
+  }, 70_000);
+
   async function playing(): Promise<AudioPlayer> {
     const player = await createAudioPlayer();
     await player.load(await fixture());
@@ -111,10 +121,11 @@ describe('song clock', () => {
     );
     // The message describes a quantum the graph has finished, and it arrives well within
     // 100 ms. The spec has currentTime advance one render quantum at a time but doesn't say
-    // how soon the main thread sees each step: Chromium and WebKit are at or past the
-    // message, Firefox (159, on a PulseAudio null sink) up to two quanta behind it. The clock
-    // only measures currentTime against the anchor, so that lag is 5.3 ms early, not an error.
-    expect(min).toBeGreaterThanOrEqual(-2 * QUANTUM);
+    // how soon the main thread sees each step. Chromium and WebKit are at or past the
+    // message; Firefox (159, on a PulseAudio null sink) trailed it by up to 512 frames in CI,
+    // about one audio callback. The clock only measures currentTime against the anchor, so
+    // that lag reads the song up to one callback early, not wrong: allow 20 ms.
+    expect(min).toBeGreaterThanOrEqual(-SAMPLE_RATE * 0.02);
     expect(max).toBeLessThan(SAMPLE_RATE * 0.1);
     await player.close();
   }, 30_000);
