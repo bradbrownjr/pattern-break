@@ -50,6 +50,10 @@ const context = await browser.newContext({ viewport: { width: 768, height: 432 }
 const page = await context.newPage();
 const errors: string[] = [];
 page.on('pageerror', (e) => errors.push(e.message));
+// Playwright turns on file chooser interception, an asynchronous call to the browser, when
+// the first listener is added. Added just before the key press, a slow machine (CI) can
+// open the picker before interception is on, and the event never comes.
+const chooser = page.waitForEvent('filechooser', { timeout: 0 });
 
 async function press(p: Page, key: string, times = 1): Promise<void> {
   for (let i = 0; i < times; i++) {
@@ -114,9 +118,10 @@ try {
   await press(page, 'Enter');
   await screen(page, 'jukebox');
   await press(page, 'ArrowUp', 2);
-  const chooser = page.waitForEvent('filechooser', { timeout: 10_000 });
   await press(page, 'Enter');
-  await (await chooser).setFiles(SONG);
+  const picked = await Promise.race([chooser, page.waitForTimeout(10_000).then(() => null)]);
+  if (!picked) fail('the file picker did not open');
+  await picked.setFiles(SONG);
   const deadline = Date.now() + 60_000;
   while (!(await importedSongs(page)).includes('pb-fixture-01.mod')) {
     if (Date.now() > deadline) fail('the imported song was not stored');

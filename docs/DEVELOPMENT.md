@@ -1354,7 +1354,10 @@ server stops and the browser goes offline, the page reloads from the cache, a so
 imported in the Jukebox, and Practice starts a run on it. It follows the game's screens
 through `<html data-mode>`, which `Game.#setMode` keeps, rather than fixed waits.
 Chromium's file chooser for a folder (`webkitdirectory`) doesn't reach Playwright, so
-the check imports a file.
+the check imports a file. Playwright turns on file chooser interception asynchronously when
+the first `filechooser` listener is added, so the check adds it when the page opens: added
+just before the key press, CI's first run opened the picker before interception was on and
+the event never came (reproduced locally with Chromium's CPU throttled 8 times).
 
 ### Menus and the jukebox
 
