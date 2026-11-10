@@ -5,7 +5,7 @@
 import { analyze, loadOpenMpt } from '@game/analysis';
 import fixtureUrl from '@game/analysis/fixtures/pb-fixture-01.mod?url';
 import { CHUNK_FRAMES, SAMPLE_RATE } from '@game/core';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createAudioPlayer, type AudioPlayer, type PositionMessage } from '../../src/audio/index.ts';
 
 const QUANTUM = 128;
@@ -82,15 +82,27 @@ describe('libopenmpt worklet', () => {
 });
 
 describe('song clock', () => {
-  // In CI, WebKit's first live AudioContext in the page didn't start within 30 s, while every
-  // later one started at once. Start one first and wait for it, so the tests measure the clock.
+  // In CI, WebKit's first live AudioContext in a page stayed suspended (60 s and more), and so
+  // did the next one made after it was closed; but while a stuck one was still open, later
+  // ones started at once. So open contexts until one runs, and keep the stuck ones open until
+  // the clock tests are done.
+  const stuck: AudioContext[] = [];
   beforeAll(async () => {
-    const context = new AudioContext({ sampleRate: SAMPLE_RATE });
-    const t0 = performance.now();
-    await Promise.race([context.resume(), sleep(60_000)]);
-    console.log(`first live context: ${context.state} after ${Math.round(performance.now() - t0)} ms`);
-    await context.close();
-  }, 70_000);
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      const context = new AudioContext({ sampleRate: SAMPLE_RATE });
+      const t0 = performance.now();
+      await Promise.race([context.resume(), sleep(5000)]);
+      console.log(`live context ${attempt}: ${context.state} after ${Math.round(performance.now() - t0)} ms`);
+      if (context.state === 'running') {
+        await context.close();
+        return;
+      }
+      stuck.push(context);
+    }
+  }, 40_000);
+  afterAll(async () => {
+    for (const context of stuck) await context.close();
+  });
 
   async function playing(): Promise<AudioPlayer> {
     const player = await createAudioPlayer();
