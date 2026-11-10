@@ -17,6 +17,10 @@ Fixes**, in that order.
   Numen in Da Chip and FastLane, leave the run. RNDD_Keygen#1.0 is the new level 1, and
   the run has seven levels until a second new song is picked; Silicon Dancer was tried
   and dropped as too funky. The recorded replay is now a run of RNDD_Keygen#1.0.
+* **Drozerix catalog.** `SONG-DIGEST.md` now lists all 80 of Drozerix's modules with
+  their license, measurements and status, for picking songs later; 38 more Public Domain
+  songs were downloaded, checked and measured. Three are picked for Brad to hear as the
+  new level 1: Neon Techno, Peachy Chip and Viral Legacy.
 * **Amiga resampler emulation off** (`GEN_VERSION` 8). With it on, a 4-channel MOD took
   15 times as long to analyze (18 s for Silicon Dancer, against 1 s), and Brad found MODs
   sound fine without it. Only MODs change; every bundled song is an XM.

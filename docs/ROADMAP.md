@@ -45,8 +45,8 @@ start the next until the current one is done.
       fit above the spectrum (Brad, 2026-11-10). With ten songs the rows closed up from 11 px
       to 10.
 - [ ] A new level 1: a Drozerix song in the same techno or retro-futuristic style, slower
-      than RNDD_Keygen#1.0, so the run has eight levels again (Brad, 2026-11-10; candidates
-      in `SONG-DIGEST.md`, "Where to look next").
+      than RNDD_Keygen#1.0, so the run has eight levels again (Brad, 2026-11-10). Three picks
+      for Brad to hear are in `SONG-DIGEST.md`, "Level 1 picks".
 
 **Acceptance:** install as a PWA, turn on airplane mode, import a new module, and play it.
 

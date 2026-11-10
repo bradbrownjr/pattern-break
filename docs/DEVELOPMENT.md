@@ -1245,7 +1245,7 @@ Domain, CC0, CC BY). A CC BY-SA entry fails until it has a `"reviewed"` field sa
 reviewed it and when.
 
 The nine songs so far, all by Drozerix (Brad, 2026-11-10: JAM's songs sound out of place
-beside his), each marked Public Domain on its Mod Archive page, with the file's MD5
+beside Drozerix's), each marked Public Domain on its Mod Archive page, with the file's MD5
 matching the one the page lists. The files are named after the archive's,
 without the artist prefix and the `!` (`4_rndd.xm`), since the name becomes the song's id
 in URLs. Their numbers, the songs that were considered and not used, and the checks a new
