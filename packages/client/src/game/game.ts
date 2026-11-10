@@ -29,6 +29,7 @@ import { createAudioPlayer, type AudioPlayer } from '../audio/index.ts';
 import { EffectsMixer } from '../audio/mixer.ts';
 import { MenuSounds, type MenuSound } from '../audio/sfx.ts';
 import { SongNotes } from '../audio/song-notes.ts';
+import { songLook, type SongLook } from '../render/copper.ts';
 import { FLASH_PEAK } from '../render/flash.ts';
 import { CYAN, LIME, MAGENTA } from '../render/palette.ts';
 import { seededRandom } from '../render/random.ts';
@@ -241,6 +242,7 @@ export class Game {
   readonly #cueList: Cue[] = [];
   /** The song's notes for each level, so effects can take their pitch from it. */
   readonly #songNotes = new WeakMap<Level, SongNotes>();
+  readonly #looks = new WeakMap<Level, SongLook>();
   /** The song the player has loaded, and its length. */
   #loaded: BundledSong | null = null;
   #loadedTempo = 1000;
@@ -811,17 +813,28 @@ export class Game {
     if (this.#fx) this.#fx.volume = volumeGain(this.#settings.effects);
   }
 
-  /** Sets the flashes' caps and the shake from the settings. */
+  /** Shows `level`'s terrain, copper bars and sparks, or none. */
+  #showLevel(level: Level | null): void {
+    this.#r.terrain.setLevel(level);
+    const look = level ? (this.#looks.get(level) ?? null) : null;
+    this.#r.copper.setSong(look);
+    this.#r.sparks.setSong(level, look);
+  }
+
+  /** Sets the flashes' caps, the shake and the CRT look from the settings. */
   #applyLook(): void {
     this.#r.flashes.flashing = this.#settings.flashing;
+    this.#r.copper.flashing = this.#settings.flashing;
     this.#r.shakeOn = this.#settings.shake;
+    this.#r.crt = this.#settings.crt;
     if (this.#hangar) this.#hangar.strobePeak = FLASH_PEAK[this.#settings.flashing];
   }
 
-  /** Builds `level` from `levelData` and keeps the song's notes for the effects' pitch. */
+  /** Builds `level` from `levelData` and keeps the song's notes and look for the effects. */
   #makeLevel(levelData: LevelData, difficulty: DifficultyName): Level {
     const level = generateLevel(levelData, difficulty);
     this.#songNotes.set(level, new SongNotes(levelData));
+    this.#looks.set(level, songLook(levelData));
     return level;
   }
 
@@ -926,7 +939,7 @@ export class Game {
     this.#fx?.stopAll();
     this.#endFlood();
     this.#run = null;
-    this.#r.terrain.setLevel(null);
+    this.#showLevel(null);
     this.#r.explosion.hide();
     this.#r.flash.hide();
     this.#lastInput = performance.now();
@@ -959,7 +972,7 @@ export class Game {
     this.#state.cheats = 0;
     resetSimState(this.#state);
     this.#clock.reset();
-    this.#r.terrain.setLevel(demo.level);
+    this.#showLevel(demo.level);
     this.#setMode('demo');
   }
 
@@ -1044,7 +1057,7 @@ export class Game {
       this.#level = entry.level;
       this.#autopilot = entry.autopilot;
       this.#log = new InputLog(entry.level.tickCount);
-      this.#r.terrain.setLevel(entry.level);
+      this.#showLevel(entry.level);
       this.#state.cheats = this.#runCheats;
       resetSimState(this.#state);
       this.#r.explosion.hide();
@@ -1307,7 +1320,7 @@ export class Game {
       if (request !== this.#musicRequest) return;
       this.#playerReady = player;
       this.#playback = { replay, song, level, from };
-      this.#r.terrain.setLevel(level);
+      this.#showLevel(level);
       this.#state.cheats = replay.cheats;
       resetSimState(this.#state);
       this.#clock.reset();
@@ -1368,7 +1381,7 @@ export class Game {
       resetSimState(this.#state);
       runInputLog(this.#level, replay.inputs, this.#state);
     }
-    this.#r.terrain.setLevel(this.#level);
+    this.#showLevel(this.#level);
     if (from === 'gameover') {
       this.#showGameOver();
     } else {

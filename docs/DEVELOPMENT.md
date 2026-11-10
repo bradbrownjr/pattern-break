@@ -1076,14 +1076,14 @@ Run `pnpm dev` and open the URL it prints.
   left and right a page, the mouse wheel a row; Enter pages down and leaves from the end;
   Esc goes back to where it was opened.
 - **Settings** (`settings.ts`, `SettingsMenu`, `SettingsScreen`), from the title menu: Music
-  and Effects volume as five LED cells each, off to 5; Flashing (Reduced or Full) and Shake
-  (Off or On) as words; then Back. Left and right change a value and stop at the ends; Enter
-  steps a volume up and wraps to off, and flips Flashing or Shake. Each volume step halves
-  the gain. The defaults are Music 5, Effects 4, Flashing Reduced and Shake On. Changes take
-  effect at once (a kill sound plays at the new effects level) and are kept in
+  and Effects volume as five LED cells each, off to 5; Flashing (Reduced or Full), Shake and
+  CRT (Off or On) as words; then Back. Left and right change a value and stop at the ends;
+  Enter steps a volume up and wraps to off, and flips the others. Each volume step halves
+  the gain. The defaults are Music 5, Effects 4, Flashing Reduced, Shake On and CRT Off.
+  Changes take effect at once (a kill sound plays at the new effects level) and are kept in
   `localStorage` under `pattern-break.settings`; where storage is blocked, the defaults
   apply and changes last until the page closes. What Flashing and Shake do is under
-  "Flashing and shake" in "Rendering".
+  "Flashing and shake" in "Rendering", and CRT under "CRT".
 - **Sound effects** play in runs, replays, and the demo (see "Sound effects" under "Audio
   and clock").
 - **Score:** top right in play. Each kill shows its points where the enemy was, amber when
@@ -1258,11 +1258,13 @@ is added.
   phone at 3x gets 5 device pixels a game pixel (640x360 CSS px), where whole CSS pixels
   gave 1 (until 2026-11-10). `index.html` also sets `touch-action: none` and turns off text
   selection, so a touch doesn't scroll, zoom or select.
-- **Layers,** back to front: the starfield, the world (terrain, capsules, enemies, shots,
-  missiles, drones, the shield and bullets, ship, explosion, point popups), the HUD
+- **Layers,** back to front: the copper bars, the starfield, the world (terrain, tip sparks,
+  capsules, enemies, shots, missiles, drones, the shield and bullets, ship, explosion, point
+  popups), the HUD
   (lives, bomb and missile, multiplier, nukes, score, power-up meter), the game-over flash, and
   the UI (title screen, jukebox, controls, demo banner, messages, the pause menu, and the
-  fade).
+  fade). With CRT on, the stage sits in a root container that carries the bloom, and a CSS
+  overlay lies over the canvas.
 - **Terrain** (`terrain.ts`, geometry in `terrain-layout.ts`): 41 columns
   (`MAX_VISIBLE_BARS`) of 46 sprites each, 23 a side (`SEGMENTS_PER_SIDE`, the most hard's
   50 px minimum gap allows), made once. Each frame moves the columns to the bars
@@ -1303,6 +1305,38 @@ is added.
   It changes a cell's tint or label only when that cell's state does.
 - **Starfield** (`starfield.ts`): 112 stars in three layers placed by `seededRandom(seed)`,
   scrolling at 0.12, 0.25 and 0.5 of the terrain's speed.
+- **Copper bars** (`copper.ts`; `test/copper.test.ts`): five 14 px bands behind the stars,
+  violet, cyan, lime, amber and magenta, each stepped from 0.3 of its colour at the edges
+  to full in the middle, 36 px apart. They sway together (20 px, a 5.3 s sine) and each
+  ripples (8 px, 2.1 s, out of step), never overlapping, on song time. `songLook(levelData)`
+  takes the bass (the loudest of spectrum bands 0 to 3, 40 Hz to about 179 Hz, per
+  analysis frame) and the downbeats (rows that are multiples of 16, OpenMPT's default rows
+  per measure, `DEFAULT_ROWS_PER_MEASURE` in soundlib/Snd_defs.h; libopenmpt can report a
+  pattern's own value, which LevelData doesn't keep). The bars' opacity is 0.12 plus
+  `COPPER_SWING` times 0.7 of the bass plus 0.5 of a downbeat pulse fading over 250 ms,
+  capped at 1. That pulse is the "flash on downbeats". With Flashing Reduced the swing is
+  0.24, so lime, the brightest, moves 0.08 in relative luminance, under WCAG's 0.1 for a
+  flash; Full swings 0.48. The game keeps a `SongLook` per level (`Game.#looks`) and
+  `#showLevel` hands it to the bars and the sparks; capture mode makes its own.
+- **Tip sparks** (`sparks.ts`; `test/sparks.test.ts`): when a row with a note starting on it
+  (`SongLook.noteRows`) begins, 5 sparks leave its bar's ceiling tip and 5 its floor tip,
+  out into the passage within 1.1 rad of straight, at 45 to 115 px/s, falling at
+  320 px/s squared, white turning to the tip's colour and fading over 200 to 360 ms; one
+  in two is 2 px wide. Each spark's numbers come from `hash32(bar, spark)`, and the sparks
+  are drawn fresh from song time each frame from a pool of 96, newest first.
+- **Hit flash** (`CombatView`; `test/hit-flash.test.ts`): an enemy whose hits left drop
+  without reaching 0 (only tanks have more than one, `ENEMY_HP`) is drawn all white
+  (`Textures.tankHit`) for 70 ms of song time. `CombatView` keeps each enemy's hits left
+  from the last draw to see it, sized to the level, cleared when the song starts over.
+- **CRT** (`crt.ts`; `test/crt.test.ts`): off by default. The bloom is a GLSL filter on the
+  root container at 384x216: each pixel adds 0.35 of its neighbours' bright parts
+  (luminance through a smoothstep from 0.35 to 0.9), 12 taps out to 2 px. Its
+  `uInputSize` and `uInputClamp` are `highp`, as in Pixi's default filter vertex shader;
+  with a mismatch the program fails to link and the picture goes black. WebGL only, so
+  with WebGPU the CRT look has no bloom. The scanlines and vignette are a CSS background on
+  a div over the canvas, sized with it in `resize()`: a dark band (0.32 black) over the
+  bottom 35% of each game pixel row at the screen's resolution, only from 2 device pixels
+  per game pixel up, and a radial darkening from 62% out to 0.45 black at the corners.
 - **Text** (`font.ts`, `text.ts`): a 5x7 pixel font for printable ASCII, with descenders,
   in one atlas texture. A character outside printable ASCII draws as `?`. `PixelText`
   reuses its sprites when its text changes.

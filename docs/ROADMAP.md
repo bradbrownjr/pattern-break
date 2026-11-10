@@ -33,14 +33,10 @@ start the next until the current one is done.
 
 **Goal:** it looks and feels like the pitch.
 
-Order of work (2026-11-10): the look, the results screen, and the rest of accessibility.
-The explosions are done (changelog, November 10). The flashing and shake settings came first (see the changelog, November
+Order of work (2026-11-10): the results screen, then the rest of accessibility. The
+explosions and the look are done (changelog, November 10). The flashing and shake settings came first (see the changelog, November
 10); every new flash goes through `FlashGate` and every shake through `shakeOffset`.
 
-- [ ] **The look:** copper bars (horizontal colour bands) behind the starfield, pulsing with
-      the bass; a white hit flash on an enemy that takes a hit and survives; sparks off the
-      LED tips on note hits; a flash on downbeats; and a CRT filter (scanlines, slight
-      bloom, vignette) as a setting, off by default.
 - [x] Sound effects, made in the browser (no sound files to license): shots, hits,
       kills, power-ups, and an explosion with a deep boom, echo, and reverb, from our own
       sfxr-style generator (`@game/chipfx`), with pitched effects on the song's notes.

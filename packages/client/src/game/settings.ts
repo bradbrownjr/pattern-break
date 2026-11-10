@@ -14,9 +14,11 @@ export interface Settings {
   flashing: Flashing;
   /** Whether the screen shakes on a crash. */
   shake: boolean;
+  /** The CRT look: bloom, scanlines and a vignette (render/crt.ts). */
+  crt: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { music: 5, effects: 4, flashing: 'reduced', shake: true };
+export const DEFAULT_SETTINGS: Settings = { music: 5, effects: 4, flashing: 'reduced', shake: true, crt: false };
 
 const KEY = 'pattern-break.settings';
 
@@ -40,6 +42,7 @@ export function loadSettings(storage: Pick<Storage, 'getItem'> | null): Settings
       effects: level(o['effects'], DEFAULT_SETTINGS.effects),
       flashing: o['flashing'] === 'full' || o['flashing'] === 'reduced' ? o['flashing'] : DEFAULT_SETTINGS.flashing,
       shake: typeof o['shake'] === 'boolean' ? o['shake'] : DEFAULT_SETTINGS.shake,
+      crt: typeof o['crt'] === 'boolean' ? o['crt'] : DEFAULT_SETTINGS.crt,
     };
   } catch {
     return { ...DEFAULT_SETTINGS };

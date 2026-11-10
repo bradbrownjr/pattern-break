@@ -43,7 +43,7 @@
   },
   "settings": {
     "path": "docs/img/settings.png",
-    "alt": "\"Settings\" in large cyan pixel letters with a magenta shadow. Below it, five rows in small pixel type. \"Music\" in amber with an amber \">\" before it, then \"<\", five LED cells lit green, yellow-green, yellow, orange and red, and \">\". \"Effects\" in grey with four of its five cells lit and the fifth dim red. \"Flashing\" with \"Reduced\", \"Shake\" with \"On\", and \"Back\", all in grey.",
+    "alt": "\"Settings\" in large cyan pixel letters with a magenta shadow. Below it, five rows in small pixel type. \"Music\" in amber with an amber \">\" before it, then \"<\", five LED cells lit green, yellow-green, yellow, orange and red, and \">\". \"Effects\" in grey with four of its five cells lit and the fifth dim red. \"Flashing\" with \"Reduced\", \"Shake\" with \"On\", \"CRT\" with \"Off\", and \"Back\", all in grey.",
     "caption": "The settings screen at the defaults. Not used in the README.",
     "usedIn": []
   },
@@ -85,7 +85,7 @@
   },
   "impossible": {
     "path": "docs/img/impossible.png",
-    "alt": "A frame of play in an LED cavern lit only in red: the columns hanging from the top and rising from the bottom are dark maroon at the screen edges, brightening to vivid red at their tips. The small cyan ship on the left is inside a cyan ring, its shield, with an amber capsule marked \"P\" behind it and cyan shots ahead. Two magenta enemy ships fly in the middle among small magenta bullets, \"200\" shows twice in white where enemies were destroyed, and \"400\" in amber at the right; a turret hangs from the ceiling at the top right. The HUD shows three ship icons, a bomb and \"x3\" in the top left, \"0004300\" in the top right, and the power-up meter along the bottom with \"Shield 6\" lit lime.",
+    "alt": "A frame of play in an LED cavern lit only in red: the columns hanging from the top and rising from the bottom are dark maroon at the screen edges, brightening to vivid red at their tips. Dim horizontal bands of violet, teal and olive cross the dark passage behind them. The small cyan ship on the left is inside a cyan ring, its shield, with an amber capsule marked \"P\" behind it and cyan shots ahead. Two magenta enemy ships fly in the middle among small magenta bullets, \"200\" shows twice in white where enemies were destroyed, and \"400\" in amber at the right; a turret hangs from the ceiling at the top right. The HUD shows three ship icons, a bomb and \"x3\" in the top left, \"0004300\" in the top right, and the power-up meter along the bottom with \"Shield 6\" lit lime.",
     "caption": "Crush on Impossible, 12 seconds in, flown by the autopilot. Not used in the README.",
     "usedIn": []
   },
@@ -97,19 +97,31 @@
   },
   "paused": {
     "path": "docs/img/paused.png",
-    "alt": "A frame of play in an LED cavern, with a dark translucent panel in the middle. On the panel, \"Paused\" in large amber pixel letters, and below it a menu: \"Resume\" in amber with an amber \">\" before it, then \"Controls\", \"Help\" and \"Quit\" in grey. The HUD shows three ship icons, a bomb icon and \"x2\" in the top left, the score \"0001700\" in the top right, and the power-up meter along the bottom edge: Double lit green, Missile with a grey label, \"Shield 6\" lit lime, and the other three dark. The player ship on the left is inside a faint cyan ring, its shield.",
+    "alt": "A frame of play in an LED cavern, dim horizontal bands of colour across its passage, with a dark translucent panel in the middle. On the panel, \"Paused\" in large amber pixel letters, and below it a menu: \"Resume\" in amber with an amber \">\" before it, then \"Controls\", \"Help\" and \"Quit\" in grey. The HUD shows three ship icons, a bomb icon and \"x2\" in the top left, the score \"0001700\" in the top right, and the power-up meter along the bottom edge: Double lit green, Missile with a grey label, \"Shield 6\" lit lime, and the other three dark. The player ship on the left is inside a faint cyan ring, its shield.",
     "caption": "The pause menu over play. Not used in the README.",
+    "usedIn": []
+  },
+  "copper": {
+    "path": "docs/img/copper.png",
+    "alt": "A frame of play in an LED cavern lit green to red. Five soft horizontal bands of colour, the copper bars, cross the screen behind the columns: violet near the top, then teal, olive, and amber near the bottom, each darker at its edges and brightest in its middle, showing through the gaps between LED segments. Near the left, a few orange specks fly down from the tip of a ceiling column and a few red specks up from the tip of a floor column below it: sparks on a note. The cyan ship flies inside its shield ring, its shots ahead, a magenta enemy ship to the right.",
+    "caption": "Copper bars glowing with the bass, and sparks off the LED tips on a note, at 21.9 seconds. Not used in the README.",
+    "usedIn": []
+  },
+  "crt": {
+    "path": "docs/img/crt.png",
+    "alt": "The same frame as the copper bars shot with the CRT setting on. Bright pixels glow softly into the dark gaps between the LED segments, every row of game pixels has a faint dark line along its bottom like a television screen, and the corners are a little darker than the middle.",
+    "caption": "The copper shot with the CRT setting on: bloom, scanlines and a vignette. Not used in the README.",
     "usedIn": []
   },
   "explosion": {
     "path": "docs/img/explosion.png",
-    "alt": "A frame of play in an LED cavern, columns of LED segments lit green to red hanging from the top and rising from the bottom. On the left, where the ship was, a scatter of single cyan, white, magenta and amber pixels flies apart inside a large thin ring of dots, magenta along the top, teal on the right, lime at the bottom and amber on the left. Cyan shots fly on to the right, where a magenta enemy ship comes in. The lives, bomb and score panels are at the top and the power-up meter along the bottom.",
+    "alt": "A frame of play in an LED cavern, columns of LED segments lit green to red hanging from the top and rising from the bottom. On the left, where the ship was, a scatter of single cyan, white, magenta and amber pixels flies apart inside a large thin ring of dots, magenta along the top, teal on the right, lime at the bottom and amber on the left, over soft horizontal bands of violet, teal and olive. Cyan shots fly on to the right, where a magenta enemy ship comes in. The lives, bomb and score panels are at the top and the power-up meter along the bottom.",
     "caption": "The ship breaking apart, 200 ms after it blew up. Not used in the README.",
     "usedIn": []
   },
   "gameplay": {
     "path": "docs/img/gameplay.png",
-    "alt": "A frame of play in an LED cavern. Columns of small square LED segments hang from the top edge and rise from the bottom edge, lit green at the screen edges through yellow and orange to red at their tips, leaving a dark passage across the middle. A small magenta and amber turret sits upside down on a tip of the ceiling at the right. A small cyan ship with a magenta engine flame flies on the left inside a faint cyan ring, its shield, with a row of cyan shots ahead of it and an enemy ship coming in from the right. Near the top, a scatter of coloured particles where an enemy was just destroyed, with \"400\" in white pixel digits above it. Three small ship icons on a dark panel in the top left corner show the lives left, followed by a small amber bomb icon and \"x2\" in amber; \"0001700\" in white in the top right corner is the score. Along the bottom edge runs the power-up meter, six LED cells labelled Double, Missile, Shield, Drone, Laser and Boost: Double lit green and \"Shield 6\" lit lime, the ship has them; Missile, the next to unlock, with a grey label; the rest dark.",
+    "alt": "A frame of play in an LED cavern. Columns of small square LED segments hang from the top edge and rise from the bottom edge, lit green at the screen edges through yellow and orange to red at their tips, leaving a dark passage across the middle, crossed by soft horizontal bands of violet, teal and olive, the copper bars. A small magenta and amber turret sits upside down on a tip of the ceiling at the right. A small cyan ship with a magenta engine flame flies on the left inside a faint cyan ring, its shield, with a row of cyan shots ahead of it and an enemy ship coming in from the right. Near the top, a scatter of coloured particles where an enemy was just destroyed, with \"400\" in white pixel digits above it. Three small ship icons on a dark panel in the top left corner show the lives left, followed by a small amber bomb icon and \"x2\" in amber; \"0001700\" in white in the top right corner is the score. Along the bottom edge runs the power-up meter, six LED cells labelled Double, Missile, Shield, Drone, Laser and Boost: Double lit green and \"Shield 6\" lit lime, the ship has them; Missile, the next to unlock, with a grey label; the rest dark.",
     "caption": "Pattern Break at 21.5 seconds into the test song on normal, with the ship flown by the autopilot.",
     "usedIn": [
       "readme"
@@ -117,7 +129,7 @@
   },
   "gameplay-clip": {
     "path": "docs/img/gameplay-clip.gif",
-    "alt": "Four seconds of play in an LED cavern. Columns of square LED segments, lit green at the screen edges through yellow and orange to red at their tips, hang from the top and rise from the bottom and scroll from right to left, one column per row of the song. Small magenta and amber turrets ride in on the tips of the floor and ceiling and fire amber pellets, and small magenta enemy ships fly in from the right and fire round magenta bullets. A small cyan ship on the left, inside a faint cyan ring that is its shield, keeps firing cyan shots, drops a bomb that bursts on the floor, and moves up and down to dodge. Amber capsules marked \"P\" rest on the floor bars and scroll away with them. Three ship icons in the top left corner show the lives left, followed by a bomb icon and \"x3\" in amber, and the score in the top right corner counts up as each kill shows its points where the enemy was. Along the bottom edge runs the power-up meter, six LED cells labelled Double, Missile, Shield, Drone, Laser and Boost, with Double lit green and \"Shield 6\" lit lime.",
+    "alt": "Four seconds of play in an LED cavern. Columns of square LED segments, lit green at the screen edges through yellow and orange to red at their tips, hang from the top and rise from the bottom and scroll from right to left, one column per row of the song. Behind them, soft horizontal bands of violet, teal, olive and amber sway up and down and glow brighter with the bass, and specks of light fly off the column tips. Small magenta and amber turrets ride in on the tips of the floor and ceiling and fire amber pellets, and small magenta enemy ships fly in from the right and fire round magenta bullets. A small cyan ship on the left, inside a faint cyan ring that is its shield, keeps firing cyan shots, drops a bomb that bursts on the floor, and moves up and down to dodge. Amber capsules marked \"P\" rest on the floor bars and scroll away with them. Three ship icons in the top left corner show the lives left, followed by a bomb icon and \"x3\" in amber, and the score in the top right corner counts up as each kill shows its points where the enemy was. Along the bottom edge runs the power-up meter, six LED cells labelled Double, Missile, Shield, Drone, Laser and Boost, with Double lit green and \"Shield 6\" lit lime.",
     "caption": "Four seconds of the test song on normal, flown by the autopilot through the sim.",
     "usedIn": [
       "readme"

@@ -1,4 +1,4 @@
-// Draws one frame of play: the starfield, the terrain, enemies and bullets, and the ship at
+// Draws one frame of play: the copper bars, the starfield, the terrain and its sparks, enemies and bullets, and the ship at
 // a song position. Shared by the game loop and capture mode, so a capture shows what play
 // shows.
 
@@ -19,8 +19,10 @@ export function drawPlay(r: GameRenderer, level: Level, state: SimState, display
   // Every crash shakes the picture, the last one included (hitTick is set on each).
   const sinceHit = state.hitTick < 0 ? -1 : ((displaySamples - state.hitTick * SAMPLES_PER_TICK) * 1000) / SAMPLE_RATE;
   r.shake(sinceHit, state.hitTick);
+  r.copper.draw(displaySamples);
   r.starfield.draw(scrollPx);
   r.terrain.draw(scrollPx);
+  r.sparks.draw(displaySamples, scrollPx, r.terrain.lit);
   const visible = !state.dead && r.combat.draw(level, state, scrollPx, displaySamples);
   r.ship.visible = visible;
   if (visible) {

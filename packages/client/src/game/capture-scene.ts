@@ -22,6 +22,7 @@ import {
 } from '@game/core';
 import type { Container } from 'pixi.js';
 import { markCaptureReady, type CaptureParams } from '../capture.ts';
+import { songLook } from '../render/copper.ts';
 import { seededRandom } from '../render/random.ts';
 import type { GameRenderer } from '../render/renderer.ts';
 import { analyzeInWorker } from './analysis.ts';
@@ -58,6 +59,7 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
   const song = findSong(params.song);
   if (!song) throw new Error(`unknown song ${params.song ?? ''}`);
   const difficulty: DifficultyName = params.difficulty in Difficulty ? (params.difficulty as DifficultyName) : 'normal';
+  r.crt = params.crt;
 
   const menuScene = (container: Container): Promise<void> => {
     r.ui.addChild(container);
@@ -132,7 +134,11 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
     r.ui.addChild(pause.container);
   }
 
-  const level = generateLevel(await analyzeInWorker(await fetchSongBytes(song), Difficulty[difficulty].tempoPermille), difficulty);
+  const data = await analyzeInWorker(await fetchSongBytes(song), Difficulty[difficulty].tempoPermille);
+  const level = generateLevel(data, difficulty);
+  const look = songLook(data);
+  r.copper.setSong(look);
+  r.sparks.setSong(level, look);
   const inputs = autopilotInputs(level);
   const state = createSimState();
   r.terrain.setLevel(level);

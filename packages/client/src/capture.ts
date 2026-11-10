@@ -14,6 +14,8 @@ export interface CaptureParams {
   seed: number;
   /** Play scenes: the ship blown up where it is, this many ms ago, or null. */
   boom: number | null;
+  /** The CRT setting on (`crt=1`). */
+  crt: boolean;
 }
 
 declare global {
@@ -36,6 +38,7 @@ export function readCaptureParams(search: string = window.location.search): Capt
     difficulty: q.get('difficulty') ?? 'normal',
     seed: Number.isInteger(seed) ? seed : 1,
     boom: Number.isFinite(boom) ? boom : null,
+    crt: q.get('crt') === '1',
   };
 }
 

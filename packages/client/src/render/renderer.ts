@@ -3,13 +3,16 @@
 // (docs/PLAN.md, "Visual spec").
 
 import { PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH } from '@game/core';
-import { Container, TextureSource, autoDetectRenderer, type Renderer } from 'pixi.js';
+import { Container, Rectangle, TextureSource, autoDetectRenderer, type Filter, type Renderer } from 'pixi.js';
 import { CombatView } from './combat.ts';
+import { CopperBars } from './copper.ts';
+import { bloomFilter, overlayBackground } from './crt.ts';
 import { Flash, ShipBreakup } from './effects.ts';
 import { FlashGate } from './flash.ts';
 import { BACKGROUND, LETTERBOX } from './palette.ts';
 import { shakeOffset } from './shake.ts';
 import { ShipView } from './ship.ts';
+import { TipSparks } from './sparks.ts';
 import { Starfield } from './starfield.ts';
 import { TerrainView } from './terrain.ts';
 
@@ -38,10 +41,20 @@ export function integerScale(width: number, height: number, dpr = 1): number {
 
 export class GameRenderer {
   readonly renderer: Renderer;
+  /** The stage, inside the root that carries the CRT setting's bloom. */
   readonly stage = new Container();
+  #root = new Container();
+  #crt = false;
+  #bloom: Filter | null = null;
+  /** The CRT setting's scanlines and vignette over the canvas. */
+  #overlay = document.createElement('div');
+  /** Copper bars behind the stars, in play only. */
+  readonly copper = new CopperBars();
   readonly starfield: Starfield;
   readonly world = new Container();
   readonly terrain = new TerrainView();
+  /** Sparks off the LED tips on note hits. */
+  readonly sparks = new TipSparks();
   readonly ship = new ShipView();
   /** Decides which flashes are shown and how strong (the Flashing setting). */
   readonly flashes = new FlashGate();
@@ -61,23 +74,35 @@ export class GameRenderer {
     this.renderer = renderer;
     this.#parent = options.parent;
     this.starfield = new Starfield(options.seed);
-    this.world.addChild(this.terrain.container, this.combat.container, this.ship.container, this.explosion.container);
-    this.stage.addChild(this.starfield.container, this.world, this.combat.hud, this.flash.sprite, this.ui);
+    this.world.addChild(this.terrain.container, this.sparks.container, this.combat.container, this.ship.container, this.explosion.container);
+    this.stage.addChild(this.copper.container, this.starfield.container, this.world, this.combat.hud, this.flash.sprite, this.ui);
     const canvas = renderer.canvas as HTMLCanvasElement;
     canvas.style.imageRendering = 'pixelated';
     canvas.style.display = 'block';
     options.parent.appendChild(canvas);
+    this.#root.addChild(this.stage);
+    this.#root.filterArea = new Rectangle(0, 0, PLAYFIELD_WIDTH, PLAYFIELD_HEIGHT);
+    const o = this.#overlay.style;
+    o.position = 'absolute';
+    o.left = '50%';
+    o.top = '50%';
+    o.transform = 'translate(-50%, -50%)';
+    o.pointerEvents = 'none';
+    o.display = 'none';
+    options.parent.appendChild(this.#overlay);
     this.resize();
   }
 
   /**
-   * Moves the starfield and the cave for a shake `elapsedMs` after a crash (shake.ts); a
-   * negative time, or shake off, puts them back. The HUD and the screens stay put.
+   * Moves the copper bars, the starfield and the cave for a shake `elapsedMs` after a crash
+   * (shake.ts); a negative time, or shake off, puts them back. The HUD and the screens stay
+   * put.
    */
   shake(elapsedMs: number, seed: number): void {
     shakeOffset(this.shakeOn, elapsedMs, seed, this.#shake);
     this.world.position.set(this.#shake.x, this.#shake.y);
     this.starfield.container.position.set(this.#shake.x, this.#shake.y);
+    this.copper.container.position.set(this.#shake.x, this.#shake.y);
   }
 
   /** Scales the canvas to the largest whole multiple of device pixels that fits the window. */
@@ -88,10 +113,27 @@ export class GameRenderer {
     canvas.style.width = `${(PLAYFIELD_WIDTH * k) / dpr}px`;
     canvas.style.height = `${(PLAYFIELD_HEIGHT * k) / dpr}px`;
     this.#parent.style.background = LETTERBOX;
+    this.#overlay.style.width = canvas.style.width;
+    this.#overlay.style.height = canvas.style.height;
+    this.#overlay.style.background = overlayBackground(k / dpr, k);
+  }
+
+  /** The CRT setting: bloom, scanlines and a vignette, or none. */
+  get crt(): boolean {
+    return this.#crt;
+  }
+
+  set crt(on: boolean) {
+    this.#crt = on;
+    // The bloom is a WebGL shader; with WebGPU (a fallback) the CRT look has no bloom.
+    const bloom = on && this.renderer.name === 'webgl';
+    if (bloom && !this.#bloom) this.#bloom = bloomFilter();
+    this.#root.filters = bloom ? [this.#bloom!] : null;
+    this.#overlay.style.display = on ? 'block' : 'none';
   }
 
   render(): void {
-    this.renderer.render(this.stage);
+    this.renderer.render(this.#root);
   }
 }
 

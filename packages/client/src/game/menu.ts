@@ -235,17 +235,23 @@ export class ControlsPages {
   }
 }
 
-export const SETTINGS_ITEMS = ['music', 'effects', 'flashing', 'shake', 'back'] as const;
+export const SETTINGS_ITEMS = ['music', 'effects', 'flashing', 'shake', 'crt', 'back'] as const;
 export type SettingsItem = (typeof SETTINGS_ITEMS)[number];
 
 /** The two-way settings, each value left to right as the screen shows them. */
 export const SETTINGS_CHOICES = {
   flashing: ['reduced', 'full'],
   shake: [false, true],
+  crt: [false, true],
 } as const;
+type Choice = keyof typeof SETTINGS_CHOICES;
+
+function isChoice(item: SettingsItem): item is Choice {
+  return item in SETTINGS_CHOICES;
+}
 
 /**
- * Music and Effects volume, 0 (off) to 5; Flashing (Reduced or Full) and Shake (Off or On);
+ * Music and Effects volume, 0 (off) to 5; Flashing (Reduced or Full), Shake and CRT (Off or On);
  * then Back. Left and right change a value and stop at the ends; confirm steps a volume up
  * and wraps from 5 to off, and flips a two-way setting, so a click alone can reach every
  * value. Back, or confirm on Back, leaves.
@@ -262,7 +268,7 @@ export class SettingsMenu {
     return SETTINGS_ITEMS[this.cursor]!;
   }
 
-  #set<K extends 'flashing' | 'shake'>(item: K, v: Settings[K]): void {
+  #set<K extends Choice>(item: K, v: Settings[K]): void {
     this.values[item] = v;
   }
 
@@ -276,7 +282,7 @@ export class SettingsMenu {
       case 'left':
       case 'right': {
         if (item === 'back') return null;
-        if (item === 'flashing' || item === 'shake') {
+        if (isChoice(item)) {
           const v = SETTINGS_CHOICES[item][action === 'left' ? 0 : 1];
           if (v === this.values[item]) return null;
           this.#set(item, v);
@@ -289,7 +295,7 @@ export class SettingsMenu {
       }
       case 'confirm':
         if (item === 'back') return 'back';
-        if (item === 'flashing' || item === 'shake') {
+        if (isChoice(item)) {
           const [a, b] = SETTINGS_CHOICES[item];
           this.#set(item, this.values[item] === a ? b : a);
           return 'changed';

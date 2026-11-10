@@ -13,6 +13,12 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **M3: the look.** Copper bars, bands of violet, cyan, lime, amber and magenta, sway
+  behind the stars, glow brighter with the bass and pulse on each downbeat; with Flashing
+  Reduced their brightness never swings far enough to count as a flash. Sparks fly off the
+  LED tips when a row with a note reaches the playhead. A tank that takes a hit and
+  survives shows white for a moment. Settings has a CRT look, off by default: a slight
+  bloom, scanlines and a vignette. Screenshots now report the page's errors.
 * **M3: the ship breaks apart.** When the ship is destroyed, every pixel of it flies off in
   its own colour with hot sparks, inside a shockwave ring of cyan, lime, amber and magenta
   that grows and fades, and the screen shakes. Flashing Reduced dims the ring.

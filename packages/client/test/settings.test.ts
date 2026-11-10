@@ -16,7 +16,7 @@ describe('settings', () => {
 
   it('saves and loads', () => {
     const s = memory();
-    const saved = { music: 2, effects: 0, flashing: 'full', shake: false } as const;
+    const saved = { music: 2, effects: 0, flashing: 'full', shake: false, crt: true } as const;
     saveSettings(s, saved);
     expect(loadSettings(s)).toEqual(saved);
   });
@@ -27,15 +27,16 @@ describe('settings', () => {
     expect(loadSettings(null)).toEqual(DEFAULT_SETTINGS);
     s.setItem('pattern-break.settings', '{not json');
     expect(loadSettings(s)).toEqual(DEFAULT_SETTINGS);
-    s.setItem('pattern-break.settings', JSON.stringify({ music: 9, effects: 2.5, flashing: 'none', shake: 1 }));
+    s.setItem('pattern-break.settings', JSON.stringify({ music: 9, effects: 2.5, flashing: 'none', shake: 1, crt: 'yes' }));
     expect(loadSettings(s)).toEqual(DEFAULT_SETTINGS);
     s.setItem('pattern-break.settings', JSON.stringify({ music: 1 }));
     expect(loadSettings(s)).toEqual({ ...DEFAULT_SETTINGS, music: 1 });
   });
 
-  it('reduces flashing and shakes by default', () => {
+  it('reduces flashing, shakes, and has the CRT look off by default', () => {
     expect(DEFAULT_SETTINGS.flashing).toBe('reduced');
     expect(DEFAULT_SETTINGS.shake).toBe(true);
+    expect(DEFAULT_SETTINGS.crt).toBe(false);
   });
 
   it('ignores storage that throws', () => {

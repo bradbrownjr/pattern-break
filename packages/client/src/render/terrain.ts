@@ -71,6 +71,11 @@ export class TerrainView {
     for (const c of this.#columns) c.visible = false;
   }
 
+  /** The lit colours in use, by segment colour index. */
+  get lit(): readonly number[] {
+    return this.#lit;
+  }
+
   setLevel(level: Level | null): void {
     this.#level = level;
     // Peak dots are drawn only where they are solid: a dot the ship could fly through

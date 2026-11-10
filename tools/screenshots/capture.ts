@@ -198,6 +198,11 @@ try {
       colorScheme: 'dark',
     });
     const page = await context.newPage();
+    // The page's errors and warnings, so a broken shader or a throw shows up here.
+    page.on('pageerror', (e) => console.error(`  ${shot.id}: page error: ${e.message}`));
+    page.on('console', (m) => {
+      if (m.type() === 'error' || m.type() === 'warning') console.error(`  ${shot.id}: ${m.type()}: ${m.text()}`);
+    });
     try {
       await page.goto(shotUrl(server.origin, shot));
       try {

@@ -135,6 +135,12 @@ const COLORS = ICON_COLORS;
 const ENEMY_SPRITES = 64;
 /** Enemy bursts that can play at once; the oldest is reused. */
 const BURSTS = 8;
+/**
+ * How long an enemy that takes a hit and survives shows white: tanks, the only enemy with
+ * more than one hit (ENEMY_HP). A sprite-sized change, far under WCAG's area for a flash,
+ * so it doesn't go through the FlashGate.
+ */
+export const HIT_FLASH_SAMPLES = Math.round(SAMPLE_RATE * 0.07);
 const ENEMY_BURST: ExplosionStyle = { particles: 16, ms: 450, colors: [WHITE, MAGENTA, AMBER, LIME], speed: 70 };
 const BLAST: ExplosionStyle = { particles: 40, ms: 600, colors: [WHITE, AMBER, AMBER, MAGENTA], speed: 130 };
 const MISSILE_BLAST: ExplosionStyle = { particles: 28, ms: 500, colors: [WHITE, CYAN, CYAN, MAGENTA], speed: 110 };
@@ -154,6 +160,8 @@ export interface Textures {
   turret: Texture;
   turretCeiling: Texture;
   tank: Texture;
+  /** The tank in white, for the moment after it takes a hit and survives. */
+  tankHit: Texture;
   ship: Texture;
   /** Enemy bullets, indexed by EnemyKind. */
   bullets: Texture[];
@@ -190,6 +198,7 @@ export function getTextures(): Textures {
     turret: mapTexture(TURRET_MAP, COLORS, 'turret'),
     turretCeiling: mapTexture(flipRows(TURRET_MAP), COLORS, 'turret-ceiling'),
     tank: mapTexture(TANK_MAP, COLORS, 'tank'),
+    tankHit: mapTexture(TANK_MAP, Object.fromEntries(Object.keys(COLORS).map((k) => [k, WHITE])), 'tank-hit'),
     ship: mapTexture(ENEMY_SHIP_MAP, COLORS, 'enemy-ship'),
     bullets: BULLET_MAPS.map((map, k) => mapTexture(map, COLORS, `bullet-${k}`)),
     bomb: mapTexture(BOMB_MAP, COLORS, 'bomb'),
@@ -277,6 +286,9 @@ export class CombatView {
   #shipX = 0;
   #shipY = 0;
   #flashes: FlashGate;
+  /** Each enemy's hits left at the last draw, and the song sample it last took a hit. */
+  #lastHp = new Uint8Array(0);
+  #hitSample = new Float64Array(0);
 
   /** `flashes` decides whether the nuke's flash is shown, and how strong it is. */
   constructor(flashes: FlashGate = new FlashGate()) {
@@ -360,6 +372,7 @@ export class CombatView {
   /** Forgets the bursts and explosions, for a new run or when the song starts over. */
   reset(): void {
     this.#seenTick = 0;
+    this.#lastHp = new Uint8Array(0);
     this.#scanFrom = 0;
     this.#seenHit = -1;
     this.#seenExtraLife = -1;
@@ -397,7 +410,16 @@ export class CombatView {
     const tex = getTextures();
     const e = level.enemies;
 
-    // Enemies.
+    // Enemies. A hit that leaves hits to spare shows the enemy white for a moment.
+    const hp = state.enemyHp;
+    if (this.#lastHp.length !== hp.length) {
+      this.#lastHp = hp.slice();
+      this.#hitSample = new Float64Array(hp.length).fill(-Infinity);
+    }
+    for (let i = state.firstLive; i < state.nextSpawn; i++) {
+      if (hp[i]! > 0 && hp[i]! < this.#lastHp[i]!) this.#hitSample[i] = displaySamples;
+      this.#lastHp[i] = hp[i]!;
+    }
     let used = 0;
     for (let i = state.firstLive; i < state.nextSpawn && used < ENEMY_SPRITES; i++) {
       if (state.enemyStatus[i] !== EnemyStatus.alive) continue;
@@ -410,7 +432,8 @@ export class CombatView {
           placeCentred(sprite, e.x[i]! / Q8 - scrollPx, y);
           break;
         case EnemyKind.tank: {
-          sprite.texture = tex.tank;
+          const since = displaySamples - this.#hitSample[i]!;
+          sprite.texture = since >= 0 && since < HIT_FLASH_SAMPLES ? tex.tankHit : tex.tank;
           const wx = e.x[i]! - TANK_SPEED_Q8 * (state.tick - e.spawnTick[i]!);
           placeCentred(sprite, wx / Q8 - scrollPx, y);
           break;

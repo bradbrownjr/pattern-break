@@ -13,3 +13,10 @@ export function seededRandom(seed: number): () => number {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+
+/** A small integer hash: the same `a` and `b` always give the same 32 bits. */
+export function hash32(a: number, b: number): number {
+  let h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(b + 1, 0xc2b2ae35);
+  h = Math.imul(h ^ (h >>> 16), 0x7feb352d);
+  return (h ^ (h >>> 15)) >>> 0;
+}

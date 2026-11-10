@@ -146,7 +146,7 @@ describe('SettingsMenu', () => {
     expect(m.apply('back')).toBe('back');
   });
 
-  it('sets Flashing and Shake with left and right, and flips them on confirm', () => {
+  it('sets Flashing, Shake and CRT with left and right, and flips them on confirm', () => {
     const m = new SettingsMenu(DEFAULT_SETTINGS);
     m.cursor = SETTINGS_ITEMS.indexOf('flashing');
     expect(m.apply('left')).toBeNull();
@@ -162,6 +162,11 @@ describe('SettingsMenu', () => {
     expect(m.values.shake).toBe(false);
     expect(m.apply('confirm')).toBe('changed');
     expect(m.values.shake).toBe(true);
+    m.apply('down');
+    expect(m.item).toBe('crt');
+    expect(m.apply('left')).toBeNull();
+    expect(m.apply('right')).toBe('changed');
+    expect(m.values.crt).toBe(true);
   });
 
   it('works on its own copy of the settings', () => {

@@ -307,10 +307,11 @@ every bar of every generated level.
   Unlit segments are not drawn, so the passage is plain background (2026-11-09).
   White peak-hold dots are drawn only on a difficulty with solid peaks (none, for now).
 - Backgrounds: animated copper-bar gradients (horizontal colour bands) and a parallax
-  starfield. The bars can pulse with the bass channel's VU.
-- Effects: pooled particle emitters on note hits and kills, hit-stop (cosmetic only),
-  screen shake, a flash on downbeats, and a CRT filter (scanlines, slight bloom, vignette)
-  as a toggle.
+  starfield. The bars pulse with the bass (the low spectrum bands; built 2026-11-10).
+- Effects: pooled particle emitters on note hits and kills, hit-stop (cosmetic only; an
+  open decision), screen shake, a flash on downbeats (the copper bars pulse), a white flash
+  on an enemy that survives a hit, and a CRT filter (scanlines, slight bloom, vignette) as
+  a toggle (built 2026-11-10, except hit-stop).
 - Enemies are small pixel-art sprites: magenta and amber turrets (upside down on the
   ceiling), lime tanks, magenta ships facing left, and white-cored bullets in the colour of
   what fired them: a ship's magenta, a tank's lime, a turret's a larger amber pellet. The
