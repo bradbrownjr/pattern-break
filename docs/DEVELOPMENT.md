@@ -649,7 +649,8 @@ The client's `vitest.config.ts` has the same two projects. Its `browser` project
 `test/browser/mixer.test.ts`, which renders effects through the mixer offline and checks
 the pan, the echo and reverb tail, silence at volume 0, and the voice limit; and
 `test/browser/render.test.ts`, which draws a hand-made level with WebGL and checks canvas
-pixels against the terrain rules and the palette. Each engine
+pixels against the terrain rules and the palette; and `test/browser/library.test.ts`, the
+song library and level cache against each engine's IndexedDB (see "Library"). Each engine
 is launched with audio allowed to start without a click: Chromium with
 `--autoplay-policy=no-user-gesture-required`, Firefox with the `media.autoplay.default` and
 `media.autoplay.block-webaudio` preferences, WebKit with Playwright's defaults.
@@ -1263,6 +1264,29 @@ is added.
 | Girl From Mars | `girl_from_mars.xm` | Drozerix | Level 6 |
 | Wrath_of_the_Djinn | `wrath_of_the_djinn.xm` | Drozerix | Level 7 |
 | Keygen 9000 | `keygen_9000.xm` | Drozerix | Level 8, game over |
+
+### Library
+
+`game/library.ts` keeps the player's songs and analyzed levels in this browser's IndexedDB,
+through `idb` 8.0.4, in the database `pattern-break` (version 1):
+
+- **`levels`**: serialized LevelData (`serializeLevelData`), keyed
+  `<song SHA-256>:<tempo permille>:<GEN_VERSION>`, with an index on the hash. The game asks
+  the cache before analyzing (`Game.#analyze`): a hit skips the worker, and a miss analyzes
+  and stores the result. Opening the library deletes entries from any other `GEN_VERSION`,
+  so a bump costs one analysis per song and tempo, and a libopenmpt change, which changes
+  the golden hashes, comes with a bump. On 2026-11-10 in headless Chromium, the title
+  screen's two levels took 13 s to appear on the first load and 3 s after a reload, with no
+  analysis worker started.
+- **`songs`**: imported song files (M4), keyed by SHA-256, with the file name, title, bytes
+  and import time. Deleting a song deletes its cached levels.
+
+Songs without a hash (the generated test song) are never cached. Where IndexedDB is missing
+or fails to open, `openLibrary()` resolves to null and the game analyzes every time; a
+failed read or write, or an entry that won't deserialize, falls back to analyzing. When a
+newer build in another tab asks to upgrade the database, this tab closes its connection
+rather than block it. `test/browser/library.test.ts` checks the cache, the pruning, and
+song storage in Chromium, Firefox and WebKit.
 
 ### Menus and the jukebox
 

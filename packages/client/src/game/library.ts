@@ -1,0 +1,148 @@
+// The player's song library and level cache, in this browser's IndexedDB (docs/PLAN.md,
+// "Client UI"; docs/DEVELOPMENT.md, "Library"). Two stores:
+//
+// - `songs`: imported song files (songs made in a music tracker), keyed by the SHA-256 of
+//   their bytes, the hash replays already name a song by.
+// - `levels`: serialized LevelData, keyed by song hash, tempo and GEN_VERSION, so a song is
+//   analyzed once per difficulty tempo. Entries from another GEN_VERSION are useless and
+//   are deleted when the library opens.
+//
+// IndexedDB can be missing or blocked (a private window, cleared or blocked site data), so
+// openLibrary() resolves to null there and the game runs without a cache.
+
+import { GEN_VERSION } from '@game/core';
+import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+
+export interface StoredSong {
+  /** SHA-256 of `bytes`, lower-case hex. */
+  sha256: string;
+  /** The file's name when imported, for the list and for export. */
+  fileName: string;
+  /** The song's own title, or the file name when it has none. */
+  title: string;
+  bytes: ArrayBuffer;
+  /** When it was imported, in ms since the epoch. */
+  added: number;
+}
+
+export interface CachedLevel {
+  key: string;
+  sha256: string;
+  tempoPermille: number;
+  genVersion: number;
+  /** serializeLevelData() of the analysis. */
+  levelData: ArrayBuffer;
+}
+
+interface LibrarySchema extends DBSchema {
+  songs: { key: string; value: StoredSong };
+  levels: { key: string; value: CachedLevel; indexes: { sha256: string } };
+}
+
+export const DB_NAME = 'pattern-break';
+const DB_VERSION = 1;
+
+/** The level cache's key for a song at a tempo, under a GEN_VERSION. */
+export function levelKey(sha256: string, tempoPermille: number, genVersion: number = GEN_VERSION): string {
+  return `${sha256}:${tempoPermille}:${genVersion}`;
+}
+
+/** An ArrayBuffer holding exactly `bytes`, copied unless `bytes` already spans its buffer. */
+function ownBuffer(bytes: Uint8Array): ArrayBuffer {
+  const whole = bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength && bytes.buffer instanceof ArrayBuffer;
+  return whole ? (bytes.buffer as ArrayBuffer) : bytes.slice().buffer;
+}
+
+export class Library {
+  readonly #db: IDBPDatabase<LibrarySchema>;
+
+  constructor(db: IDBPDatabase<LibrarySchema>) {
+    this.#db = db;
+  }
+
+  /** A song's cached LevelData at a tempo for this GEN_VERSION, or null. */
+  async level(sha256: string, tempoPermille: number): Promise<Uint8Array | null> {
+    const entry = await this.#db.get('levels', levelKey(sha256, tempoPermille));
+    return entry ? new Uint8Array(entry.levelData) : null;
+  }
+
+  async putLevel(sha256: string, tempoPermille: number, levelData: Uint8Array): Promise<void> {
+    await this.#db.put('levels', {
+      key: levelKey(sha256, tempoPermille),
+      sha256,
+      tempoPermille,
+      genVersion: GEN_VERSION,
+      levelData: ownBuffer(levelData),
+    });
+  }
+
+  /** Deletes cached levels from any other GEN_VERSION; returns how many went. */
+  async pruneLevels(): Promise<number> {
+    const tx = this.#db.transaction('levels', 'readwrite');
+    let removed = 0;
+    for await (const cursor of tx.store) {
+      if (cursor.value.genVersion !== GEN_VERSION) {
+        await cursor.delete();
+        removed++;
+      }
+    }
+    await tx.done;
+    return removed;
+  }
+
+  /** Every imported song, oldest first. */
+  async songs(): Promise<StoredSong[]> {
+    const all = await this.#db.getAll('songs');
+    return all.sort((a, b) => a.added - b.added);
+  }
+
+  async song(sha256: string): Promise<StoredSong | null> {
+    return (await this.#db.get('songs', sha256)) ?? null;
+  }
+
+  /** Stores an imported song; one with the same hash is replaced. */
+  async putSong(song: StoredSong): Promise<void> {
+    await this.#db.put('songs', song);
+  }
+
+  /** Removes an imported song and its cached levels. */
+  async deleteSong(sha256: string): Promise<void> {
+    const tx = this.#db.transaction(['songs', 'levels'], 'readwrite');
+    const levels = tx.objectStore('levels');
+    const keys = await levels.index('sha256').getAllKeys(sha256);
+    await Promise.all([tx.objectStore('songs').delete(sha256), ...keys.map((k) => levels.delete(k)), tx.done]);
+  }
+
+  close(): void {
+    this.#db.close();
+  }
+}
+
+/**
+ * Opens the library and drops levels from older GEN_VERSIONs, or resolves to null where
+ * IndexedDB is unavailable or fails to open.
+ */
+export async function openLibrary(name: string = DB_NAME): Promise<Library | null> {
+  try {
+    if (typeof indexedDB === 'undefined') return null;
+    let opened: IDBPDatabase<LibrarySchema> | null = null;
+    const db = await openDB<LibrarySchema>(name, DB_VERSION, {
+      upgrade(db) {
+        db.createObjectStore('songs', { keyPath: 'sha256' });
+        db.createObjectStore('levels', { keyPath: 'key' }).createIndex('sha256', 'sha256');
+      },
+      // A newer build in another tab wants to upgrade the database: let it, rather than
+      // leave it waiting. This tab's library stops working until it reloads.
+      blocking() {
+        opened?.close();
+      },
+    });
+    opened = db;
+    const library = new Library(db);
+    await library.pruneLevels();
+    return library;
+  } catch (err) {
+    console.warn('song library unavailable:', err);
+    return null;
+  }
+}

@@ -13,10 +13,10 @@ Fixes**, in that order.
 
 ## Milestones
 
-* **Drozerix only.** The bundled music keeps to Drozerix's style, so JAM's two songs,
-  Numen in Da Chip and FastLane, leave the run. RNDD_Keygen#1.0 is the new level 1, and
-  the run has seven levels until a second new song is picked; Silicon Dancer was tried
-  and dropped as too funky. The recorded replay is now a run of RNDD_Keygen#1.0.
+* **M4: level cache.** Analyzed levels are kept in the browser's IndexedDB, keyed by the
+  song's hash, the difficulty's tempo and `GEN_VERSION`, so each song is analyzed once per
+  difficulty instead of on every visit. Entries from an older `GEN_VERSION` are deleted.
+  The same database has a store ready for imported songs.
 * **Neon Techno is level 1.** Brad picked it from the three candidates, so the run has
   eight levels again: Neon Techno, then RNDD_Keygen#1.0, with The_Dim_Dungeon back at level
   4. Peachy Chip goes into the M4 music pack. The recorded replay is now a run of Neon
@@ -25,6 +25,10 @@ Fixes**, in that order.
   their license, measurements and status, for picking songs later; 38 more Public Domain
   songs were downloaded, checked and measured. Three are picked for Brad to hear as the
   new level 1: Neon Techno, Peachy Chip and Viral Legacy.
+* **Drozerix only.** The bundled music keeps to Drozerix's style, so JAM's two songs,
+  Numen in Da Chip and FastLane, leave the run. RNDD_Keygen#1.0 is the new level 1, and
+  the run has seven levels until a second new song is picked; Silicon Dancer was tried
+  and dropped as too funky. The recorded replay is now a run of RNDD_Keygen#1.0.
 * **Amiga resampler emulation off** (`GEN_VERSION` 8). With it on, a 4-channel MOD took
   15 times as long to analyze (18 s for Silicon Dancer, against 1 s), and Brad found MODs
   sound fine without it. Only MODs change; every bundled song is an XM.

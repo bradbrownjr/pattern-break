@@ -15,6 +15,7 @@
     "@game/analysis": "workspace:*",
     "@game/chipfx": "workspace:*",
     "@game/core": "workspace:*",
+    "idb": "8.0.4",
     "pixi.js": "8.22.0"
   },
   "devDependencies": {

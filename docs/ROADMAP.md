@@ -35,7 +35,7 @@ start the next until the current one is done.
 - [ ] Module import (file picker, drag and drop, directory import on Chromium) and
       IndexedDB storage. Imported songs are managed in the Jukebox: an Import row, and Del
       removes one (Brad, 2026-11-10). They join Practice and the Jukebox, not the run.
-- [ ] Level caching by hash and `GEN_VERSION`.
+- [x] Level caching by hash and `GEN_VERSION` (2026-11-10; `DEVELOPMENT.md`, "Library").
 - [ ] PWA install and full offline play.
 - [ ] The bundled music pack: Augmented_Emotions, The_Dim_Dungeon_2, Chica-pop!, Cabin
       Fever! and Peachy Chip (Brad, 2026-11-10; Drozerix only), attribution with author and source links on

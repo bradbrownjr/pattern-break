@@ -15,6 +15,7 @@ import {
   autopilotInputs,
   createSimState,
   decodeReplay,
+  deserializeLevelData,
   runInputLog,
   encodeReplay,
   generateLevel,
@@ -35,7 +36,8 @@ import { CYAN, LIME, MAGENTA } from '../render/palette.ts';
 import { seededRandom } from '../render/random.ts';
 import type { GameRenderer } from '../render/renderer.ts';
 import { barBinEdges, barLevels } from '../render/spectrum.ts';
-import { analyzeInWorker } from './analysis.ts';
+import { analyzeSerializedInWorker } from './analysis.ts';
+import { openLibrary, type Library } from './library.ts';
 import {
   STANDARD_PROFILE,
   assign,
@@ -261,6 +263,8 @@ export class Game {
   readonly #clock = new DisplayClock();
   readonly #state = createSimState();
   readonly #cache = new Map<BundledSong, SongCache>();
+  /** The song library and level cache (library.ts); null where IndexedDB is unavailable. */
+  readonly #library: Promise<Library | null> = openLibrary();
   #mode: Mode = 'start';
   #modeSince = 0;
   /** The last key press or click on the title menu, for the demo's idle timer. */
@@ -1113,9 +1117,31 @@ export class Game {
     const tempo = Difficulty[difficulty].tempoPermille;
     let data = cache.levelData.get(tempo);
     if (!data) {
-      data = cache.bytes.then((b) => analyzeInWorker(b, tempo));
+      data = this.#analyze(song, cache, tempo);
       cache.levelData.set(tempo, data);
     }
+    return data;
+  }
+
+  /**
+   * `song`'s LevelData at `tempoPermille`: from the level cache when this GEN_VERSION has
+   * analyzed it before, else from the analysis worker, then cached. A cache that fails to
+   * read or write, or an entry that won't deserialize, falls back to analyzing.
+   */
+  async #analyze(song: BundledSong, cache: SongCache, tempoPermille: number): Promise<LevelData> {
+    const hash = song.sha256;
+    const library = hash ? await this.#library : null;
+    if (library && hash) {
+      try {
+        const hit = await library.level(hash, tempoPermille);
+        if (hit) return deserializeLevelData(hit);
+      } catch (err) {
+        console.warn('level cache read failed:', err);
+      }
+    }
+    const serialized = await analyzeSerializedInWorker(await cache.bytes, tempoPermille);
+    const data = deserializeLevelData(serialized);
+    if (library && hash) library.putLevel(hash, tempoPermille, serialized).catch((err: unknown) => console.warn('level cache write failed:', err));
     return data;
   }
 
