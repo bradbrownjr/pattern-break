@@ -69,6 +69,21 @@ and its only text is the artist's banner, "Composed&Sampled By: Drozerix/M0n50n"
 contact address. The_Dim_Dungeon is level 4, before the mini boss. Wrath_of_the_Djinn's sample names read "A Grand Keygen Chipp ... Gott That Boss? :)",
 which leads into the last level.
 
+### Music pack
+
+Five more songs, in Practice and the Jukebox but not the run (M4; Brad, 2026-11-10). Each
+was checked again on 2026-11-10 before bundling: Public Domain on its page, the MD5
+matching, and the comments and the file's text read for a cover or a sample source. All
+five pass the playability test on every difficulty.
+
+| Song | Length | Rows/s | Notes/s | Gap | Rating | MD5 | Comments and text |
+|---|---|---|---|---|---|---|---|
+| [Augmented_Emotions](https://modarchive.org/index.php?request=view_by_moduleid&query=172184) | 3:45 | 12.8 | 38.4 | 62 / 83 | 9 | ef0be06e68e4fbadeb7ee98de4a0ad93 | Two comments praise it; the text credits "M0n50n" and an earlier title, "Chip_Overture_3". |
+| [The_Dim_Dungeon_2](https://modarchive.org/index.php?request=view_by_moduleid&query=172897) | 2:16 | 14.4 | 22.1 | 69 / 104 | 8 | 2e5c1012c42ee7f07f709cf15fbea600 | One comment compares it with The_Dim_Dungeon; the text is the artist's banner and title. |
+| [Cabin Fever!](https://modarchive.org/index.php?request=view_by_moduleid&query=174833) | 2:00 | 17.6 | 31.8 | 90 / 104 | 10 | 868d46f0cccdc4d990c628fb01358c90 | Two comments praise it; the text names it "Winter Chip IX", dated 1/14/2014. |
+| [Chica-pop!](https://modarchive.org/index.php?request=view_by_moduleid&query=189433) | 3:03 | 16.8 | 27.8 | 76 / 104 | 10 | 4861bc70c49362ddf264a3a6dc0253a8 | One comment: "getting all nostalgic with the ghidorah vibes"; it names no song, and the text is the banner, title and date. Digital Rendezvous was ruled out over a question about Ghidorah, so this one went to Brad (2026-11-10). |
+| [Peachy Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=191437) | 2:12 | 9.9 | 33.9 | 62 / 83 | none | bad56295b4ed3f50963437a9ecd0a763 | No comments; the text is the title and a new year's note. |
+
 ## Level 1 picks
 
 Brad passed on Silicon Dancer, so on 2026-11-10 three Drozerix songs near level 1's speed
@@ -84,8 +99,8 @@ its MD5 checked against its page, its text and comments read, and its level buil
 flown by the autopilot (with enemies) on easy, normal and hard; a note says where the
 autopilot died. Statuses:
 
-- **Bundled:** in the game now. **Pack:** chosen for the M4 music pack (Brad,
-  2026-11-10).
+- **Bundled:** in the game now. **Pack:** in the game as part of the M4 music pack
+  (Brad, 2026-11-10; see "Music pack").
 - **Measured:** passes the checks; not yet heard by Brad.
 - **Dropped:** heard and turned down. **Ruled out:** a possible cover. **Not suitable:**
   the title fails the all-ages rule (the archive masks these titles). **Not open:** Mod
@@ -94,7 +109,7 @@ autopilot died. Statuses:
 | Song | Added | Format | Length | Rows/s | Notes/s | Gap | Rating | Status | Notes |
 |---|---|---|---|---|---|---|---|---|---|
 | [L3V3L_33](https://modarchive.org/index.php?request=view_by_moduleid&query=172183) | Mar 2012 | XM | 1:05 | 15.3 | 38.5 | 83 / 97 | 7 | Measured |  |
-| [Augmented_Emotions](https://modarchive.org/index.php?request=view_by_moduleid&query=172184) | Mar 2012 | XM | 3:45 | 12.8 | 38.4 | 62 / 83 | 9 | Pack | M4 music pack; tight cave |
+| [Augmented_Emotions](https://modarchive.org/index.php?request=view_by_moduleid&query=172184) | Mar 2012 | XM | 3:45 | 12.8 | 38.4 | 62 / 83 | 9 | Pack | Tight cave |
 | [CHiP_OVERTURE](https://modarchive.org/index.php?request=view_by_moduleid&query=172185) | Mar 2012 | XM | 2:15 | 10.7 | 32.0 | 62 / 83 | 8 | Bundled | Level 3 |
 | [Dissorint](https://modarchive.org/index.php?request=view_by_moduleid&query=172423) | May 2012 | XM | 1:53 | 12.8 | 43.4 | 62 / 83 | none | Measured |  |
 | [The_Epic_Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=172424) | May 2012 | XM | 3:48 | 10.7 | 34.9 | 62 / 83 | 8 | Bundled | Title and demo music |
@@ -102,7 +117,7 @@ autopilot died. Statuses:
 | [The_Dim_Dungeon](https://modarchive.org/index.php?request=view_by_moduleid&query=172732) | Aug 2012 | XM | 1:41 | 12.0 | 17.0 | 76 / 104 | 9 | Bundled | Level 4 |
 | [Necromancer's_Castle](https://modarchive.org/index.php?request=view_by_moduleid&query=172786) | Aug 2012 | XM | 1:24 | 16.0 | 22.0 | 83 / 104 | 7 | Measured |  |
 | [RNDD_Keygen#1.0](https://modarchive.org/index.php?request=view_by_moduleid&query=172896) | Sep 2012 | XM | 1:10 | 8.3 | 17.8 | 69 / 97 | 9 | Bundled | Level 2 |
-| [The_Dim_Dungeon_2](https://modarchive.org/index.php?request=view_by_moduleid&query=172897) | Sep 2012 | XM | 2:16 | 14.4 | 22.1 | 69 / 104 | 8 | Pack | M4 music pack; a sequel to The_Dim_Dungeon; autopilot died on hard |
+| [The_Dim_Dungeon_2](https://modarchive.org/index.php?request=view_by_moduleid&query=172897) | Sep 2012 | XM | 2:16 | 14.4 | 22.1 | 69 / 104 | 8 | Pack | A sequel to The_Dim_Dungeon; autopilot died on hard |
 | [4_RNDD!](https://modarchive.org/index.php?request=view_by_moduleid&query=172898) | Sep 2012 | XM | 2:02 | 14.2 | 27.5 | 69 / 97 | 8 | Bundled | Level 5 |
 | [Wrath_of_the_Djinn](https://modarchive.org/index.php?request=view_by_moduleid&query=173080) | Nov 2012 | XM | 1:52 | 16.0 | 20.0 | 83 / 104 | 9 | Bundled | Level 7 |
 | [Nerve_intro](https://modarchive.org/index.php?request=view_by_moduleid&query=173081) | Nov 2012 | XM | 1:30 | 21.3 | 23.1 | 90 / 104 | none | Measured |  |
@@ -126,7 +141,7 @@ autopilot died. Statuses:
 | [The Digital Dragon](https://modarchive.org/index.php?request=view_by_moduleid&query=174511) | Dec 2013 | XM | 3:06 | 16.0 | 35.9 | 62 / 97 | none | Measured |  |
 | [Lost in her eyes](https://modarchive.org/index.php?request=view_by_moduleid&query=174531) | Dec 2013 | XM | 1:52 | 16.8 | 18.9 | 90 / 104 | none | Measured |  |
 | [A Winter Kiss](https://modarchive.org/index.php?request=view_by_moduleid&query=174546) | Dec 2013 | XM | 3:11 | 16.9 | 35.1 | 62 / 104 | none | Measured | Samples by Ogge, Seablue and Zabutom, and Drozerix |
-| [Cabin Fever!](https://modarchive.org/index.php?request=view_by_moduleid&query=174833) | Mar 2014 | XM | 2:00 | 17.6 | 31.8 | 90 / 104 | 10 | Pack | M4 music pack |
+| [Cabin Fever!](https://modarchive.org/index.php?request=view_by_moduleid&query=174833) | Mar 2014 | XM | 2:00 | 17.6 | 31.8 | 90 / 104 | 10 | Pack |  |
 | [Computer ****!](https://modarchive.org/index.php?request=view_by_moduleid&query=175021) | May 2014 | XM |  |  |  |  | 9 | Not suitable | Title |
 | [Poppy Flower Girls](https://modarchive.org/index.php?request=view_by_moduleid&query=175325) | Jun 2014 | XM | 2:34 | 18.7 | 49.8 | 62 / 97 | 9 | Measured |  |
 | [Mecanum Overdrive](https://modarchive.org/index.php?request=view_by_moduleid&query=175349) | Jun 2014 | XM | 3:18 | 17.3 | 27.6 | 83 / 104 | 10 | Measured |  |
@@ -145,10 +160,10 @@ autopilot died. Statuses:
 | [*****_bit](https://modarchive.org/index.php?request=view_by_moduleid&query=185091) | Mar 2019 | XM |  |  |  |  | none | Not suitable | Title |
 | [Playful Girl](https://modarchive.org/index.php?request=view_by_moduleid&query=185337) | May 2019 | XM | 1:58 | 16.0 | 59.7 | 62 / 97 | none | Measured |  |
 | [Building Energy](https://modarchive.org/index.php?request=view_by_moduleid&query=185456) | Jun 2019 | XM | 1:29 | 23.6 | 30.7 | 62 / 104 | none | Measured |  |
-| [Chica-pop!](https://modarchive.org/index.php?request=view_by_moduleid&query=189433) | Jun 2020 | XM | 3:03 | 16.8 | 27.8 | 76 / 104 | 10 | Pack | M4 music pack |
+| [Chica-pop!](https://modarchive.org/index.php?request=view_by_moduleid&query=189433) | Jun 2020 | XM | 3:03 | 16.8 | 27.8 | 76 / 104 | 10 | Pack |  |
 | [War Path](https://modarchive.org/index.php?request=view_by_moduleid&query=190185) | Aug 2020 | XM | 2:46 | 14.4 | 19.9 | 69 / 104 | none | Measured |  |
 | [Master Select](https://modarchive.org/index.php?request=view_by_moduleid&query=190186) | Aug 2020 | XM | 1:34 | 17.1 | 17.5 | 76 / 104 | none | Measured |  |
-| [Peachy Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=191437) | Apr 2021 | XM | 2:12 | 9.9 | 33.9 | 62 / 83 | none | Pack | M4 music pack (Brad, 2026-11-10) |
+| [Peachy Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=191437) | Apr 2021 | XM | 2:12 | 9.9 | 33.9 | 62 / 83 | none | Pack | Brad, 2026-11-10 |
 | [Slayers of High Toro](https://modarchive.org/index.php?request=view_by_moduleid&query=191997) | May 2021 | MOD |  |  |  |  | none | Not open | Mod Archive Distribution license |
 | [14-The High Ground](https://modarchive.org/index.php?request=view_by_moduleid&query=191998) | May 2021 | MOD |  |  |  |  | none | Not open | Mod Archive Distribution license |
 | [Voyage](https://modarchive.org/index.php?request=view_by_moduleid&query=191999) | May 2021 | MOD |  |  |  |  | none | Not open | Mod Archive Distribution license |

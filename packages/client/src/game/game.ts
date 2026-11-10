@@ -60,6 +60,7 @@ import { DisplayClock, InputLog, catchUp, targetTick } from './loop.ts';
 import { ControlsScreen } from './controls.ts';
 import { SoundCues, type Cue } from './cues.ts';
 import { ColourFlood, HangarIntro, PLAY_AT, WIPE_MS, hangarCues, introTime, loadHangarArt } from './hangar.ts';
+import { CreditsMenu, CreditsScreen, creditRows } from './credits.ts';
 import { HelpScreen } from './help.ts';
 import { CONTROL_PAGES, ControlsPages, DIFFICULTY_LABELS, JukeboxMenu, KeysMenu, PauseMenu, SettingsMenu, TitleMenu, type TitleEvent } from './menu.ts';
 import { KeysScreen } from './keys-screen.ts';
@@ -102,6 +103,7 @@ type Mode =
   | 'settings'
   | 'keys'
   | 'help'
+  | 'credits'
   | 'hangar'
   | 'analyzing'
   | 'intro'
@@ -252,6 +254,10 @@ export class Game {
   /** A note over the Keys screen's hint, such as a direction left with no key. */
   #keysNote: { text: string; until: number } | null = null;
   readonly #help = new HelpScreen();
+  readonly #creditsMenu: CreditsMenu;
+  readonly #credits: CreditsScreen;
+  /** A note in place of the Credits screen's detail line, such as a link a pad can't open. */
+  #creditsNote: { text: string; until: number } | null = null;
   /** The hangar intro, once its art has loaded; it shows in #hangarLayer. */
   #hangar: HangarIntro | null = null;
   readonly #hangarLayer = new Container();
@@ -344,6 +350,9 @@ export class Game {
     this.#menu = new TitleMenu(options.songs.length, Math.max(0, options.songs.indexOf(options.song)));
     this.#jukeboxMenu = new JukeboxMenu(options.songs.length, FOLDER_PICKER);
     this.#jukebox = new JukeboxScreen(this.#songs, FOLDER_PICKER);
+    const credits = creditRows(options.songs);
+    this.#creditsMenu = new CreditsMenu(credits);
+    this.#credits = new CreditsScreen(credits);
     this.#settingsMenu = new SettingsMenu(this.#settings);
     this.#input.keys = new KeyMap(this.#bindings.keys);
     this.#applyLook();
@@ -354,6 +363,7 @@ export class Game {
       this.#settingsScreen.container,
       this.#keysScreen.container,
       this.#help.container,
+      this.#credits.container,
       this.#hangarLayer,
       this.#demoBanner.container,
       this.#replayBanner.container,
@@ -439,6 +449,7 @@ export class Game {
     this.#settingsScreen.container.visible = mode === 'settings';
     this.#keysScreen.container.visible = mode === 'keys';
     this.#help.container.visible = mode === 'help';
+    this.#credits.container.visible = mode === 'credits';
     this.#hangarLayer.visible = mode === 'hangar' || (mode === 'play' && this.#wiping);
     this.#pauseScreen.container.visible = mode === 'paused';
     this.#demoBanner.container.visible = mode === 'demo';
@@ -540,6 +551,7 @@ export class Game {
       case 'controls':
       case 'settings':
       case 'help':
+      case 'credits':
         this.#menuKey(e);
         return;
       default:
@@ -622,7 +634,8 @@ export class Game {
       case 'controls':
       case 'settings':
       case 'keys':
-      case 'help': {
+      case 'help':
+      case 'credits': {
         const action = padMenuAction(bit);
         if (action) this.#onMenu(action);
         return;
@@ -666,7 +679,8 @@ export class Game {
       this.#mode === 'controls' ||
       this.#mode === 'settings' ||
       this.#mode === 'keys' ||
-      this.#mode === 'help'
+      this.#mode === 'help' ||
+      this.#mode === 'credits'
     ) {
       this.#onMenu('confirm');
     }
@@ -703,6 +717,10 @@ export class Game {
     }
     if (this.#mode === 'keys') {
       this.#onKeysMenu(action);
+      return;
+    }
+    if (this.#mode === 'credits') {
+      this.#onCreditsMenu(action);
       return;
     }
     if (this.#mode === 'help') {
@@ -810,6 +828,12 @@ export class Game {
         this.#sound('select');
         this.#settingsMenu.cursor = 0;
         this.#setMode('settings');
+        break;
+      case 'credits':
+        this.#sound('select');
+        this.#creditsMenu.reset();
+        this.#creditsNote = null;
+        this.#setMode('credits');
         break;
       case null:
         break;
@@ -1043,6 +1067,38 @@ export class Game {
       hint: note || hint,
       warn: note !== '',
     });
+  }
+
+  #onCreditsMenu(action: MenuAction): void {
+    const command = this.#creditsMenu.apply(action);
+    switch (command?.type) {
+      case 'moved':
+        this.#sound('move');
+        break;
+      case 'open':
+        this.#openLink(command.url);
+        break;
+      case 'back':
+        this.#sound('back');
+        this.#lastInput = performance.now();
+        this.#setMode('title');
+        break;
+      default:
+        break;
+    }
+  }
+
+  /**
+   * Opens a credit's page in a new tab. Browsers allow that only during a key press, click
+   * or tap (user activation), so a gamepad press gets a note instead.
+   */
+  #openLink(url: string): void {
+    if (navigator.userActivation && !navigator.userActivation.isActive) {
+      this.#creditsNote = { text: 'Open: keys or touch', until: performance.now() + 3000 };
+      return;
+    }
+    this.#sound('select');
+    window.open(new URL(url, window.location.href).href, '_blank', 'noopener');
   }
 
   /** Opens the help screen at its top. */
@@ -1958,6 +2014,12 @@ export class Game {
       }
       case 'help': {
         if (this.#helpFrom === 'title') r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
+        break;
+      }
+      case 'credits': {
+        const note = this.#creditsNote && now < this.#creditsNote.until ? this.#creditsNote.text : '';
+        this.#credits.update(this.#creditsMenu.cursor, note);
+        r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
         break;
       }
       case 'hangar': {

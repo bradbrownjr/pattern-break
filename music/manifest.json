@@ -98,5 +98,55 @@
     "license": "Public Domain",
     "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
     "sha256": "ca14c44d3e70030b31aef0354ad13dccda46402d7d0ccdf928b2aaf06af8eb14"
+  },
+  {
+    "file": "augmented_emotions.xm",
+    "title": "Augmented_Emotions",
+    "author": "Drozerix",
+    "authorUrl": "https://modarchive.org/member.php?84702",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=172184",
+    "license": "Public Domain",
+    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
+    "sha256": "bda329f17eedb42d6d639797de9f95bfbe5ae9bc0ed927459ef4b00a83e579b2"
+  },
+  {
+    "file": "the_dim_dungeon_2.xm",
+    "title": "The_Dim_Dungeon_2",
+    "author": "Drozerix",
+    "authorUrl": "https://modarchive.org/member.php?84702",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=172897",
+    "license": "Public Domain",
+    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
+    "sha256": "eab71260ba67fe38188f8a7b80e7e4f05fb2e804e8b5a50529ee8940ec1305cb"
+  },
+  {
+    "file": "cabin_fever.xm",
+    "title": "Cabin Fever!",
+    "author": "Drozerix",
+    "authorUrl": "https://modarchive.org/member.php?84702",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=174833",
+    "license": "Public Domain",
+    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
+    "sha256": "d7f6ca27ec83dd2e5e605f4686d7415125b9a8087cd1453ef4d374127e27dfe5"
+  },
+  {
+    "file": "chica_pop.xm",
+    "title": "Chica-pop!",
+    "author": "Drozerix",
+    "authorUrl": "https://modarchive.org/member.php?84702",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=189433",
+    "license": "Public Domain",
+    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
+    "sha256": "25649d63a343686dd4aa129f0cdbc8c28323e366b7c48ab421ece9b5cec6c9b6"
+  },
+  {
+    "file": "peachy_chip.xm",
+    "title": "Peachy Chip",
+    "author": "Drozerix",
+    "authorUrl": "https://modarchive.org/member.php?84702",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=191437",
+    "license": "Public Domain",
+    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
+    "sha256": "31ea4ac6380ad3571522153f05785a0dab7d8bb3e9ff13d00a266cbe67ef964d"
   }
 ]

@@ -11,8 +11,7 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 
 | Item | What it delivers | Stage |
 |---|---|---|
-| [M4: library, offline, music pack](#m4-library-offline-music-pack) | Import your own songs, install the game, and play with no connection; a bundled, credited music pack. | Next |
-| [M5: leaderboards](#m5-leaderboards) | A global board per song, with scores checked by replaying them on the server. | Planned |
+| [M5: leaderboards](#m5-leaderboards) | A global board per song, with scores checked by replaying them on the server. | Next |
 | [M6: mobile and polish](#m6-mobile-and-polish) | Latency calibration, phone performance, tuned difficulty. | Planned |
 | [Boss patterns](#later) | A mini boss at the end of level 4 and the final boss at the end of level 8, from the song's patterns. | Later |
 | [Per-song enemy overrides](#later) | A sidecar file that changes which instrument spawns which enemy for one song. | Later |
@@ -27,24 +26,6 @@ Each milestone is finished only when its acceptance checks pass. Work them in or
 start the next until the current one is done.
 
 ---
-
-## M4: library, offline, music pack
-
-**Goal:** bring your own music, play anywhere.
-
-- [x] Module import (file picker, drag and drop, folder import) and IndexedDB storage,
-      managed in the Jukebox; imported songs join Practice and the Jukebox, not the run
-      (2026-11-10; `DEVELOPMENT.md`, "Menus and the jukebox").
-- [x] Level caching by hash and `GEN_VERSION` (2026-11-10; `DEVELOPMENT.md`, "Library").
-- [x] PWA install and full offline play (2026-11-10; `DEVELOPMENT.md`, "Install and
-      offline"). `pnpm check:offline` runs the acceptance check in headless Chromium.
-- [ ] The bundled music pack: Augmented_Emotions, The_Dim_Dungeon_2, Chica-pop!, Cabin
-      Fever! and Peachy Chip (Brad, 2026-11-10; Drozerix only), attribution with author and
-      source links on song cards and level intros, and a credits screen.
-      `tools/validate-manifest.ts` is already in CI.
-- [x] A scroll bar on the jukebox's list, like the help screen's (2026-11-10).
-
-**Acceptance:** install as a PWA, turn on airplane mode, import a new module, and play it.
 
 ## M5: leaderboards
 

@@ -3,7 +3,8 @@
 // Everything on screen is a function of the query parameters. Scenes: title, jukebox (the
 // first song playing, its spectrum dark), controls-arrows, controls-wasd and
 // controls-gamepad, settings (at the defaults), keys (the Keys screen at the defaults, on
-// Fire's first slot), help and help-end (scrolled to the top and to the end), hangar (the intro,
+// Fire's first slot), help and help-end (scrolled to the top and to the end), credits (at its
+// top), hangar (the intro,
 // `t` seconds from its start, for `song` as level 1), play (with `boom`, the ship blowing
 // up), run-start (play from the
 // hangar: the canopy closing and the colour flooding in), paused (play with the pause
@@ -38,6 +39,7 @@ import { JukeboxScreen, MessageScreen, PauseScreen, SPECTRUM_BARS, SettingsScree
 import { REPLAY_HINT, resultRows, scoreBreakdown } from './results.ts';
 import { DEFAULT_SETTINGS } from './settings.ts';
 import { ColourFlood, HangarIntro, WIPE_MS, loadHangarArt } from './hangar.ts';
+import { CreditsScreen, creditRows } from './credits.ts';
 import { HelpScreen } from './help.ts';
 import { DIFFICULTY_LABELS, type ControlPage } from './menu.ts';
 import { FOLDER_PICKER, SONGS, TITLE_SONG_ID, fetchSongBytes, findSong, songById } from './songs.ts';
@@ -102,6 +104,12 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
       if (params.scene === 'help-end') help.scroller.top = help.scroller.maxTop;
       help.update();
       return menuScene(help.container);
+    }
+    case 'credits': {
+      const rows = creditRows(SONGS);
+      const credits = new CreditsScreen(rows);
+      credits.update(rows.findIndex((r) => 'url' in r));
+      return menuScene(credits.container);
     }
     case 'settings': {
       const settings = new SettingsScreen();

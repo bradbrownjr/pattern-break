@@ -294,8 +294,9 @@ every bar of every generated level.
   commercial songs tagged PD, for example), so exclude covers and remixes of commercial
   music.
 - **On-screen attribution:** the song-select card and the level intro show title, author,
-  and license, with links to the author and the source. A Credits screen lists everything,
-  including libopenmpt (BSD) and, if used, chiptune3.js (MIT).
+  and license. A Credits screen lists everything, songs and code (libopenmpt is
+  BSD-3-Clause), and opens each one's page (built 2026-11-10; Brad, 2026-11-10: the links
+  live in Credits only).
 
 ## 10. Visual spec (`packages/client/render`)
 

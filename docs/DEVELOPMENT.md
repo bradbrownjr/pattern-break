@@ -88,6 +88,7 @@ pattern-break/
 │   │   ├── src/render/            # PixiJS renderer: terrain, ship, starfield, pixel font, effects
 │   │   ├── src/game/              # game flow, frame loop, keyboard and gamepad input, analysis worker, capture mode
 │   │   ├── src/sw.ts              # the service worker for install and offline play
+│   │   ├── src/game/credits.ts    # the Credits screen: songs, code and licenses, each a link
 │   │   ├── public/icons/          # app icons, drawn by tools/make-icons.ts
 │   │   ├── audio-debug.html       # dev-server page that plays the fixture and shows the clock
 │   │   └── vitest.config.ts       # the node and browser test projects
@@ -1275,7 +1276,7 @@ credit field is empty or a link isn't https, or a license is off the allowlist (
 Domain, CC0, CC BY). A CC BY-SA entry fails until it has a `"reviewed"` field saying who
 reviewed it and when.
 
-The ten songs so far, all by Drozerix (Brad, 2026-11-10: JAM's songs sound out of place
+The fifteen songs so far, all by Drozerix (Brad, 2026-11-10: JAM's songs sound out of place
 beside Drozerix's), each marked Public Domain on its Mod Archive page, with the file's MD5
 matching the one the page lists. The files are named after the archive's,
 without the artist prefix and the `!` (`4_rndd.xm`), since the name becomes the song's id
@@ -1294,6 +1295,15 @@ is added.
 | Girl From Mars | `girl_from_mars.xm` | Drozerix | Level 6 |
 | Wrath_of_the_Djinn | `wrath_of_the_djinn.xm` | Drozerix | Level 7 |
 | Keygen 9000 | `keygen_9000.xm` | Drozerix | Level 8, game over |
+| Crush | `crush.xm` | Drozerix | Impossible |
+| Augmented_Emotions | `augmented_emotions.xm` | Drozerix | Pack |
+| The_Dim_Dungeon_2 | `the_dim_dungeon_2.xm` | Drozerix | Pack |
+| Cabin Fever! | `cabin_fever.xm` | Drozerix | Pack |
+| Chica-pop! | `chica_pop.xm` | Drozerix | Pack |
+| Peachy Chip | `peachy_chip.xm` | Drozerix | Pack |
+
+The pack songs (M4) have no level in the run: they are in Practice and the Jukebox, like
+an imported song.
 
 ### Library
 
@@ -1340,7 +1350,8 @@ vite-plugin-pwa 2.0.0 and Workbox 7.4.1:
   px icon serves as both kinds.
 - **Service worker.** `src/sw.ts`, built with the `injectManifest` strategy as a classic
   script (`sw.js`). Workbox's precache takes every built file (the page, scripts, the
-  libopenmpt WASM, images and the bundled songs, 48 files and about 3.3 MB on 2026-11-10)
+  libopenmpt WASM, images, the bundled songs and the license texts, 56 files and about 3.5
+  MB on 2026-11-10, with the pack songs)
   when the worker installs, so one online visit is enough. The WASM is about 1.6 MB, under
   the 4 MiB limit the config sets (Workbox's default is 2 MiB). Files under `assets/` are
   served from the cache; the page itself is fetched from the network first and falls back
@@ -1405,6 +1416,30 @@ the event never came (reproduced locally with Chromium's CPU throttled 8 times).
   change. `render/spectrum.ts` groups the bins into 24 bars spaced on a log scale from 60 Hz
   to 14 kHz, and each bar lights up to 12 LED segments from its loudest bin, in the terrain's
   colours.
+
+### Credits
+
+The title menu's last row, Credits (`game/credits.ts`), lists the bundled songs with their
+authors, the code the game is built on with its licenses, and the game itself. Up and down
+move between the rows that open something, skipping the section headings; the line under
+the list shows the selected row's license and site, or what a library does; Enter opens
+the row's page in a new tab, and Esc returns to the title. Like the file picker, a new tab
+opens only during a key press, click or tap, so a pad's confirm shows "Open: keys or
+touch". The list scrolls to keep the cursor in view (`creditsTop`), with a scroll bar.
+
+- **Songs** open their page on The Mod Archive (`sourceUrl` in the manifest). Imported
+  songs and the test song have no page and aren't listed.
+- **Code** opens license texts the build serves under `licenses/`, so they open offline
+  too: `third-party.txt` from Vite's `build.license` (the npm packages in the main bundle:
+  PixiJS and the packages it uses, and idb), and `libopenmpt.txt` and `workbox.txt`, which
+  `vite.config.ts` copies in because `build.license` doesn't see them (libopenmpt is
+  vendored rather than an npm package, and Workbox is in the service worker's own build).
+  libopenmpt's license is BSD-3-Clause, which asks that binary copies carry its notice.
+- **Game** opens the source code on GitHub.
+
+The song lines elsewhere (the title's Practice line, the Jukebox, the level intro) keep
+"by Drozerix. Public Domain." without a link (Brad, 2026-11-10: Credits is the one place
+for the links; a canvas line can't be clicked, and a URL doesn't fit).
 
 ### Renderer
 

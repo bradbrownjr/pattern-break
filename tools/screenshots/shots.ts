@@ -45,7 +45,7 @@ export const shots: Shot[] = [
       'The title screen on a near-black background with faint blue stars. "Pattern Break" in large cyan pixel ' +
       'letters with a magenta shadow, over a row of small LED segments shading from green to red. Below it, a ' +
       'menu in small pixel type: "Play" in amber with an amber ">" before it, then "Practice" with ' +
-      '"The_Epic_Chip", "Difficulty" with "Normal", "Jukebox", "Controls", "Settings" and "Help", in grey. Under the menu, ' +
+      '"The_Epic_Chip", "Difficulty" with "Normal", "Jukebox", "Controls", "Settings", "Help" and "Credits", in grey. Under the menu, ' +
       '"Music: The_Epic_Chip by Drozerix. Public Domain."',
     caption: 'The title menu. Not used in the README.',
     usedIn: [],
@@ -55,9 +55,9 @@ export const shots: Shot[] = [
     query: { scene: 'jukebox', song: 'the_epic_chip', t: '12' },
     alt:
       '"Jukebox" in large cyan pixel letters with a magenta shadow over a starfield. Below it, a list of ' +
-      'ten songs in grey pixel type with their authors right-aligned in dim grey: The_Epic_Chip, ' +
+      'songs in grey pixel type with their authors right-aligned in dim grey: The_Epic_Chip, ' +
       'Neon Techno, RNDD_Keygen#1.0, CHiP_OVERTURE, The_Dim_Dungeon, 4_RNDD!, Girl From Mars, Wrath_of_the_Djinn, ' +
-      'Keygen 9000 and Crush, then "Import" with "File" right-aligned in dim grey; "Back" is below, out of view, and a thin ' +
+      'Keygen 9000, Crush and Augmented_Emotions; four more songs, "Import" and "Back" are below, out of view, and a thin ' +
       'scroll bar on the right has its grey thumb at the top. The first song is lime with an amber ">" before it. Under the list, a dim ' +
       'row of 24 LED bars, green at the bottom to red at the top, all unlit. At the bottom, "The_Epic_Chip ' +
       'by Drozerix. Public Domain." in grey and "0:12 / 3:48" in cyan.',
@@ -129,6 +129,19 @@ export const shots: Shot[] = [
       'ready", Fills; the missile icon, "Missile ready", Fills; an amber "x3", Multiplier; the amber nuke ' +
       'icon, "Nukes held".',
     caption: 'The help screen scrolled to its end. Not used in the README.',
+    usedIn: [],
+  },
+  {
+    id: 'credits',
+    query: { scene: 'credits', song: 'the_epic_chip', t: '0' },
+    alt:
+      '"Credits" in large cyan pixel letters with a magenta shadow, over a list with a grey scroll bar on ' +
+      'the right, its thumb at the top. The cyan section name Music, then song titles in grey with ' +
+      '"Drozerix" right-aligned in dim grey: The_Epic_Chip in amber with an amber ">" before it, Neon ' +
+      'Techno, RNDD_Keygen#1.0, CHiP_OVERTURE, The_Dim_Dungeon, 4_RNDD!, Girl From Mars, ' +
+      'Wrath_of_the_Djinn, Keygen 9000, Crush, Augmented_Emotions, The_Dim_Dungeon_2 and Cabin Fever!. ' +
+      'At the bottom, "Public Domain modarchive.org" in grey.',
+    caption: 'The credits screen at its top. Not used in the README.',
     usedIn: [],
   },
   {

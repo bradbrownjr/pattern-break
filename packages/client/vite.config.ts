@@ -1,10 +1,39 @@
-import { defineConfig } from 'vite';
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { defineConfig, type Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { BRAND } from './src/config/brand.ts';
+
+const require = createRequire(import.meta.url);
+
+/**
+ * The license texts `build.license` can't see, beside its file: libopenmpt is vendored
+ * rather than an npm package, and Workbox is bundled into the service worker by its own
+ * build. The Credits screen links to each (src/game/credits.ts).
+ */
+function moreLicenses(): Plugin {
+  const files: Record<string, string> = {
+    'licenses/libopenmpt.txt': fileURLToPath(new URL('../analysis/vendor/libopenmpt/LICENSE', import.meta.url)),
+    'licenses/workbox.txt': require.resolve('workbox-core/LICENSE'),
+  };
+  return {
+    name: 'pattern-break:more-licenses',
+    apply: 'build',
+    generateBundle() {
+      for (const [fileName, from] of Object.entries(files)) {
+        this.emitFile({ type: 'asset', fileName, source: readFileSync(from, 'utf8') });
+      }
+    },
+  };
+}
 
 export default defineConfig({
   build: {
     target: 'es2022',
+    // The licenses of the npm packages in the bundle, which their licenses ask copies to
+    // carry; the Credits screen links to it.
+    license: { fileName: 'licenses/third-party.txt' },
   },
   // ES module workers, so the audio worklet bundle (src/audio/worklet.ts) is an ES module
   // like AudioWorklet.addModule expects.
@@ -12,6 +41,7 @@ export default defineConfig({
     format: 'es',
   },
   plugins: [
+    moreLicenses(),
     // Install and offline play (docs/DEVELOPMENT.md, "Install and offline"): the web app
     // manifest, and src/sw.ts built with the list of files to cache.
     VitePWA({
@@ -26,7 +56,7 @@ export default defineConfig({
         // A classic script, not a module: module service workers are newer, and the
         // worker has no imports left once it is bundled.
         rollupFormat: 'iife',
-        globPatterns: ['**/*.{html,js,css,wasm,png,mod,xm,s3m,it}'],
+        globPatterns: ['**/*.{html,js,css,wasm,png,mod,xm,s3m,it,txt}'],
         // libopenmpt.wasm is about 1.6 MB; Workbox skips files over 2 MiB by default.
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         // Files under assets/ have a content hash in their names already.

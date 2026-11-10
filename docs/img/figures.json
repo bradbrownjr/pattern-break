@@ -1,13 +1,13 @@
 {
   "title-screen": {
     "path": "docs/img/title-screen.png",
-    "alt": "The title screen on a near-black background with faint blue stars. \"Pattern Break\" in large cyan pixel letters with a magenta shadow, over a row of small LED segments shading from green to red. Below it, a menu in small pixel type: \"Play\" in amber with an amber \">\" before it, then \"Practice\" with \"The_Epic_Chip\", \"Difficulty\" with \"Normal\", \"Jukebox\", \"Controls\", \"Settings\" and \"Help\", in grey. Under the menu, \"Music: The_Epic_Chip by Drozerix. Public Domain.\"",
+    "alt": "The title screen on a near-black background with faint blue stars. \"Pattern Break\" in large cyan pixel letters with a magenta shadow, over a row of small LED segments shading from green to red. Below it, a menu in small pixel type: \"Play\" in amber with an amber \">\" before it, then \"Practice\" with \"The_Epic_Chip\", \"Difficulty\" with \"Normal\", \"Jukebox\", \"Controls\", \"Settings\", \"Help\" and \"Credits\", in grey. Under the menu, \"Music: The_Epic_Chip by Drozerix. Public Domain.\"",
     "caption": "The title menu. Not used in the README.",
     "usedIn": []
   },
   "jukebox": {
     "path": "docs/img/jukebox.png",
-    "alt": "\"Jukebox\" in large cyan pixel letters with a magenta shadow over a starfield. Below it, a list of ten songs in grey pixel type with their authors right-aligned in dim grey: The_Epic_Chip, Neon Techno, RNDD_Keygen#1.0, CHiP_OVERTURE, The_Dim_Dungeon, 4_RNDD!, Girl From Mars, Wrath_of_the_Djinn, Keygen 9000 and Crush, then \"Import\" with \"File\" right-aligned in dim grey; \"Back\" is below, out of view, and a thin scroll bar on the right has its grey thumb at the top. The first song is lime with an amber \">\" before it. Under the list, a dim row of 24 LED bars, green at the bottom to red at the top, all unlit. At the bottom, \"The_Epic_Chip by Drozerix. Public Domain.\" in grey and \"0:12 / 3:48\" in cyan.",
+    "alt": "\"Jukebox\" in large cyan pixel letters with a magenta shadow over a starfield. Below it, a list of songs in grey pixel type with their authors right-aligned in dim grey: The_Epic_Chip, Neon Techno, RNDD_Keygen#1.0, CHiP_OVERTURE, The_Dim_Dungeon, 4_RNDD!, Girl From Mars, Wrath_of_the_Djinn, Keygen 9000, Crush and Augmented_Emotions; four more songs, \"Import\" and \"Back\" are below, out of view, and a thin scroll bar on the right has its grey thumb at the top. The first song is lime with an amber \">\" before it. Under the list, a dim row of 24 LED bars, green at the bottom to red at the top, all unlit. At the bottom, \"The_Epic_Chip by Drozerix. Public Domain.\" in grey and \"0:12 / 3:48\" in cyan.",
     "caption": "The jukebox, playing the first song. Not used in the README.",
     "usedIn": []
   },
@@ -39,6 +39,12 @@
     "path": "docs/img/help-end.png",
     "alt": "The help screen scrolled to its end, the scroll bar thumb at the bottom. Rows of an icon, a white label and a grey value: the player ship inside a cyan ring, Shield, Refill; the cyan drone orb, Drone, \"Copies fire Max 2\"; a white bar, Laser, \"Pierces\"; no icon, Boost, \"Speed Max 3\"; no icon, \"Life lost\", \"Power-ups lost\" in magenta. Then the cyan section name Display: the player ship, Lives, \"3 to start\"; \"1UP\" in lime, \"Extra life\", \"20000 Max 9\"; the amber bomb icon, \"Bomb ready\", Fills; the missile icon, \"Missile ready\", Fills; an amber \"x3\", Multiplier; the amber nuke icon, \"Nukes held\".",
     "caption": "The help screen scrolled to its end. Not used in the README.",
+    "usedIn": []
+  },
+  "credits": {
+    "path": "docs/img/credits.png",
+    "alt": "\"Credits\" in large cyan pixel letters with a magenta shadow, over a list with a grey scroll bar on the right, its thumb at the top. The cyan section name Music, then song titles in grey with \"Drozerix\" right-aligned in dim grey: The_Epic_Chip in amber with an amber \">\" before it, Neon Techno, RNDD_Keygen#1.0, CHiP_OVERTURE, The_Dim_Dungeon, 4_RNDD!, Girl From Mars, Wrath_of_the_Djinn, Keygen 9000, Crush, Augmented_Emotions, The_Dim_Dungeon_2 and Cabin Fever!. At the bottom, \"Public Domain modarchive.org\" in grey.",
+    "caption": "The credits screen at its top. Not used in the README.",
     "usedIn": []
   },
   "settings": {

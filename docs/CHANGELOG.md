@@ -13,6 +13,18 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **M4 finished: library, offline, music pack.** Its acceptance check passes: the game
+  installs, plays with no connection, and imports and plays a new song offline
+  (`pnpm check:offline`). The last step adds the music pack and a Credits screen:
+  * Five more Drozerix songs, checked again against their pages: Augmented_Emotions,
+    The_Dim_Dungeon_2, Cabin Fever!, Chica-pop! and Peachy Chip. They are in Practice and
+    the Jukebox; the run keeps its eight levels.
+  * Credits, the title menu's last row, lists the songs, the code the game is built on
+    with its licenses, and the game. Enter opens a song's page on The Mod Archive, a
+    license text the game serves (offline too), or the source code. Song lines elsewhere
+    keep the author and license without a link (Brad, 2026-11-10).
+  * The build now serves the bundled packages' licenses under `licenses/`, libopenmpt's
+    BSD-3-Clause notice among them.
 * **Keep imported songs.** After the first import, the game asks the browser to keep its
   data when the device runs low on space. Firefox asks the player; Chrome, Edge and Safari
   decide on their own.

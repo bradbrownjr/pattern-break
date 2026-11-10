@@ -33,6 +33,7 @@ const TITLE_LABELS: Record<TitleItem, string> = {
   controls: 'Controls',
   help: 'Help',
   settings: 'Settings',
+  credits: 'Credits',
 };
 const MENU_TOP = 78;
 const MENU_ROW = 13;
