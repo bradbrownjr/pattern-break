@@ -786,6 +786,7 @@ The client reads query parameters; `packages/client/src/capture.ts` parses them
 | `t` | Song clock in seconds. |
 | `difficulty` | Difficulty name. |
 | `seed` | Integer seed for cosmetic randomness. Default 1. |
+| `boom` | Play scenes: the ship blown up where it is, this many ms ago (the `explosion` shot). Unset, no explosion. |
 
 In capture mode the renderer must:
 
@@ -819,7 +820,8 @@ In capture mode the renderer must:
   `floor(round(t * 48000) / 400)` with that log, through the same `catchUp` the game loop
   uses. It then draws the frame at song sample `round(t * 48000)`, the scroll interpolated
   between ticks as in play. If the autopilot lost its last life before `t`, the frame shows
-  the crash, timed from the crash tick in song time.
+  the crash, timed from the crash tick in song time. With `boom`, the ship (drawn without
+  its shield) breaks apart where it is, `boom` ms in, shake included.
 - The renderer is created with `preserveDrawingBuffer`, so the screenshot reads the frame
   that was drawn, and the page waits two animation frames after the draw before it calls
   `markCaptureReady()`. Capture mode needs WebGL and throws if PixiJS picks another
@@ -1303,8 +1305,16 @@ is added.
 - **Text** (`font.ts`, `text.ts`): a 5x7 pixel font for printable ASCII, with descenders,
   in one atlas texture. A character outside printable ASCII draws as `?`. `PixelText`
   reuses its sprites when its text changes.
-- **Crash** (`effects.ts`): 48 particles in a seeded burst, a shake, and on the last life
-  one white flash.
+- **Crash** (`ShipBreakup` in `effects.ts`; `test/breakup.test.ts`): the ship breaks apart
+  pixel by pixel. Each of its sprite's 60 lit pixels (`SHIP_PIXELS`) starts where it was
+  drawn, in its own colour, and flies outward from the sprite's centre (the vertical
+  counted double, so it spreads beyond the flat ship; nose and tail faster; up to 0.45 rad
+  of scatter), slowing with drag and fading to the background over 0.7 to 1.3 s. 24 white
+  and amber sparks fly with them. A shockwave ring of 96 2x2 dots grows to 44 px over
+  520 ms, fast then slowing, in four arcs of cyan, lime, amber and magenta that turn as it
+  grows, fading from `RING_PEAK` (0.65 with Flashing Reduced, 1 with Full). Then a shake,
+  and on the last life one white flash. `CombatView` plays it for a life lost, the renderer
+  (`GameRenderer.explosion`) on game over.
 - **Flashing and shake** (`flash.ts`, `shake.ts`; `test/flashing.test.ts`). Every flash
   fades linearly over 220 ms from a peak: the game-over flash (`Flash`), the nuke's
   (`CombatView`), and the hangar's red strobe (`strobeAlpha`). One `FlashGate` on the

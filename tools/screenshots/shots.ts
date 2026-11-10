@@ -256,6 +256,18 @@ export const shots: Shot[] = [
     usedIn: [],
   },
   {
+    id: 'explosion',
+    query: { scene: 'play', song: 'pb-fixture-01', t: '21.5', difficulty: 'normal', seed: '1', boom: '200' },
+    alt:
+      'A frame of play in an LED cavern, columns of LED segments lit green to red hanging from the top and ' +
+      'rising from the bottom. On the left, where the ship was, a scatter of single cyan, white, magenta and ' +
+      'amber pixels flies apart inside a large thin ring of dots, magenta along the top, teal on the right, ' +
+      'lime at the bottom and amber on the left. Cyan shots fly on to the right, where a magenta enemy ship ' +
+      'comes in. The lives, bomb and score panels are at the top and the power-up meter along the bottom.',
+    caption: 'The ship breaking apart, 200 ms after it blew up. Not used in the README.',
+    usedIn: [],
+  },
+  {
     id: 'gameplay',
     query: { scene: 'play', song: 'pb-fixture-01', t: '21.5', difficulty: 'normal', seed: '1' },
     alt:

@@ -12,6 +12,8 @@ export interface CaptureParams {
   difficulty: string;
   /** Seed for cosmetic randomness (particles, shake). */
   seed: number;
+  /** Play scenes: the ship blown up where it is, this many ms ago, or null. */
+  boom: number | null;
 }
 
 declare global {
@@ -26,12 +28,14 @@ export function readCaptureParams(search: string = window.location.search): Capt
   if (q.get('capture') !== '1') return null;
   const t = Number(q.get('t') ?? '0');
   const seed = Number(q.get('seed') ?? '1');
+  const boom = q.get('boom') === null ? Number.NaN : Number(q.get('boom'));
   return {
     scene: q.get('scene') ?? 'play',
     song: q.get('song'),
     t: Number.isFinite(t) ? t : 0,
     difficulty: q.get('difficulty') ?? 'normal',
     seed: Number.isInteger(seed) ? seed : 1,
+    boom: Number.isFinite(boom) ? boom : null,
   };
 }
 

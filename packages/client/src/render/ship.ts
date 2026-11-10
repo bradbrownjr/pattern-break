@@ -20,6 +20,11 @@ export const SHIP_SPRITE_HEIGHT = 8;
 
 const COLORS: Record<string, number> = { c: CYAN, b: 0x177a94, w: WHITE, m: MAGENTA };
 
+/** The ship sprite's lit pixels: where each is in the sprite, and its colour. */
+export const SHIP_PIXELS: readonly { x: number; y: number; color: number }[] = SHIP_MAP.flatMap((row, y) =>
+  [...row].flatMap((ch, x) => (COLORS[ch] === undefined ? [] : [{ x, y, color: COLORS[ch]! }])),
+);
+
 /** RGBA pixels of the ship sprite. */
 export function shipPixels(): Uint8Array {
   const out = new Uint8Array(SHIP_SPRITE_WIDTH * SHIP_SPRITE_HEIGHT * 4);

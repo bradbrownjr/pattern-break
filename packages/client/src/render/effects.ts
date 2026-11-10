@@ -1,11 +1,13 @@
-// Cosmetic effects: explosions (the ship's, and smaller ones for enemies) and the screen
-// flash on game over. Each is a function of the time since it started, which the caller
-// passes in (wall clock or song time). They never touch sim state.
+// Cosmetic effects: explosions (the ship breaking apart, and smaller bursts for enemies,
+// the bomb and missiles) and the screen flash on game over. Each is a function of the time
+// since it started, which the caller passes in (wall clock or song time). They never touch
+// sim state.
 
 import { PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH } from '@game/core';
 import { Container, Sprite, Texture } from 'pixi.js';
 import { flashAlpha, type FlashGate } from './flash.ts';
-import { AMBER, BACKGROUND, CYAN, MAGENTA, WHITE, mix } from './palette.ts';
+import { AMBER, BACKGROUND, CYAN, LIME, MAGENTA, WHITE, mix } from './palette.ts';
+import { SHIP_PIXELS, SHIP_SPRITE_HEIGHT, SHIP_SPRITE_WIDTH } from './ship.ts';
 
 export interface ExplosionStyle {
   particles: number;
@@ -15,8 +17,6 @@ export interface ExplosionStyle {
   speed: number;
 }
 
-/** The player ship's explosion. */
-export const SHIP_EXPLOSION: ExplosionStyle = { particles: 48, ms: 900, colors: [WHITE, CYAN, CYAN, MAGENTA, AMBER], speed: 110 };
 
 interface Particle {
   sprite: Sprite;
@@ -33,7 +33,7 @@ export class Explosion {
   #x = 0;
   #y = 0;
 
-  constructor(style: ExplosionStyle = SHIP_EXPLOSION) {
+  constructor(style: ExplosionStyle) {
     this.#style = style;
     for (let i = 0; i < style.particles; i++) {
       const sprite = new Sprite(Texture.WHITE);
@@ -115,5 +115,124 @@ export class Flash {
 
   hide(): void {
     this.sprite.visible = false;
+  }
+}
+
+/** The ship breaking apart: how long its pixels fly, and its shockwave ring. */
+export const BREAKUP_MS = 1300;
+export const RING_MS = 520;
+export const RING_RADIUS = 44;
+const RING_DOTS = 96;
+const RING_COLORS = [CYAN, LIME, AMBER, MAGENTA];
+/** The ring's colours turn this far around it over its life, in dots. */
+const RING_TURN = RING_DOTS / 2;
+/** Hot sparks thrown out with the pixels. */
+const BREAKUP_SPARKS: ExplosionStyle = { particles: 24, ms: 700, colors: [WHITE, AMBER, AMBER, MAGENTA], speed: 130 };
+
+interface Bit {
+  sprite: Sprite;
+  /**
+   * Where the pixel starts, from the ship's centre as ShipView rounds it (whole px, so the
+   * first frame is the ship), and its speed, px/s.
+   */
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  color: number;
+  lifeMs: number;
+}
+
+/**
+ * The player ship's explosion (docs/PLAN.md, "Explosions"): every pixel of its sprite flies
+ * off in its own colour, away from the ship's centre, with hot sparks and a shockwave ring
+ * of dots in the neon colours that grows and fades. The ring's brightness comes from the
+ * Flashing setting through `gate`. Like Explosion, a function of the time since it started.
+ */
+export class ShipBreakup {
+  readonly container = new Container();
+  #bits: Bit[] = [];
+  #ring: Sprite[] = [];
+  #sparks = new Explosion(BREAKUP_SPARKS);
+  #gate: FlashGate;
+  #x = 0;
+  #y = 0;
+
+  constructor(gate: FlashGate) {
+    this.#gate = gate;
+    for (let i = 0; i < RING_DOTS; i++) {
+      const dot = new Sprite(Texture.WHITE);
+      dot.width = 2;
+      dot.height = 2;
+      dot.visible = false;
+      this.#ring.push(dot);
+      this.container.addChild(dot);
+    }
+    for (const p of SHIP_PIXELS) {
+      const sprite = new Sprite(Texture.WHITE);
+      sprite.visible = false;
+      this.container.addChild(sprite);
+      const x = p.x - SHIP_SPRITE_WIDTH / 2;
+      const y = p.y - SHIP_SPRITE_HEIGHT / 2;
+      this.#bits.push({ sprite, x, y, vx: 0, vy: 0, color: p.color, lifeMs: 0 });
+    }
+    this.container.addChild(this.#sparks.container);
+  }
+
+  /** Starts it with the ship's centre at screen (x, y) px; `random` gives floats in [0, 1). */
+  start(x: number, y: number, random: () => number): void {
+    this.#x = Math.round(x);
+    this.#y = Math.round(y);
+    for (const b of this.#bits) {
+      // Outward from the sprite's centre (pixel centres are half a pixel in), the nose and
+      // tail faster, with a little scatter. The ship is wide and flat, so the vertical
+      // counts double.
+      const cx = b.x + 0.5;
+      const cy = b.y + 0.5;
+      const angle = Math.atan2(cy * 2, cx) + (random() - 0.5) * 0.9;
+      const speed = 25 + Math.hypot(cx, cy) * 6 + random() * 70;
+      b.vx = Math.cos(angle) * speed;
+      b.vy = Math.sin(angle) * speed;
+      b.lifeMs = BREAKUP_MS * (0.55 + random() * 0.45);
+    }
+    this.#sparks.start(x, y, random);
+  }
+
+  /** Draws it `elapsedMs` after it started; hides it once it is over. */
+  draw(elapsedMs: number): void {
+    const seconds = Math.max(0, elapsedMs) / 1000;
+    const travel = (1 - Math.exp(-1.8 * seconds)) / 1.8;
+    for (const b of this.#bits) {
+      const left = 1 - elapsedMs / b.lifeMs;
+      b.sprite.visible = elapsedMs >= 0 && left > 0;
+      if (!b.sprite.visible) continue;
+      b.sprite.x = this.#x + Math.round(b.x + b.vx * travel);
+      b.sprite.y = this.#y + Math.round(b.y + b.vy * travel);
+      b.sprite.tint = mix(BACKGROUND, b.color, Math.round(256 * Math.min(1, left * 2)));
+    }
+    this.#sparks.draw(elapsedMs);
+
+    const t = elapsedMs / RING_MS;
+    const on = t >= 0 && t < 1;
+    // Fast at first, slowing as it grows; fading slowly, then fast.
+    const radius = RING_RADIUS * (1 - (1 - t) * (1 - t) * (1 - t));
+    const alpha = this.#gate.ringPeak * (1 - t * t);
+    const turn = Math.floor(t * RING_TURN);
+    for (let i = 0; i < RING_DOTS; i++) {
+      const dot = this.#ring[i]!;
+      dot.visible = on;
+      if (!on) continue;
+      const angle = (i / RING_DOTS) * Math.PI * 2;
+      dot.x = this.#x + Math.round(Math.cos(angle) * radius) - 1;
+      dot.y = this.#y + Math.round(Math.sin(angle) * radius) - 1;
+      dot.tint = RING_COLORS[Math.floor((((i + turn) % RING_DOTS) * RING_COLORS.length) / RING_DOTS)]!;
+      dot.alpha = alpha;
+    }
+  }
+
+  hide(): void {
+    for (const b of this.#bits) b.sprite.visible = false;
+    for (const dot of this.#ring) dot.visible = false;
+    this.#sparks.hide();
   }
 }

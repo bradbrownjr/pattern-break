@@ -13,6 +13,9 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **M3: the ship breaks apart.** When the ship is destroyed, every pixel of it flies off in
+  its own colour with hot sparks, inside a shockwave ring of cyan, lime, amber and magenta
+  that grows and fades, and the screen shakes. Flashing Reduced dims the ring.
 * **M3: flashing and shake settings.** Settings has Flashing, Reduced until the player
   changes it, and Shake. Reduced keeps every flash (the game-over flash, the nuke, the
   hangar's red strobe) at a quarter of white or less and never starts more than three in a

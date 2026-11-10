@@ -101,6 +101,12 @@
     "caption": "The pause menu over play. Not used in the README.",
     "usedIn": []
   },
+  "explosion": {
+    "path": "docs/img/explosion.png",
+    "alt": "A frame of play in an LED cavern, columns of LED segments lit green to red hanging from the top and rising from the bottom. On the left, where the ship was, a scatter of single cyan, white, magenta and amber pixels flies apart inside a large thin ring of dots, magenta along the top, teal on the right, lime at the bottom and amber on the left. Cyan shots fly on to the right, where a magenta enemy ship comes in. The lives, bomb and score panels are at the top and the power-up meter along the bottom.",
+    "caption": "The ship breaking apart, 200 ms after it blew up. Not used in the README.",
+    "usedIn": []
+  },
   "gameplay": {
     "path": "docs/img/gameplay.png",
     "alt": "A frame of play in an LED cavern. Columns of small square LED segments hang from the top edge and rise from the bottom edge, lit green at the screen edges through yellow and orange to red at their tips, leaving a dark passage across the middle. A small magenta and amber turret sits upside down on a tip of the ceiling at the right. A small cyan ship with a magenta engine flame flies on the left inside a faint cyan ring, its shield, with a row of cyan shots ahead of it and an enemy ship coming in from the right. Near the top, a scatter of coloured particles where an enemy was just destroyed, with \"400\" in white pixel digits above it. Three small ship icons on a dark panel in the top left corner show the lives left, followed by a small amber bomb icon and \"x2\" in amber; \"0001700\" in white in the top right corner is the score. Along the bottom edge runs the power-up meter, six LED cells labelled Double, Missile, Shield, Drone, Laser and Boost: Double lit green and \"Shield 6\" lit lime, the ship has them; Missile, the next to unlock, with a grey label; the rest dark.",

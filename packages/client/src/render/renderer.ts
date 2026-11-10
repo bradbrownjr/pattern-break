@@ -5,7 +5,7 @@
 import { PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH } from '@game/core';
 import { Container, TextureSource, autoDetectRenderer, type Renderer } from 'pixi.js';
 import { CombatView } from './combat.ts';
-import { Explosion, Flash } from './effects.ts';
+import { Flash, ShipBreakup } from './effects.ts';
 import { FlashGate } from './flash.ts';
 import { BACKGROUND, LETTERBOX } from './palette.ts';
 import { shakeOffset } from './shake.ts';
@@ -47,7 +47,8 @@ export class GameRenderer {
   readonly flashes = new FlashGate();
   /** Enemies, shots, bullets, their bursts, and the lives left. */
   readonly combat = new CombatView(this.flashes);
-  readonly explosion = new Explosion();
+  /** The ship breaking apart on the last life (CombatView has the one for other lives). */
+  readonly explosion = new ShipBreakup(this.flashes);
   readonly flash = new Flash(this.flashes);
   /** The Shake setting: false keeps the playfield still. */
   shakeOn = true;

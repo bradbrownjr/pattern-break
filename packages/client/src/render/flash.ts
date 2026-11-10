@@ -11,6 +11,12 @@ export type Flashing = 'reduced' | 'full';
 
 /** The strongest a flash may be, as the opacity of the white (or red) over the picture. */
 export const FLASH_PEAK: Readonly<Record<Flashing, number>> = { reduced: 0.25, full: 0.6 };
+/**
+ * The brightest the crash's shockwave ring may be, as its opacity. The ring is a thin line,
+ * far under WCAG's area for a flash (a quarter of a 10 degree field, about 341x256 px of a
+ * 1024x768 screen), so it isn't one by WCAG's measure; Reduced still dims it.
+ */
+export const RING_PEAK: Readonly<Record<Flashing, number>> = { reduced: 0.65, full: 1 };
 /** With reduced flashing, the least time from one flash's start to the next one's. */
 export const FLASH_GAP_MS = 334;
 export const FLASH_MS = 220;
@@ -31,6 +37,10 @@ export class FlashGate {
 
   get peak(): number {
     return FLASH_PEAK[this.flashing];
+  }
+
+  get ringPeak(): number {
+    return RING_PEAK[this.flashing];
   }
 
   /** Whether a flash starting at `atMs` may be shown; if so, it counts as the last one. */

@@ -32,7 +32,7 @@ import {
   type SimState,
 } from '@game/core';
 import { Container, Rectangle, Sprite, Texture } from 'pixi.js';
-import { Explosion, SHIP_EXPLOSION, type ExplosionStyle } from './effects.ts';
+import { Explosion, ShipBreakup, type ExplosionStyle } from './effects.ts';
 import { FlashGate, flashAlpha } from './flash.ts';
 import { MeterView } from './meter.ts';
 import { AMBER, BACKGROUND, CYAN, LIME, MAGENTA, WHITE } from './palette.ts';
@@ -268,7 +268,7 @@ export class CombatView {
   #seenExtraLife = -1;
   readonly #meter = new MeterView();
 
-  #lifeLost = new Explosion(SHIP_EXPLOSION);
+  #lifeLost: ShipBreakup;
   #lifeLostSample = -1;
   /** Sim tick and first possibly live enemy at the last draw, to find what changed since. */
   #seenTick = 0;
@@ -281,6 +281,7 @@ export class CombatView {
   /** `flashes` decides whether the nuke's flash is shown, and how strong it is. */
   constructor(flashes: FlashGate = new FlashGate()) {
     this.#flashes = flashes;
+    this.#lifeLost = new ShipBreakup(flashes);
     for (let i = 0; i < ENEMY_SPRITES; i++) this.#enemies.push(this.#add(new Sprite()));
     const tex = getTextures();
     for (let i = 0; i < CAPSULE_SLOTS; i++) this.#capsules.push(this.#add(new Sprite(tex.capsule)));

@@ -33,13 +33,10 @@ start the next until the current one is done.
 
 **Goal:** it looks and feels like the pitch.
 
-Order of work (2026-11-10): the explosions, the look, the results screen, and the rest of
-accessibility. The flashing and shake settings came first (see the changelog, November
+Order of work (2026-11-10): the look, the results screen, and the rest of accessibility.
+The explosions are done (changelog, November 10). The flashing and shake settings came first (see the changelog, November
 10); every new flash goes through `FlashGate` and every shake through `shakeOffset`.
 
-- [ ] **Big explosions:** a destroyed ship breaks apart pixel by pixel, each pixel of its
-      sprite flying off as its own particle in its own colour, with a colourful shockwave
-      ring and a short screen shake. With reduced flashing, the ring's brightness is capped.
 - [ ] **The look:** copper bars (horizontal colour bands) behind the starfield, pulsing with
       the bass; a white hit flash on an enemy that takes a hit and survives; sparks off the
       LED tips on note hits; a flash on downbeats; and a CRT filter (scanlines, slight

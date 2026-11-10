@@ -318,7 +318,7 @@ every bar of every generated level.
   lives left are ship icons in the top left corner.
 - Explosions: a destroyed ship breaks apart pixel by pixel; every pixel of its sprite
   becomes a particle in its own colour and flies outward, with an expanding colourful
-  shockwave ring and a short shake.
+  shockwave ring and a short shake (built 2026-11-10).
 - Sound effects: synthesized in the client (no sample files, nothing to license) by our
   own sfxr-style generator, `@game/chipfx`, with our own parameters; pitched effects take
   their note from the song. Mixed under the music with their own volume and an off switch.

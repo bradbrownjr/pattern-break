@@ -3,7 +3,8 @@
 // Everything on screen is a function of the query parameters. Scenes: title, jukebox (the
 // first song playing, its spectrum dark), controls-arrows, controls-wasd and
 // controls-gamepad, settings (at the defaults), help and help-end (scrolled to the top and to the end), hangar (the intro,
-// `t` seconds from its start, for `song` as level 1), play, run-start (play from the
+// `t` seconds from its start, for `song` as level 1), play (with `boom`, the ship blowing
+// up), run-start (play from the
 // hangar: the canopy closing and the colour flooding in), and paused (play with the pause
 // menu over it).
 
@@ -149,8 +150,16 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
     catchUp(level, state, target, (tick) => inputs[tick] ?? 0, null);
     // The sim stops at a crash; the picture shows the crash at the tick it happened.
     const shown = state.dead ? state.deathTick * SAMPLES_PER_TICK : samples;
-    drawPlay(r, level, state, Math.max(0, Math.min(shown, level.tickCount * SAMPLES_PER_TICK)));
+    // With `boom`, the ship is gone: draw it with no shield (a copy; the sim keeps its own).
+    const view = params.boom === null ? state : { ...state, shield: 0 };
+    drawPlay(r, level, view, Math.max(0, Math.min(shown, level.tickCount * SAMPLES_PER_TICK)));
     drawCrash(r, state, samples, params.seed);
+    if (params.boom !== null) {
+      r.ship.visible = false;
+      r.explosion.start(state.shipX / Q8, state.shipY / Q8, seededRandom(params.seed));
+      r.explosion.draw(params.boom);
+      r.shake(params.boom, params.seed);
+    }
     if (runStart) {
       const ms = (samples * 1000) / SAMPLE_RATE;
       runStart.hangar.container.visible = ms < WIPE_MS;
