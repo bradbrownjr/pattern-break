@@ -36,13 +36,12 @@ Fixes**, in that order.
   second, under WCAG 2.2's flash thresholds; Full is brighter with no limit on how often.
   Every crash now shakes the picture for 0.3 s, by whole pixels, the same way in a replay;
   Shake Off keeps it still.
-* **CI: the audio tests pass in Firefox, and the worklet test in WebKit.** They had failed
-  on every push since November 8: Firefox had no sound server to play into, and WebKit
-  rendered the worklet test's offline context before the worklet saw its start message. CI
-  now gives Firefox a PulseAudio null sink, and the worklet test waits for the song to
-  start before rendering on. WebKit's first live context in CI is "interrupted" and never
-  starts; the clock tests open players until one runs, and skip with a logged reason if
-  none does.
+* **CI passes again.** The browser tests had failed on every push since November 8.
+  Firefox had no sound server to play into, and WebKit rendered the worklet test's offline
+  context before the worklet saw its start message. CI now gives Firefox a PulseAudio null
+  sink, and the worklet test waits for the song to start before rendering on. WebKit's live
+  audio contexts in CI stay "interrupted" or "suspended", cause unknown, so its three
+  song-clock tests skip there with a logged reason; Chromium and Firefox run them.
 
 ---
 

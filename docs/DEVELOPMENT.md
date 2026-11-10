@@ -675,11 +675,13 @@ found then:
 - In CI, WebKit puts its first live context in a page in the "interrupted" state at once
   (an `AudioContextState` WebKit implements; the context leaves it only when the
   interruption ends), and `start()` waited more than 120 s. The worklet itself loaded in
-  0.2 s. In four runs, a new player started at once whenever an earlier stuck player was
-  still open; plain contexts left open didn't help, nor did closing the stuck one. The
-  clock tests' `beforeAll` opens players (5 s each, up to three) until one runs, keeps the
-  stuck ones open until `afterAll`, and logs each. If none runs, the clock tests skip and
-  log why. Locally, where WebKit's GStreamer has no output, they always skip.
+  0.2 s. In three earlier runs a later player started after the first had timed out, but
+  in the run of 2026-11-10 that opened three players 5 s apart, the first stayed
+  interrupted and the other two suspended; no cause has been found. The clock tests'
+  `beforeAll` opens players (5 s each, up to three) until one runs, keeps the stuck ones
+  open until `afterAll`, and logs each; if none runs, the clock tests skip and log why. So
+  in CI, WebKit's clock tests usually skip, and only Chromium and Firefox check the live
+  clock. Locally, where WebKit's GStreamer has no output, they always skip.
 
 - `PB_BROWSERS` picks the engines: `chromium` by default; CI sets
   `chromium,firefox,webkit`.
