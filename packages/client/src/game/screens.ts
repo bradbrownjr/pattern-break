@@ -186,14 +186,33 @@ export interface JukeboxView {
 
 export const SPECTRUM_BARS = 24;
 export const SPECTRUM_SEGMENTS = LED_LIT.length;
-// The list fits ten rows (nine songs and Back) above the spectrum; the spectrum's 12
-// segments are 2 px tall on a 3 px pitch, so it ends above the now-playing lines.
+// The spectrum's 12 segments are 2 px tall on a 3 px pitch, so it ends above the
+// now-playing lines. The list's rows close up from 11 px to fit above it: ten songs and
+// Back take 10 px (2026-11-10: at 11, Back ran into the spectrum once Crush was added).
 const LIST_TOP = 34;
 const LIST_ROW = 11;
 const LIST_LEFT = 88;
 const LIST_RIGHT = 296;
 const SPECTRUM_BOTTOM = 182;
 const SEGMENT_PITCH = 3;
+/** The spectrum's top, and the gap the list keeps above it. */
+const SPECTRUM_TOP = SPECTRUM_BOTTOM - SPECTRUM_SEGMENTS * SEGMENT_PITCH;
+const LIST_GAP = 3;
+const TEXT_HEIGHT = 7;
+
+/** The list's row pitch for `rows` rows: 11 px, or less so the last ends above the spectrum. */
+export function jukeboxRow(rows: number): number {
+  if (rows < 2) return LIST_ROW;
+  return Math.min(LIST_ROW, Math.floor((SPECTRUM_TOP - LIST_GAP - TEXT_HEIGHT - LIST_TOP) / (rows - 1)));
+}
+
+/** The top of row `i` of a `rows`-row list. */
+export function jukeboxRowY(i: number, rows: number): number {
+  return LIST_TOP + i * jukeboxRow(rows);
+}
+
+/** Where the list's last row ends and the spectrum starts, for tests. */
+export const JUKEBOX_LIMITS = { spectrumTop: SPECTRUM_TOP, textHeight: TEXT_HEIGHT };
 const NOW_Y = 188;
 
 /** m:ss */
@@ -221,7 +240,7 @@ export class JukeboxScreen {
     const heading = new PixelText('Jukebox', CYAN, 2).place(CENTER, 12, 'center');
     this.container.addChild(shadow, heading, this.#marker);
     for (let i = 0; i <= songs.length; i++) {
-      const y = LIST_TOP + i * LIST_ROW;
+      const y = jukeboxRowY(i, songs.length + 1);
       const song = songs[i];
       const title = new PixelText(song ? song.title : 'Back').place(LIST_LEFT, y);
       const author = new PixelText(song ? song.author : '', DIM_GREY).place(LIST_RIGHT, y, 'right');
@@ -264,7 +283,7 @@ export class JukeboxScreen {
     for (let i = 0; i < this.#titles.length; i++) {
       this.#titles[i]!.color = i === view.playing ? LIME : i === view.cursor ? AMBER : GREY;
     }
-    this.#marker.place(LIST_LEFT - 10, LIST_TOP + view.cursor * LIST_ROW);
+    this.#marker.place(LIST_LEFT - 10, jukeboxRowY(view.cursor, this.#songs.length + 1));
     this.#nowTime.visible = song !== null;
     this.#nowTitle.text = song ? `${song.title} ${song.credit}` : '';
     this.#nowTitle.place(CENTER, NOW_Y, 'center');

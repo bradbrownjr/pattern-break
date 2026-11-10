@@ -33,7 +33,14 @@ import {
   DRONE_DELAY_TICKS,
   POWER_UP_COUNT,
   PowerUp,
-  SHIELD_HITS,
+  BOUNCE_SPEED_Q8,
+  BOUNCE_TICKS,
+  EXTRA_LIFE_POINTS,
+  MAX_LIVES,
+  SHIELD_BULLET_COST,
+  SHIELD_MAX,
+  SHIELD_RAM_COST,
+  SHIELD_WALL_COST,
   BOMB_BLAST_PX,
   BOMB_RELOAD_TICKS,
   BOMB_GRAVITY_Q8,
@@ -135,6 +142,9 @@ export interface SimState {
   /** The tick count at which the last life was lost (state.tick after that tick), or -1. */
   deathTick: number;
   lives: number;
+  /** The score at which the next extra life comes, and the tick the last one came (-1). */
+  nextExtraLife: number;
+  extraLifeTick: number;
   /** True once tick reaches level.tickCount. */
   finished: boolean;
   /** Enemies and bullets can't hit the ship before this tick (after losing a life). */
@@ -185,8 +195,9 @@ export interface SimState {
   shotVY: Int32Array;
   shotSource: Uint8Array;
   shotLaser: Uint8Array;
-  /** Enemy bullets: screen centre and velocity per tick, Q8. */
+  /** Enemy bullets: screen centre and velocity per tick, Q8, and the EnemyKind that fired each. */
   bulletActive: Uint8Array;
+  bulletKind: Uint8Array;
   bulletX: Int32Array;
   bulletY: Int32Array;
   bulletVX: Int32Array;
@@ -212,7 +223,7 @@ export interface SimState {
   /** The power-up meter's highlighted slot (a PowerUp), or -1; capsules picked up. */
   meter: number;
   capsules: number;
-  /** Upgrades bought: boost level (0 to 3) and fuel left (ticks), double, laser, missile, drones, shield hits left. */
+  /** Power-ups: boost level (0 to 3) and fuel left (ticks), double, laser, missile, drones, shield points left. */
   boostLevel: number;
   boostFuel: number;
   /** True if the ship boosted this tick. */
@@ -221,7 +232,12 @@ export interface SimState {
   laser: boolean;
   missile: boolean;
   drones: number;
-  shieldHits: number;
+  shield: number;
+  /** The tick the shield last took a hit, or -1. */
+  shieldHitTick: number;
+  /** Knocked off a wall: until this tick, and +1 (down) or -1 (up). */
+  bounceUntil: number;
+  bounceDir: number;
   /** The ship's centre over the last TRAIL ticks (index tick % TRAIL), and the drones' positions, Q8. */
   trailX: Int32Array;
   trailY: Int32Array;
@@ -256,6 +272,8 @@ export function createSimState(cheats = 0): SimState {
     dead: false,
     deathTick: -1,
     lives: START_LIVES,
+    nextExtraLife: EXTRA_LIFE_POINTS,
+    extraLifeTick: -1,
     finished: false,
     safeUntil: 0,
     flyInUntil: 0,
@@ -286,6 +304,7 @@ export function createSimState(cheats = 0): SimState {
     shotSource: new Uint8Array(SHOT_SLOTS),
     shotLaser: new Uint8Array(SHOT_SLOTS),
     bulletActive: new Uint8Array(BULLET_SLOTS),
+    bulletKind: new Uint8Array(BULLET_SLOTS),
     bulletX: new Int32Array(BULLET_SLOTS),
     bulletY: new Int32Array(BULLET_SLOTS),
     bulletVX: new Int32Array(BULLET_SLOTS),
@@ -312,7 +331,10 @@ export function createSimState(cheats = 0): SimState {
     laser: false,
     missile: false,
     drones: 0,
-    shieldHits: 0,
+    shield: 0,
+    shieldHitTick: -1,
+    bounceUntil: 0,
+    bounceDir: 0,
     trailX: new Int32Array(TRAIL),
     trailY: new Int32Array(TRAIL),
     droneX: new Int32Array(MAX_DRONES),
@@ -344,6 +366,8 @@ export function resetSimState(state: SimState): void {
   state.dead = false;
   state.deathTick = -1;
   state.lives = START_LIVES;
+  state.nextExtraLife = EXTRA_LIFE_POINTS;
+  state.extraLifeTick = -1;
   state.finished = false;
   state.safeUntil = 0;
   state.flyInUntil = 0;
@@ -374,6 +398,9 @@ export function resetSimState(state: SimState): void {
   state.nukeTick = -1;
   state.prevInput = 0;
   state.capsules = 0;
+  state.shieldHitTick = -1;
+  state.bounceUntil = 0;
+  state.bounceDir = 0;
   loseUpgrades(state);
   state.boosting = false;
   resetTrail(state, state.shipX, state.shipY);
@@ -384,11 +411,12 @@ export function resetSimState(state: SimState): void {
 }
 
 /**
- * Every power-up is lost and the unlock order starts again (a new run, or a life lost).
- * With the god cheat the ship has every power-up instead.
+ * Every power-up is lost and the unlock order starts again (a new run, or a life lost),
+ * but the shield is full. With the god cheat the ship has every power-up instead.
  */
 function loseUpgrades(state: SimState): void {
   state.meter = -1;
+  state.shield = SHIELD_MAX;
   if ((state.cheats & Cheat.god) !== 0) {
     state.boostLevel = BOOST_MAX_LEVEL;
     state.boostFuel = BOOST_MAX_LEVEL * BOOST_FUEL_PER_LEVEL;
@@ -396,7 +424,6 @@ function loseUpgrades(state: SimState): void {
     state.laser = true;
     state.missile = true;
     state.drones = MAX_DRONES;
-    state.shieldHits = SHIELD_HITS;
     return;
   }
   state.boostLevel = 0;
@@ -405,7 +432,6 @@ function loseUpgrades(state: SimState): void {
   state.laser = false;
   state.missile = false;
   state.drones = 0;
-  state.shieldHits = 0;
 }
 
 /** Fills the trail with (x, y), so the drones start on the ship. */
@@ -688,7 +714,7 @@ export function canUnlock(state: SimState, slot: number): boolean {
     case PowerUp.drone:
       return state.drones < MAX_DRONES;
     case PowerUp.shield:
-      return state.shieldHits < SHIELD_HITS;
+      return state.shield < SHIELD_MAX;
     default:
       return false;
   }
@@ -713,7 +739,7 @@ function unlock(state: SimState, slot: number): void {
       state.drones++;
       break;
     default:
-      state.shieldHits = SHIELD_HITS;
+      state.shield = SHIELD_MAX;
   }
 }
 
@@ -837,8 +863,10 @@ function nuke(level: Level, state: SimState, t: number): void {
   state.bulletCount = 0;
 }
 
-/** Fires an enemy bullet from (x, y) at the ship, if the difficulty's cap allows one more. */
-function fireAtShip(level: Level, state: SimState, x: number, y: number): void {
+/** Enemy i fires a bullet from where it is at the ship, if the difficulty's cap allows one more. */
+function fireAtShip(level: Level, state: SimState, i: number): void {
+  const x = state.enemyX[i]!;
+  const y = state.enemyY[i]!;
   const { bulletSpeedQ8, maxBullets } = EnemyTuning[level.difficulty];
   if (state.bulletCount >= maxBullets) return;
   let slot = 0;
@@ -849,6 +877,7 @@ function fireAtShip(level: Level, state: SimState, x: number, y: number): void {
   // sqrt is correctly rounded in IEEE 754, so every engine gets the same length.
   const length = Math.sqrt(dx * dx + dy * dy);
   state.bulletActive[slot] = 1;
+  state.bulletKind[slot] = level.enemies.kind[i]!;
   state.bulletX[slot] = x;
   state.bulletY[slot] = y;
   state.bulletVX[slot] = length < Q8 ? -bulletSpeedQ8 : Math.trunc((dx * bulletSpeedQ8) / length);
@@ -889,7 +918,19 @@ function loseLife(level: Level, state: SimState, t: number): void {
   state.safeUntil = t + RESPAWN_SAFE_TICKS;
   state.bulletActive.fill(0);
   state.bulletCount = 0;
+  state.bounceUntil = 0;
   resetTrail(state, state.shipX, state.shipY);
+}
+
+/**
+ * The shield takes a hit costing `cost` points at tick t, if it has any left (with the god
+ * cheat it loses none); false if it has none, and the hit costs a life.
+ */
+function shieldTakes(state: SimState, t: number, cost: number): boolean {
+  if (state.shield <= 0) return false;
+  if ((state.cheats & Cheat.god) === 0) state.shield = state.shield > cost ? state.shield - cost : 0;
+  state.shieldHitTick = t;
+  return true;
 }
 
 /**
@@ -908,11 +949,13 @@ function loseLife(level: Level, state: SimState, t: number): void {
  *    press once reloaded; they burst on the first enemy they touch.
  * 4. Enemies fire on their scheduled ticks; move enemy bullets, which stop on the terrain.
  * 5. Move capsules, which scroll with the cave and fall to its floor; the ship picks up
- *    those it touches, each unlocking the next power-up. Unless the ship is flying in,
- *    test it against the terrain; unless it is in its safe time after a respawn, against
- *    live enemies (which are destroyed too) and enemy bullets. The shield takes a hit from
- *    an enemy or bullet (none with the god cheat); any other hit costs a life, the streak,
- *    and every power-up.
+ *    those it touches, each unlocking the next power-up. A score past the next multiple of
+ *    EXTRA_LIFE_POINTS gives a life. Unless the ship is flying in or bouncing, test it
+ *    against the terrain; unless it is in its safe time after a respawn, against live
+ *    enemies (which are destroyed too) and enemy bullets. While the shield has points it
+ *    takes each hit for its SHIELD_* cost (none with the god cheat), and a wall knocks the
+ *    ship towards the cave's middle; with none, a hit costs a life, the streak, and every
+ *    power-up.
  * 6. At the song's end, add the survival bonus.
  * A shot that destroys an enemy scores KILL_POINTS for its kind, doubled on the beat (a
  * note of its instrument within ON_BEAT_TICKS), times scoreMultiplier(streak). Shooting
@@ -948,6 +991,12 @@ export function tick(level: Level, state: SimState, rawInput: number): void {
     x = RESPAWN_FROM_X * Q8 + Math.floor(((SHIP_START_X - RESPAWN_FROM_X) * Q8 * k) / RESPAWN_FLY_TICKS);
     y = caveCentre(level, barAt(level, level.scroll[state.tick + 1]! + x));
   } else {
+    if (state.tick < state.bounceUntil) {
+      // Knocked off a wall: towards the cave's middle, not past it, whatever the stick says.
+      const mid = caveCentre(level, barAt(level, level.scroll[state.tick + 1]! + x));
+      const gap = state.bounceDir * (mid - state.shipY);
+      y = state.shipY + state.bounceDir * (gap <= 0 ? 0 : gap < BOUNCE_SPEED_Q8 ? gap : BOUNCE_SPEED_Q8);
+    }
     if (x < MIN_X) x = MIN_X;
     if (x > MAX_X) x = MAX_X;
     if (y < MIN_Y) y = MIN_Y;
@@ -1057,7 +1106,7 @@ export function tick(level: Level, state: SimState, rawInput: number): void {
     const end = e.fireStart[i + 1]!;
     while (f < end && e.fireTick[f]! <= t) {
       if (e.fireTick[f] === t && state.enemyStatus[i] === EnemyStatus.alive) {
-        fireAtShip(level, state, state.enemyX[i]!, state.enemyY[i]!);
+        fireAtShip(level, state, i);
       }
       f++;
     }
@@ -1082,8 +1131,18 @@ export function tick(level: Level, state: SimState, rawInput: number): void {
     state.capsules++;
     unlockNext(state);
   }
-  const godShield = (state.cheats & Cheat.god) !== 0;
-  let hit = t >= state.flyInUntil && shipCollides(level, t, x, y);
+  while (state.score >= state.nextExtraLife) {
+    if (state.lives < MAX_LIVES) state.lives++;
+    state.nextExtraLife += EXTRA_LIFE_POINTS;
+    state.extraLifeTick = t;
+  }
+  let hit = false;
+  if (t >= state.flyInUntil && t >= state.bounceUntil && shipCollides(level, t, x, y)) {
+    if (shieldTakes(state, t, SHIELD_WALL_COST)) {
+      state.bounceUntil = t + BOUNCE_TICKS;
+      state.bounceDir = caveCentre(level, barAt(level, level.scroll[t]! + x)) < y ? -1 : 1;
+    } else hit = true;
+  }
   if (t >= state.safeUntil) {
     for (let i = state.firstLive; i < state.nextSpawn && !hit; i++) {
       if (state.enemyStatus[i] !== EnemyStatus.alive) continue;
@@ -1092,18 +1151,14 @@ export function tick(level: Level, state: SimState, rawInput: number): void {
         endEnemy(state, i, t, EnemyStatus.destroyed);
         spoilFormation(level, state, i);
         state.kills++;
-        if (state.shieldHits > 0) {
-          if (!godShield) state.shieldHits--;
-        } else hit = true;
+        if (!shieldTakes(state, t, SHIELD_RAM_COST)) hit = true;
       }
     }
     for (let b = 0; b < BULLET_SLOTS && !hit; b++) {
       if (!state.bulletActive[b]) continue;
       if (overlaps(x, y, HALF_W, HALF_H, state.bulletX[b]!, state.bulletY[b]!, BULLET_H, BULLET_H)) {
         removeBullet(state, b);
-        if (state.shieldHits > 0) {
-          if (!godShield) state.shieldHits--;
-        } else hit = true;
+        if (!shieldTakes(state, t, SHIELD_BULLET_COST[state.bulletKind[b]!]!)) hit = true;
       }
     }
   }
@@ -1126,14 +1181,14 @@ export function runInputLog(level: Level, inputs: Uint16Array, state: SimState =
 }
 
 /**
- * A deterministic byte form of the state, for golden hashes: 28 little-endian i32s (tick,
- * shipX, shipY, dead, deathTick, lives, finished, safeUntil, flyInUntil, cheats, hitTick, kills, score,
- * streak, onBeatKills, survivalBonus, nukes, nukeCharge, blastTick, meter, capsules,
- * boostLevel, boostFuel, double, laser, missile, drones, shieldHits), then each enemy's
- * status byte.
+ * A deterministic byte form of the state, for golden hashes: 33 little-endian i32s (tick,
+ * shipX, shipY, dead, deathTick, lives, nextExtraLife, extraLifeTick, finished, safeUntil,
+ * flyInUntil, cheats, hitTick, kills, score, streak, onBeatKills, survivalBonus, nukes,
+ * nukeCharge, blastTick, meter, capsules, boostLevel, boostFuel, double, laser, missile,
+ * drones, shield, shieldHitTick, bounceUntil, bounceDir), then each enemy's status byte.
  */
 export function serializeSimState(state: SimState): Uint8Array {
-  const out = new Uint8Array(112 + state.enemyStatus.length);
+  const out = new Uint8Array(132 + state.enemyStatus.length);
   const view = new DataView(out.buffer);
   const fields = [
     state.tick,
@@ -1142,6 +1197,8 @@ export function serializeSimState(state: SimState): Uint8Array {
     state.dead ? 1 : 0,
     state.deathTick,
     state.lives,
+    state.nextExtraLife,
+    state.extraLifeTick,
     state.finished ? 1 : 0,
     state.safeUntil,
     state.flyInUntil,
@@ -1163,9 +1220,12 @@ export function serializeSimState(state: SimState): Uint8Array {
     state.laser ? 1 : 0,
     state.missile ? 1 : 0,
     state.drones,
-    state.shieldHits,
+    state.shield,
+    state.shieldHitTick,
+    state.bounceUntil,
+    state.bounceDir,
   ];
   for (let i = 0; i < fields.length; i++) view.setInt32(i * 4, fields[i]!, true);
-  out.set(state.enemyStatus, 112);
+  out.set(state.enemyStatus, 132);
   return out;
 }

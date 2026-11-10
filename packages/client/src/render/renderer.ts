@@ -23,9 +23,14 @@ export interface GameRendererOptions {
   preserveDrawingBuffer?: boolean;
 }
 
-/** The largest whole-number scale at which 384x216 fits in `width` x `height`, at least 1. */
-export function integerScale(width: number, height: number): number {
-  const k = Math.floor(Math.min(width / PLAYFIELD_WIDTH, height / PLAYFIELD_HEIGHT));
+/**
+ * The largest whole number of device pixels per game pixel at which 384x216 fits in a
+ * `width` x `height` CSS px window with `dpr` device pixels per CSS px, at least 1. Counting
+ * device pixels keeps every game pixel the same size on a high-density screen while using
+ * more of it: a phone 390 CSS px tall at 3x gets 5 (360 CSS px), where whole CSS px gave 1.
+ */
+export function integerScale(width: number, height: number, dpr = 1): number {
+  const k = Math.floor(Math.min((width * dpr) / PLAYFIELD_WIDTH, (height * dpr) / PLAYFIELD_HEIGHT));
   return k < 1 ? 1 : k;
 }
 
@@ -57,12 +62,13 @@ export class GameRenderer {
     this.resize();
   }
 
-  /** Scales the canvas to the largest whole multiple that fits the window. */
+  /** Scales the canvas to the largest whole multiple of device pixels that fits the window. */
   resize(): void {
-    const k = integerScale(window.innerWidth, window.innerHeight);
+    const dpr = window.devicePixelRatio || 1;
+    const k = integerScale(window.innerWidth, window.innerHeight, dpr);
     const canvas = this.renderer.canvas as HTMLCanvasElement;
-    canvas.style.width = `${PLAYFIELD_WIDTH * k}px`;
-    canvas.style.height = `${PLAYFIELD_HEIGHT * k}px`;
+    canvas.style.width = `${(PLAYFIELD_WIDTH * k) / dpr}px`;
+    canvas.style.height = `${(PLAYFIELD_HEIGHT * k) / dpr}px`;
     this.#parent.style.background = LETTERBOX;
   }
 

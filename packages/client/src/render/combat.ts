@@ -1,7 +1,7 @@
 // Enemies, shots, bullets, the bomb, missiles, drones, capsules and the shield drawn from
 // the sim state, plus their cosmetics: a burst and the points scored when an enemy is
-// destroyed, the bomb's and missiles' blasts, the nuke's flash, an explosion when the ship
-// loses a life, and the HUD: lives left, the bomb and missile reloading, the streak
+// destroyed, "1UP" for an extra life, the bomb's and missiles' blasts, the nuke's flash, the
+// shield flickering when it takes a hit, an explosion when the ship loses a life, and the HUD: lives left, the bomb and missile reloading, the streak
 // multiplier, nukes held, the score, and the power-up meter (meter.ts; docs/PLAN.md,
 // "Enemies" and "Scoring"). Turrets and tanks are placed against the terrain as drawn, so
 // they stay on their bars. Effect timing comes from song time, so capture mode reproduces
@@ -22,7 +22,7 @@ import {
   Q8,
   SAMPLES_PER_TICK,
   SAMPLE_RATE,
-  SHIELD_HITS,
+  SHIELD_MAX,
   SHOT_HEIGHT,
   SHOT_SLOTS,
   SHOT_WIDTH,
@@ -37,6 +37,7 @@ import { flashAlpha } from './flash.ts';
 import { MeterView } from './meter.ts';
 import { AMBER, BACKGROUND, CYAN, LIME, MAGENTA, WHITE } from './palette.ts';
 import { flipRows, mapTexture } from './pixels.ts';
+import { BOMB_ICON_MAP, ICON_COLORS, MISSILE_ICON_MAP, NUKE_MAP } from './icons.ts';
 import { seededRandom } from './random.ts';
 import { PixelText } from './text.ts';
 import { SHIP_SPRITE_HEIGHT, SHIP_SPRITE_WIDTH, shipTexture } from './ship.ts';
@@ -71,30 +72,19 @@ const ENEMY_SHIP_MAP = [
   '......mm..',
 ];
 
-const BULLET_MAP = ['.mm.', 'mwwm', 'mwwm', '.mm.'];
+/**
+ * Enemy bullets by the kind that fired them, indexed by EnemyKind. All have the same 4 px
+ * hitbox; a tank's shell is a lime block, a turret's (which empties the shield) an amber
+ * pellet with a 1 px glow around the hitbox.
+ */
+const BULLET_MAPS = [
+  ['..aa..', '.awwa.', 'awwwwa', 'awwwwa', '.awwa.', '..aa..'],
+  ['llll', 'lwwl', 'lwwl', 'llll'],
+  ['.mm.', 'mwwm', 'mwwm', '.mm.'],
+];
 
 const BOMB_MAP = ['.aa.', 'awwa', 'aaaa', '.aa.'];
 
-/** The bomb in the HUD. */
-const BOMB_ICON_MAP = [
-  '....ww.',
-  '...w...',
-  '..aaa..',
-  '.aaaaa.',
-  '.aawaa.',
-  '.aaaaa.',
-  '..aaa..',
-];
-/** The missile in the HUD, shown once bought. */
-const MISSILE_ICON_MAP = [
-  '.......',
-  '..cc...',
-  'mcccccw',
-  'mccccww',
-  'mcccccw',
-  '..cc...',
-  '.......',
-];
 /** The HUD bomb's and missile's empty part: they fill from the bottom as they reload. */
 const BOMB_ICON_DIM = 0.3;
 const ICON_ROWS = BOMB_ICON_MAP.length;
@@ -131,22 +121,15 @@ function ringMap(w: number, h: number): string[] {
   return rows;
 }
 const SHIELD_MAP = ringMap(22, 14);
-/** The shield's opacity with 1, 2 and 3 hits left. */
-const SHIELD_ALPHA = [0, 0.35, 0.55, 0.8];
+/** The shield's opacity with 0 to SHIELD_MAX points left. */
+const SHIELD_ALPHA = [0, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
+/** After a hit the shield flickers for 0.25 s, on and off every 3 ticks, at full strength. */
+const SHIELD_FLICKER_TICKS = 30;
+const SHIELD_FLICKER_STEP = 3;
 
 
-/** A nuke held, in the HUD. */
-const NUKE_MAP = [
-  '..aaa..',
-  '.a...a.',
-  'a.w.w.a',
-  'a..w..a',
-  'a.w.w.a',
-  '.a...a.',
-  '..aaa..',
-];
 
-const COLORS: Record<string, number> = { m: MAGENTA, w: WHITE, a: AMBER, l: LIME, g: 0x3c7a1a, c: CYAN };
+const COLORS = ICON_COLORS;
 
 /** Enemy sprites on screen at once; enemies beyond this are not drawn. */
 const ENEMY_SPRITES = 64;
@@ -172,7 +155,8 @@ export interface Textures {
   turretCeiling: Texture;
   tank: Texture;
   ship: Texture;
-  bullet: Texture;
+  /** Enemy bullets, indexed by EnemyKind. */
+  bullets: Texture[];
   bomb: Texture;
   bombIcon: Texture;
   /** The bomb icon's bottom k rows, for k = 0 to ICON_ROWS. */
@@ -185,6 +169,8 @@ export interface Textures {
   drone: Texture;
   capsule: Texture;
   shield: Texture;
+  /** The shield in white, for its flicker. */
+  shieldFlash: Texture;
 }
 
 /** A texture's bottom k rows, for k = 0 to its height. */
@@ -205,7 +191,7 @@ export function getTextures(): Textures {
     turretCeiling: mapTexture(flipRows(TURRET_MAP), COLORS, 'turret-ceiling'),
     tank: mapTexture(TANK_MAP, COLORS, 'tank'),
     ship: mapTexture(ENEMY_SHIP_MAP, COLORS, 'enemy-ship'),
-    bullet: mapTexture(BULLET_MAP, COLORS, 'bullet'),
+    bullets: BULLET_MAPS.map((map, k) => mapTexture(map, COLORS, `bullet-${k}`)),
     bomb: mapTexture(BOMB_MAP, COLORS, 'bomb'),
     bombIcon: mapTexture(BOMB_ICON_MAP, COLORS, 'bomb-icon'),
     bombFill: [],
@@ -217,6 +203,7 @@ export function getTextures(): Textures {
     drone: mapTexture(DRONE_MAP, COLORS, 'drone'),
     capsule: mapTexture(CAPSULE_MAP, COLORS, 'capsule'),
     shield: mapTexture(SHIELD_MAP, COLORS, 'shield'),
+    shieldFlash: mapTexture(SHIELD_MAP, { c: WHITE }, 'shield-flash'),
   };
   if (textures.bombFill.length === 0) {
     textures.bombFill = bottomRows(textures.bombIcon, BOMB_ICON_MAP[0]!.length, ICON_ROWS);
@@ -278,6 +265,7 @@ export class CombatView {
   #drones: Sprite[] = [];
   #capsules: Sprite[] = [];
   #shield = new Sprite();
+  #seenExtraLife = -1;
   readonly #meter = new MeterView();
 
   #lifeLost = new Explosion(SHIP_EXPLOSION);
@@ -370,6 +358,7 @@ export class CombatView {
     this.#seenTick = 0;
     this.#scanFrom = 0;
     this.#seenHit = -1;
+    this.#seenExtraLife = -1;
     this.#lifeLostSample = -1;
     this.#lifeLost.hide();
     this.#blastSample = -1;
@@ -450,7 +439,7 @@ export class CombatView {
       const sprite = this.#bullets[b]!;
       sprite.visible = state.bulletActive[b] === 1;
       if (!sprite.visible) continue;
-      sprite.texture = tex.bullet;
+      sprite.texture = tex.bullets[state.bulletKind[b]!]!;
       placeCentred(sprite, state.bulletX[b]! / Q8, state.bulletY[b]! / Q8);
     }
 
@@ -480,10 +469,15 @@ export class CombatView {
       if (sprite.visible) placeCentred(sprite, state.capsuleX[c]! / Q8, state.capsuleY[c]! / Q8);
     }
     const shipVisible = state.tick >= state.safeUntil || Math.floor(state.tick / BLINK_TICKS) % 2 === 0;
-    const hits = state.shieldHits < SHIELD_HITS ? state.shieldHits : SHIELD_HITS;
-    this.#shield.visible = hits > 0 && shipVisible && !state.dead;
+    const points = state.shield < SHIELD_MAX ? state.shield : SHIELD_MAX;
+    const sinceHit = state.shieldHitTick < 0 ? SHIELD_FLICKER_TICKS : state.tick - state.shieldHitTick;
+    const flicker = sinceHit < SHIELD_FLICKER_TICKS;
+    // Flickering, it shows even with no points left, so the hit that emptied it reads.
+    const shieldOn = flicker ? Math.floor(sinceHit / SHIELD_FLICKER_STEP) % 2 === 0 : points > 0;
+    this.#shield.visible = shieldOn && shipVisible && !state.dead;
     if (this.#shield.visible) {
-      this.#shield.alpha = SHIELD_ALPHA[hits]!;
+      this.#shield.alpha = flicker ? 1 : SHIELD_ALPHA[points]!;
+      this.#shield.texture = flicker ? tex.shieldFlash : tex.shield;
       placeCentred(this.#shield, state.shipX / Q8, state.shipY / Q8);
     }
 
@@ -521,6 +515,17 @@ export class CombatView {
         this.#popupSample[p] = state.enemyEndTick[i]! * SAMPLES_PER_TICK;
       }
     }
+    // An extra life: "1UP" in lime, rising from the ship.
+    if (state.extraLifeTick !== this.#seenExtraLife && state.extraLifeTick > 0) {
+      const p = this.#nextPopup;
+      this.#nextPopup = (p + 1) % POPUPS;
+      this.#popups[p]!.text = '1UP';
+      this.#popups[p]!.color = LIME;
+      this.#popupX[p] = state.shipX / Q8;
+      this.#popupY[p] = state.shipY / Q8 - 12;
+      this.#popupSample[p] = state.extraLifeTick * SAMPLES_PER_TICK;
+    }
+    this.#seenExtraLife = state.extraLifeTick;
     for (let p = 0; p < POPUPS; p++) {
       const popup = this.#popups[p]!;
       const ms = this.#popupSample[p]! < 0 ? -1 : samplesToMs(displaySamples - this.#popupSample[p]!);

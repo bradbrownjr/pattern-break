@@ -14,7 +14,12 @@ import {
   NUKE_CHARGE_KILLS,
   PLAYFIELD_HEIGHT,
   PLAYFIELD_WIDTH,
-  SHIELD_HITS,
+  EXTRA_LIFE_POINTS,
+  MAX_LIVES,
+  SHIELD_BULLET_COST,
+  SHIELD_MAX,
+  SHIELD_RAM_COST,
+  SHIELD_WALL_COST,
   START_LIVES,
   STREAK_STEP,
   SURVIVAL_POINTS_PER_LIFE,
@@ -24,7 +29,7 @@ import {
 } from '@game/core';
 import { Container, Sprite, Texture } from 'pixi.js';
 import { getTextures } from '../render/combat.ts';
-import { AMBER, CYAN, DIM_GREY, GREY, LED_LIT, MAGENTA, WHITE } from '../render/palette.ts';
+import { AMBER, CYAN, DIM_GREY, GREY, LED_LIT, LIME, MAGENTA, WHITE } from '../render/palette.ts';
 import { shipTexture } from '../render/ship.ts';
 import { PixelText } from '../render/text.ts';
 import { Scroller } from './menu.ts';
@@ -61,7 +66,19 @@ export function helpRows(): HelpRow[] {
       label: `Tank  ${ENEMY_HP[EnemyKind.tank]} hits`,
       value: String(KILL_POINTS[EnemyKind.tank]),
     },
-    { icon: { textures: () => [tex().bullet] }, label: 'Bullet', value: 'Dodge', valueColor: GREY },
+    { heading: 'Shield' },
+    {
+      icon: { textures: () => [tex().shield, shipTexture()], alpha: 0.8 },
+      label: 'Each life',
+      value: `${SHIELD_MAX} points`,
+      valueColor: GREY,
+    },
+    { icon: { textures: () => [tex().bullets[EnemyKind.ship]!] }, label: 'Ship bullet', value: `-${SHIELD_BULLET_COST[EnemyKind.ship]}` },
+    { icon: { textures: () => [tex().bullets[EnemyKind.tank]!] }, label: 'Tank shell', value: `-${SHIELD_BULLET_COST[EnemyKind.tank]}` },
+    { icon: { textures: () => [tex().bullets[EnemyKind.turret]!] }, label: 'Turret shell', value: `-${SHIELD_BULLET_COST[EnemyKind.turret]}` },
+    { label: 'Wall', value: `-${SHIELD_WALL_COST}  Bounce` },
+    { label: 'Ram', value: `-${SHIELD_RAM_COST}` },
+    { label: 'Empty', value: 'Hit loses life', valueColor: MAGENTA },
     { heading: 'Score' },
     { icon: { text: String(shipKill * 2), color: AMBER }, label: 'Kill on the beat', value: 'x2' },
     { icon: { text: 'x2', color: AMBER }, label: `${STREAK_STEP} kills no hit`, value: `+1  Max x${MAX_MULTIPLIER}` },
@@ -79,7 +96,7 @@ export function helpRows(): HelpRow[] {
     {
       icon: { textures: () => [tex().shield, shipTexture()], alpha: 0.8 },
       label: 'Shield',
-      value: `${SHIELD_HITS} hits`,
+      value: 'Refill',
       valueColor: GREY,
     },
     { icon: { textures: () => [tex().drone] }, label: 'Drone', value: `Copies fire  Max ${MAX_DRONES}`, valueColor: GREY },
@@ -88,6 +105,7 @@ export function helpRows(): HelpRow[] {
     { label: 'Life lost', value: 'Power-ups lost', valueColor: MAGENTA },
     { heading: 'Display' },
     { icon: { textures: () => [shipTexture()] }, label: 'Lives', value: `${START_LIVES} to start`, valueColor: GREY },
+    { icon: { text: '1UP', color: LIME }, label: 'Extra life', value: `${EXTRA_LIFE_POINTS}  Max ${MAX_LIVES}`, valueColor: GREY },
     { icon: { textures: () => [tex().bombIcon, tex().bombFill.at(-1)!] }, label: 'Bomb ready', value: 'Fills', valueColor: GREY },
     {
       icon: { textures: () => [tex().missileIcon, tex().missileFill.at(-1)!] },

@@ -44,9 +44,12 @@ describe('sound cues', () => {
     for (const every of [2, 3, 7]) {
       const c = counts(run(level, every).cues);
       const want = counts(everyTick.cues);
-      // Shots from the same volley group can merge across a long frame; everything else matches.
-      delete c['shot'];
-      delete want['shot'];
+      // Volleys (shots and laser beams) from the same group can merge across a long frame;
+      // everything else matches.
+      for (const volley of ['shot', 'laser']) {
+        delete c[volley];
+        delete want[volley];
+      }
       expect(c, `every ${every}`).toEqual(want);
     }
   });

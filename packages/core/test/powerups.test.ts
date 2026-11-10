@@ -13,7 +13,8 @@ import {
   MISSILE_RELOAD_TICKS,
   POWER_UP_COUNT,
   PowerUp,
-  SHIELD_HITS,
+  BOUNCE_TICKS,
+  SHIELD_MAX,
   SHIP_SPEED_Q8,
 } from '../src/sim/constants.ts';
 import { EnemyStatus, createSimState, tick, type SimState } from '../src/sim/sim.ts';
@@ -21,6 +22,8 @@ import { enemyLevel, handLevel } from './level-fixtures.ts';
 
 const Q = 256;
 const open = enemyLevel([], 2000);
+/** A cave with a floor 10 segments high under the ship for the whole song. */
+const floorLevel = handLevel('easy', Array.from({ length: 40 }, (): [number, number] => [0, 10]), 0, 2000);
 
 /** Puts a capsule on the ship, so the next tick picks it up (`open` doesn't scroll). */
 function capsuleOnShip(s: SimState): void {
@@ -92,17 +95,18 @@ describe('capsules', () => {
       tick(open, s, 0);
       seen.push(s.meter);
     }
-    // Double, missile, shield, drone, laser, boost; then double, missile and the shield are
-    // at their most, so the seventh gives the second drone.
-    expect(seen).toEqual([0, 1, 2, 3, 4, 5, 3]);
-    expect([s.double, s.missile, s.shieldHits, s.drones, s.laser, s.boostLevel]).toEqual([true, true, SHIELD_HITS, 2, true, 1]);
+    // Double, missile, then drone, laser and boost: the shield starts full, so it is
+    // skipped; then double and missile are at their most, so the sixth and seventh give the
+    // second drone and the second boost.
+    expect(seen).toEqual([0, 1, 3, 4, 5, 3, 5]);
+    expect([s.double, s.missile, s.shield, s.drones, s.laser, s.boostLevel]).toEqual([true, true, SHIELD_MAX, 2, true, 2]);
   });
 });
 
 describe('unlocking', () => {
   it('with every power-up at its most, a capsule does nothing', () => {
     const s = createSimState();
-    Object.assign(s, { double: true, laser: true, missile: true, drones: 2, boostLevel: 3, shieldHits: SHIELD_HITS, meter: 2 });
+    Object.assign(s, { double: true, laser: true, missile: true, drones: 2, boostLevel: 3, shield: SHIELD_MAX, meter: 2 });
     capsuleOnShip(s);
     tick(open, s, 0);
     expect([s.capsules, s.meter, s.boostLevel, s.drones]).toEqual([1, 2, 3, 2]);
@@ -110,25 +114,32 @@ describe('unlocking', () => {
 
   it('losing a life loses every power-up and starts the order again', () => {
     const s = createSimState();
-    Object.assign(s, { double: true, missile: true, drones: 2, boostLevel: 2, boostFuel: 50, meter: PowerUp.drone });
+    Object.assign(s, { double: true, missile: true, drones: 2, boostLevel: 2, boostFuel: 50, meter: PowerUp.drone, shield: 0 });
     bulletOnShip(s);
     tick(open, s, 0);
     expect([s.lives, s.double, s.missile, s.drones, s.boostLevel, s.boostFuel, s.meter]).toEqual([2, false, false, 0, 0, 0, -1]);
   });
 
-  it('the god cheat starts with every power-up, keeps them after a life, and the shield never breaks', () => {
+  it('the god cheat starts with every power-up and a shield that never weakens', () => {
     const s = createSimState(Cheat.god);
-    expect([s.double, s.laser, s.missile, s.drones, s.boostLevel, s.shieldHits]).toEqual([true, true, true, 2, 3, SHIELD_HITS]);
+    expect([s.double, s.laser, s.missile, s.drones, s.boostLevel, s.shield]).toEqual([true, true, true, 2, 3, SHIELD_MAX]);
     for (let k = 0; k < 10; k++) {
       bulletOnShip(s);
       tick(open, s, 0);
     }
-    expect([s.lives, s.shieldHits]).toEqual([3, SHIELD_HITS]);
-    // A wall still costs a life, but not the power-ups.
-    const level = handLevel('easy', Array.from({ length: 20 }, (_, i): [number, number] => (i >= 5 && i <= 8 ? [0, 20] : [0, 0])), 0, 100);
+    expect([s.lives, s.shield]).toEqual([3, SHIELD_MAX]);
+    // A wall bounces it off, again and again.
     const g = createSimState(Cheat.god);
-    tick(level, g, 0);
-    expect([g.lives, g.double, g.laser, g.missile, g.drones, g.shieldHits]).toEqual([2, true, true, true, 2, SHIELD_HITS]);
+    for (let k = 0; k < 400; k++) tick(floorLevel, g, InputBit.down);
+    expect([g.lives, g.shield, g.double, g.drones]).toEqual([3, SHIELD_MAX, true, 2]);
+  });
+
+  it('the god cheat keeps every power-up after a life is lost', () => {
+    const s = createSimState(Cheat.god);
+    s.shield = 0;
+    bulletOnShip(s);
+    tick(open, s, 0);
+    expect([s.lives, s.double, s.laser, s.missile, s.drones, s.shield]).toEqual([2, true, true, true, 2, SHIELD_MAX]);
   });
 });
 
@@ -232,38 +243,82 @@ describe('drones', () => {
 });
 
 describe('shield', () => {
-  it('takes 3 hits from bullets; the next costs a life', () => {
+  /** A bullet fired by `kind` on the ship. */
+  function shellOnShip(s: SimState, kind: number): void {
+    bulletOnShip(s);
+    s.bulletKind[0] = kind;
+  }
+
+  it('every life starts with a full shield', () => {
     const s = createSimState();
-    // The shield comes after the missile.
+    expect(s.shield).toBe(SHIELD_MAX);
+    s.shield = 0;
+    bulletOnShip(s);
+    tick(open, s, 0);
+    expect([s.lives, s.shield]).toEqual([2, SHIELD_MAX]);
+  });
+
+  it("takes three ships' bullets, two tank shells or one turret shell; the next hit costs a life", () => {
+    for (const [kind, hits] of [
+      [EnemyKind.ship, 3],
+      [EnemyKind.tank, 2],
+      [EnemyKind.turret, 1],
+    ] as const) {
+      const s = createSimState();
+      for (let k = 0; k < hits; k++) {
+        shellOnShip(s, kind);
+        tick(open, s, 0);
+        expect(s.shieldHitTick).toBe(s.tick);
+      }
+      expect([s.shield, s.lives]).toEqual([0, 3]);
+      shellOnShip(s, EnemyKind.ship);
+      tick(open, s, 0);
+      expect(s.lives).toBe(2);
+    }
+  });
+
+  it('takes a hit that costs more than it has left', () => {
+    const s = createSimState();
+    s.shield = 2;
+    shellOnShip(s, EnemyKind.turret);
+    tick(open, s, 0);
+    expect([s.shield, s.lives]).toEqual([0, 3]);
+  });
+
+  it('a capsule refills it', () => {
+    const s = createSimState();
+    s.shield = 1;
     s.meter = PowerUp.missile;
     s.missile = true;
     capsuleOnShip(s);
     tick(open, s, 0);
-    expect(s.shieldHits).toBe(SHIELD_HITS);
-    for (let k = 0; k < SHIELD_HITS; k++) {
-      bulletOnShip(s);
-      tick(open, s, 0);
-    }
-    expect([s.shieldHits, s.lives]).toEqual([0, 3]);
-    bulletOnShip(s);
-    tick(open, s, 0);
-    expect(s.lives).toBe(2);
+    expect([s.meter, s.shield]).toEqual([PowerUp.shield, SHIELD_MAX]);
   });
 
-  it('a wall still costs a life', () => {
-    // Bars 5 to 8 (world x 50 to 88) fill the floor up to the ship.
-    const level = handLevel('easy', Array.from({ length: 20 }, (_, i): [number, number] => (i >= 5 && i <= 8 ? [0, 20] : [0, 0])), 0, 100);
+  it('a wall costs 3 points and knocks the ship towards the middle; with none left it costs a life', () => {
     const s = createSimState();
-    s.shieldHits = SHIELD_HITS;
-    tick(level, s, 0);
-    expect([s.lives, s.shieldHits]).toEqual([2, 0]);
+    // Hold down into the floor: two bounces empty the shield, the third touch costs a life.
+    const bounces: number[] = [];
+    while (s.lives === 3 && s.tick < 2000) {
+      tick(floorLevel, s, InputBit.down);
+      if (s.lives === 3 && s.bounceUntil === s.tick + BOUNCE_TICKS) {
+        bounces.push(s.tick);
+        expect(s.bounceDir).toBe(-1);
+        const y = s.shipY;
+        // Knocked up while down is held.
+        tick(floorLevel, s, InputBit.down);
+        expect(s.shipY).toBeLessThan(y);
+      }
+    }
+    expect(bounces.length).toBe(2);
+    expect(bounces[1]! - bounces[0]!).toBeGreaterThanOrEqual(BOUNCE_TICKS);
+    expect([s.lives, s.shield]).toEqual([2, SHIELD_MAX]);
   });
 
-  it('ramming an enemy with the shield destroys it and costs a shield hit', () => {
+  it('ramming an enemy destroys it and costs 3 points', () => {
     const level = enemyLevel([{ kind: EnemyKind.ship, spawnTick: 1, x: 392 * Q }]);
     const s = createSimState();
-    s.shieldHits = SHIELD_HITS;
     while (s.enemyStatus[0] !== EnemyStatus.destroyed && s.tick < 900) tick(level, s, 0);
-    expect([s.lives, s.shieldHits, s.score]).toEqual([3, SHIELD_HITS - 1, 0]);
+    expect([s.lives, s.shield, s.score]).toEqual([3, SHIELD_MAX - 3, 0]);
   });
 });

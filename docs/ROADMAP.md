@@ -14,7 +14,7 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 | [M3: effects and look](#m3-effects-and-look) | Particles, big explosions, sound effects, copper bars, starfield, CRT filter, the results screen, accessibility options. | Next |
 | [M4: library, offline, music pack](#m4-library-offline-music-pack) | Import your own songs, install the game, and play with no connection; a bundled, credited music pack. | Planned |
 | [M5: leaderboards](#m5-leaderboards) | A global board per song, with scores checked by replaying them on the server. | Planned |
-| [M6: mobile and polish](#m6-mobile-and-polish) | Touch controls, latency calibration, phone performance, tuned difficulty. | Planned |
+| [M6: mobile and polish](#m6-mobile-and-polish) | Latency calibration, phone performance, tuned difficulty. | Planned |
 | [Boss patterns](#later) | A mini boss at the end of level 4 and the final boss at the end of level 8, from the song's patterns. | Later |
 | [Per-song enemy overrides](#later) | A sidecar file that changes which instrument spawns which enemy for one song. | Later |
 | [Amiga PAL mode](#later) | An optional 320x256 display mode. | Later |
@@ -96,7 +96,6 @@ start the next until the current one is done.
 
 **Goal:** good on a phone.
 
-- [ ] Touch controls.
 - [ ] The latency calibration screen.
 - [ ] A performance pass on a mid-range Android phone.
 - [ ] Difficulty tuning across about 20 varied modules.

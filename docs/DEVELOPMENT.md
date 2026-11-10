@@ -404,8 +404,9 @@ formation count and that many u8 sizes.
   increment `state.tick`, and place the drones; spawn enemies whose tick has come and move
   every live one; nuke, fire and move shots and test them against enemies; the bomb;
   missiles; fire enemies' scheduled shots and move bullets; move capsules and pick up any
-  the ship touches; then test the ship against the terrain unless it is flying in, and
-  against live enemies and bullets unless it is in its safe time.
+  the ship touches; give any extra lives the score has earned; then test the ship against
+  the terrain unless it is flying in or bouncing, and against live enemies and bullets
+  unless it is in its safe time.
 - **Input bits** (`InputBit`, a u16 per tick, so input logs are `Uint16Array`s): up 1, down
   2, left 4, right 8, fire 16, bomb 32, nuke 128, boost 256, missile 512; 64 was buy until
   `SIM_VERSION` 11. Opposite directions cancel. `state.prevInput` keeps the last tick's
@@ -487,15 +488,31 @@ formation count and that many u8 sizes.
   where the ship was 16 x (k + 1) ticks ago (`droneX`, `droneY`). Drones can't be hit
   and pass through walls. A life lost refills the trail with the new position, so drones
   unlocked later start on the ship.
-- **Shield:** an unlock sets `state.shieldHits` to 3. A bullet or enemy that touches the ship
-  then costs a shield hit instead of a life; a rammed enemy is still destroyed, scoring
-  nothing, and the streak is kept. The terrain always costs a life.
+- **Shield** (Brad, 2026-11-10; until `SIM_VERSION` 12 it was a power-up of 3 hits, and the
+  walls always cost a life): `state.shield` is 6 points (`SHIELD_MAX`) at the start of the
+  run and of every life, and the shield power-up fills it again, so capsules skip it while
+  it is full. A hit costs `SHIELD_BULLET_COST` by the kind that fired the bullet
+  (`state.bulletKind`, set from `level.enemies.kind` in `fireAtShip`): a ship's 2, a tank's
+  3, a turret's 6; ramming an enemy 3 (`SHIELD_RAM_COST`, which Brad didn't set); a wall 3
+  (`SHIELD_WALL_COST`). While any points are left the shield takes the hit, even one that
+  costs more than is left: the life and the streak are kept, and a rammed enemy is still
+  destroyed, scoring nothing. `state.shieldHitTick` records the hit for the flicker and
+  the thud. With no points left, any hit costs a life.
+- **Wall bounce:** a wall the shield takes sets `state.bounceUntil` 20 ticks on
+  (`BOUNCE_TICKS`) and `state.bounceDir` towards the middle of the gap under the ship
+  (-1 up, 1 down). Until then the ship moves 2 px a tick that way (`BOUNCE_SPEED_Q8`),
+  stopping at the middle, whatever the vertical input; the horizontal input still works,
+  and the walls don't count. A life lost ends a bounce.
 - **Nuke:** a new press (`input & ~prevInput`) with `state.nukes` above 0 destroys every
   live enemy whose centre is on screen (x 0 to 384) and clears the bullets, before shots
   move that tick. Its kills score base points times the multiplier, never on the beat.
   Each kill on the beat adds to `state.nukeCharge`; at 10 it becomes a nuke, while fewer
   than 3 are held (`NUKE_CHARGE_KILLS`, `MAX_NUKES`). Nukes stay when a life is lost.
-- **Lives:** 3 (`START_LIVES`). A hit costs one, every power-up, and the streak:
+- **Extra lives:** each time the score reaches `state.nextExtraLife` (a multiple of 20 000,
+  `EXTRA_LIFE_POINTS`) the ship gains a life, up to 9 (`MAX_LIVES`; one past the cap is
+  lost), and `state.extraLifeTick` records it. The check runs after the tick's scoring, before
+  the ship's hit test, so a kill that earns a life saves a ship hit on the same tick.
+- **Lives:** 3 (`START_LIVES`). A hit with the shield empty costs one, every power-up, and the streak:
   `state.hitTick` records it. Ramming an enemy destroys it (and counts in `state.kills`).
   With lives left every bullet is cleared and the ship flies in: for 60 ticks
   (`RESPAWN_FLY_TICKS`, until `state.flyInUntil`) it moves in a straight line from x -16 to
@@ -506,8 +523,9 @@ formation count and that many u8 sizes.
   last life sets `state.dead` and `state.deathTick`.
 - **Cheats** (`Cheat`, `state.cheats`, set by `createSimState(cheats)` and kept by
   `resetSimState`): `infiniteLives` (1) means a hit costs no life; `god` (2) gives every
-  power-up at their most from the start and after each life lost, and shield hits are never
-  used up, though the walls still cost a life. A replay records them (see "Replays").
+  power-up at their most from the start and after each life lost, and the shield never
+  loses a point, so the walls bounce the ship every time. A replay records them (see
+  "Replays").
 - **Running a log:** `runInputLog(level, inputs, state?)` runs from the state's current
   tick until the log ends, the last life is lost, or the song ends. `resetSimState` reuses
   a state: it clears `state.enemiesReady`, and the next `tick()` sets the per-enemy arrays
@@ -523,7 +541,8 @@ formation count and that many u8 sizes.
   held inside the clear range, while no enemy bullet is within 64 px (near the floor,
   where capsules rest, it has little room to dodge: chasing every capsule cost the title
   song's demo all three lives in 23 s), and launches a missile at an enemy ship up to
-  240 px ahead and within 12 px of its height. On normal (2026-11-10) it picks up 16
+  240 px ahead and within 12 px of its height. On normal (2026-11-10, `SIM_VERSION` 11,
+  before the shield) it picks up 16
   capsules on The_Epic_Chip, 30 on Numen in Da Chip and 5 to 13 on the next three levels;
   in the demo's 30 s it picks up two, fires missiles from 13.8 s and bombs at 17.3 s
   (Brad's play-test: the demo used to show none of these). Of its three moves (up, down, none) it takes the one
@@ -920,7 +939,8 @@ The research and design are in [`SOUND-EFFECTS.md`](SOUND-EFFECTS.md). In code:
   one per `Level` (`#makeLevel`).
 - **`game/cues.ts`** (`SoundCues`) compares the sim state with what it saw last frame and
   lists what happened: the ship's volley, tank hits, kills (3 a frame at most), kills on the
-  beat, bombs, missiles, the nuke, a nuke charged, a life lost, shield hits, pickups, unlocks,
+  beat, bombs, missiles, the nuke, a nuke charged, a life lost, shield hits (by
+  `state.shieldHitTick`, so the god cheat's hits sound too), pickups, unlocks, extra lives,
   and boost. It only reads, and it starts over without cues when the level changes or the
   tick goes back (a retry, the demo looping). `Game.#playCues` runs it after each frame's
   `catchUp` in play, replays, and the demo.
@@ -979,8 +999,8 @@ Run `pnpm dev` and open the URL it prints.
   WASD with J, K, L, ; (semicolon) and ' (quote). Arrows or WASD move; Space, Z or J fire
   (hold to keep firing); X or K drop a bomb (one per press, 1 s to reload after it bursts);
   C or L launch a missile once unlocked; V or ; nuke; Shift or ' boosts once unlocked; and
-  Esc pauses (a gamepad is below). Capsules unlock power-ups as they are picked up. Losing the last of three
-  lives is game over: any key retries the level, Esc goes to the title, and R and S watch
+  Esc pauses (a gamepad and touch are below). Capsules unlock power-ups as they are picked up. Losing the last
+  life is game over: any key retries the level, Esc goes to the title, and R and S watch
   and save the run's replay (see "Replays"). Game over and level complete ignore keys for 0.7 s, so a key still held from
   play doesn't skip them. The game pauses when the window loses focus or the tab is hidden.
 - **Secrets** (Brad and his son, 2026-11-10), none of them shown in the game's help:
@@ -1035,7 +1055,7 @@ Run `pnpm dev` and open the URL it prints.
   shows the score.
 - **Power-up meter:** six LED cells along the bottom in the order capsules unlock them,
   Double to Boost, each lit (green to red) while the ship has that power-up. A label shows
-  the count held for drones, shield and boost; the next capsule's power-up has a grey
+  the count held for drones, shield points and boost; the next capsule's power-up has a grey
   label and the rest a darker one; a cyan bar in the Boost cell shows the fuel left.
 - **Gamepad:** any pad that reports the Gamepad API's "standard" mapping
   (https://w3c.github.io/gamepad/, "Remapping"), which fixes its button and axis numbers;
@@ -1045,9 +1065,28 @@ Run `pnpm dev` and open the URL it prints.
   every 100 ms), A or Start selects, and B or Select goes back. On game over and level
   complete B or Select is Esc, Y (3) watches the replay, and any other button is any key. A pad can't leave the start
   screen on a fresh page: browsers start sound only after a user activation, and the HTML
-  spec's activation-triggering input events are keydown, mousedown, pointer and touch
-  events, not gamepad presses. So unless `navigator.userActivation.hasBeenActive`, a pad
-  press there shows "Key or click for sound".
+  spec's activation-triggering input events
+  (https://html.spec.whatwg.org/multipage/interaction.html#activation-triggering-input-event)
+  are keydown (not Esc), mousedown, pointerdown from a mouse, pointerup from anything else,
+  and touchend, not gamepad presses. So unless `navigator.userActivation.hasBeenActive`, a
+  pad press there shows "Key or click for sound". For the same reason a click acts on
+  `pointerdown` and a touch on `pointerup` (until 2026-11-10 both acted on `pointerdown`,
+  so a tap on a phone couldn't start the sound).
+- **Touch** (`touch.ts` for the DOM, `touch-input.ts` for the logic; Brad, 2026-11-10):
+  DOM elements over the canvas, shown on a screen with a coarse pointer or once a touch is
+  seen, hidden on the start screen (its tap starts the sound) and while
+  `gamepadConnected()` is true (a pad shows up there once a button on it is pressed). A
+  touch on the left 40% of the screen puts a floating stick there: 40 px of reach, a 10 px
+  dead zone, 8 equal sectors, and dragged past its reach its centre follows the thumb. A
+  touch there that ends within 300 ms without leaving the dead zone is a tap, which acts
+  like a click. Six buttons on the right show the HUD's symbols (`render/icons.ts`, drawn
+  as SVG): pause, nuke, boost, missile, bomb and fire, fire lowest. Each holds a gamepad's
+  bits (`TOUCH_BITS`): fire is also A and bomb also B in menus, and pause is Start, so
+  holding pause while pressing fire on Play starts in god mode. `touchLayout` puts them in
+  the bar right of the picture, in two columns if they fit at 44 CSS px or more (WCAG 2.2,
+  2.5.5 Target Size), one column if not, and at the right edge over the picture if the
+  bar is narrower still. Pointer Events track each finger by `pointerId`, so the stick and
+  buttons work together; `Game.#pollPads` ORs the touch bits with the pads'.
 - **Jukebox:** the ten songs and Back, with a 24-bar spectrum of what is playing under
   them, and the song's title, credit and time below that. Enter plays the song under the
   cursor or stops it if it is playing, a song that ends hands over to the next, and Esc or
@@ -1173,9 +1212,13 @@ is added.
 
 - **Setup:** `createGameRenderer()` in `render/renderer.ts` asks PixiJS for WebGL
   (`preference: 'webgl'`) at 384x216, resolution 1, no antialiasing, `roundPixels` on, and
-  nearest-neighbour texture sampling. The canvas's CSS size is the largest whole multiple of
-  384x216 that fits the window (`integerScale()`), with `image-rendering: pixelated`, centred
-  on black by `index.html`.
+  nearest-neighbour texture sampling. The canvas's CSS size is 384x216 times the largest
+  whole number of device pixels that fits the window, divided by `devicePixelRatio`
+  (`integerScale(width, height, dpr)`), with `image-rendering: pixelated`, centred on black
+  by `index.html`. Counting device pixels keeps every game pixel the same size: an 844x390
+  phone at 3x gets 5 device pixels a game pixel (640x360 CSS px), where whole CSS pixels
+  gave 1 (until 2026-11-10). `index.html` also sets `touch-action: none` and turns off text
+  selection, so a touch doesn't scroll, zoom or select.
 - **Layers,** back to front: the starfield, the world (terrain, capsules, enemies, shots,
   missiles, drones, the shield and bullets, ship, explosion, point popups), the HUD
   (lives, bomb and missile, multiplier, nukes, score, power-up meter), the death flash, and
@@ -1209,8 +1252,12 @@ is added.
   flash (25% white fading over 220 ms), under the HUD. An angled double shot is a 4x4 diagonal, a laser a
   16x2 white bar. A missile is an 8x4 sprite; each slot's burst is a 28-particle cyan
   explosion over 500 ms. Drones are 6x6 orbs, capsules 8x8 amber pills marked P, and the
-  shield a 22x14 ring around the ship, more opaque with more hits left (35, 55 and 80%),
-  blinking with the ship. The missile icon follows the bomb icon once unlocked and fills the
+  shield a 22x14 ring around the ship, more opaque with more points left (30% at 1 to 80%
+  at 6), blinking with the ship. A hit flickers it white for 30 ticks, 3 on and 3 off,
+  even when the hit emptied it. Enemy bullets are drawn by the kind that fired them
+  (`Textures.bullets`): a ship's a 4x4 magenta and white dot, a tank's a 4x4 lime block, a
+  turret's a 6x6 amber pellet (the hitbox is 4x4 for all three). An extra life shows a
+  lime "1UP" rising from the ship, in the popups' pool. The missile icon follows the bomb icon once unlocked and fills the
   same way over `MISSILE_RELOAD_TICKS`.
 - **Meter** (`meter.ts`): `MeterView` draws six 62x11 cells on a dark backing at the
   bottom of the HUD, tinted from `LED_LIT` and `LED_DIM` green to red, with a label in each.

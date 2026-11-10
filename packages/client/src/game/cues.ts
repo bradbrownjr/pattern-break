@@ -44,7 +44,8 @@ export class SoundCues {
   #nukeTick = -1;
   #nukes = 0;
   #hitTick = -1;
-  #shieldHits = 0;
+  #shieldHitTick = -1;
+  #extraLifeTick = -1;
   #capsules = 0;
   #meter = -1;
   #boostFuel = 0;
@@ -121,10 +122,11 @@ export class SoundCues {
     const hit = state.hitTick !== this.#hitTick && state.hitTick > 0;
     if (hit) cue('lifeLost', shipX);
     else {
-      if (state.shieldHits < this.#shieldHits) cue('shield', shipX);
+      if (state.shieldHitTick !== this.#shieldHitTick && state.shieldHitTick > 0) cue('shield', shipX);
       if (state.meter !== this.#meter && state.meter >= 0) cue('unlock', shipX);
     }
     if (state.capsules > this.#capsules) cue('pickup', shipX);
+    if (state.extraLifeTick !== this.#extraLifeTick && state.extraLifeTick > 0) cue('extraLife', shipX);
     const boosting = state.boostFuel < this.#boostFuel;
     if (boosting && !this.#boosting) cue('boost', shipX);
     this.#boosting = boosting;
@@ -144,7 +146,8 @@ export class SoundCues {
     this.#nukeTick = state.nukeTick;
     this.#nukes = state.nukes;
     this.#hitTick = state.hitTick;
-    this.#shieldHits = state.shieldHits;
+    this.#shieldHitTick = state.shieldHitTick;
+    this.#extraLifeTick = state.extraLifeTick;
     this.#capsules = state.capsules;
     this.#meter = state.meter;
     this.#boostFuel = state.boostFuel;

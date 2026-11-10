@@ -204,7 +204,8 @@ heard time.
 | `missileBlast` | a missile bursts | a smaller boom | the boom recipe |
 | `nuke` | the nuke | the longest boom, with a short-mode sweep and the most reverb | the boom recipe |
 | `lifeLost` | a life lost | a boom over a falling, wavering square | |
-| `shield` | the shield takes a hit | a ringing triangle with a shimmer | |
+| `shield` | the shield takes a hit or bounces off a wall | a falling sine thump and a muffled noise knock, with a short wavering triangle | |
+| `extraLife` | an extra life | root, octave, twelfth, two octaves from the song's note: a square over a triangle | |
 | `pickup` | a capsule picked up | saw with punch, jumping a fifth, from the song's note | `pickupCoin` |
 | `unlock` | a power-up unlocked by a capsule | square rising, repeated, from the song's note | `powerUp` |
 | `nukeReady` | a nuke charged | root, fifth, octave, twelfth from the song's note | |

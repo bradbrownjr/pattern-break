@@ -22,6 +22,7 @@ export type Effect =
   | 'nuke'
   | 'lifeLost'
   | 'shield'
+  | 'extraLife'
   | 'pickup'
   | 'unlock'
   | 'nukeReady'
@@ -177,14 +178,52 @@ export const EFFECTS: Record<Effect, EffectSpec> = {
     reverb: 0.35,
     priority: 8,
   },
-  // A ping: a triangle ringing with a quick shimmer, and a thin square on top.
+  // The shield takes a hit or bounces off a wall (Brad, 2026-11-10: "a thud"): a falling
+  // sine thump and a muffled noise knock, the thunk's recipe a little higher and harder, with
+  // a short wavering triangle on top so it reads as the shield and not the hull.
   shield: {
     layers: [
-      { wave: 'triangle', freq: 1760, sustain: 0.01, decay: 0.25, decayCurve: 1.5, vibratoDepth: 0.3, vibratoRate: 30, volume: 0.3 },
-      { wave: 'square', freq: 2637, duty: 0.25, decay: 0.12, volume: 0.08 },
+      { wave: 'sine', freq: 170, slide: -3, sustain: 0.015, decay: 0.14, volume: 0.42 },
+      { wave: 'noise', freq: 1200, slide: -2.5, decay: 0.06, punch: 0.7, lowpass: 1400, volume: 0.28 },
+      { wave: 'triangle', freq: 880, slide: -1, decay: 0.09, vibratoDepth: 0.3, vibratoRate: 30, volume: 0.1 },
     ],
-    echo: 0.2,
+    variants: 2,
+    jitter: 0.05,
+    reverb: 0.15,
     priority: 7,
+  },
+  // An extra life: a quick rising run of root, octave, twelfth and two octaves from the song's
+  // note, a triangle under a thin square, faster than the nuke's chime.
+  extraLife: {
+    layers: (p) => [
+      {
+        wave: 'square',
+        freq: note(p, C5),
+        duty: 0.25,
+        sustain: 0.2,
+        decay: 0.25,
+        jumps: [
+          { at: 0.05, semitones: 12 },
+          { at: 0.1, semitones: 7 },
+          { at: 0.15, semitones: 5 },
+        ],
+        volume: 0.16,
+      },
+      {
+        wave: 'triangle',
+        freq: note(p, C5, -12),
+        sustain: 0.2,
+        decay: 0.25,
+        jumps: [
+          { at: 0.05, semitones: 12 },
+          { at: 0.1, semitones: 7 },
+          { at: 0.15, semitones: 5 },
+        ],
+        volume: 0.22,
+      },
+    ],
+    echo: 0.25,
+    priority: 8,
   },
   // sfxr's pickupCoin: a saw with a punch that jumps up once, here a fifth, from the song's note.
   pickup: {

@@ -34,7 +34,8 @@ import { seededRandom } from '../render/random.ts';
 import type { GameRenderer } from '../render/renderer.ts';
 import { barBinEdges, barLevels } from '../render/spectrum.ts';
 import { analyzeInWorker } from './analysis.ts';
-import { PadBit, PadTracker, padMenuAction, readGamepads } from './gamepad.ts';
+import { PadBit, PadTracker, gamepadConnected, padMenuAction, readGamepads } from './gamepad.ts';
+import { TouchControls } from './touch.ts';
 import { CodeListener, keyToken, padToken, type CodeToken } from './secrets.ts';
 import { InputSampler, keyToMenuAction, type MenuAction } from './input.ts';
 import { DisplayClock, InputLog, catchUp, targetTick } from './loop.ts';
@@ -42,7 +43,7 @@ import { ControlsScreen } from './controls.ts';
 import { SoundCues, type Cue } from './cues.ts';
 import { ColourFlood, HANGAR_CUES, HangarIntro, PLAY_AT, WIPE_MS, introTime, loadHangarArt } from './hangar.ts';
 import { HelpScreen } from './help.ts';
-import { ControlsPages, DIFFICULTY_LABELS, JukeboxMenu, PauseMenu, SettingsMenu, TitleMenu, type TitleEvent } from './menu.ts';
+import { CONTROL_PAGES, ControlsPages, DIFFICULTY_LABELS, JukeboxMenu, PauseMenu, SettingsMenu, TitleMenu, type TitleEvent } from './menu.ts';
 import type { PerfMeter } from './perf.ts';
 import { drawPlay } from './play-view.ts';
 import {
@@ -168,6 +169,8 @@ export interface GameOptions {
 
 export class Game {
   readonly #r: GameRenderer;
+  /** The on-screen controls, made in start(). */
+  #touch: TouchControls | null = null;
   readonly #songs: readonly BundledSong[];
   readonly #levelSongs: readonly BundledSong[] = LEVEL_SONG_IDS.map(songById);
   readonly #impossibleSongs: readonly BundledSong[] = IMPOSSIBLE_SONG_IDS.map(songById);
@@ -305,7 +308,17 @@ export class Game {
       this.#input.keyUp(e.code);
       if (e.code === 'Escape') this.#escHeld = false;
     });
-    window.addEventListener('pointerdown', () => this.#onPointer());
+    // A click acts on the press; a touch on the lift, the event that lets sound start (the
+    // HTML spec's activation-triggering input events: pointerdown only for a mouse,
+    // pointerup for anything else).
+    window.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse') this.#onPointer();
+    });
+    window.addEventListener('pointerup', (e) => {
+      if (e.pointerType !== 'mouse') this.#onPointer();
+    });
+    this.#touch = new TouchControls(document.body, this.#r.renderer.canvas as HTMLCanvasElement, () => this.#onPointer());
+    this.#touch.setStartScreen(this.#mode === 'start');
     window.addEventListener('blur', () => {
       this.#input.clear();
       this.#escHeld = false;
@@ -314,7 +327,10 @@ export class Game {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') void this.#pause();
     });
-    window.addEventListener('resize', () => this.#r.resize());
+    window.addEventListener('resize', () => {
+      this.#r.resize();
+      this.#touch?.layout();
+    });
     // The mouse wheel scrolls the help screen.
     window.addEventListener('wheel', (e) => {
       if (this.#mode !== 'help' || e.deltaY === 0) return;
@@ -342,6 +358,7 @@ export class Game {
 
   #setMode(mode: Mode): void {
     this.#mode = mode;
+    this.#touch?.setStartScreen(mode === 'start');
     this.#modeSince = performance.now();
     this.#title.container.visible = mode === 'start' || mode === 'title';
     this.#jukebox.container.visible = mode === 'jukebox';
@@ -457,7 +474,9 @@ export class Game {
 
   /** Polls the gamepads: their held bits go to the sim, new presses act like keys. */
   #pollPads(now: number): void {
-    const bits = readGamepads();
+    const pads = readGamepads();
+    this.#touch?.setPadConnected(gamepadConnected());
+    const bits = pads | (this.#touch?.bits ?? 0);
     this.#padHeld = bits;
     this.#input.setPad(bits);
     for (const bit of this.#pads.update(bits, now)) this.#onPadPress(bit);
@@ -748,7 +767,7 @@ export class Game {
   /** Opens the controls on the page for the last thing pressed: the keyboard or a pad. */
   #openControls(from: 'title' | 'paused'): void {
     this.#controlsFrom = from;
-    this.#controlsPages.index = this.#lastPressPad ? 1 : 0;
+    this.#controlsPages.index = this.#lastPressPad ? CONTROL_PAGES.indexOf('gamepad') : 0;
     this.#setMode('controls');
   }
 

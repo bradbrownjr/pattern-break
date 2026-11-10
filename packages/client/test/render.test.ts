@@ -1,7 +1,10 @@
-// Node tests for the renderer's pure parts: the font, terrain geometry, flash cap, colours.
+// Node tests for the renderer's pure parts: the font, terrain geometry, flash cap, colours,
+// and the jukebox list's fit.
 
 import { BAR_LIT_WIDTH, BAR_PITCH, PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH, Q8, SAMPLES_PER_TICK } from '@game/core';
 import { describe, expect, it } from 'vitest';
+import { JUKEBOX_LIMITS, jukeboxRow, jukeboxRowY } from '../src/game/screens.ts';
+import { SONGS } from '../src/game/songs.ts';
 import { FLASH_MAX_ALPHA, FLASH_MS, flashAlpha } from '../src/render/flash.ts';
 import { ATLAS_HEIGHT, ATLAS_WIDTH, FIRST_CHAR, LAST_CHAR, buildAtlasPixels, glyphIndex, glyphRows, textWidth } from '../src/render/font.ts';
 import { BACKGROUND, LED_DIM, LED_LIT, mix } from '../src/render/palette.ts';
@@ -130,5 +133,14 @@ describe('cosmetics', () => {
     let opaque = 0;
     for (let i = 3; i < px.length; i += 4) if (px[i] === 255) opaque++;
     expect(opaque).toBeGreaterThan(40);
+  });
+});
+
+describe('jukebox list', () => {
+  it('ends above the spectrum for every bundled song and Back', () => {
+    const rows = SONGS.length + 1;
+    expect(jukeboxRowY(rows - 1, rows) + JUKEBOX_LIMITS.textHeight).toBeLessThan(JUKEBOX_LIMITS.spectrumTop);
+    // Short lists keep the 11 px rows.
+    expect(jukeboxRow(10)).toBe(11);
   });
 });

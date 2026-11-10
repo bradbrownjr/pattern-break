@@ -1,6 +1,6 @@
 // The power-up meter along the bottom of the playfield, drawn as a row of VU meter LEDs
 // (docs/PLAN.md, "Simulation"): one cell per power-up, in the order capsules unlock them,
-// lit while the ship has it. A cell shows how many the ship has (drones, shield hits, boost
+// lit while the ship has it. A cell shows how many the ship has (drones, shield points, boost
 // level); the next capsule's power-up has a grey label, the rest a dim one; and the boost
 // cell shows the fuel left. Text changes only when the state does.
 
@@ -51,7 +51,7 @@ function count(state: SimState, slot: number): number {
     case PowerUp.drone:
       return state.drones;
     case PowerUp.shield:
-      return state.shieldHits;
+      return state.shield;
     default:
       return 0;
   }

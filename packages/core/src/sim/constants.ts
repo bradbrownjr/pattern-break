@@ -40,6 +40,12 @@ export type InputBit = (typeof InputBit)[keyof typeof InputBit];
 /** Lives at the start of a run. */
 export const START_LIVES = 3;
 /**
+ * An extra life each time the score reaches a multiple of EXTRA_LIFE_POINTS, up to
+ * MAX_LIVES; one past the cap is lost (Brad, 2026-11-10).
+ */
+export const EXTRA_LIFE_POINTS = 20_000;
+export const MAX_LIVES = 9;
+/**
  * After losing a life the ship flies in from the left along the cave's centre for
  * RESPAWN_FLY_TICKS (0.5 s), from RESPAWN_FROM_X to SHIP_START_X, ignoring the controls
  * and the walls; enemies and bullets can't hit it until RESPAWN_SAFE_TICKS (2 s) after
@@ -53,7 +59,7 @@ export const RESPAWN_SAFE_TICKS = 240;
  * Cheats, set on a run before it starts and recorded in its replay; a run with any is kept
  * off the leaderboards. `infiniteLives`: a life lost isn't counted (the Konami code).
  * `god`: every power-up from the start, kept after a life is lost, and a shield that never
- * breaks (holding Esc or Start while choosing Play). Brad, 2026-11-10.
+ * weakens (holding Esc or Start while choosing Play). Brad, 2026-11-10.
  */
 export const Cheat = { infiniteLives: 1, god: 2 } as const;
 
@@ -204,5 +210,22 @@ export const MISSILE_RELOAD_TICKS = 120;
 export const MAX_DRONES = 2;
 export const DRONE_DELAY_TICKS = 16;
 
-/** Shield: takes 3 hits from bullets or enemies. The walls still cost a life. */
-export const SHIELD_HITS = 3;
+/**
+ * Shield (Brad, 2026-11-10): every life starts with SHIELD_MAX points, and the shield
+ * power-up fills it again. Each hit costs its SHIELD_COST; while any points are left the
+ * shield takes the hit, even one that costs more than is left, and the life is kept. With
+ * none left, any hit costs a life. So a full shield takes three ships' bullets, two tank
+ * shells, one turret shell, or two touches of the wall.
+ */
+export const SHIELD_MAX = 6;
+/** Shield points each hit costs: an enemy bullet by the kind that fired it (indexed by EnemyKind), ramming an enemy, a wall. */
+export const SHIELD_BULLET_COST = [6, 3, 2] as const;
+export const SHIELD_RAM_COST = 3;
+export const SHIELD_WALL_COST = 3;
+/**
+ * A wall the shield takes knocks the ship towards the middle of the cave at 2 px per tick
+ * for BOUNCE_TICKS (1/6 s), stopping at the middle; the vertical controls are ignored and
+ * the walls don't count until it ends.
+ */
+export const BOUNCE_TICKS = 20;
+export const BOUNCE_SPEED_Q8 = 512;

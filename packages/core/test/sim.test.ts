@@ -28,6 +28,7 @@ import {
   serializeSimState,
   shipCollides,
   tick,
+  type SimState,
 } from '../src/sim/sim.ts';
 import { enemyLevel, enemyList, handLevel, lcg, randomSong, syntheticLevelData, type HandEnemy } from './level-fixtures.ts';
 
@@ -130,6 +131,12 @@ describe('collision', () => {
   });
 });
 
+/** One tick with the shield emptied first, for tests of what a hit does without it. */
+function bare(level: Level, s: SimState, input: number): void {
+  s.shield = 0;
+  tick(level, s, input);
+}
+
 describe('tick', () => {
   // Scroll 0; the bar at world 60..68 is under the ship's start x (64), with a tall floor.
   const wall = (): Level =>
@@ -139,7 +146,7 @@ describe('tick', () => {
     const level = wall();
     const s = createSimState();
     expect(s.lives).toBe(3);
-    while (s.lives === 3) tick(level, s, InputBit.down);
+    while (s.lives === 3) bare(level, s, InputBit.down);
     // The floor's top segment starts at y 133, so the hitbox (bottom y + 3) hits once
     // y > 130. From y 108 at 1.5 px per tick that is tick 15 (y 130.5).
     expect([s.hitTick, s.lives, s.dead]).toEqual([15, 2, false]);
@@ -148,11 +155,11 @@ describe('tick', () => {
     expect([s.flyInUntil, s.safeUntil]).toEqual([15 + RESPAWN_FLY_TICKS, 15 + RESPAWN_SAFE_TICKS]);
     // Flying in, the controls are ignored; it ends at the start x, on the middle of bar
     // 6's gap (y 0 to 132).
-    for (let k = 0; k < RESPAWN_FLY_TICKS; k++) tick(level, s, InputBit.down | InputBit.left);
+    for (let k = 0; k < RESPAWN_FLY_TICKS; k++) bare(level, s, InputBit.down | InputBit.left);
     expect([s.tick, s.shipX, s.shipY, s.lives]).toEqual([15 + RESPAWN_FLY_TICKS, SHIP_START_X * Q, 66 * Q, 2]);
     // From there the walls count, though enemies and bullets still can't hit it: 43 ticks
     // down from y 66 reach y 130.5, as in the first hit.
-    while (s.lives === 2) tick(level, s, InputBit.down);
+    while (s.lives === 2) bare(level, s, InputBit.down);
     expect(s.hitTick).toBe(15 + RESPAWN_FLY_TICKS + 43);
     expect(s.hitTick).toBeLessThan(15 + RESPAWN_SAFE_TICKS);
   });
@@ -160,7 +167,7 @@ describe('tick', () => {
   it('the last life ends the run, and then tick does nothing', () => {
     const level = wall();
     const s = createSimState();
-    while (!s.dead) tick(level, s, InputBit.down);
+    while (!s.dead) bare(level, s, InputBit.down);
     expect([s.lives, s.deathTick]).toEqual([0, 15 + 2 * (RESPAWN_FLY_TICKS + 43)]);
     const before = serializeSimState(s);
     tick(level, s, InputBit.up);
@@ -170,7 +177,7 @@ describe('tick', () => {
   it('with the infinite-lives cheat a hit costs no life', () => {
     const level = wall();
     const s = createSimState(Cheat.infiniteLives);
-    for (let k = 0; k < 600; k++) tick(level, s, InputBit.down);
+    for (let k = 0; k < 600; k++) bare(level, s, InputBit.down);
     expect([s.lives, s.dead, s.hitTick > 15]).toEqual([3, false, true]);
     resetSimState(s);
     expect(s.cheats).toBe(Cheat.infiniteLives);
@@ -273,7 +280,7 @@ describe('enemies', () => {
   it('a bullet costs a life and clears the others', () => {
     const level = enemyLevel([{ kind: EnemyKind.turret, spawnTick: 0, x: 300 * Q, y: 108 * Q, fire: [10, 80] }]);
     const s = createSimState();
-    while (s.lives === 3 && s.tick < 400) tick(level, s, 0);
+    while (s.lives === 3 && s.tick < 400) bare(level, s, 0);
     expect(s.lives).toBe(2);
     expect(s.bulletCount).toBe(0);
   });
@@ -282,7 +289,7 @@ describe('enemies', () => {
     // A ship on the cave's centre line, which is the ship's height in an open cave.
     const level = enemyLevel([{ kind: EnemyKind.ship, spawnTick: 1, x: 392 * Q }]);
     const s = createSimState();
-    while (s.lives === 3 && s.tick < 600) tick(level, s, 0);
+    while (s.lives === 3 && s.tick < 600) bare(level, s, 0);
     expect([s.lives, s.kills, s.enemyStatus[0]]).toEqual([2, 1, EnemyStatus.destroyed]);
   });
 
@@ -351,7 +358,7 @@ describe('score', () => {
     const level = enemyLevel([{ kind: EnemyKind.ship, spawnTick: 1, x: 392 * Q }]);
     const s = createSimState();
     s.streak = 15;
-    while (s.lives === 3) tick(level, s, 0);
+    while (s.lives === 3) bare(level, s, 0);
     expect([s.streak, s.score, s.enemyPoints[0]]).toEqual([0, 0, 0]);
   });
 
@@ -468,7 +475,7 @@ describe('nuke', () => {
     const rammed = createSimState();
     rammed.nukes = 2;
     const ram = enemyLevel([{ kind: EnemyKind.ship, spawnTick: 1, x: 392 * Q }]);
-    while (rammed.lives === 3) tick(ram, rammed, 0);
+    while (rammed.lives === 3) bare(ram, rammed, 0);
     expect(rammed.nukes).toBe(2);
   });
 });

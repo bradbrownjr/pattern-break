@@ -140,6 +140,20 @@ export class PadTracker {
   }
 }
 
+/**
+ * True if any gamepad is connected. Browsers report a pad only once a button on it has been
+ * pressed (the spec's gamepad user gesture), so this is a pad that has been used.
+ */
+export function gamepadConnected(): boolean {
+  if (typeof navigator.getGamepads !== 'function') return false;
+  try {
+    for (const pad of navigator.getGamepads()) if (pad?.connected) return true;
+  } catch {
+    // A permissions policy that blocks "gamepad" makes getGamepads() throw.
+  }
+  return false;
+}
+
 /** The PadBits of every connected standard pad, OR'd together. 0 where the API is missing. */
 export function readGamepads(): number {
   if (typeof navigator.getGamepads !== 'function') return 0;

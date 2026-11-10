@@ -1,31 +1,31 @@
 {
   "genVersion": 7,
-  "simVersion": 11,
+  "simVersion": 12,
   "fixtures": {
     "pb-fixture-01.mod": {
       "easy": {
         "level": "be794c5020d137344a99349759f21d42d3f12ce1d4c6f562d2b13919a3699558",
-        "autopilot": "65d18ca921cb95f11ca6748523a07ee4a78a41b03ad285b38da6060621047ae7",
-        "zigzag": "fe52601ccd32053127b13a6b41ccaf58fb3313ed6cac03f41a20fd842730fcff",
-        "zigzagDeathTick": 318
+        "autopilot": "b883e85fdb92dbdb10c00849b5a2c328c3f51543dae0705a8afa188aea3b4c96",
+        "zigzag": "e308fc3e76e03bf3b57f93259c93bdc0b238748dbe40b8c6079c67b519330059",
+        "zigzagDeathTick": 915
       },
       "normal": {
         "level": "1c7a2f3483735594b123287bea7c9f9b3df0a672c30ecb01f66c2e6127b62598",
-        "autopilot": "f1fd78f8d26fd1083e48de4e96797445fa456b0845da97fcc96d076d5cd6bf5c",
-        "zigzag": "dff3746d4933a1fea911f7600f99db0f8b9e447cea4ef795f7d23bf653abac6e",
-        "zigzagDeathTick": 190
+        "autopilot": "c903dff6d66d7d7de81ba25b3d543b3e298c6e03adb8c326da4328bd446148e3",
+        "zigzag": "d62f4cbd5cf8c595c6628b90e7ffbfd5c29884e4cdda4dd9ae2c692c9ce54714",
+        "zigzagDeathTick": 672
       },
       "hard": {
         "level": "2dd71b7b089203cc692cd0227ba1809f45d6b6a187604f469e463c694bb47018",
-        "autopilot": "26061d209126c48608f638754fef7b29612dad8c239606b23827ea1b8e9796af",
-        "zigzag": "c4e775a1c6f42cac5a05c7fb546820cca81b60370cf08937bf503e7639213b1f",
-        "zigzagDeathTick": 176
+        "autopilot": "68113bcce4388177b5aaff2622150b72905117f0bc5ae79c5c00af75a3929390",
+        "zigzag": "42157cfdfbea5e4e6fad9155138c8b9aaab003c3049ba5472c9542be426244ad",
+        "zigzagDeathTick": 655
       },
       "impossible": {
         "level": "b3a70dbc55165f0434db777f132ab8b1184db2d37659d9c6aefcee6d5dcc51b4",
-        "autopilot": "28a02e15ebdbf3a8082b30e0dc83935538c9933a29c8b949c710e2132a62fe40",
-        "zigzag": "80e9973b30c49320f7401536fc29d3c27153900dff03e965e2019f4525b3ed70",
-        "zigzagDeathTick": 179
+        "autopilot": "91023f8b423fa1c1d467bd82ce39b39c2a5346c3ccd2047dafff35c94cf9f90f",
+        "zigzag": "a39223bd920ace85b52b901f31a56d066ef40df68b639cd12179cb0837797924",
+        "zigzagDeathTick": 595
       }
     }
   }

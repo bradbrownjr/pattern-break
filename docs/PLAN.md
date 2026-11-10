@@ -209,7 +209,14 @@ every bar of every generated level.
 - Collision: ship against lit LED segments, enemies, and enemy bullets. Integer AABB
   (axis-aligned bounding box) or small hitboxes. Enemy bullets stop on the walls. Bullets
   are aimed with `Math.sqrt`, which IEEE 754 rounds the same in every engine.
-- **Lives (2026-11-09):** three. A hit costs one; ramming an enemy destroys it too. The
+- **Shield (2026-11-10):** every life starts with a 6-point shield. A ship's bullet costs
+  2, a tank's shell 3, a turret's shell 6, ramming an enemy 3, and touching a wall 3,
+  which bounces the ship back towards the middle of the cave instead of killing it. While
+  it has points it takes any hit; with none, a hit costs a life. It flickers with a thud
+  on each hit. (Brad's play-test: no one had finished a level.)
+- **Extra lives (2026-11-10):** one each time the score reaches a multiple of 20 000, up
+  to 9.
+- **Lives (2026-11-09):** three. A hit with the shield empty costs one; ramming an enemy destroys it too. The
   music can't rewind, so the ship comes back at the playhead: the enemy bullets in flight
   are cleared, it flies in from the left along the middle of the cave for 0.5 s with the
   controls locked, and enemies and bullets can't hit it for 2 s from the hit. The walls
@@ -217,7 +224,7 @@ every bar of every generated level.
   walls for 2 s, so it could drift into one).
 - **Cheats (2026-11-10):** the Konami code on the title screen gives infinite lives;
   holding Esc or Start while choosing Play gives god mode (every power-up, kept after a
-  life, and a shield that never breaks). The replay records them and the boards refuse
+  life, and a shield that never weakens). The replay records them and the boards refuse
   such runs.
 - **Bomb (2026-11-09):** each press of the bomb button drops a concussive bomb, one in the
   air at a time and 1 s to reload after it bursts, so bombs are timed, not held down.
@@ -239,7 +246,7 @@ every bar of every generated level.
   - **Double:** a second shot angled 45 degrees up. It stacks with the laser.
   - **Missile:** the bomb for air to air, on its own button: one per press, it bursts on
     the first enemy it touches and destroys every enemy within 20 px, then reloads for 1 s.
-  - **Shield:** takes 3 hits from bullets or enemies. The walls still cost a life.
+  - **Shield:** fills the shield again (see "Shield" above).
   - **Drone:** follows the ship's path 16 ticks behind (the second 32), can't
     be hit, and fires the ship's shots and missiles. Up to 2.
   - **Laser:** a beam 1.5 times as fast as a shot that goes through every enemy in line.
@@ -288,8 +295,9 @@ every bar of every generated level.
 
 ## 10. Visual spec (`packages/client/render`)
 
-- Internal resolution **384x216** (16:9), integer-scaled with nearest-neighbour filtering
-  and letterboxed. An optional 320x256 "Amiga PAL" mode later.
+- Internal resolution **384x216** (16:9), scaled by a whole number of device pixels with
+  nearest-neighbour filtering and letterboxed (2026-11-10: whole CSS pixels left a phone
+  at 1x). An optional 320x256 "Amiga PAL" mode later.
 - Palette: near-black background with neon cyan, magenta, lime, and amber accents. LED
   segments go green at the screen edge to amber to red 12 segments in, and stay red beyond.
   Unlit segments are not drawn, so the passage is plain background (2026-11-09).
@@ -300,7 +308,8 @@ every bar of every generated level.
   screen shake, a flash on downbeats, and a CRT filter (scanlines, slight bloom, vignette)
   as a toggle.
 - Enemies are small pixel-art sprites: magenta and amber turrets (upside down on the
-  ceiling), lime tanks, magenta ships facing left, and white-cored magenta bullets. The
+  ceiling), lime tanks, magenta ships facing left, and white-cored bullets in the colour of
+  what fired them: a ship's magenta, a tank's lime, a turret's a larger amber pellet. The
   player's shots are cyan dashes. A destroyed enemy bursts into a few particles; the
   lives left are ship icons in the top left corner.
 - Explosions: a destroyed ship breaks apart pixel by pixel; every pixel of its sprite
@@ -345,8 +354,8 @@ every bar of every generated level.
 - Help, from the title and pause menus: a key to every sprite and HUD icon, and what each
   enemy and bonus scores (built 2026-11-10).
 - Settings, from the title menu: Music and Effects volume (built); to come, audio latency
-  calibration, controls (keyboard, gamepad through the Gamepad API, a touch overlay on
-  mobile), visual options, accessibility.
+  calibration, control remapping, visual options, accessibility. Keyboard, gamepad
+  (Gamepad API) and on-screen touch controls are built (touch 2026-11-10).
 - Results screen: score breakdown, personal best, submit to the leaderboard, save the
   replay.
 

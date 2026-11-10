@@ -13,6 +13,26 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **Play-test: a shield on every life.** No one had finished a level, so every life now
+  starts with a 6-point shield: a ship's bullet costs 2, a tank's shell 3, a turret's shell
+  6, ramming 3, and a wall 3, which bounces the ship back towards the middle of the cave
+  instead of killing it. It flickers with a thud on each hit, the shield power-up refills
+  it, and tanks and turrets fire shells drawn apart from the ships' bullets (`SIM_VERSION`
+  12). The zigzag test bot now lives about three times as long.
+* **Play-test: extra lives.** One every 20 000 points, up to 9, with a chime and a "1UP"
+  over the ship.
+* **Play-test: touch controls.** On a phone or tablet a floating stick appears under the
+  left thumb, and six buttons in the bar right of the picture show the HUD's symbols for
+  pause, nuke, boost, missile, bomb and fire. They work the menus too and hide while a
+  gamepad is connected.
+* **Play-test: a bigger, sharper picture on high-density screens.** The picture scales by
+  whole device pixels instead of whole CSS pixels: a phone held sideways went from 1x to
+  640x360. A tap now starts the sound on a phone, where it used to act too early for the
+  browser to allow it.
+* **Play-test: the jukebox fits Crush.** With ten songs, Back ran into the spectrum; the
+  rows close up to fit.
+* **Play-test: the gamepad's Controls page.** Opening Controls after a pad press shows
+  the Gamepad page again; since the split into three pages it showed WASD.
 * **Play-test: a fairer level 1.** Every cave is 14 px wider, one LED segment
   a side, after Numen in Da Chip played too tight (`GEN_VERSION` 6). The recorded run of
   level 1 that used to die now finishes the song.

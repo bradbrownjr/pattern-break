@@ -55,9 +55,9 @@ export const shots: Shot[] = [
     query: { scene: 'jukebox', song: 'the_epic_chip', t: '12' },
     alt:
       '"Jukebox" in large cyan pixel letters with a magenta shadow over a starfield. Below it, a list of ' +
-      'nine songs in grey pixel type with their authors right-aligned in dim grey: The_Epic_Chip, Numen in ' +
-      'Da Chip, FastLane, CHiP_OVERTURE, The_Dim_Dungeon, 4_RNDD!, Girl From Mars, Wrath_of_the_Djinn and ' +
-      'Keygen 9000, then "Back". The first song is lime with an amber ">" before it. Under the list, a dim ' +
+      'ten songs in grey pixel type with their authors right-aligned in dim grey: The_Epic_Chip, Numen in ' +
+      'Da Chip, FastLane, CHiP_OVERTURE, The_Dim_Dungeon, 4_RNDD!, Girl From Mars, Wrath_of_the_Djinn, ' +
+      'Keygen 9000 and Crush, then "Back". The first song is lime with an amber ">" before it. Under the list, a dim ' +
       'row of 24 LED bars, green at the bottom to red at the top, all unlit. At the bottom, "The_Epic_Chip ' +
       'by Drozerix. Public Domain." in grey and "0:12 / 3:48" in cyan.',
     caption: 'The jukebox, playing the first song. Not used in the README.',
@@ -109,10 +109,10 @@ export const shots: Shot[] = [
       '"Help" in large cyan pixel letters with a magenta shadow, over a list with a grey scroll bar on the ' +
       'right, its thumb at the top. Cyan section names, then rows of an icon, a white label and a value on ' +
       'the right. Enemies: the magenta ship sprite, Ship, 100 in amber; the turret, Turret, 200; the lime ' +
-      'tank, "Tank 3 hits", 300; the magenta bullet, Bullet, "Dodge" in grey. Score: an amber "200", "Kill ' +
-      'on the beat", x2; an amber "x2", "10 kills no hit", "+1 Max x4"; the cyan player ship, "Life left at ' +
-      'end", 1000; the amber nuke icon, "10 beat kills", "+1 Nuke Max 3". Weapons: a cyan dash, Shot, "Hold ' +
-      'fire" in grey.',
+      'tank, "Tank 3 hits", 300. Shield: the player ship inside a cyan ring, "Each life", "6 points" in ' +
+      'grey; a magenta dot, "Ship bullet", -2 in amber; a lime block, "Tank shell", -3; an amber pellet, ' +
+      '"Turret shell", -6; no icon, Wall, "-3 Bounce"; no icon, Ram, -3; no icon, Empty, "Hit loses life" ' +
+      'in magenta.',
     caption: 'The help screen at its top. Not used in the README.',
     usedIn: [],
   },
@@ -121,10 +121,10 @@ export const shots: Shot[] = [
     query: { scene: 'help-end', song: 'the_epic_chip', t: '0' },
     alt:
       'The help screen scrolled to its end, the scroll bar thumb at the bottom. Rows of an icon, a white ' +
-      'label and a grey value: the missile, Missile, "Air to air"; the player ship inside a cyan ring, ' +
-      'Shield, "3 hits"; the cyan drone orb, Drone, "Copies fire Max 2"; a white bar, Laser, "Pierces"; no ' +
+      'label and a grey value: the player ship inside a cyan ring, Shield, Refill; the cyan drone orb, Drone, "Copies fire Max 2"; a white bar, Laser, "Pierces"; no ' +
       'icon, Boost, "Speed Max 3"; no icon, "Life lost", "Power-ups lost" in magenta. ' +
-      'Then the cyan section name Display: the player ship, Lives, "3 to start"; the amber bomb icon, "Bomb ' +
+      'Then the cyan section name Display: the player ship, Lives, "3 to start"; "1UP" in lime, "Extra ' +
+      'life", "20000 Max 9"; the amber bomb icon, "Bomb ' +
       'ready", Fills; the missile icon, "Missile ready", Fills; an amber "x3", Multiplier; the amber nuke ' +
       'icon, "Nukes held".',
     caption: 'The help screen scrolled to its end. Not used in the README.',
@@ -225,7 +225,8 @@ export const shots: Shot[] = [
       '"Paused" in large amber pixel letters, and below it a menu: "Resume" in amber with an amber ">" ' +
       'before it, then "Controls", "Help" and "Quit" in grey. The HUD shows three ship icons, a bomb icon ' +
       'and "x2" in the top left, the score "0001700" in the top right, and the power-up meter along the ' +
-      'bottom edge, its first cell, Double, lit green and the other five dark.',
+      'bottom edge: Double lit green, Missile with a grey label, "Shield 6" lit lime, and the other three ' +
+      'dark. The player ship on the left is inside a faint cyan ring, its shield.',
     caption: 'The pause menu over play. Not used in the README.',
     usedIn: [],
   },
@@ -236,14 +237,14 @@ export const shots: Shot[] = [
       'A frame of play in an LED cavern. Columns of small square LED segments hang from the top edge and rise ' +
       'from the bottom edge, lit green at the screen edges through yellow and orange to red at their tips, ' +
       'leaving a dark passage across the middle. A small magenta and amber turret sits upside down on a ' +
-      'tip of the ceiling at the right. A small cyan ship with a magenta engine flame flies on the left, with a row of cyan ' +
+      'tip of the ceiling at the right. A small cyan ship with a magenta engine flame flies on the left inside a faint cyan ring, its shield, with a row of cyan ' +
       'shots ahead of it and an enemy ship coming in from the right. Near the top, a scatter of coloured ' +
       'particles where an enemy was just destroyed, with "400" in white pixel digits above it. Three small ' +
       'ship icons on a dark panel in the top left corner show the lives left, followed by a small amber ' +
       'bomb icon and "x2" in amber; "0001700" in white in the top right corner is the score. Along the ' +
       'bottom edge runs the power-up meter, six LED cells labelled Double, Missile, Shield, Drone, Laser and ' +
-      'Boost: Double lit green, the ship has it; Missile, the next to unlock, with a grey label; the rest ' +
-      'dark.',
+      'Boost: Double lit green and "Shield 6" lit lime, the ship has them; Missile, the next to unlock, ' +
+      'with a grey label; the rest dark.',
     caption: 'Pattern Break at 21.5 seconds into the test song on normal, with the ship flown by the autopilot.',
     usedIn: ['readme'],
   },
@@ -255,13 +256,14 @@ export const shots: Shot[] = [
       'Four seconds of play in an LED cavern. Columns of square LED segments, lit green at the screen edges ' +
       'through yellow and orange to red at their tips, hang from the top and rise from the bottom and scroll ' +
       'from right to left, one column per row of the song. Small magenta and amber turrets ride in on the ' +
-      'tips of the floor and ceiling, and small magenta enemy ships fly in from the right and fire round ' +
-      'magenta bullets. A small cyan ship on the left keeps firing cyan shots, drops a bomb that bursts on ' +
+      'tips of the floor and ceiling and fire amber pellets, and small magenta enemy ships fly in from the ' +
+      'right and fire round magenta bullets. A small cyan ship on the left, inside a faint cyan ring that is ' +
+      'its shield, keeps firing cyan shots, drops a bomb that bursts on ' +
       'the floor, and moves up and down to dodge. Amber capsules marked "P" rest on the floor bars and scroll ' +
       'away with them. Three ship icons in the top left corner show the lives left, followed by a bomb icon ' +
       'and "x3" in amber, and the score in the top right corner counts up as each kill shows its points ' +
       'where the enemy was. Along the bottom edge runs the power-up meter, six LED cells labelled Double, ' +
-      'Missile, Shield, Drone, Laser and Boost, with Double lit green.',
+      'Missile, Shield, Drone, Laser and Boost, with Double lit green and "Shield 6" lit lime.',
     caption: 'Four seconds of the test song on normal, flown by the autopilot through the sim.',
     usedIn: ['readme'],
   },
