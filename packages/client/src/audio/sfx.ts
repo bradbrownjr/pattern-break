@@ -3,7 +3,7 @@
 // they never touch the song clock or the sim. They play through the effects mixer, so the
 // Effects setting sets their volume too.
 
-export type MenuSound = 'coin' | 'move' | 'change' | 'select' | 'back' | 'start';
+export type MenuSound = 'coin' | 'move' | 'change' | 'select' | 'back' | 'start' | 'secret';
 
 /** Each sound as notes played one after another: [MIDI note, length in ms]. */
 export const MENU_SOUNDS: Record<MenuSound, readonly (readonly [number, number])[]> = {
@@ -36,6 +36,15 @@ export const MENU_SOUNDS: Record<MenuSound, readonly (readonly [number, number])
     [76, 45],
     [79, 45],
     [84, 160],
+  ],
+  /** A secret found: the Konami code, or Impossible. A trill up to a high octave. */
+  secret: [
+    [84, 40],
+    [88, 40],
+    [84, 40],
+    [88, 40],
+    [91, 40],
+    [96, 220],
   ],
 };
 

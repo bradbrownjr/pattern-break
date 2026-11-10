@@ -4,6 +4,7 @@
 // clock drives the sim (docs/DEVELOPMENT.md, "Renderer and game loop").
 
 import {
+  Cheat,
   Difficulty,
   GEN_VERSION,
   SIM_VERSION,
@@ -34,6 +35,7 @@ import type { GameRenderer } from '../render/renderer.ts';
 import { barBinEdges, barLevels } from '../render/spectrum.ts';
 import { analyzeInWorker } from './analysis.ts';
 import { PadBit, PadTracker, padMenuAction, readGamepads } from './gamepad.ts';
+import { CodeListener, keyToken, padToken, type CodeToken } from './secrets.ts';
 import { InputSampler, keyToMenuAction, type MenuAction } from './input.ts';
 import { DisplayClock, InputLog, catchUp, targetTick } from './loop.ts';
 import { ControlsScreen } from './controls.ts';
@@ -56,6 +58,7 @@ import {
 } from './screens.ts';
 import {
   GAME_OVER_MUSIC,
+  IMPOSSIBLE_SONG_IDS,
   LEVEL_SONG_IDS,
   TITLE_SONG_ID,
   fetchSongBytes,
@@ -87,7 +90,8 @@ type Mode =
 type Music = 'title' | 'jukebox' | 'run' | 'gameover' | null;
 
 /** A run: the arcade levels in order from `level` (0-based), or one song in practice. */
-type Run = { kind: 'arcade'; level: number } | { kind: 'practice'; song: BundledSong };
+/** An arcade run plays `songs` in order: the eight levels, or Impossible's one. */
+type Run = { kind: 'arcade'; level: number; songs: readonly BundledSong[] } | { kind: 'practice'; song: BundledSong };
 
 /**
  * A song's bytes, its LevelData per tempo once analyzed (each difficulty plays the song at
@@ -166,6 +170,17 @@ export class Game {
   readonly #r: GameRenderer;
   readonly #songs: readonly BundledSong[];
   readonly #levelSongs: readonly BundledSong[] = LEVEL_SONG_IDS.map(songById);
+  readonly #impossibleSongs: readonly BundledSong[] = IMPOSSIBLE_SONG_IDS.map(songById);
+  /** The Konami code on the title screen, and whether it has turned infinite lives on. */
+  readonly #konami = new CodeListener();
+  #infiniteLives = false;
+  /** Esc held on the keyboard, and the pad's held bits: either held while choosing Play is god mode. */
+  #escHeld = false;
+  #padHeld = 0;
+  /** True while a pad's Start press is being handled: Start alone choosing Play isn't god mode. */
+  #confirmByStart = false;
+  /** The Cheat flags of the run being played, set as it starts from the title. */
+  #runCheats = 0;
   readonly #titleSong = songById(TITLE_SONG_ID);
   readonly #gameOverSong = songById(GAME_OVER_MUSIC.songId);
   readonly #options: GameOptions;
@@ -286,10 +301,14 @@ export class Game {
 
   start(): void {
     window.addEventListener('keydown', (e) => this.#onKeyDown(e));
-    window.addEventListener('keyup', (e) => this.#input.keyUp(e.code));
+    window.addEventListener('keyup', (e) => {
+      this.#input.keyUp(e.code);
+      if (e.code === 'Escape') this.#escHeld = false;
+    });
     window.addEventListener('pointerdown', () => this.#onPointer());
     window.addEventListener('blur', () => {
       this.#input.clear();
+      this.#escHeld = false;
       void this.#pause();
     });
     document.addEventListener('visibilitychange', () => {
@@ -375,6 +394,7 @@ export class Game {
   #onKeyDown(e: KeyboardEvent): void {
     if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
     this.#input.keyDown(e.code);
+    if (e.code === 'Escape') this.#escHeld = true;
     this.#lastPressPad = false;
     if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta') return;
     switch (this.#mode) {
@@ -400,6 +420,9 @@ export class Game {
         }
         return;
       case 'title':
+        if (!e.repeat) this.#codePress(keyToken(e.code));
+        this.#menuKey(e);
+        return;
       case 'jukebox':
       case 'controls':
       case 'settings':
@@ -435,6 +458,7 @@ export class Game {
   /** Polls the gamepads: their held bits go to the sim, new presses act like keys. */
   #pollPads(now: number): void {
     const bits = readGamepads();
+    this.#padHeld = bits;
     this.#input.setPad(bits);
     for (const bit of this.#pads.update(bits, now)) this.#onPadPress(bit);
   }
@@ -457,7 +481,14 @@ export class Game {
       case 'hangar':
         this.#skipHangar();
         return;
-      case 'title':
+      case 'title': {
+        this.#codePress(padToken(bit));
+        const action = padMenuAction(bit);
+        this.#confirmByStart = bit === PadBit.start;
+        if (action) this.#onMenu(action);
+        this.#confirmByStart = false;
+        return;
+      }
       case 'jukebox':
       case 'controls':
       case 'settings':
@@ -584,7 +615,20 @@ export class Game {
     }
   }
 
+  /** A press on the title screen, for the Konami code: it turns infinite lives on or off. */
+  #codePress(token: CodeToken | null): void {
+    if (!this.#konami.push(token)) return;
+    this.#infiniteLives = !this.#infiniteLives;
+    this.#sound(this.#infiniteLives ? 'secret' : 'back');
+  }
+
+  /** God mode: Esc, or a pad's Start, held while Play is chosen by another key or button. */
+  #godHeld(): boolean {
+    return this.#escHeld || ((this.#padHeld & PadBit.start) !== 0 && !this.#confirmByStart);
+  }
+
   #onTitleEvent(event: TitleEvent): void {
+    const lives = this.#infiniteLives ? Cheat.infiniteLives : 0;
     switch (event) {
       case 'moved':
         this.#sound('move');
@@ -592,15 +636,23 @@ export class Game {
       case 'changed':
         this.#sound('change');
         break;
-      case 'play':
-        this.#sound('start');
-        this.#run = { kind: 'arcade', level: 0 };
+      case 'impossible':
+        this.#sound('secret');
+        break;
+      case 'play': {
+        const god = this.#godHeld();
+        this.#sound(god ? 'secret' : 'start');
+        const songs = this.#menu.difficulty === 'impossible' ? this.#impossibleSongs : this.#levelSongs;
+        this.#run = { kind: 'arcade', level: 0, songs };
+        this.#runCheats = lives | (god ? Cheat.god : 0);
         this.#runScore = 0;
         void this.#beginLevel(true);
         break;
+      }
       case 'practice':
         this.#sound('start');
         this.#run = { kind: 'practice', song: this.#songs[this.#menu.song]! };
+        this.#runCheats = lives;
         void this.#beginLevel();
         break;
       case 'jukebox':
@@ -874,6 +926,7 @@ export class Game {
   #startDemo(): void {
     const demo = this.#demo;
     if (!demo || this.#music !== 'title') return;
+    this.#state.cheats = 0;
     resetSimState(this.#state);
     this.#clock.reset();
     this.#r.terrain.setLevel(demo.level);
@@ -912,7 +965,7 @@ export class Game {
   // Runs ----------------------------------------------------------------------------------
 
   #runSong(run: Run): BundledSong {
-    return run.kind === 'arcade' ? this.#levelSongs[run.level]! : run.song;
+    return run.kind === 'arcade' ? run.songs[run.level]! : run.song;
   }
 
   /**
@@ -960,6 +1013,7 @@ export class Game {
       this.#autopilot = entry.autopilot;
       this.#log = new InputLog(entry.level.tickCount);
       this.#r.terrain.setLevel(entry.level);
+      this.#state.cheats = this.#runCheats;
       resetSimState(this.#state);
       this.#r.explosion.hide();
       this.#r.flash.hide();
@@ -980,7 +1034,8 @@ export class Game {
 
   #levelHeading(run: Run): string {
     if (run.kind === 'practice') return 'Practice';
-    return run.level === this.#levelSongs.length - 1 ? 'Final level' : `Level ${run.level + 1}`;
+    if (run.songs === this.#impossibleSongs) return 'Impossible';
+    return run.level === run.songs.length - 1 ? 'Final level' : `Level ${run.level + 1}`;
   }
 
   /** A key in the hangar: start the run now, or as soon as the level has loaded. */
@@ -1105,13 +1160,13 @@ export class Game {
       score.push(`Total ${this.#runScore}`);
     }
     if (this.#lastReplay) score.push(REPLAY_HINT);
-    if (run?.kind === 'arcade' && run.level < this.#levelSongs.length - 1) {
+    if (run?.kind === 'arcade' && run.level < run.songs.length - 1) {
       this.#completeView = {
         heading: `Level ${run.level + 1} clear`,
         lines: [`${this.#song.title}, ${difficulty}`, ...score, 'Any key Next'],
         after: () => {
           this.#sound('start');
-          this.#run = { kind: 'arcade', level: run.level + 1 };
+          this.#run = { kind: 'arcade', level: run.level + 1, songs: run.songs };
           void this.#beginLevel();
         },
       };
@@ -1220,6 +1275,7 @@ export class Game {
       this.#playerReady = player;
       this.#playback = { replay, song, level, from };
       this.#r.terrain.setLevel(level);
+      this.#state.cheats = replay.cheats;
       resetSimState(this.#state);
       this.#clock.reset();
       this.#displaySamples = 0;
@@ -1317,6 +1373,7 @@ export class Game {
           practice: this.#songs[this.#menu.song]!,
           difficulty: this.#menu.difficulty,
           music: this.#titleSong,
+          secret: [this.#infiniteLives ? 'Infinite lives' : '', this.#godHeld() ? 'God mode' : ''].filter(Boolean).join('  '),
         };
         this.#title.update(view, blink);
         r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);

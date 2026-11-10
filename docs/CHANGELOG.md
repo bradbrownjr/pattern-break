@@ -13,6 +13,28 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **Play-test: a fairer level 1.** Every cave is 14 px wider, one LED segment
+  a side, after Numen in Da Chip played too tight (`GEN_VERSION` 6). The recorded run of
+  level 1 that used to die now finishes the song.
+* **Play-test: a gentler respawn.** After a hit the ship flies in from the left
+  along the cave's centre for 0.5 s with the controls locked, and the walls count again as
+  soon as it has control. It used to appear at once and ignore the walls for 2 s, so it
+  could drift into one and die as its safe time ended.
+* **Play-test: power-ups unlock on pickup.** Buying from the meter in flight
+  was impossible, so each capsule now unlocks the next power-up in the order double shot,
+  missile, shield, drone, laser, boost, and the Buy button is gone. Double and laser stack.
+  The meter lights what the ship has and greys the label of the next (`SIM_VERSION` 11).
+* **Play-test: a demo that shows the weapons.** The autopilot steers for
+  capsules when no bullet is near, so in its 30 s the demo picks up two power-ups, fires
+  missiles and drops a bomb; before, it showed none of them.
+* **Play-test: controls in three pages.** Arrows with Z, X, C, V and Shift;
+  WASD with J, K, L, ; and '; then the gamepad. Each lights only its own keys, where one
+  keyboard page with both layouts showed too many.
+* **Play-test: three secrets.** The Konami code on the title screen gives
+  infinite lives; holding Esc or Start while choosing Play gives god mode; and stepping the
+  difficulty through easy, normal and hard three times shows Impossible, one level of
+  Crush by Drozerix at 1.5 times level 8's speed. A run with a cheat shows "Cheat", and its
+  replay (format 2) records it so the boards can refuse it (`GEN_VERSION` 7).
 * **M2: Replays.** Every run that ends keeps a replay: the song's SHA-256, the difficulty,
   `GEN_VERSION`, `SIM_VERSION`, the score, and the inputs run-length encoded. R watches it,
   S saves it as a `.pbreplay` file, and a saved file dropped on the title screen plays. A

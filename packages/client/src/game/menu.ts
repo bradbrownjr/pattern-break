@@ -6,14 +6,35 @@ import { Difficulty, type DifficultyName } from '@game/core';
 import type { MenuAction } from './input.ts';
 import { VOLUME_LEVELS, type Settings } from './settings.ts';
 
-export const DIFFICULTY_LABELS: Record<DifficultyName, string> = { easy: 'Easy', normal: 'Normal', hard: 'Hard' };
+export const DIFFICULTY_LABELS: Record<DifficultyName, string> = {
+  easy: 'Easy',
+  normal: 'Normal',
+  hard: 'Hard',
+  impossible: 'Impossible',
+};
+/** Every difficulty in menu order; Impossible shows only once found (TitleMenu). */
 export const DIFFICULTY_ORDER = Object.keys(Difficulty) as DifficultyName[];
+/** Passes through easy, normal and hard that show Impossible after the last hard. */
+export const IMPOSSIBLE_PASSES = 3;
 
 export const TITLE_ITEMS = ['play', 'practice', 'difficulty', 'jukebox', 'controls', 'help', 'settings'] as const;
 export type TitleItem = (typeof TITLE_ITEMS)[number];
 
-/** What one action did on the title menu: what the game plays a sound for or opens. */
-export type TitleEvent = 'moved' | 'changed' | 'play' | 'practice' | 'jukebox' | 'controls' | 'help' | 'settings' | null;
+/**
+ * What one action did on the title menu: what the game plays a sound for or opens.
+ * 'impossible' is the difficulty changing to Impossible the first time.
+ */
+export type TitleEvent =
+  | 'moved'
+  | 'changed'
+  | 'impossible'
+  | 'play'
+  | 'practice'
+  | 'jukebox'
+  | 'controls'
+  | 'help'
+  | 'settings'
+  | null;
 
 /** Steps `i` by `step` through `count` values, wrapping at both ends. */
 function wrap(i: number, step: number, count: number): number {
@@ -24,6 +45,10 @@ function wrap(i: number, step: number, count: number): number {
  * Play, Practice, Difficulty, Jukebox, Controls, Help, Settings. Up and down move the cursor; left and right change
  * Practice's song or the difficulty under it. Confirm on Difficulty steps it forward, so a
  * single button or a click can reach every choice.
+ *
+ * The secret (Brad and his son, 2026-11-10): stepping the difficulty forward through easy,
+ * normal and hard IMPOSSIBLE_PASSES times shows Impossible after the last hard, and from
+ * then on it is one of the choices. A step back starts the count again.
  */
 export class TitleMenu {
   cursor = 0;
@@ -31,11 +56,21 @@ export class TitleMenu {
   song: number;
   #songCount: number;
   #difficulty: number;
+  #impossible: boolean;
+  /** Forward passes through easy, normal and hard so far, and whether this one began on easy. */
+  #passes = 0;
+  #fromEasy = false;
 
   constructor(songCount: number, song = 0, difficulty: DifficultyName = 'normal') {
     this.#songCount = songCount;
     this.song = song;
     this.#difficulty = DIFFICULTY_ORDER.indexOf(difficulty);
+    this.#impossible = difficulty === 'impossible';
+  }
+
+  /** True once Impossible has been found. */
+  get impossibleFound(): boolean {
+    return this.#impossible;
   }
 
   get item(): TitleItem {
@@ -69,11 +104,32 @@ export class TitleMenu {
       this.song = wrap(this.song, step, this.#songCount);
       return 'changed';
     }
-    if (this.item === 'difficulty') {
-      this.#difficulty = wrap(this.#difficulty, step, DIFFICULTY_ORDER.length);
+    if (this.item === 'difficulty') return this.#stepDifficulty(step);
+    return null;
+  }
+
+  #stepDifficulty(step: number): TitleEvent {
+    const from = this.difficulty;
+    const count = this.#impossible ? DIFFICULTY_ORDER.length : DIFFICULTY_ORDER.length - 1;
+    if (step < 0) {
+      this.#passes = 0;
+      this.#fromEasy = false;
+      this.#difficulty = wrap(this.#difficulty, step, count);
       return 'changed';
     }
-    return null;
+    if (from === 'hard' && !this.#impossible && this.#passes >= IMPOSSIBLE_PASSES) {
+      this.#impossible = true;
+      this.#difficulty = DIFFICULTY_ORDER.indexOf('impossible');
+      return 'impossible';
+    }
+    this.#difficulty = wrap(this.#difficulty, step, count);
+    const to = this.difficulty;
+    if (from === 'easy' && to === 'normal') this.#fromEasy = true;
+    else if (from === 'normal' && to === 'hard' && this.#fromEasy) {
+      this.#passes++;
+      this.#fromEasy = false;
+    } else if (to !== 'easy') this.#fromEasy = false;
+    return 'changed';
   }
 }
 

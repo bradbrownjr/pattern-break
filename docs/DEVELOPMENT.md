@@ -281,7 +281,8 @@ and "Simulation"; this section has the exact rules.
 
 The settings are `Difficulty` and `Terrain` in `levelgen/types.ts`. Difficulty sets the
 tempo the LevelData was analyzed at (`generateLevel` throws on a mismatch), the base gap
-(118, 104, 90 px on easy, normal, hard) and the minimum gap (66, 58, 50 px). Before the
+(118, 104, 90 px on easy, normal, hard) and the minimum gap (66, 58, 50 px). The secret
+`impossible` (id 3) has hard's gaps and enemies at the song's own tempo. Before the
 bars, `findDrums()` marks each instrument whose three commonest pitches make up at least
 95% of its notes (`drumPitchPercent`). Then, for each bar in order, with the previous
 bar's final values:
@@ -605,8 +606,8 @@ recorded score (82 400) on the recorded last tick, in Node and in every browser.
 **Bundled songs.** `packages/analysis/test/music.test.ts` analyzes every song in
 `music/manifest.json`, builds its level on each difficulty, and checks that it has enemies,
 that the path check passes with them, and that the autopilot reaches the end of the
-terrain alone. It runs in Node only and takes about a minute
-for the nine songs, so a levelgen change that makes a real song unplayable fails `pnpm test`.
+terrain alone. It runs in Node only and takes about a minute and a half
+for the ten songs on four difficulties, so a levelgen change that makes a real song unplayable fails `pnpm test`.
 
 **Sound effects.** `packages/chipfx/test/chipfx.test.ts` checks the generator (lengths,
 levels, determinism, pitch, slides, jumps, the cutoff, punch, filtering, mixing, and the
@@ -982,6 +983,23 @@ Run `pnpm dev` and open the URL it prints.
   lives is game over: any key retries the level, Esc goes to the title, and R and S watch
   and save the run's replay (see "Replays"). Game over and level complete ignore keys for 0.7 s, so a key still held from
   play doesn't skip them. The game pauses when the window loses focus or the tab is hidden.
+- **Secrets** (Brad and his son, 2026-11-10), none of them shown in the game's help:
+  - **Konami code:** up, up, down, down, left, right, left, right, B, A on the title
+    screen (the arrow keys and the B and A keys, or a pad's D-pad and B and A buttons;
+    `secrets.ts`) turns infinite lives on, or off again, with a trill (`secret` in
+    `MENU_SOUNDS`). "Infinite lives" shows in magenta under the title's credit, and Play
+    and Practice start with `Cheat.infiniteLives`.
+  - **God mode:** holding Esc, or Start on a pad, while choosing Play with another key or
+    button (Start alone choosing Play doesn't count) starts the run with `Cheat.god`.
+    "God mode" shows under the credit while Esc or Start is held.
+  - **Impossible:** stepping the difficulty forward through easy, normal and hard three
+    times shows Impossible after the third hard (`TitleMenu`, `IMPOSSIBLE_PASSES`); a step
+    back starts the count again. From then on, until the page reloads, it is one of the
+    choices. Play on Impossible is one level, Crush (`IMPOSSIBLE_SONG_IDS`), headed
+    "Impossible"; Practice on it plays any song with hard's cave at its own tempo.
+
+  A run with a cheat shows "Cheat" in magenta left of the score, and its replay records the
+  flags, so the M5 boards will refuse it. Watching a replay runs with the flags it recorded.
 - **Pause menu:** "Paused" over the frozen game, with Resume, Controls, Help and Quit,
   worked like the title menu. Esc (or Backspace) resumes, as does Start on a pad, from any
   item; Q, or Select on a pad, quits to the title. The cursor starts on Resume each time.
@@ -1030,7 +1048,7 @@ Run `pnpm dev` and open the URL it prints.
   spec's activation-triggering input events are keydown, mousedown, pointer and touch
   events, not gamepad presses. So unless `navigator.userActivation.hasBeenActive`, a pad
   press there shows "Key or click for sound".
-- **Jukebox:** the nine songs and Back, with a 24-bar spectrum of what is playing under
+- **Jukebox:** the ten songs and Back, with a 24-bar spectrum of what is playing under
   them, and the song's title, credit and time below that. Enter plays the song under the
   cursor or stops it if it is playing, a song that ends hands over to the next, and Esc or
   Back returns to the title, where the title music starts again.
@@ -1081,6 +1099,8 @@ The part each song plays is set in `songs.ts`, not the manifest:
 - `TITLE_SONG_ID`: the title and demo music, and Practice's first song (The_Epic_Chip).
 - `LEVEL_SONG_IDS`: the eight arcade levels in order, by scroll speed, from Numen in Da Chip
   to Keygen 9000.
+- `IMPOSSIBLE_SONG_IDS`: the secret Impossible difficulty's run, one level: Crush, the
+  fastest song measured.
 - `GAME_OVER_MUSIC`: game over plays Keygen 9000's first 8 s, its two sparse opening
   patterns (about 3 to 5 notes per second; the third pattern jumps to 17), fading out over
   the last 1.5 s.
@@ -1091,8 +1111,8 @@ credit field is empty or a link isn't https, or a license is off the allowlist (
 Domain, CC0, CC BY). A CC BY-SA entry fails until it has a `"reviewed"` field saying who
 reviewed it and when.
 
-The nine songs so far (2026-11-09), each marked Public Domain on its Mod Archive page, with
-the file's MD5 matching the one the page lists. The files are named after the archive's,
+The ten songs so far (nine on 2026-11-09, Crush on 2026-11-10), each marked Public Domain on
+its Mod Archive page, with the file's MD5 matching the one the page lists. The files are named after the archive's,
 without the artist prefix and the `!` (`4_rndd.xm`), since the name becomes the song's id
 in URLs. Their numbers, the songs that were considered and not used, and the checks a new
 song goes through are in [`SONG-DIGEST.md`](SONG-DIGEST.md); keep it current when a song

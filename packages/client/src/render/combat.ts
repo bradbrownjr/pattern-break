@@ -256,6 +256,8 @@ export class CombatView {
   #score = new PixelText('', WHITE);
   #scoreBacking = new Sprite(Texture.WHITE);
   #shownScore = -1;
+  /** "Cheat" left of the score when the run has a cheat: its score can't go on a board. */
+  #cheat = new PixelText('Cheat', MAGENTA);
   #bomb = new Sprite();
   #blast = new Explosion(BLAST);
   #blastSample = -1;
@@ -344,7 +346,8 @@ export class CombatView {
     this.#scoreBacking.tint = BACKGROUND;
     this.#scoreBacking.alpha = 0.85;
     this.#scoreBacking.height = SHIP_SPRITE_HEIGHT + 4;
-    this.hud.addChild(this.#scoreBacking, this.#score);
+    this.#cheat.visible = false;
+    this.hud.addChild(this.#scoreBacking, this.#score, this.#cheat);
     for (let i = 0; i < POPUPS; i++) {
       const popup = new PixelText('', WHITE);
       popup.visible = false;
@@ -595,7 +598,9 @@ export class CombatView {
       this.#score.place(right, 4 + Math.floor((SHIP_SPRITE_HEIGHT - 7) / 2), 'right');
       this.#scoreBacking.width = this.#score.textWidth + 2 * HUD_PAD + 1;
       this.#scoreBacking.position.set(right - this.#score.textWidth - HUD_PAD, 2);
+      this.#cheat.place(this.#scoreBacking.x - 4, this.#score.y, 'right');
     }
+    this.#cheat.visible = state.cheats !== 0;
 
     this.#seenTick = state.tick;
     this.#scanFrom = state.firstLive;

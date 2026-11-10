@@ -164,7 +164,8 @@ every bar of every generated level.
   2026-11-10, when level 1 played too tight). The beat and the winding
   are the same on every difficulty; enemies (M2) add the rest of the challenge. Each
   difficulty is analyzed at its own tempo, so it has its own LevelData. Difficulty is a
-  constant object (`easy`, `normal`, `hard`); the numbers and the exact rounding rules are
+  constant object (`easy`, `normal`, `hard`, and the secret `impossible`: hard's cave and
+  enemies at the song's own tempo, 2026-11-10); the numbers and the exact rounding rules are
   in `docs/DEVELOPMENT.md`, "Level and sim".
 - **Enemies (2026-11-09):** three kinds, each from one part of the song. Every enemy fires
   on its own instrument's notes, so every shot lands on the music.

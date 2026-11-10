@@ -69,7 +69,7 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
   switch (params.scene) {
     case 'title': {
       const title = new TitleScreen();
-      title.update({ cursor: 0, practice: song, difficulty, music: songById(TITLE_SONG_ID) }, true);
+      title.update({ cursor: 0, practice: song, difficulty, music: songById(TITLE_SONG_ID), secret: '' }, true);
       return menuScene(title.container);
     }
     case 'jukebox': {

@@ -18,6 +18,11 @@ export const Difficulty = {
   easy: { id: 0, tempoPermille: 900, baseGapPx: 118, minGapPx: 66, solidPeaks: false },
   normal: { id: 1, tempoPermille: 1000, baseGapPx: 104, minGapPx: 58, solidPeaks: false },
   hard: { id: 2, tempoPermille: 1150, baseGapPx: 90, minGapPx: 50, solidPeaks: false },
+  /**
+   * The secret difficulty (Brad, 2026-11-10): hard's cave and enemies at the song's own
+   * tempo. Its song, Crush, is fast enough as written.
+   */
+  impossible: { id: 3, tempoPermille: 1000, baseGapPx: 90, minGapPx: 50, solidPeaks: false },
 } as const;
 export type DifficultyName = keyof typeof Difficulty;
 
@@ -64,6 +69,18 @@ export type ShipMotion = (typeof ShipMotion)[keyof typeof ShipMotion];
  * - `bulletSpeedQ8`, `maxBullets`: enemy bullet speed, and how many can be in flight.
  * - `shipShots`: shots each ship may fire. `shipSpeedQ8`: how fast ships cross the screen.
  */
+const HARD_TUNING = {
+  turretSpacingTicks: 168,
+  tankSpacingTicks: 336,
+  formationSpacingTicks: 168,
+  formationSize: 4,
+  fireIntervalTicks: 48,
+  bulletSpeedQ8: 352,
+  maxBullets: 12,
+  shipShots: 2,
+  shipSpeedQ8: 352,
+} as const;
+
 export const EnemyTuning = {
   easy: {
     turretSpacingTicks: 360,
@@ -87,17 +104,8 @@ export const EnemyTuning = {
     shipShots: 1,
     shipSpeedQ8: 288,
   },
-  hard: {
-    turretSpacingTicks: 168,
-    tankSpacingTicks: 336,
-    formationSpacingTicks: 168,
-    formationSize: 4,
-    fireIntervalTicks: 48,
-    bulletSpeedQ8: 352,
-    maxBullets: 12,
-    shipShots: 2,
-    shipSpeedQ8: 352,
-  },
+  hard: HARD_TUNING,
+  impossible: HARD_TUNING,
 } as const;
 
 /**

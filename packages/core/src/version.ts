@@ -8,7 +8,8 @@
  * (2026-11-09). 3 = turrets, tanks and ships from the drums, bass and other instruments
  * (2026-11-09). 4 = each instrument's note ticks in the Level, for the on-beat bonus
  * (2026-11-09). 5 = each ship's formation, for power-up capsules (2026-11-09). 6 = every
- * gap 14 px wider, one segment a side (2026-11-10). Pre-release: no scores are kept yet.
+ * gap 14 px wider, one segment a side (2026-11-10). 7 = the impossible difficulty
+ * (2026-11-10). Pre-release: no scores are kept yet.
  *
  * SIM_VERSION 1 = the ship and terrain (M1). 2 = enemies, shots, enemy bullets and three
  * lives (2026-11-09). 3 = score: kill points, the on-beat bonus, the streak multiplier and
@@ -22,7 +23,7 @@
  * power-ups in order (no buy button), and double and laser stack; the infinite-lives and
  * god cheats (2026-11-10).
  */
-export const GEN_VERSION = 6;
+export const GEN_VERSION = 7;
 export const SIM_VERSION = 11;
 
 /** Fixed simulation tick rate (docs/PLAN.md, "Simulation"). */

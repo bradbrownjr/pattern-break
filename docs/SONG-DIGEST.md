@@ -46,6 +46,13 @@ In the order of the arcade run. The_Epic_Chip is the title and demo music and is
 | 6 | [Girl From Mars](https://modarchive.org/index.php?request=view_by_moduleid&query=173935) | Drozerix | 1:52 | 15.5 | 26.9 | 48 / 83 | 9 |
 | 7 | [Wrath_of_the_Djinn](https://modarchive.org/index.php?request=view_by_moduleid&query=173080) | Drozerix | 1:52 | 16.0 | 20.0 | 69 / 90 | 9 |
 | 8 | [Keygen 9000](https://modarchive.org/index.php?request=view_by_moduleid&query=173938) | Drozerix | 3:20 | 16.0 | 34.7 | 62 / 90 | 9 |
+| Impossible | [Crush](https://modarchive.org/index.php?request=view_by_moduleid&query=179581) | Drozerix | 2:05 | 24.0 | 54.0 | 48 / 83 | 10 |
+
+Crush is the secret Impossible difficulty's one level (Brad, 2026-11-10): the fastest song
+measured, 1.5 times level 8's speed, played at its own tempo with hard's cave. Checked again
+on 2026-11-10 before bundling: Public Domain on its page, the MD5 matches
+(1613a27c819396c6d4e74b426c21a36a), the comments praise it with no mention of a cover, and
+its only text is the artist's name banner and contact address.
 
 The run is about 16.5 minutes on normal. Levels are ordered by scroll speed, Keygen 9000
 last as Brad chose. The_Dim_Dungeon is level 4, before the mini boss. Wrath_of_the_Djinn's
@@ -94,7 +101,6 @@ the fast ones scroll well past the final level.
 | [Lost Without (Her)](https://modarchive.org/index.php?request=view_by_moduleid&query=177708) | Drozerix | 2:14 | 23.2 | 34.5 | 48 / 90 | 9 |
 | [Dream Candy](https://modarchive.org/index.php?request=view_by_moduleid&query=178565) | Drozerix | 3:52 | 23.5 | 76.8 | 48 / 83 | 8 |
 | [Leisurely Voice](https://modarchive.org/index.php?request=view_by_moduleid&query=183837) | Drozerix | 4:09 | 23.6 | 29.2 | 48 / 90 | 9 |
-| [Crush](https://modarchive.org/index.php?request=view_by_moduleid&query=179581) | Drozerix | 2:05 | 24.0 | 54.0 | 48 / 83 | 10 |
 
 ## Ruled out
 

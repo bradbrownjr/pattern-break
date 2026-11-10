@@ -20,6 +20,8 @@ export interface TitleView {
   difficulty: DifficultyName;
   /** The song playing on the title screen, credited under the menu. */
   music: BundledSong;
+  /** The secrets on, in magenta under the credit: "Infinite lives", "God mode", or ''. */
+  secret: string;
 }
 
 const TITLE_LABELS: Record<TitleItem, string> = {
@@ -68,11 +70,13 @@ export class TitleScreen {
   #labels: PixelText[] = [];
   #values: PixelText[] = [];
   #credit = new PixelText('', GREY);
+  #secret = new PixelText('', MAGENTA);
   /** What the last update() drew, so an unchanged frame does no work. */
-  #drawn: { cursor: number; practice: BundledSong | null; difficulty: DifficultyName | null } = {
+  #drawn: { cursor: number; practice: BundledSong | null; difficulty: DifficultyName | null; secret: string } = {
     cursor: -1,
     practice: null,
     difficulty: null,
+    secret: '',
   };
 
   constructor() {
@@ -88,6 +92,7 @@ export class TitleScreen {
     this.#menu.addChild(
       this.#marker,
       this.#credit,
+      this.#secret,
     );
     this.#padHint.visible = false;
     this.container.addChild(this.#menu, this.#press, this.#padHint);
@@ -106,6 +111,11 @@ export class TitleScreen {
     if (!view) return;
     this.#marker.visible = blinkBright;
     const d = this.#drawn;
+    if (view.secret !== d.secret) {
+      d.secret = view.secret;
+      this.#secret.text = view.secret;
+      this.#secret.place(CENTER, MENU_TOP + TITLE_ITEMS.length * MENU_ROW + 20, 'center');
+    }
     if (d.cursor === view.cursor && d.practice === view.practice && d.difficulty === view.difficulty) return;
     d.cursor = view.cursor;
     d.practice = view.practice;

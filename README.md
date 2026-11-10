@@ -53,7 +53,7 @@ player reads, read the [writing guide](docs/DOC-STYLE.md).
 ## License
 
 Pattern Break is free and open source. The code is [MIT](LICENSE). Bundled music keeps its
-own licenses, listed in `music/manifest.json` and shown in the game. The nine songs so far
+own licenses, listed in `music/manifest.json` and shown in the game. The ten songs so far
 are Public Domain, by [JAM](https://modarchive.org/member.php?81691) and
 [Drozerix](https://modarchive.org/member.php?84702):
 
@@ -66,6 +66,7 @@ are Public Domain, by [JAM](https://modarchive.org/member.php?81691) and
 - [Girl From Mars](https://modarchive.org/index.php?request=view_by_moduleid&query=173935) by Drozerix
 - [Wrath_of_the_Djinn](https://modarchive.org/index.php?request=view_by_moduleid&query=173080) by Drozerix
 - [Keygen 9000](https://modarchive.org/index.php?request=view_by_moduleid&query=173938) by Drozerix
+- [Crush](https://modarchive.org/index.php?request=view_by_moduleid&query=179581) by Drozerix
 
 Every song considered, and why the others weren't used, is in the
 [song digest](docs/SONG-DIGEST.md).

@@ -58,6 +58,12 @@ export const LEVEL_SONG_IDS: readonly string[] = [
   'keygen_9000',
 ];
 
+/**
+ * The secret Impossible difficulty's run: one level, the fastest song measured (24 rows a
+ * second, 1.5 times level 8's speed; docs/SONG-DIGEST.md).
+ */
+export const IMPOSSIBLE_SONG_IDS: readonly string[] = ['crush'];
+
 /** Game over plays the opening of a song, fading out at the end. */
 export const GAME_OVER_MUSIC = { songId: 'keygen_9000', seconds: 8, fadeSeconds: 1.5 } as const;
 
