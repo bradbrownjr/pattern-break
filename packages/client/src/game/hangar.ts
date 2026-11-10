@@ -138,8 +138,12 @@ const PLAY = 1;
 /** The deck's door, hinged along its bottom edge, and the window in it. */
 const DOOR = new Rectangle(135, 97, 117, 57);
 const DECK_WINDOW = new Rectangle(145, 105, 97, 35);
-/** How far the door tilts open, in radians (a guess: no source gives the angle). */
-const DOOR_ANGLE = Math.PI / 3;
+/**
+ * How far the door tilts open, in radians (a guess: no source gives the angle). Kept
+ * shallow: the tilt is drawn by squashing the door and the tape in it, and at 60 degrees
+ * the tape looked like it shrank (Brad, 2026-11-10).
+ */
+const DOOR_ANGLE = (25 * Math.PI) / 180;
 const EJECT = 4;
 /**
  * The cassette, in a compact cassette's proportions (4 by 2.5 inches: Wikipedia, "Cassette

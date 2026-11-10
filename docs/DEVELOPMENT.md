@@ -943,9 +943,10 @@ Run `pnpm dev` and open the URL it prints.
   differ: US patent 4087844 hinges its door at the top. The bottom hinge, the spring that
   opens it, and the button that releases it follow the outer door of US patent 4607301 (a
   car stereo); that door doesn't hold the cassette, so the holder is the intro's own, and
-  the opening angle, 60 degrees (`DOOR_ANGLE`), is a guess. The tilt is drawn by squashing
-  the door and the tape in it towards the hinge (`door.png`, cut from the cockpit by
-  `tools/hangar-art.py`, its window clear). While the level is still loading, the hand waits over
+  the opening angle, 25 degrees (`DOOR_ANGLE`), is a guess. The tilt is drawn by squashing
+  the door (`door.png`, cut from the cockpit by `tools/hangar-art.py`, its window clear)
+  and the tape in it towards the hinge; at 60 degrees the tape looked like it shrank
+  (Brad, 2026-11-10). While the level is still loading, the hand waits over
   Play (`introTime`). The run starts with the canopy frame coming down over the window,
   the level showing through the glass, then the cockpit dropping out of view (`drawWipe`,
   1 s of song time); meanwhile the level floods from black and white into colour, one step
