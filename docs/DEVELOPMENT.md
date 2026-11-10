@@ -935,8 +935,9 @@ Run `pnpm dev` and open the URL it prints.
 - **Hangar intro** (`hangar.ts`, Brad, 2026-11-10): before level 1 of each run started with
   Play, in black and white (see "Hangar intro art" below). The captain walks across the
   hangar, climbs the ladder into the fighter, and the camera closes in (0 to 5.2 s); in the
-  cockpit a gloved hand pushes a cassette labelled with level 1's song into the deck, the
-  level number, credit and difficulty show, and the hand presses Play (8.15 s), which
+  cockpit a gloved hand pushes a cassette labelled with level 1's song into the deck's door
+  (after that it shows through the door's window), the level number, the song's title,
+  credit and difficulty show, and the hand presses Play (8.15 s), which
   starts the run with the song at 0. While the level is still loading, the hand waits over
   Play (`introTime`). The run starts with the canopy frame coming down over the window,
   the level showing through the glass, then the cockpit dropping out of view (`drawWipe`,
@@ -1021,15 +1022,20 @@ The hangar with the fighter, the cockpit, the captain, and the glove are generat
 (Brad, 2026-11-10): `art/hangar/README.md` has the model, the prompts, the references
 (the first version's frames, and the player ship's sprite so the fighter has its shape),
 and the files' hashes. The cassette, the symbols on the deck's keys, the canopy frame, and
-the text are drawn in code.
+the text are drawn in code. The cassette has a compact cassette's proportions, 4 by 2.5
+inches (Wikipedia, "Cassette tape"), at 88x55 px, the most the deck's door holds, and its
+face follows a photo of one (the comment on `drawCassette()` names it). Its label holds 13
+characters, so `labelText()` cuts a longer title at a word; the full title shows with the
+level heading.
 
 `python3 tools/hangar-art.py` makes the game's copies in
 `packages/client/src/game/hangar-art/`: it box-filters each source to the 384x216 grid
 (the captain to 28 px tall, the glove to 0.4 of its source), snaps every pixel to the
 intro's seven greys and its alpha to on or off, cuts the captain's sheet into frames
 (`pilot.png`: four of the walk, then two of the climb, 12x33 each, feet at the bottom
-centre; `pilot-seated.png`), cuts the cockpit's panel away from the view out of the canopy
-along the glare shield (`cockpit-panel.png`), and prints the glove's anchor points.
+centre; `pilot-seated.png`), paints out the faint cassette the source drew in the deck's
+empty window, cuts the cockpit's panel away from the view out of the canopy along the
+glare shield (`cockpit-panel.png`), and prints the glove's anchor points.
 `hangar.ts` has the positions measured on these files (the ladder, the cockpit opening,
 the deck's window and keys) and the anchors; rebuilding the art from new sources means
 measuring them again. `loadHangarArt()` loads the PNGs once; `Game` starts it at start-up

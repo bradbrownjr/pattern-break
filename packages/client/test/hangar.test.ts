@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { EFFECTS } from '../src/audio/effects.ts';
-import { COCKPIT_AT, ColourFlood, FLOOD_ROWS, HANGAR_CUES, HOLD_AT, PLAY_AT, introTime } from '../src/game/hangar.ts';
+import {
+  COCKPIT_AT,
+  ColourFlood,
+  FLOOD_ROWS,
+  HANGAR_CUES,
+  HOLD_AT,
+  LABEL_CHARS,
+  PLAY_AT,
+  introTime,
+  labelText,
+} from '../src/game/hangar.ts';
 
 describe('hangar intro', () => {
   it('plays its sounds in time order, all before Play starts the run', () => {
@@ -20,6 +30,17 @@ describe('hangar intro', () => {
     expect(introTime(60_000, false)).toBe(HOLD_AT);
     expect(introTime(HOLD_AT + 50, true)).toBe(HOLD_AT + 50);
     expect(introTime(60_000, true)).toBe(PLAY_AT);
+  });
+});
+
+describe('labelText', () => {
+  it('keeps a title that fits, and cuts a long one at the last word that fits', () => {
+    expect(labelText('FastLane')).toBe('FastLane');
+    expect(labelText('Numen in Da Chip')).toBe('Numen in Da');
+    expect(labelText('Wrath_of_the_Djinn')).toBe('Wrath_of_the_');
+    for (const t of ['Numen in Da Chip', 'Wrath_of_the_Djinn', 'Girl From Mars']) {
+      expect(labelText(t).length).toBeLessThanOrEqual(LABEL_CHARS);
+    }
   });
 });
 

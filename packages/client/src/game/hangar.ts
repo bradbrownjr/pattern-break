@@ -114,18 +114,30 @@ const WALK_FRAMES = 4;
 const CLIMB_FRAME = 4;
 
 // Where things are in cockpit.png.
-/** The deck's window, and its keys left to right: rewind, play, fast forward, stop, eject. */
-const KEY_LEFT = [133, 157, 182, 207, 232];
-const KEY_TOP = 167;
-const KEY_W = 19;
-const KEY_H = 11;
+/** The deck's keys, left to right: rewind, play, fast forward, stop, eject. */
+const KEY_LEFT = [133, 157, 182, 206, 230];
+const KEY_TOP = 158;
+const KEY_W = 21;
+const KEY_H = 14;
 const PLAY = 1;
-/** The cassette: its size, and where it sits in the deck's window. */
-const TAPE_W = 108;
-const TAPE_H = 28;
-const TAPE_AT = { x: 138, y: 125 };
-/** The label holds this many characters. */
-const LABEL_CHARS = 16;
+/** The window in the deck's door: once the door shuts, the tape shows only through it. */
+const DECK_WINDOW = new Rectangle(145, 105, 97, 35);
+/**
+ * The cassette, in a compact cassette's proportions (4 by 2.5 inches: Wikipedia, "Cassette
+ * tape"), as big as the deck's door allows, and where it sits behind the door.
+ */
+const TAPE_W = 88;
+const TAPE_H = 55;
+const TAPE_AT = { x: 149, y: 98 };
+/** The label's line holds this many characters. */
+export const LABEL_CHARS = 13;
+
+/** What fits on the cassette's label: the title up to the last word that fits. */
+export function labelText(title: string): string {
+  if (title.length <= LABEL_CHARS) return title;
+  const cut = title.lastIndexOf(' ', LABEL_CHARS);
+  return (cut > 0 ? title.slice(0, cut) : title.slice(0, LABEL_CHARS)).trimEnd();
+}
 
 // Anchors in the glove sprites (printed by tools/hangar-art.py).
 /** hand-grip.png: the cassette's right end, middle, sits here between fingers and thumb. */
@@ -180,13 +192,14 @@ export class HangarIntro {
   #outsideMask = new Graphics();
   #keys = new Graphics();
   #cassette = new Container();
+  #tapeMask = new Graphics();
   #reels = new Graphics();
   #grip: Sprite;
   #point: Sprite;
   #canopy = new Graphics();
   #label = new PixelText('', G1);
   #heading = new PixelText('', G6, 2);
-  #subhead = new PixelText('', G4);
+  #subhead = new PixelText('', G5);
   #credit = new PixelText('', G4);
   readonly #art: HangarArt;
 
@@ -199,13 +212,9 @@ export class HangarIntro {
 
     this.#outside = new Sprite(art.cockpit);
     this.#outside.mask = this.#outsideMask;
-    const body = new Graphics();
-    body.rect(0, 0, TAPE_W, TAPE_H).fill(G3).rect(1, 1, TAPE_W - 2, TAPE_H - 2).fill(G5);
-    body.rect(3, 2, TAPE_W - 6, 11).fill(G6);
-    body.rect(34, 16, 40, 9).fill(G1);
-    body.rect(6, TAPE_H - 2, TAPE_W - 12, 1).fill(G4);
-    this.#label.place(6, 3);
-    this.#cassette.addChild(body, this.#reels, this.#label);
+    this.#label.place(8, 8);
+    this.#cassette.addChild(drawCassette(), this.#reels, this.#label);
+    this.#tapeMask.rect(DECK_WINDOW.x, DECK_WINDOW.y, DECK_WINDOW.width, DECK_WINDOW.height).fill(0xffffff);
     this.#grip = new Sprite(art.grip);
     this.#point = new Sprite(art.point);
     this.#cockpit.addChild(
@@ -213,6 +222,7 @@ export class HangarIntro {
       this.#outsideMask,
       new Sprite(art.panel),
       this.#keys,
+      this.#tapeMask,
       this.#cassette,
       this.#grip,
       this.#point,
@@ -223,15 +233,18 @@ export class HangarIntro {
     this.container.addChild(this.#camera, this.#cockpit, this.#canopy);
   }
 
-  /** What the cassette label and the headings say. */
+  /**
+   * What the cassette's label and the headings say: the level, then the song's title (the
+   * label holds only part of a long one), then its credit and the difficulty.
+   */
   setSong(heading: string, title: string, credit: string, difficulty: string): void {
     this.#heading.text = heading;
     this.#heading.place(W / 2, 6, 'center');
-    this.#subhead.text = difficulty;
-    this.#subhead.place(W / 2, 38, 'center');
-    this.#label.text = title.length > LABEL_CHARS ? title.slice(0, LABEL_CHARS) : title;
-    this.#credit.text = credit;
-    this.#credit.place(W / 2, 27, 'center');
+    this.#subhead.text = title;
+    this.#subhead.place(W / 2, 27, 'center');
+    this.#label.text = labelText(title);
+    this.#credit.text = `${credit}  ${difficulty}`;
+    this.#credit.place(W / 2, 38, 'center');
   }
 
   /** Draws the intro at `ms` from its start. */
@@ -332,12 +345,16 @@ export class HangarIntro {
     const cy = Math.round(lerp(150, TAPE_AT.y, inP));
     this.#cassette.position.set(cx, cy);
     this.#cassette.visible = ms >= CASSETTE_IN;
+    // Pushed home, the door shuts on it: it shows through the door's window.
+    const home = ms >= INSERTED;
+    this.#cassette.mask = home ? this.#tapeMask : null;
+    this.#tapeMask.visible = home;
 
     // The reels turn once Play is down.
     const r = this.#reels;
     r.clear();
     const turning = ms >= PRESS_AT ? (ms - PRESS_AT) / 1000 : 0;
-    for (const rx of [28, 80]) drawReel(r, rx, 20, turning * Math.PI * 2 * 0.8);
+    for (const rx of HUB_X) drawReel(r, rx, HUB_Y, turning * Math.PI * 2 * 0.8);
 
     // The glove: holding the cassette's end, then away down to the right; then pointing,
     // over Play, and pressing it.
@@ -422,9 +439,49 @@ function drawKeys(g: Graphics, playDown: boolean): void {
   });
 }
 
+// The cassette's face, after a photo of one (Wikimedia Commons, "Goldstar compact cassette
+// DJ60 20090717.jpg"): screws in the corners and the bottom middle; a label with a line
+// to write on and a window across it showing both hubs, level with each other, at about a
+// quarter and three quarters of the width; and along the bottom, a raised trapezoid with
+// the openings for the heads and the capstans, and a tape guide in each corner.
+const HUB_X = [26, 62];
+const HUB_Y = 26;
+
+/** The cassette's shell and label, drawn once; the hubs turn on top of it. */
+function drawCassette(): Graphics {
+  const g = new Graphics();
+  const w = TAPE_W;
+  const h = TAPE_H;
+  g.roundRect(0, 0, w, h, 3).fill(G2);
+  g.roundRect(1, 1, w - 2, h - 2, 2).fill(G3);
+  // The label, its writing line, and the window across it.
+  g.rect(6, 4, w - 12, 33).fill(G6);
+  g.rect(8, 17, w - 16, 1).fill(G5);
+  g.rect(17, 19, 54, 15).fill(G1);
+  // The tape wound on each hub, more on the left at the start.
+  g.circle(HUB_X[0]!, HUB_Y, 7).fill(G2);
+  g.circle(HUB_X[1]!, HUB_Y, 5).fill(G2);
+  // The trapezoid along the bottom, its openings, and the tape across them.
+  g.poly([20, 39, w - 20, 39, w - 13, h - 1, 13, h - 1]).fill(G4);
+  for (const hx of [24, 34, 50, 60]) g.rect(hx, h - 7, 4, 5).fill(G1);
+  g.rect(14, h - 3, w - 28, 1).fill(G2);
+  g.circle(9, h - 6, 3).fill(G5).circle(9, h - 6, 1).fill(G2);
+  g.circle(w - 9, h - 6, 3).fill(G5).circle(w - 9, h - 6, 1).fill(G2);
+  // Screws.
+  for (const [sx, sy] of [
+    [3, 3],
+    [w - 4, 3],
+    [3, h - 4],
+    [w - 4, h - 4],
+    [w / 2 - 1, h - 6],
+  ] as const) {
+    g.rect(sx, sy, 2, 2).fill(G1);
+  }
+  return g;
+}
+
 /** A cassette reel hub at (x, y), turned `angle` radians. */
 function drawReel(g: Graphics, x: number, y: number, angle: number): void {
-  g.circle(x, y, 6).fill(G2);
   g.circle(x, y, 4).fill(G5);
   for (let k = 0; k < 6; k++) {
     const a = angle + (k / 6) * Math.PI * 2;

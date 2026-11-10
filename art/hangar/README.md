@@ -20,13 +20,13 @@ images, so the art keeps the layout of the intro's first version, drawn in code:
 | File | Size | References | SHA-256 |
 |---|---|---|---|
 | `hangar.webp` | 1280x720 | `hangar-walk`, `ship-ref` | `84093d249fa7d10dc1ff7f4201096b79911e739db09c43ded42f68b3d177e35b` |
-| `cockpit.webp` | 1280x720 | `hangar-play` | `76ce51275d330635729c0d3ddcd2d874ad27377be7a886203f90066797fe26be` |
+| `cockpit.webp` | 1280x720 | the first cockpit (below) | `3d493f1a473360c8e9d77fba0025c1de0e30be665f8e9b77cf13d1d94a58f5c9` |
 | `pilot.webp` | 1152x864, transparent | `hangar-walk` | `02884463ce1867fdb3c14d0555a681ab612d42e9670fb7c8ab5f597b33625b7e` |
 | `hand.webp` | 1152x864, transparent | `hangar-play` | `580df891e2469ad8412f637866118f288239c6e9d4f8a7b0d02fc173ca4076cf` |
 
 The service keeps the outputs under these image IDs, for edits that should keep the same
 look: hangar `53efe46e-d99d-4086-928d-54b9e41f9dfa`, cockpit
-`741e9e43-7678-4d9e-a497-98b0e0739a01`, pilot `d72419b6-339e-41c6-9674-5a11c78f04e6`, hand
+`c5d3044b-f210-4013-856a-3a5fb0d982e5`, pilot `d72419b6-339e-41c6-9674-5a11c78f04e6`, hand
 `498fa574-af6f-4fe2-8e08-175df8e22e2b`.
 
 ## Prompts
@@ -57,7 +57,12 @@ look: hangar `53efe46e-d99d-4086-928d-54b9e41f9dfa`, cockpit
 >
 > Moody, quiet, film-noir lighting from the work lights.
 
-**`cockpit.webp`** (reference: `hangar-play`):
+**`cockpit.webp`** was made in two steps. The first cockpit (image ID
+`741e9e43-7678-4d9e-a497-98b0e0739a01`, reference: `hangar-play`) had a deck window too
+short for a cassette seen face-on (Brad, 2026-11-10), so it was edited with a second prompt,
+given after the first.
+
+First:
 
 > Retro 16-bit pixel art, strictly black and white (greyscale only, no colour), about
 > seven flat grey tones, hard pixel edges, no anti-aliasing, no gradients. Chunky pixels,
@@ -76,6 +81,32 @@ look: hangar `53efe46e-d99d-4086-928d-54b9e41f9dfa`, cockpit
 >
 > Keep the top quarter of the image fairly plain and dark, since titles will be drawn
 > there.
+
+Then, editing the first cockpit:
+
+> Edit this cockpit image. Keep everything exactly the same (the view out of the open
+> canopy, the glare shield, the row of indicator lights, both round gauges and their
+> positions, the rivets, seams and toggle switches, the colours and the pixel-art style,
+> strictly greyscale) except the cassette deck in the lower centre.
+>
+> Replace the cassette deck with a taller front-loading cassette deck, like a boombox or
+> home tape deck: a recessed housing with a tape door whose window is sized and shaped for
+> a standard compact cassette seen face-on. A compact cassette is 4 by 2.5 inches, so the
+> window must be about 1.6 times as wide as it is tall: about 27% of the image width wide
+> and about 32% of the image height tall, centred horizontally. Its top edge is a little
+> below the row of indicator lights (about 41% of the way down the image) and its bottom
+> edge about 73% of the way down. The window is empty and dark (no cassette inside).
+> Directly under the door, a single row of five plain rectangular piano-style keys of equal
+> size with no symbols on them, filling the deck's width, ending about 82% of the way down
+> the image. The deck housing frames the door and keys with a bevelled metal bezel and four
+> rivets.
+>
+> Retro 16-bit pixel art, hard pixel edges, no anti-aliasing, no gradients, no text or
+> labels anywhere, no hands, no people.
+
+The result has a door about twice as wide as it is tall, with a window showing the middle
+of a tape, as a deck's door does, rather than the 1.6:1 window asked for, and it drew a
+faint cassette in the window; `tools/hangar-art.py` paints that out.
 
 **`pilot.webp`** (reference: `hangar-walk`; transparent background):
 

@@ -12,7 +12,7 @@ Needs Python 3 and Pillow (pip install pillow). Run from the repository root:
 
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "art" / "hangar"
@@ -92,9 +92,16 @@ def shield_edge(x: int) -> float:
     return SHIELD_Y
 
 
+# The cassette deck's window in cockpit.png (measured on it). The source draws a faint
+# cassette in it; the window is painted out empty, since the tape goes in during the intro.
+DECK_WINDOW = (145, 105, 241, 139)
+
+
 def backgrounds() -> None:
     for name in ("hangar", "cockpit"):
         img = snap(shrink(Image.open(SRC / f"{name}.webp"), SCREEN))
+        if name == "cockpit":
+            ImageDraw.Draw(img).rectangle(DECK_WINDOW, fill=(*GREY_RGB[1], 255))
         img.convert("RGB").save(OUT / f"{name}.png", optimize=True)
         print(f"{name}.png {img.size}")
     # The panel alone, clear above the glare shield, so the level can show through the
