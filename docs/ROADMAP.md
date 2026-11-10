@@ -37,16 +37,13 @@ start the next until the current one is done.
       removes one (Brad, 2026-11-10). They join Practice and the Jukebox, not the run.
 - [ ] Level caching by hash and `GEN_VERSION`.
 - [ ] PWA install and full offline play.
-- [ ] The bundled music pack: Augmented_Emotions, The_Dim_Dungeon_2, Chica-pop! and Cabin
-      Fever! (Brad, 2026-11-10; Drozerix only), attribution with author and source links on
+- [ ] The bundled music pack: Augmented_Emotions, The_Dim_Dungeon_2, Chica-pop!, Cabin
+      Fever! and Peachy Chip (Brad, 2026-11-10; Drozerix only), attribution with author and source links on
       song cards and level intros, and a credits screen.
       `tools/validate-manifest.ts` is already in CI.
 - [ ] A scroll bar on the jukebox's list, like the help screen's, once the songs no longer
       fit above the spectrum (Brad, 2026-11-10). With ten songs the rows closed up from 11 px
       to 10.
-- [ ] A new level 1: a Drozerix song in the same techno or retro-futuristic style, slower
-      than RNDD_Keygen#1.0, so the run has eight levels again (Brad, 2026-11-10). Three picks
-      for Brad to hear are in `SONG-DIGEST.md`, "Level 1 picks".
 
 **Acceptance:** install as a PWA, turn on airplane mode, import a new module, and play it.
 

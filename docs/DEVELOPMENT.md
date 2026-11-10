@@ -617,11 +617,11 @@ and a fixed zigzag log (which loses its lives, the last at the recorded
 alone. The same test checks them in Node and in the browsers. A Level hash
 changes only with a `GEN_VERSION` bump, a sim hash only with a `SIM_VERSION` bump.
 
-**Recorded replay.** `packages/analysis/fixtures/replay-rndd_keygen_1-normal.pbreplay` is a
-run of level 1 (RNDD_Keygen#1.0 on normal) recorded by the game in Chromium.
+**Recorded replay.** `packages/analysis/fixtures/replay-neon_techno-normal.pbreplay` is a
+run of level 1 (Neon Techno on normal) recorded by the game in Chromium.
 `test/replay.test.ts` checks that it names this `GEN_VERSION` and `SIM_VERSION` and the song
-file's SHA-256, builds the level from `music/rndd_keygen_1.xm`, runs the inputs, and gets the
-recorded score (49 300) on the recorded last tick, in Node and in every browser.
+file's SHA-256, builds the level from `music/neon_techno.mod`, runs the inputs, and gets the
+recorded score (93 200) on the recorded last tick, in Node and in every browser.
 
 **Bundled songs.** `packages/analysis/test/music.test.ts` analyzes every song in
 `music/manifest.json`, builds its level on each difficulty, and checks that it has enemies,
@@ -1230,8 +1230,8 @@ adding the file and its entry. The generated test song (`pb-fixture-01.mod`) sta
 The part each song plays is set in `songs.ts`, not the manifest:
 
 - `TITLE_SONG_ID`: the title and demo music, and Practice's first song (The_Epic_Chip).
-- `LEVEL_SONG_IDS`: the arcade levels in order, by scroll speed, from RNDD_Keygen#1.0 to
-  Keygen 9000. Seven until a new level 1 is picked (`ROADMAP.md`).
+- `LEVEL_SONG_IDS`: the eight arcade levels in order, by scroll speed, from Neon Techno to
+  Keygen 9000.
 - `IMPOSSIBLE_SONG_IDS`: the secret Impossible difficulty's run, one level: Crush, the
   fastest song measured.
 - `GAME_OVER_MUSIC`: game over plays Keygen 9000's first 8 s, its two sparse opening
@@ -1244,7 +1244,7 @@ credit field is empty or a link isn't https, or a license is off the allowlist (
 Domain, CC0, CC BY). A CC BY-SA entry fails until it has a `"reviewed"` field saying who
 reviewed it and when.
 
-The nine songs so far, all by Drozerix (Brad, 2026-11-10: JAM's songs sound out of place
+The ten songs so far, all by Drozerix (Brad, 2026-11-10: JAM's songs sound out of place
 beside Drozerix's), each marked Public Domain on its Mod Archive page, with the file's MD5
 matching the one the page lists. The files are named after the archive's,
 without the artist prefix and the `!` (`4_rndd.xm`), since the name becomes the song's id
@@ -1255,13 +1255,14 @@ is added.
 | Song | File | Author | Part |
 |---|---|---|---|
 | The_Epic_Chip | `the_epic_chip.xm` | Drozerix | Title, demo |
-| RNDD_Keygen#1.0 | `rndd_keygen_1.xm` | Drozerix | Level 1 |
-| CHiP_OVERTURE | `chip_overture.xm` | Drozerix | Level 2 |
-| The_Dim_Dungeon | `the_dim_dungeon.xm` | Drozerix | Level 3 |
-| 4_RNDD! | `4_rndd.xm` | Drozerix | Level 4 |
-| Girl From Mars | `girl_from_mars.xm` | Drozerix | Level 5 |
-| Wrath_of_the_Djinn | `wrath_of_the_djinn.xm` | Drozerix | Level 6 |
-| Keygen 9000 | `keygen_9000.xm` | Drozerix | Level 7 (last), game over |
+| Neon Techno | `neon_techno.mod` | Drozerix | Level 1 |
+| RNDD_Keygen#1.0 | `rndd_keygen_1.xm` | Drozerix | Level 2 |
+| CHiP_OVERTURE | `chip_overture.xm` | Drozerix | Level 3 |
+| The_Dim_Dungeon | `the_dim_dungeon.xm` | Drozerix | Level 4 |
+| 4_RNDD! | `4_rndd.xm` | Drozerix | Level 5 |
+| Girl From Mars | `girl_from_mars.xm` | Drozerix | Level 6 |
+| Wrath_of_the_Djinn | `wrath_of_the_djinn.xm` | Drozerix | Level 7 |
+| Keygen 9000 | `keygen_9000.xm` | Drozerix | Level 8, game over |
 
 ### Menus and the jukebox
 

@@ -17,6 +17,10 @@ Fixes**, in that order.
   Numen in Da Chip and FastLane, leave the run. RNDD_Keygen#1.0 is the new level 1, and
   the run has seven levels until a second new song is picked; Silicon Dancer was tried
   and dropped as too funky. The recorded replay is now a run of RNDD_Keygen#1.0.
+* **Neon Techno is level 1.** Brad picked it from the three candidates, so the run has
+  eight levels again: Neon Techno, then RNDD_Keygen#1.0, with The_Dim_Dungeon back at level
+  4. Peachy Chip goes into the M4 music pack. The recorded replay is now a run of Neon
+  Techno.
 * **Drozerix catalog.** `SONG-DIGEST.md` now lists all 80 of Drozerix's modules with
   their license, measurements and status, for picking songs later; 38 more Public Domain
   songs were downloaded, checked and measured. Three are picked for Brad to hear as the

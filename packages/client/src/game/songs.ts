@@ -48,6 +48,7 @@ export const TITLE_SONG_ID = 'the_epic_chip';
  * are in docs/SONG-DIGEST.md.
  */
 export const LEVEL_SONG_IDS: readonly string[] = [
+  'neon_techno',
   'rndd_keygen_1',
   'chip_overture',
   'the_dim_dungeon',

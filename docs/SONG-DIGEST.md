@@ -43,13 +43,14 @@ In the order of the arcade run. The_Epic_Chip is the title and demo music and is
 | Level | Song | Artist | Length | Rows/s | Notes/s | Gap | Rating |
 |---|---|---|---|---|---|---|---|
 | Title | [The_Epic_Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=172424) | Drozerix | 3:48 | 10.7 | 34.9 | 62 / 83 | 8 |
-| 1 | [RNDD_Keygen#1.0](https://modarchive.org/index.php?request=view_by_moduleid&query=172896) | Drozerix | 1:10 | 8.3 | 17.8 | 69 / 97 | 9 |
-| 2 | [CHiP_OVERTURE](https://modarchive.org/index.php?request=view_by_moduleid&query=172185) | Drozerix | 2:15 | 10.7 | 32.0 | 62 / 83 | 8 |
-| 3 | [The_Dim_Dungeon](https://modarchive.org/index.php?request=view_by_moduleid&query=172732) | Drozerix | 1:41 | 12.0 | 17.0 | 76 / 104 | 9 |
-| 4 | [4_RNDD!](https://modarchive.org/index.php?request=view_by_moduleid&query=172898) | Drozerix | 2:02 | 14.2 | 27.5 | 69 / 97 | 8 |
-| 5 | [Girl From Mars](https://modarchive.org/index.php?request=view_by_moduleid&query=173935) | Drozerix | 1:52 | 15.5 | 26.9 | 62 / 97 | 9 |
-| 6 | [Wrath_of_the_Djinn](https://modarchive.org/index.php?request=view_by_moduleid&query=173080) | Drozerix | 1:52 | 16.0 | 20.0 | 83 / 104 | 9 |
-| 7 | [Keygen 9000](https://modarchive.org/index.php?request=view_by_moduleid&query=173938) | Drozerix | 3:20 | 16.0 | 34.7 | 76 / 104 | 9 |
+| 1 | [Neon Techno](https://modarchive.org/index.php?request=view_by_moduleid&query=178172) | Drozerix | 3:32 | 8.3 | 19.7 | 76 / 90 | none |
+| 2 | [RNDD_Keygen#1.0](https://modarchive.org/index.php?request=view_by_moduleid&query=172896) | Drozerix | 1:10 | 8.3 | 17.8 | 69 / 97 | 9 |
+| 3 | [CHiP_OVERTURE](https://modarchive.org/index.php?request=view_by_moduleid&query=172185) | Drozerix | 2:15 | 10.7 | 32.0 | 62 / 83 | 8 |
+| 4 | [The_Dim_Dungeon](https://modarchive.org/index.php?request=view_by_moduleid&query=172732) | Drozerix | 1:41 | 12.0 | 17.0 | 76 / 104 | 9 |
+| 5 | [4_RNDD!](https://modarchive.org/index.php?request=view_by_moduleid&query=172898) | Drozerix | 2:02 | 14.2 | 27.5 | 69 / 97 | 8 |
+| 6 | [Girl From Mars](https://modarchive.org/index.php?request=view_by_moduleid&query=173935) | Drozerix | 1:52 | 15.5 | 26.9 | 62 / 97 | 9 |
+| 7 | [Wrath_of_the_Djinn](https://modarchive.org/index.php?request=view_by_moduleid&query=173080) | Drozerix | 1:52 | 16.0 | 20.0 | 83 / 104 | 9 |
+| 8 | [Keygen 9000](https://modarchive.org/index.php?request=view_by_moduleid&query=173938) | Drozerix | 3:20 | 16.0 | 34.7 | 76 / 104 | 9 |
 | Impossible | [Crush](https://modarchive.org/index.php?request=view_by_moduleid&query=179581) | Drozerix | 2:05 | 24.0 | 54.0 | 62 / 97 | 10 |
 
 Crush is the secret Impossible difficulty's one level (Brad, 2026-11-10): the fastest song
@@ -58,30 +59,22 @@ on 2026-11-10 before bundling: Public Domain on its page, the MD5 matches
 (1613a27c819396c6d4e74b426c21a36a), the comments praise it with no mention of a cover, and
 its only text is the artist's name banner and contact address.
 
-The run is seven levels, about 14 minutes on normal, until a new level 1 is picked
-(Brad, 2026-11-10; see "Dropped"). Levels are ordered by scroll speed, Keygen 9000 last as
-Brad chose. RNDD_Keygen#1.0 was checked again on 2026-11-10 before bundling: Public Domain
+The run is about 18 minutes on normal. Levels are ordered by scroll speed, Keygen 9000
+last as Brad chose. Neon Techno and RNDD_Keygen#1.0 scroll at the same speed; Neon Techno
+goes first for its wider cave. Neon Techno was checked again on 2026-11-10 before bundling:
+Public Domain on its page, the MD5 matches (5e4b2a67a1ce6ab5f65ac0a511bc681c), the page has
+no comments, and its only text is its title banner and a contact address. RNDD_Keygen#1.0 was checked again on 2026-11-10 before bundling: Public Domain
 on its page, the MD5 matches (d5c5e8661d259428a115537c536a59dc), the page has no comments,
 and its only text is the artist's banner, "Composed&Sampled By: Drozerix/M0n50n" and a
-contact address. With a new level 1, The_Dim_Dungeon is level 4 again, before the mini
-boss. Wrath_of_the_Djinn's sample names read "A Grand Keygen Chipp ... Gott That Boss? :)",
+contact address. The_Dim_Dungeon is level 4, before the mini boss. Wrath_of_the_Djinn's sample names read "A Grand Keygen Chipp ... Gott That Boss? :)",
 which leads into the last level.
 
 ## Level 1 picks
 
-Brad passed on Silicon Dancer, so level 1 needs another Drozerix song in the bundled
-songs' style. These three are the closest by speed; RNDD_Keygen#1.0 (8.3 rows/s) moves to
-whichever level its speed puts it. Their text holds nothing that suggests a cover, and
-their pages have no comments. Not yet heard.
-
-| Song | Added | Length | Rows/s | Notes/s | Gap | Why |
-|---|---|---|---|---|---|---|
-| [Neon Techno](https://modarchive.org/index.php?request=view_by_moduleid&query=178172) | Mar 2016 | 3:32 | 8.3 | 19.7 | 76 / 90 | Genre tag Electronic - Techno; text is only the title banner |
-| [Peachy Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=191437) | Apr 2021 | 2:12 | 9.9 | 33.9 | 62 / 83 | A chiptune by its title; its text dates it 2020-12-31 |
-| [Viral Legacy](https://modarchive.org/index.php?request=view_by_moduleid&query=173936) | Jun 2013 | 2:27 | 10.6 | 34.2 | 62 / 76 | Its text dates it 2012, like most of the bundled songs; "[System:On-line]" |
-
-The slower Sleepy Snow (4.1 rows/s) is calm and sparse, and Spectrum (8.5) is written with
-another artist; both are in the catalog below.
+Brad passed on Silicon Dancer, so on 2026-11-10 three Drozerix songs near level 1's speed
+went to him to hear. Neon Techno became level 1 ("a great vibe for this kind of game"),
+Peachy Chip joined the M4 music pack, and Viral Legacy stays in the catalog as a possible
+stand-alone level later.
 
 ## Drozerix catalog
 
@@ -92,7 +85,7 @@ flown by the autopilot (with enemies) on easy, normal and hard; a note says wher
 autopilot died. Statuses:
 
 - **Bundled:** in the game now. **Pack:** chosen for the M4 music pack (Brad,
-  2026-11-10). **Level 1 pick:** above.
+  2026-11-10).
 - **Measured:** passes the checks; not yet heard by Brad.
 - **Dropped:** heard and turned down. **Ruled out:** a possible cover. **Not suitable:**
   the title fails the all-ages rule (the archive masks these titles). **Not open:** Mod
@@ -102,16 +95,16 @@ autopilot died. Statuses:
 |---|---|---|---|---|---|---|---|---|---|
 | [L3V3L_33](https://modarchive.org/index.php?request=view_by_moduleid&query=172183) | Mar 2012 | XM | 1:05 | 15.3 | 38.5 | 83 / 97 | 7 | Measured |  |
 | [Augmented_Emotions](https://modarchive.org/index.php?request=view_by_moduleid&query=172184) | Mar 2012 | XM | 3:45 | 12.8 | 38.4 | 62 / 83 | 9 | Pack | M4 music pack; tight cave |
-| [CHiP_OVERTURE](https://modarchive.org/index.php?request=view_by_moduleid&query=172185) | Mar 2012 | XM | 2:15 | 10.7 | 32.0 | 62 / 83 | 8 | Bundled | Level 2 |
+| [CHiP_OVERTURE](https://modarchive.org/index.php?request=view_by_moduleid&query=172185) | Mar 2012 | XM | 2:15 | 10.7 | 32.0 | 62 / 83 | 8 | Bundled | Level 3 |
 | [Dissorint](https://modarchive.org/index.php?request=view_by_moduleid&query=172423) | May 2012 | XM | 1:53 | 12.8 | 43.4 | 62 / 83 | none | Measured |  |
 | [The_Epic_Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=172424) | May 2012 | XM | 3:48 | 10.7 | 34.9 | 62 / 83 | 8 | Bundled | Title and demo music |
 | [Cornered!!](https://modarchive.org/index.php?request=view_by_moduleid&query=172568) | Jun 2012 | XM |  |  |  |  | 8 | Ruled out | A cover of an Ace Attorney song (text: "Original Artist: Sugimori Masakazu") |
-| [The_Dim_Dungeon](https://modarchive.org/index.php?request=view_by_moduleid&query=172732) | Aug 2012 | XM | 1:41 | 12.0 | 17.0 | 76 / 104 | 9 | Bundled | Level 3 |
+| [The_Dim_Dungeon](https://modarchive.org/index.php?request=view_by_moduleid&query=172732) | Aug 2012 | XM | 1:41 | 12.0 | 17.0 | 76 / 104 | 9 | Bundled | Level 4 |
 | [Necromancer's_Castle](https://modarchive.org/index.php?request=view_by_moduleid&query=172786) | Aug 2012 | XM | 1:24 | 16.0 | 22.0 | 83 / 104 | 7 | Measured |  |
-| [RNDD_Keygen#1.0](https://modarchive.org/index.php?request=view_by_moduleid&query=172896) | Sep 2012 | XM | 1:10 | 8.3 | 17.8 | 69 / 97 | 9 | Bundled | Level 1 |
+| [RNDD_Keygen#1.0](https://modarchive.org/index.php?request=view_by_moduleid&query=172896) | Sep 2012 | XM | 1:10 | 8.3 | 17.8 | 69 / 97 | 9 | Bundled | Level 2 |
 | [The_Dim_Dungeon_2](https://modarchive.org/index.php?request=view_by_moduleid&query=172897) | Sep 2012 | XM | 2:16 | 14.4 | 22.1 | 69 / 104 | 8 | Pack | M4 music pack; a sequel to The_Dim_Dungeon; autopilot died on hard |
-| [4_RNDD!](https://modarchive.org/index.php?request=view_by_moduleid&query=172898) | Sep 2012 | XM | 2:02 | 14.2 | 27.5 | 69 / 97 | 8 | Bundled | Level 4 |
-| [Wrath_of_the_Djinn](https://modarchive.org/index.php?request=view_by_moduleid&query=173080) | Nov 2012 | XM | 1:52 | 16.0 | 20.0 | 83 / 104 | 9 | Bundled | Level 6 |
+| [4_RNDD!](https://modarchive.org/index.php?request=view_by_moduleid&query=172898) | Sep 2012 | XM | 2:02 | 14.2 | 27.5 | 69 / 97 | 8 | Bundled | Level 5 |
+| [Wrath_of_the_Djinn](https://modarchive.org/index.php?request=view_by_moduleid&query=173080) | Nov 2012 | XM | 1:52 | 16.0 | 20.0 | 83 / 104 | 9 | Bundled | Level 7 |
 | [Nerve_intro](https://modarchive.org/index.php?request=view_by_moduleid&query=173081) | Nov 2012 | XM | 1:30 | 21.3 | 23.1 | 90 / 104 | none | Measured |  |
 | [Nerve_2.00](https://modarchive.org/index.php?request=view_by_moduleid&query=173082) | Nov 2012 | XM | 1:31 | 12.8 | 21.4 | 76 / 104 | none | Measured |  |
 | [****** Bit 3!!!](https://modarchive.org/index.php?request=view_by_moduleid&query=173083) | Nov 2012 | XM |  |  |  |  | 9 | Not suitable | Title |
@@ -119,10 +112,10 @@ autopilot died. Statuses:
 | [Porn_Industry](https://modarchive.org/index.php?request=view_by_moduleid&query=173085) | Nov 2012 | XM |  |  |  |  | 9 | Not suitable | Title |
 | [Knuckles_Sucks!](https://modarchive.org/index.php?request=view_by_moduleid&query=173086) | Nov 2012 | XM | 1:25 | 15.0 | 19.5 | 76 / 104 | none | Measured | Title names a game character |
 | [The Radix Point](https://modarchive.org/index.php?request=view_by_moduleid&query=173934) | Jun 2013 | XM | 1:44 | 16.7 | 21.3 | 90 / 104 | none | Measured |  |
-| [Girl From Mars](https://modarchive.org/index.php?request=view_by_moduleid&query=173935) | Jun 2013 | XM | 1:52 | 15.5 | 26.9 | 62 / 97 | 9 | Bundled | Level 5 |
-| [Viral Legacy](https://modarchive.org/index.php?request=view_by_moduleid&query=173936) | Jun 2013 | XM | 2:27 | 10.6 | 34.2 | 62 / 76 | none | Level 1 pick | Its text dates it 2012, like most of the bundled songs; "[System:On-line]" |
+| [Girl From Mars](https://modarchive.org/index.php?request=view_by_moduleid&query=173935) | Jun 2013 | XM | 1:52 | 15.5 | 26.9 | 62 / 97 | 9 | Bundled | Level 6 |
+| [Viral Legacy](https://modarchive.org/index.php?request=view_by_moduleid&query=173936) | Jun 2013 | XM | 2:27 | 10.6 | 34.2 | 62 / 76 | none | Measured | Not for the run, but maybe a stand-alone level later (Brad, 2026-11-10); its text dates it 2012 |
 | [Computer_Adventures!](https://modarchive.org/index.php?request=view_by_moduleid&query=173937) | Jun 2013 | XM | 2:49 | 15.9 | 34.0 | 83 / 104 | none | Measured |  |
-| [Keygen 9000](https://modarchive.org/index.php?request=view_by_moduleid&query=173938) | Jun 2013 | XM | 3:20 | 16.0 | 34.7 | 76 / 104 | 9 | Bundled | Level 7, game over |
+| [Keygen 9000](https://modarchive.org/index.php?request=view_by_moduleid&query=173938) | Jun 2013 | XM | 3:20 | 16.0 | 34.7 | 76 / 104 | 9 | Bundled | Level 8, game over |
 | [Key Generators](https://modarchive.org/index.php?request=view_by_moduleid&query=173939) | Jun 2013 | XM | 2:18 | 16.7 | 22.4 | 90 / 104 | 8 | Measured |  |
 | [Ambient Starfield](https://modarchive.org/index.php?request=view_by_moduleid&query=174160) | Jul 2013 | XM | 2:27 | 20.0 | 48.2 | 76 / 97 | 7 | Measured |  |
 | [Drozerix VS LHS](https://modarchive.org/index.php?request=view_by_moduleid&query=174244) | Aug 2013 | XM |  |  |  |  | 10 | Not open | Mod Archive Distribution license |
@@ -143,7 +136,7 @@ autopilot died. Statuses:
 | [Lost Without (Her)](https://modarchive.org/index.php?request=view_by_moduleid&query=177708) | Oct 2015 | XM | 2:14 | 23.2 | 34.5 | 62 / 104 | 9 | Measured |  |
 | [Spectrum](https://modarchive.org/index.php?request=view_by_moduleid&query=177960) | Dec 2015 | XM | 3:35 | 8.5 | 14.7 | 76 / 90 | none | Measured | Written with Peak (patterns split between them), so not Drozerix alone; text says "(c)", page says Public Domain |
 | [Reloaded insanity](https://modarchive.org/index.php?request=view_by_moduleid&query=177968) | Dec 2015 | XM | 5:01 | 16.5 | 22.6 | 90 / 104 | 7 | Measured |  |
-| [Neon Techno](https://modarchive.org/index.php?request=view_by_moduleid&query=178172) | Mar 2016 | MOD | 3:32 | 8.3 | 19.7 | 76 / 90 | none | Level 1 pick | Genre tag Electronic - Techno; text is only the title banner |
+| [Neon Techno](https://modarchive.org/index.php?request=view_by_moduleid&query=178172) | Mar 2016 | MOD | 3:32 | 8.3 | 19.7 | 76 / 90 | none | Bundled | Level 1 |
 | [Bit Loader](https://modarchive.org/index.php?request=view_by_moduleid&query=178415) | Apr 2016 | XM | 1:25 | 17.6 | 20.7 | 90 / 104 | none | Measured |  |
 | [Dream Candy](https://modarchive.org/index.php?request=view_by_moduleid&query=178565) | Jun 2016 | XM | 3:52 | 23.5 | 76.8 | 62 / 104 | 8 | Measured |  |
 | [Crush](https://modarchive.org/index.php?request=view_by_moduleid&query=179581) | Jan 2017 | XM | 2:05 | 24.0 | 54.0 | 62 / 97 | 10 | Bundled | Impossible |
@@ -155,7 +148,7 @@ autopilot died. Statuses:
 | [Chica-pop!](https://modarchive.org/index.php?request=view_by_moduleid&query=189433) | Jun 2020 | XM | 3:03 | 16.8 | 27.8 | 76 / 104 | 10 | Pack | M4 music pack |
 | [War Path](https://modarchive.org/index.php?request=view_by_moduleid&query=190185) | Aug 2020 | XM | 2:46 | 14.4 | 19.9 | 69 / 104 | none | Measured |  |
 | [Master Select](https://modarchive.org/index.php?request=view_by_moduleid&query=190186) | Aug 2020 | XM | 1:34 | 17.1 | 17.5 | 76 / 104 | none | Measured |  |
-| [Peachy Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=191437) | Apr 2021 | XM | 2:12 | 9.9 | 33.9 | 62 / 83 | none | Level 1 pick | A chiptune by its title; its text dates it 2020-12-31 |
+| [Peachy Chip](https://modarchive.org/index.php?request=view_by_moduleid&query=191437) | Apr 2021 | XM | 2:12 | 9.9 | 33.9 | 62 / 83 | none | Pack | M4 music pack (Brad, 2026-11-10) |
 | [Slayers of High Toro](https://modarchive.org/index.php?request=view_by_moduleid&query=191997) | May 2021 | MOD |  |  |  |  | none | Not open | Mod Archive Distribution license |
 | [14-The High Ground](https://modarchive.org/index.php?request=view_by_moduleid&query=191998) | May 2021 | MOD |  |  |  |  | none | Not open | Mod Archive Distribution license |
 | [Voyage](https://modarchive.org/index.php?request=view_by_moduleid&query=191999) | May 2021 | MOD |  |  |  |  | none | Not open | Mod Archive Distribution license |
@@ -219,4 +212,3 @@ with few notes.
 
 - **Drozerix** is fully catalogued above as of 2026-11-10. New uploads appear on
   [the artist's page](https://modarchive.org/index.php?request=view_artist_modules&query=84702).
-- **A new level 1:** the picks above, for Brad to hear.

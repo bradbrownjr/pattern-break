@@ -7,7 +7,7 @@
   },
   "jukebox": {
     "path": "docs/img/jukebox.png",
-    "alt": "\"Jukebox\" in large cyan pixel letters with a magenta shadow over a starfield. Below it, a list of nine songs in grey pixel type with their authors right-aligned in dim grey: The_Epic_Chip, RNDD_Keygen#1.0, CHiP_OVERTURE, The_Dim_Dungeon, 4_RNDD!, Girl From Mars, Wrath_of_the_Djinn, Keygen 9000 and Crush, then \"Back\". The first song is lime with an amber \">\" before it. Under the list, a dim row of 24 LED bars, green at the bottom to red at the top, all unlit. At the bottom, \"The_Epic_Chip by Drozerix. Public Domain.\" in grey and \"0:12 / 3:48\" in cyan.",
+    "alt": "\"Jukebox\" in large cyan pixel letters with a magenta shadow over a starfield. Below it, a list of ten songs in grey pixel type with their authors right-aligned in dim grey: The_Epic_Chip, Neon Techno, RNDD_Keygen#1.0, CHiP_OVERTURE, The_Dim_Dungeon, 4_RNDD!, Girl From Mars, Wrath_of_the_Djinn, Keygen 9000 and Crush, then \"Back\". The first song is lime with an amber \">\" before it. Under the list, a dim row of 24 LED bars, green at the bottom to red at the top, all unlit. At the bottom, \"The_Epic_Chip by Drozerix. Public Domain.\" in grey and \"0:12 / 3:48\" in cyan.",
     "caption": "The jukebox, playing the first song. Not used in the README.",
     "usedIn": []
   },
@@ -67,19 +67,19 @@
   },
   "hangar-cockpit": {
     "path": "docs/img/hangar-cockpit.png",
-    "alt": "Inside the cockpit, in shades of grey, in pixel art. Through the open canopy at the top, the dark hangar wall and its girders. Below, a riveted instrument panel: a row of small indicator lights, two round gauges, a toggle switch, and in the middle a cassette deck, its door tilted open forward on its bottom hinge, showing the dark deck and its two spindles behind it; under it, five keys marked rewind, play, fast forward, stop and eject. A padded grey glove on a dark sleeve reaches in from the right holding a cassette by its end, on its way into the open door: a dark shell, a white label reading \"RNDD_Keygen#1\" with a window across it showing two hubs, and a raised strip along the bottom with small openings.",
+    "alt": "Inside the cockpit, in shades of grey, in pixel art. Through the open canopy at the top, the dark hangar wall and its girders. Below, a riveted instrument panel: a row of small indicator lights, two round gauges, a toggle switch, and in the middle a cassette deck, its door tilted open forward on its bottom hinge, showing the dark deck and its two spindles behind it; under it, five keys marked rewind, play, fast forward, stop and eject. A padded grey glove on a dark sleeve reaches in from the right holding a cassette by its end, on its way into the open door: a dark shell, a white label reading \"Neon Techno\" with a window across it showing two hubs, and a raised strip along the bottom with small openings.",
     "caption": "The hangar intro: the cassette goes into the open deck. Not used in the README.",
     "usedIn": []
   },
   "hangar-play": {
     "path": "docs/img/hangar-play.png",
-    "alt": "The cockpit with the cassette in the deck: through the door's window, its label reading \"RNDD_Keygen#1\" and its two hubs. Above the panel, \"Level 1\" in large white pixel letters, \"RNDD_Keygen#1.0\" in light grey, and \"by Drozerix. Public Domain.  Normal\" in grey. The glove, coming in from the bottom right, presses the Play key with its index finger, covering the keys to its right.",
+    "alt": "The cockpit with the cassette in the deck: through the door's window, its label reading \"Neon Techno\" and its two hubs. Above the panel, \"Level 1\" in large white pixel letters, \"Neon Techno\" in light grey, and \"by Drozerix. Public Domain.  Normal\" in grey. The glove, coming in from the bottom right, presses the Play key with its index finger, covering the keys to its right.",
     "caption": "The hangar intro: Play pressed. Not used in the README.",
     "usedIn": []
   },
   "hangar-clip": {
     "path": "docs/img/hangar-clip.gif",
-    "alt": "Eight seconds in shades of grey, in pixel art. A pilot in a white helmet walks across a hangar to a fighter with a needle nose and its canopy open, climbs the ladder as the view closes in on the cockpit, and drops into the seat until only the helmet shows. The view cuts to the instrument panel: a gloved finger presses the deck's eject key and the door tips open forward; the glove brings in a cassette labelled \"RNDD_Keygen#1\", lays it in the open door and pulls away, then a finger pushes the door shut, leaving the label and hubs showing through the door's window. \"Level 1\", \"RNDD_Keygen#1.0\", the credit and \"Normal\" appear above the panel, the finger presses Play, and the hubs start to turn.",
+    "alt": "Eight seconds in shades of grey, in pixel art. A pilot in a white helmet walks across a hangar to a fighter with a needle nose and its canopy open, climbs the ladder as the view closes in on the cockpit, and drops into the seat until only the helmet shows. The view cuts to the instrument panel: a gloved finger presses the deck's eject key and the door tips open forward; the glove brings in a cassette labelled \"Neon Techno\", lays it in the open door and pulls away, then a finger pushes the door shut, leaving the label and hubs showing through the door's window. \"Level 1\", \"Neon Techno\", the credit and \"Normal\" appear above the panel, the finger presses Play, and the hubs start to turn.",
     "caption": "The hangar intro from the start to Play. Not used in the README.",
     "usedIn": []
   },

@@ -1,6 +1,6 @@
-// Records packages/analysis/fixtures/replay-rndd_keygen_1-normal.pbreplay, the replay that
+// Records packages/analysis/fixtures/replay-neon_techno-normal.pbreplay, the replay that
 // test/replay.test.ts runs in Node and the browsers (docs/DEVELOPMENT.md, "Replays"). It
-// builds the client, serves it, and in headless Chromium plays level 1 (RNDD_Keygen#1.0 on
+// builds the client, serves it, and in headless Chromium plays level 1 (Neon Techno on
 // normal) with ?autopilot=1 through the game's own loop, and saves the replay with S when
 // the run ends. Run it after a GEN_VERSION or SIM_VERSION bump, then run
 // `pnpm --filter @game/analysis test test/replay.test.ts` to check it.
@@ -15,7 +15,7 @@ import { chromium } from 'playwright';
 import { createStaticServer } from '../packages/server/src/static.ts';
 
 const ROOT = resolve(fileURLToPath(import.meta.url), '..', '..');
-const OUT = join(ROOT, 'packages/analysis/fixtures/replay-rndd_keygen_1-normal.pbreplay');
+const OUT = join(ROOT, 'packages/analysis/fixtures/replay-neon_techno-normal.pbreplay');
 /** The longest a run may take before the script gives up: the longest level 1 so far was about 4 minutes. */
 const RUN_LIMIT_MS = 300_000;
 

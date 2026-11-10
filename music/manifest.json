@@ -10,6 +10,16 @@
     "sha256": "7cd184c5f9c6962c3d37df0b3e94709695c824a4ea17ed8b195d2fe3b9231882"
   },
   {
+    "file": "neon_techno.mod",
+    "title": "Neon Techno",
+    "author": "Drozerix",
+    "authorUrl": "https://modarchive.org/member.php?84702",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=178172",
+    "license": "Public Domain",
+    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
+    "sha256": "65113989b86c165a5087106d7b40c55255a4e7c2a7b109755f678f7e1d47c142"
+  },
+  {
     "file": "rndd_keygen_1.xm",
     "title": "RNDD_Keygen#1.0",
     "author": "Drozerix",
