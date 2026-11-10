@@ -653,6 +653,23 @@ is launched with audio allowed to start without a click: Chromium with
 `--autoplay-policy=no-user-gesture-required`, Firefox with the `media.autoplay.default` and
 `media.autoplay.block-webaudio` preferences, WebKit with Playwright's defaults.
 
+A live `AudioContext` needs somewhere to play: without a sound server, Firefox's and
+WebKit's never leave "suspended" (`resume()` never resolves), so the clock tests time out.
+CI starts PulseAudio, whose default config plays into a null sink when there's no sound
+card; WebKit plays through GStreamer, whose audio plugins Playwright's `--with-deps`
+installs. Locally, run Firefox with a PulseAudio server and `PULSE_SERVER` pointing at its
+socket (it doesn't need root: `pulseaudio -n -L module-native-protocol-unix -L
+module-null-sink`; keep the socket path under 108 bytes). Until 2026-11-10 CI had no sound
+server and the job failed on every push from 2026-11-08 on. Two engine quirks the audio
+tests allow for, both found then:
+
+- Offline rendering doesn't wait for messages in flight. With the main thread busy before
+  it, WebKit rendered all 50 s of the worklet test's context before the worklet saw
+  'start', so the test suspends the context after each quantum until the song starts
+  (`holdUntil`). Firefox 159 has no `OfflineAudioContext.suspend`, and doesn't need it.
+- Firefox's `currentTime` on the main thread can trail the worklet's last position message
+  by up to two render quanta (256 frames), where Chromium and WebKit are at or past it.
+
 - `PB_BROWSERS` picks the engines: `chromium` by default; CI sets
   `chromium,firefox,webkit`.
 - `PB_CHROMIUM` points at a Chromium binary when Playwright can't download its own. In
@@ -918,8 +935,9 @@ playing at a rate the analysis didn't time.
   a time, not smoothly. Read the clock once per animation frame and smooth the display if a
   step shows; the sim can consume the steps as they come.
 
-Firefox and WebKit run the same tests in CI only; their latency reporting and
-`currentTime` step size are not measured here.
+Firefox and WebKit run the same tests in CI; their latency reporting and `currentTime` step
+size are not measured here. On a PulseAudio null sink, Firefox 159 reported an 8.6 ms
+latency (2026-11-10).
 
 ### Sound effects
 

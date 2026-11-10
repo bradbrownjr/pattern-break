@@ -18,6 +18,26 @@ async function fixture(): Promise<Uint8Array> {
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Suspends `context` after each render quantum until `started` resolves. Offline rendering
+ * doesn't wait for messages in flight: after the analysis has held the main thread for a few
+ * seconds, WebKit rendered all 50 s of silence before the worklet saw 'start'. Firefox (159)
+ * has no OfflineAudioContext.suspend, and there the message arrives in time without it.
+ */
+function holdUntil(context: OfflineAudioContext, started: Promise<void>): void {
+  if (typeof context.suspend !== 'function') return;
+  let done = false;
+  void started.then(() => (done = true));
+  const hold = (k: number): void => {
+    void context.suspend((k * QUANTUM) / SAMPLE_RATE).then(async () => {
+      await sleep(1);
+      if (!done) hold(k + 1);
+      await context.resume();
+    });
+  };
+  hold(1);
+}
+
 describe('libopenmpt worklet', () => {
   it('reports row positions that match LevelData', async () => {
     const bytes = await fixture();
@@ -38,6 +58,7 @@ describe('libopenmpt worklet', () => {
       player.onEnded = resolve;
     });
     const started = player.start();
+    holdUntil(context, started);
     await context.startRendering();
     await started;
     const songFrames = await ended;
@@ -88,9 +109,12 @@ describe('song clock', () => {
       `latency ${(player.latency * 1000).toFixed(1)} ms; context time minus reported position on receipt: ` +
         `${min} to ${max} frames (${((min / SAMPLE_RATE) * 1000).toFixed(1)} to ${((max / SAMPLE_RATE) * 1000).toFixed(1)} ms)`,
     );
-    // The message describes a quantum the graph has finished, so the context is at or past it,
-    // and the message arrives well within 100 ms.
-    expect(min).toBeGreaterThanOrEqual(0);
+    // The message describes a quantum the graph has finished, and it arrives well within
+    // 100 ms. The spec has currentTime advance one render quantum at a time but doesn't say
+    // how soon the main thread sees each step: Chromium and WebKit are at or past the
+    // message, Firefox (159, on a PulseAudio null sink) up to two quanta behind it. The clock
+    // only measures currentTime against the anchor, so that lag is 5.3 ms early, not an error.
+    expect(min).toBeGreaterThanOrEqual(-2 * QUANTUM);
     expect(max).toBeLessThan(SAMPLE_RATE * 0.1);
     await player.close();
   }, 30_000);
