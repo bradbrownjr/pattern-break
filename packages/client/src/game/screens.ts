@@ -6,6 +6,7 @@ import { Container, Sprite, Texture } from 'pixi.js';
 import { BRAND } from '../config/brand.ts';
 import { AMBER, BACKGROUND, CYAN, DIM_GREY, GREY, LED_DIM, LED_LIT, LIME, MAGENTA, WHITE } from '../render/palette.ts';
 import { PixelText } from '../render/text.ts';
+import { textWidth } from '../render/font.ts';
 import { DIFFICULTY_LABELS, PAUSE_ITEMS, SETTINGS_ITEMS, TITLE_ITEMS, type PauseItem, type SettingsItem, type TitleItem } from './menu.ts';
 import { VOLUME_LEVELS, type Settings } from './settings.ts';
 import type { BundledSong } from './songs.ts';
@@ -389,15 +390,25 @@ const SETTINGS_LABELS: Record<SettingsItem, string> = {
   flashing: 'Flashing',
   shake: 'Shake',
   crt: 'CRT',
+  leds: 'LEDs',
   back: 'Back',
 };
 
-/** What Flashing, Shake and CRT show for each value. */
-function choiceText(values: Settings, item: 'flashing' | 'shake' | 'crt'): string {
+type ChoiceItem = 'flashing' | 'shake' | 'crt' | 'leds';
+
+function isChoiceItem(item: SettingsItem): item is ChoiceItem {
+  return item === 'flashing' || item === 'shake' || item === 'crt' || item === 'leds';
+}
+
+/** What the two-way settings show for each value. */
+function choiceText(values: Settings, item: ChoiceItem): string {
   if (item === 'flashing') return values.flashing === 'full' ? 'Full' : 'Reduced';
+  if (item === 'leds') return values.leds === 'colourBlind' ? 'Colour-blind' : 'Neon';
   return values[item] ? 'On' : 'Off';
 }
-const SETTINGS_TOP = 92;
+/** The widest two-way value, so its right arrow clears it. */
+const CHOICE_WIDTH = textWidth('Colour-blind');
+const SETTINGS_TOP = 76;
 const SETTINGS_ROW = 16;
 const CELL_W = 10;
 const CELL_H = 5;
@@ -405,7 +416,7 @@ const CELL_GAP = 3;
 
 /**
  * The settings: Music and Effects as rows of five LED cells, lit up to the volume, green to
- * red, with "Off" at 0; Flashing, Shake and CRT as words; then Back.
+ * red, with "Off" at 0; Flashing, Shake, CRT and LED colours as words; then Back.
  */
 export class SettingsScreen {
   readonly container = new Container();
@@ -428,7 +439,8 @@ export class SettingsScreen {
       const left = new PixelText('<', WHITE).place(VALUE_X - 12, y);
       const right = new PixelText('>', WHITE).place(VALUE_X + VOLUME_LEVELS * (CELL_W + CELL_GAP) + 4, y);
       const off = new PixelText('Off', GREY).place(VALUE_X, y);
-      if (item === 'flashing' || item === 'shake' || item === 'crt') {
+      if (isChoiceItem(item)) {
+        right.place(VALUE_X + CHOICE_WIDTH + 4, y);
         this.container.addChild(left, right, off);
       } else if (item !== 'back') {
         for (let i = 0; i < VOLUME_LEVELS; i++) {
@@ -452,7 +464,7 @@ export class SettingsScreen {
       this.#labels[row]!.color = selected ? AMBER : GREY;
       for (const a of this.#arrows[row]!) a.visible = selected;
       if (item === 'back') return;
-      if (item === 'flashing' || item === 'shake' || item === 'crt') {
+      if (isChoiceItem(item)) {
         const value = this.#off[row]!;
         value.text = choiceText(values, item);
         value.color = selected ? WHITE : GREY;

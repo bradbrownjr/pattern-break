@@ -16,6 +16,8 @@ export interface CaptureParams {
   boom: number | null;
   /** The CRT setting on (`crt=1`). */
   crt: boolean;
+  /** The LED colours setting on Colour-blind (`leds=colourBlind`). */
+  colourBlind: boolean;
 }
 
 declare global {
@@ -39,6 +41,7 @@ export function readCaptureParams(search: string = window.location.search): Capt
     seed: Number.isInteger(seed) ? seed : 1,
     boom: Number.isFinite(boom) ? boom : null,
     crt: q.get('crt') === '1',
+    colourBlind: q.get('leds') === 'colourBlind',
   };
 }
 

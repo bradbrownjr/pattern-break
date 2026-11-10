@@ -137,7 +137,8 @@ export const shots: Shot[] = [
       '"Settings" in large cyan pixel letters with a magenta shadow. Below it, five rows in small pixel ' +
       'type. "Music" in amber with an amber ">" before it, then "<", five LED cells lit green, yellow-green, ' +
       'yellow, orange and red, and ">". "Effects" in grey with four of its five cells lit and the fifth dim ' +
-      'red. "Flashing" with "Reduced", "Shake" with "On", "CRT" with "Off", and "Back", all in grey.',
+      'red. "Flashing" with "Reduced", "Shake" with "On", "CRT" with "Off", "LEDs" with "Neon", and "Back", ' +
+      'all in grey.',
     caption: 'The settings screen at the defaults. Not used in the README.',
     usedIn: [],
   },
@@ -289,6 +290,16 @@ export const shots: Shot[] = [
       'right: "Kills 29" 6700, "Beat bonus" 400, "Score" 7100, and in amber "New best" 7100. Below them ' +
       '"R Replay  S Save" in grey and "Any key Title" in cyan.',
     caption: 'The results over play, as if the test song ended at 40 seconds, the score a new best. Not used in the README.',
+    usedIn: [],
+  },
+  {
+    id: 'colour-blind',
+    query: { scene: 'play', song: 'pb-fixture-01', t: '21.5', difficulty: 'normal', seed: '1', leds: 'colourBlind' },
+    alt:
+      'The gameplay frame with the LED columns in blue, grey and yellow instead of green to red: dark blue at ' +
+      'the screen edges, through slate and khaki greys, to bright yellow at the tips, each segment brighter ' +
+      'than the one before. The ship, enemies, shots, copper bars and HUD are as in the gameplay shot.',
+    caption: 'The gameplay shot with the LEDs setting on Colour-blind. Not used in the README.',
     usedIn: [],
   },
   {

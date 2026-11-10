@@ -4,7 +4,7 @@
 
 import { BAR_LIT_WIDTH, BAR_PITCH, Difficulty, SEGMENT_LIT_HEIGHT, type Level } from '@game/core';
 import { Container, Sprite, Texture } from 'pixi.js';
-import { LED_LIT, LED_PEAK, LED_RED } from './palette.ts';
+import { LED_CIVIDIS, LED_LIT, LED_PEAK, LED_RED } from './palette.ts';
 import {
   MAX_VISIBLE_BARS,
   SEGMENTS_PER_SIDE,
@@ -62,8 +62,12 @@ export class TerrainView {
   #columns: BarColumn[] = [];
   #level: Level | null = null;
   #showPeaks = false;
-  /** The lit colours: the neon green to red, or on Impossible all red (LED_RED). */
+  /**
+   * The lit colours: the neon green to red, on Impossible all red (LED_RED), and with the
+   * LED colours setting on Colour-blind, cividis (LED_CIVIDIS) everywhere.
+   */
   #lit: readonly number[] = LED_LIT;
+  #colourBlind = false;
   #range: BarRange = { first: 0, end: 0 };
 
   constructor() {
@@ -76,12 +80,22 @@ export class TerrainView {
     return this.#lit;
   }
 
+  /** The LED colours setting: true for Colour-blind. */
+  setColourBlind(on: boolean): void {
+    this.#colourBlind = on;
+    this.#pickLit();
+  }
+
+  #pickLit(): void {
+    this.#lit = this.#colourBlind ? LED_CIVIDIS : this.#level?.difficulty === 'impossible' ? LED_RED : LED_LIT;
+  }
+
   setLevel(level: Level | null): void {
     this.#level = level;
     // Peak dots are drawn only where they are solid: a dot the ship could fly through
     // would look like terrain.
     this.#showPeaks = level !== null && Difficulty[level.difficulty].solidPeaks;
-    this.#lit = level?.difficulty === 'impossible' ? LED_RED : LED_LIT;
+    this.#pickLit();
     if (!level) for (const c of this.#columns) c.visible = false;
   }
 

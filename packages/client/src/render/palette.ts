@@ -41,5 +41,19 @@ export function mix(base: number, color: number, amount256: number): number {
  */
 export const LED_RED: readonly number[] = Array.from({ length: 12 }, (_, k) => mix(0x3a0006, 0xff2a2a, Math.round((k * 256) / 11)));
 
+/**
+ * Lit segments with the LED colours setting on Colour-blind: cividis (Nunez, Anderton and
+ * Renslow, "Optimizing colormaps with consideration for color vision deficiency to enable
+ * accurate interpretation of scientific data", PLOS ONE 13(7), 2018,
+ * doi:10.1371/journal.pone.0199239), dark blue to yellow, which reads nearly the same to
+ * people with red-green colour blindness as to everyone else and brightens evenly. These are
+ * Matplotlib 3.9.2's cividis entries 26, 46, 67, ..., 255 (0.1 to 1 in 11 steps), so the
+ * segment at the screen edge stays clear of the background.
+ */
+export const LED_CIVIDIS: readonly number[] = [
+  0x0c3470, 0x2f426d, 0x46516c, 0x5a5f6e, 0x6c6e72, 0x7e7d78, 0x928d78, 0xa79d73, 0xbcae6c, 0xd2c060, 0xe9d34e,
+  0xfee838,
+];
+
 /** Unlit segments: the lit colour at about 12% over the background. */
 export const LED_DIM: readonly number[] = LED_LIT.map((c) => mix(BACKGROUND, c, 30));

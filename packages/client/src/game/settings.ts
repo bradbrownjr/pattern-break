@@ -16,9 +16,11 @@ export interface Settings {
   shake: boolean;
   /** The CRT look: bloom, scanlines and a vignette (render/crt.ts). */
   crt: boolean;
+  /** The walls' LED colours: neon green to red, or colour-blind safe (LED_CIVIDIS). */
+  leds: 'neon' | 'colourBlind';
 }
 
-export const DEFAULT_SETTINGS: Settings = { music: 5, effects: 4, flashing: 'reduced', shake: true, crt: false };
+export const DEFAULT_SETTINGS: Settings = { music: 5, effects: 4, flashing: 'reduced', shake: true, crt: false, leds: 'neon' };
 
 const KEY = 'pattern-break.settings';
 
@@ -43,6 +45,7 @@ export function loadSettings(storage: Pick<Storage, 'getItem'> | null): Settings
       flashing: o['flashing'] === 'full' || o['flashing'] === 'reduced' ? o['flashing'] : DEFAULT_SETTINGS.flashing,
       shake: typeof o['shake'] === 'boolean' ? o['shake'] : DEFAULT_SETTINGS.shake,
       crt: typeof o['crt'] === 'boolean' ? o['crt'] : DEFAULT_SETTINGS.crt,
+      leds: o['leds'] === 'neon' || o['leds'] === 'colourBlind' ? o['leds'] : DEFAULT_SETTINGS.leds,
     };
   } catch {
     return { ...DEFAULT_SETTINGS };

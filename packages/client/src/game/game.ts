@@ -825,12 +825,13 @@ export class Game {
     this.#r.sparks.setSong(level, look);
   }
 
-  /** Sets the flashes' caps, the shake and the CRT look from the settings. */
+  /** Sets the flashes' caps, the shake, the CRT look and the LED colours from the settings. */
   #applyLook(): void {
     this.#r.flashes.flashing = this.#settings.flashing;
     this.#r.copper.flashing = this.#settings.flashing;
     this.#r.shakeOn = this.#settings.shake;
     this.#r.crt = this.#settings.crt;
+    this.#r.terrain.setColourBlind(this.#settings.leds === 'colourBlind');
     if (this.#hangar) this.#hangar.strobePeak = FLASH_PEAK[this.#settings.flashing];
   }
 

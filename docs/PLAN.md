@@ -328,8 +328,8 @@ every bar of every generated level.
   `SOUND-EFFECTS.md` (decided with Brad, 2026-11-09).
 - **Accessibility:** a "reduce flashing" option (caps flash intensity at a quarter of white
   and frequency at three a second, under WCAG 2.2's flash thresholds; on by default until
-  the player changes it; built 2026-11-10), a shake toggle (built 2026-11-10), a colour-blind-safe LED palette
-  option, and remappable controls, for the keyboard and for gamepads and arcade sticks
+  the player changes it; built 2026-11-10), a shake toggle (built 2026-11-10), a
+  colour-blind-safe LED palette option (cividis; built 2026-11-10), and remappable controls, for the keyboard and for gamepads and arcade sticks
   (Gamepad API, from M2).
 - **Performance:** object pools for bullets, enemies, and particles. No allocations in the
   per-frame loop. Particles use a ParticleContainer. Target 2 ms or less per frame of sim

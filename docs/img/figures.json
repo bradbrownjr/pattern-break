@@ -43,7 +43,7 @@
   },
   "settings": {
     "path": "docs/img/settings.png",
-    "alt": "\"Settings\" in large cyan pixel letters with a magenta shadow. Below it, five rows in small pixel type. \"Music\" in amber with an amber \">\" before it, then \"<\", five LED cells lit green, yellow-green, yellow, orange and red, and \">\". \"Effects\" in grey with four of its five cells lit and the fifth dim red. \"Flashing\" with \"Reduced\", \"Shake\" with \"On\", \"CRT\" with \"Off\", and \"Back\", all in grey.",
+    "alt": "\"Settings\" in large cyan pixel letters with a magenta shadow. Below it, five rows in small pixel type. \"Music\" in amber with an amber \">\" before it, then \"<\", five LED cells lit green, yellow-green, yellow, orange and red, and \">\". \"Effects\" in grey with four of its five cells lit and the fifth dim red. \"Flashing\" with \"Reduced\", \"Shake\" with \"On\", \"CRT\" with \"Off\", \"LEDs\" with \"Neon\", and \"Back\", all in grey.",
     "caption": "The settings screen at the defaults. Not used in the README.",
     "usedIn": []
   },
@@ -117,6 +117,12 @@
     "path": "docs/img/results.png",
     "alt": "A dark translucent panel over a frame of play. \"Song clear\" in large lime pixel letters, then in small grey type \"pb fixture 01, Normal\" and four rows with labels on the left and numbers lined up on the right: \"Kills 29\" 6700, \"Beat bonus\" 400, \"Score\" 7100, and in amber \"New best\" 7100. Below them \"R Replay  S Save\" in grey and \"Any key Title\" in cyan.",
     "caption": "The results over play, as if the test song ended at 40 seconds, the score a new best. Not used in the README.",
+    "usedIn": []
+  },
+  "colour-blind": {
+    "path": "docs/img/colour-blind.png",
+    "alt": "The gameplay frame with the LED columns in blue, grey and yellow instead of green to red: dark blue at the screen edges, through slate and khaki greys, to bright yellow at the tips, each segment brighter than the one before. The ship, enemies, shots, copper bars and HUD are as in the gameplay shot.",
+    "caption": "The gameplay shot with the LEDs setting on Colour-blind. Not used in the README.",
     "usedIn": []
   },
   "explosion": {

@@ -52,7 +52,7 @@ flash goes through `FlashGate` and every shake through `shakeOffset`.
       the song, the canopy closes, and the level floods into colour with the song. The
       hangar, the fighter (in the player ship's shape), the cockpit, the captain and the
       glove are generated art (`art/hangar/README.md`).
-- [ ] Accessibility: a colour-blind-safe LED palette, and remappable controls. Remapping
+- [ ] Accessibility: remappable controls (the colour-blind LED colours are done). Remapping
       also covers pads and arcade sticks without the Gamepad API's standard mapping (moved
       from M2), tested once there is such a pad: without one, only hand-made gamepad
       objects could check it.

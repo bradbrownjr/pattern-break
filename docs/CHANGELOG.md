@@ -13,6 +13,10 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **M3: colour-blind LED colours.** Settings has LEDs, Neon or Colour-blind. Colour-blind
+  lights the walls dark blue to yellow (cividis, a colour map made to read the same with
+  red-green colour blindness), each segment brighter than the one before, on every
+  difficulty.
 * **M3: the results screen.** Level complete and game over now break the score down into
   kills, the beat bonus and the lives bonus, lined up in columns, and show the personal
   best for the song and difficulty, kept in this browser; a new best shows in amber. A run

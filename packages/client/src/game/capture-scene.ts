@@ -63,6 +63,7 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
   if (!song) throw new Error(`unknown song ${params.song ?? ''}`);
   const difficulty: DifficultyName = params.difficulty in Difficulty ? (params.difficulty as DifficultyName) : 'normal';
   r.crt = params.crt;
+  r.terrain.setColourBlind(params.colourBlind);
 
   const menuScene = (container: Container): Promise<void> => {
     r.ui.addChild(container);

@@ -1079,13 +1079,14 @@ Run `pnpm dev` and open the URL it prints.
   Esc goes back to where it was opened.
 - **Settings** (`settings.ts`, `SettingsMenu`, `SettingsScreen`), from the title menu: Music
   and Effects volume as five LED cells each, off to 5; Flashing (Reduced or Full), Shake and
-  CRT (Off or On) as words; then Back. Left and right change a value and stop at the ends;
-  Enter steps a volume up and wraps to off, and flips the others. Each volume step halves
-  the gain. The defaults are Music 5, Effects 4, Flashing Reduced, Shake On and CRT Off.
+  CRT (Off or On), and LEDs (Neon or Colour-blind) as words; then Back. Left and right
+  change a value and stop at the ends; Enter steps a volume up and wraps to off, and flips
+  the others. Each volume step halves the gain. The defaults are Music 5, Effects 4,
+  Flashing Reduced, Shake On, CRT Off and LEDs Neon.
   Changes take effect at once (a kill sound plays at the new effects level) and are kept in
   `localStorage` under `pattern-break.settings`; where storage is blocked, the defaults
   apply and changes last until the page closes. What Flashing and Shake do is under
-  "Flashing and shake" in "Rendering", and CRT under "CRT".
+  "Flashing and shake" in "Rendering", CRT under "CRT", and LEDs under "Terrain".
 - **Sound effects** play in runs, replays, and the demo (see "Sound effects" under "Audio
   and clock").
 - **Score:** top right in play. Each kill shows its points where the enemy was, amber when
@@ -1284,7 +1285,14 @@ is added.
   `LED_LIT[segmentColorIndex(k)]` (green at the screen edge, through amber, to red 12
   segments in, and red beyond), and a peak dot, drawn only where peaks are solid, is white.
   Unlit segments are hidden, so the passage is plain background. The scroll is rounded to a
-  whole pixel once per frame, so bars never shift against each other.
+  whole pixel once per frame, so bars never shift against each other. On Impossible the
+  colours are `LED_RED`; with the LEDs setting on Colour-blind they are `LED_CIVIDIS` on
+  every difficulty (`TerrainView.setColourBlind`): cividis (Nunez, Anderton and Renslow,
+  PLOS ONE 2018), the colour map made to read nearly the same with red-green colour
+  blindness, Matplotlib 3.9.2's entries from 0.1 to 1 in 11 steps, dark blue to yellow.
+  Each segment is brighter than the one before (`test/palette.test.ts`), so depth reads
+  from brightness alone; the neon's greens are brighter than its reds. The tip sparks take
+  the same colours.
 - **Ship** (`ship.ts`): a 16x8 sprite built from a character map, centred on the sim's
   `shipX` and `shipY`. The engine flame changes length every 1440 song samples (30 ms),
   and is longer while boosting.
