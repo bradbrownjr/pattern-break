@@ -235,13 +235,20 @@ export class ControlsPages {
   }
 }
 
-export const SETTINGS_ITEMS = ['music', 'effects', 'back'] as const;
+export const SETTINGS_ITEMS = ['music', 'effects', 'flashing', 'shake', 'back'] as const;
 export type SettingsItem = (typeof SETTINGS_ITEMS)[number];
 
+/** The two-way settings, each value left to right as the screen shows them. */
+export const SETTINGS_CHOICES = {
+  flashing: ['reduced', 'full'],
+  shake: [false, true],
+} as const;
+
 /**
- * Music and Effects volume, 0 (off) to 5, then Back. Left and right change a volume and stop
- * at the ends; confirm steps it up and wraps from 5 to off, so a click alone can reach every
- * level. Back, or confirm on Back, leaves.
+ * Music and Effects volume, 0 (off) to 5; Flashing (Reduced or Full) and Shake (Off or On);
+ * then Back. Left and right change a value and stop at the ends; confirm steps a volume up
+ * and wraps from 5 to off, and flips a two-way setting, so a click alone can reach every
+ * value. Back, or confirm on Back, leaves.
  */
 export class SettingsMenu {
   cursor = 0;
@@ -255,6 +262,10 @@ export class SettingsMenu {
     return SETTINGS_ITEMS[this.cursor]!;
   }
 
+  #set<K extends 'flashing' | 'shake'>(item: K, v: Settings[K]): void {
+    this.values[item] = v;
+  }
+
   apply(action: MenuAction): 'moved' | 'changed' | 'back' | null {
     const item = this.item;
     switch (action) {
@@ -265,6 +276,12 @@ export class SettingsMenu {
       case 'left':
       case 'right': {
         if (item === 'back') return null;
+        if (item === 'flashing' || item === 'shake') {
+          const v = SETTINGS_CHOICES[item][action === 'left' ? 0 : 1];
+          if (v === this.values[item]) return null;
+          this.#set(item, v);
+          return 'changed';
+        }
         const v = Math.max(0, Math.min(VOLUME_LEVELS, this.values[item] + (action === 'left' ? -1 : 1)));
         if (v === this.values[item]) return null;
         this.values[item] = v;
@@ -272,6 +289,11 @@ export class SettingsMenu {
       }
       case 'confirm':
         if (item === 'back') return 'back';
+        if (item === 'flashing' || item === 'shake') {
+          const [a, b] = SETTINGS_CHOICES[item];
+          this.#set(item, this.values[item] === a ? b : a);
+          return 'changed';
+        }
         this.values[item] = wrap(this.values[item], 1, VOLUME_LEVELS + 1);
         return 'changed';
       case 'back':

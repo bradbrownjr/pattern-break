@@ -6,7 +6,9 @@ import { PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH } from '@game/core';
 import { Container, TextureSource, autoDetectRenderer, type Renderer } from 'pixi.js';
 import { CombatView } from './combat.ts';
 import { Explosion, Flash } from './effects.ts';
+import { FlashGate } from './flash.ts';
 import { BACKGROUND, LETTERBOX } from './palette.ts';
+import { shakeOffset } from './shake.ts';
 import { ShipView } from './ship.ts';
 import { Starfield } from './starfield.ts';
 import { TerrainView } from './terrain.ts';
@@ -41,10 +43,15 @@ export class GameRenderer {
   readonly world = new Container();
   readonly terrain = new TerrainView();
   readonly ship = new ShipView();
+  /** Decides which flashes are shown and how strong (the Flashing setting). */
+  readonly flashes = new FlashGate();
   /** Enemies, shots, bullets, their bursts, and the lives left. */
-  readonly combat = new CombatView();
+  readonly combat = new CombatView(this.flashes);
   readonly explosion = new Explosion();
-  readonly flash = new Flash();
+  readonly flash = new Flash(this.flashes);
+  /** The Shake setting: false keeps the playfield still. */
+  shakeOn = true;
+  #shake = { x: 0, y: 0 };
   /** Screens and messages, drawn over everything. */
   readonly ui = new Container();
   #parent: HTMLElement;
@@ -60,6 +67,16 @@ export class GameRenderer {
     canvas.style.display = 'block';
     options.parent.appendChild(canvas);
     this.resize();
+  }
+
+  /**
+   * Moves the starfield and the cave for a shake `elapsedMs` after a crash (shake.ts); a
+   * negative time, or shake off, puts them back. The HUD and the screens stay put.
+   */
+  shake(elapsedMs: number, seed: number): void {
+    shakeOffset(this.shakeOn, elapsedMs, seed, this.#shake);
+    this.world.position.set(this.#shake.x, this.#shake.y);
+    this.starfield.container.position.set(this.#shake.x, this.#shake.y);
   }
 
   /** Scales the canvas to the largest whole multiple of device pixels that fits the window. */

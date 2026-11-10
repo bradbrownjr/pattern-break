@@ -1046,8 +1046,8 @@ Run `pnpm dev` and open the URL it prints.
     walls are red (`LED_RED`, from `0x3a0006` at the screen edge to `0xff2a2a` at the tip,
     which `TerrainView.setLevel` picks for the difficulty), and its hangar intro is on
     alert (`HangarIntro.setAlarm`): a red flash added over the picture twice a second
-    (`strobeAlpha`: 70 ms each, fading from 0.32, at 0 and 160 ms of every second, under
-    WCAG 2.2's three flashes a second, 2.3.1), and the siren's wail at 0.15 s and 4.15 s
+    (`strobeAlpha`: 70 ms each, fading from the Flashing setting's peak, at 0 and 160 ms of
+    every second, under WCAG 2.2's three flashes a second, 2.3.1), and the siren's wail at 0.15 s and 4.15 s
     (`ALARM_CUES`, merged into the cue list by `hangarCues`). Impossible runs go on the
     boards like any other; only cheats keep a run off (Brad, 2026-11-10).
 
@@ -1073,11 +1073,14 @@ Run `pnpm dev` and open the URL it prints.
   left and right a page, the mouse wheel a row; Enter pages down and leaves from the end;
   Esc goes back to where it was opened.
 - **Settings** (`settings.ts`, `SettingsMenu`, `SettingsScreen`), from the title menu: Music
-  and Effects volume as five LED cells each, off to 5, then Back. Left and right change a
-  volume and stop at the ends; Enter steps it up and wraps to off. Each step halves the gain.
-  The defaults are Music 5 and Effects 4. Changes take effect at once (a kill sound plays at
-  the new effects level) and are kept in `localStorage` under `pattern-break.settings`;
-  where storage is blocked, the defaults apply and changes last until the page closes.
+  and Effects volume as five LED cells each, off to 5; Flashing (Reduced or Full) and Shake
+  (Off or On) as words; then Back. Left and right change a value and stop at the ends; Enter
+  steps a volume up and wraps to off, and flips Flashing or Shake. Each volume step halves
+  the gain. The defaults are Music 5, Effects 4, Flashing Reduced and Shake On. Changes take
+  effect at once (a kill sound plays at the new effects level) and are kept in
+  `localStorage` under `pattern-break.settings`; where storage is blocked, the defaults
+  apply and changes last until the page closes. What Flashing and Shake do is under
+  "Flashing and shake" in "Rendering".
 - **Sound effects** play in runs, replays, and the demo (see "Sound effects" under "Audio
   and clock").
 - **Score:** top right in play. Each kill shows its points where the enemy was, amber when
@@ -1254,7 +1257,7 @@ is added.
   selection, so a touch doesn't scroll, zoom or select.
 - **Layers,** back to front: the starfield, the world (terrain, capsules, enemies, shots,
   missiles, drones, the shield and bullets, ship, explosion, point popups), the HUD
-  (lives, bomb and missile, multiplier, nukes, score, power-up meter), the death flash, and
+  (lives, bomb and missile, multiplier, nukes, score, power-up meter), the game-over flash, and
   the UI (title screen, jukebox, controls, demo banner, messages, the pause menu, and the
   fade).
 - **Terrain** (`terrain.ts`, geometry in `terrain-layout.ts`): 41 columns
@@ -1282,7 +1285,7 @@ is added.
   its bottom rows bright: none while a bomb falls, then filling over the reload
   (`state.bombReadyTick`), whole when one can drop. The bomb is a 4x4 sprite; its burst
   is a 40-particle explosion over 600 ms, and a nuke flashes the playfield like the crash
-  flash (25% white fading over 220 ms), under the HUD. An angled double shot is a 4x4 diagonal, a laser a
+  (see "Flashing and shake"), under the HUD. An angled double shot is a 4x4 diagonal, a laser a
   16x2 white bar. A missile is an 8x4 sprite; each slot's burst is a 28-particle cyan
   explosion over 500 ms. Drones are 6x6 orbs, capsules 8x8 amber pills marked P, and the
   shield a 22x14 ring around the ship, more opaque with more points left (30% at 1 to 80%
@@ -1300,9 +1303,23 @@ is added.
 - **Text** (`font.ts`, `text.ts`): a 5x7 pixel font for printable ASCII, with descenders,
   in one atlas texture. A character outside printable ASCII draws as `?`. `PixelText`
   reuses its sprites when its text changes.
-- **Crash** (`effects.ts`, `flash.ts`): 48 particles in a seeded burst, and one white flash
-  that fades from 25% opacity over 220 ms. "Reduce flashing" is on by default (`PLAN.md`,
-  "Visual spec") and M1 has no settings screen, so this reduced flash is the only one.
+- **Crash** (`effects.ts`): 48 particles in a seeded burst, a shake, and on the last life
+  one white flash.
+- **Flashing and shake** (`flash.ts`, `shake.ts`; `test/flashing.test.ts`). Every flash
+  fades linearly over 220 ms from a peak: the game-over flash (`Flash`), the nuke's
+  (`CombatView`), and the hangar's red strobe (`strobeAlpha`). One `FlashGate` on the
+  renderer decides which in-play flashes show, on the song clock. With Flashing Reduced the
+  peak is 0.25 white and a flash starts at most every 334 ms, so never more than three in
+  any second: WCAG 2.2 counts content with no more than three general and three red flashes
+  in any one-second period as below its flash thresholds (definition "general flash and
+  red flash thresholds"). A flash asked for inside the gap isn't drawn. Full raises the peak
+  to 0.6 and drops the gap. The strobe flashes twice a second at either setting. Every
+  crash, the last included, shakes the starfield and the world (not the HUD or the
+  screens) by whole pixels: a new offset every 30 ms, within 3 px shrinking to 0 over
+  300 ms, from a hash of the crash tick, so a replay or capture shakes the same way. In
+  play the time is song time since `state.hitTick` (`drawPlay`); on game over, wall time.
+  The frame loop puts the picture back first each frame, and with Shake off
+  `shakeOffset` is always 0.
 - **Allocation:** display objects are made at startup or when a screen changes. The
   per-frame path in play only writes positions and tints and allocates nothing in our code
   except the score and popup strings on a kill;
@@ -1337,7 +1354,7 @@ the sim stops with it; resuming continues both from where they were.
 
 **Crash and song end.** A life lost short of the last plays an explosion where the ship
 was and the run goes on (`CombatView`). When `state.dead` is set, the song stops, the picture holds the
-crash tick, and the explosion and flash play on the wall clock. A retry calls
+crash tick, and the explosion, flash and shake play on the wall clock. A retry calls
 `resetSimState()` and `player.start()`, which plays the song from its start. When
 `state.finished` is set, the "Song complete" message shows. Either way the run's difficulty,
 input log and crash tick are kept in `Game.lastRun` for the replays in M2.

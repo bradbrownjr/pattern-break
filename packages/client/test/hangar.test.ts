@@ -74,12 +74,11 @@ describe('the alarm (Impossible)', () => {
     expect(hangarCues(false)).toBe(HANGAR_CUES);
   });
 
-  it('strobes red twice a second, under three flashes in any second', () => {
+  it('strobes red twice a second, at most at the peak it is given', () => {
     const lit: number[] = [];
-    for (let ms = 0; ms < 3000; ms++) if (strobeAlpha(ms) > 0 && strobeAlpha(ms - 1) === 0) lit.push(ms);
+    for (let ms = 0; ms < 3000; ms++) if (strobeAlpha(ms, 0.6) > 0 && strobeAlpha(ms - 1, 0.6) === 0) lit.push(ms);
     expect(lit).toEqual([0, 160, 1000, 1160, 2000, 2160]);
-    for (const start of lit) expect(lit.filter((t) => t >= start && t < start + 1000).length).toBeLessThanOrEqual(3);
-    expect(Math.max(...Array.from({ length: 1000 }, (_, ms) => strobeAlpha(ms)))).toBeLessThanOrEqual(0.32);
+    expect(Math.max(...Array.from({ length: 1000 }, (_, ms) => strobeAlpha(ms, 0.6)))).toBe(0.6);
   });
 });
 

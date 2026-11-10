@@ -181,5 +181,7 @@ function drawCrash(r: GameRenderer, state: SimState, samples: number, seed: numb
   const elapsedMs = ((samples - state.deathTick * SAMPLES_PER_TICK) * 1000) / SAMPLE_RATE;
   r.explosion.start(state.shipX / Q8, state.shipY / Q8, seededRandom(seed));
   r.explosion.draw(elapsedMs);
+  r.flash.start((state.deathTick * SAMPLES_PER_TICK * 1000) / SAMPLE_RATE);
   r.flash.draw(elapsedMs);
+  r.shake(elapsedMs, state.hitTick);
 }

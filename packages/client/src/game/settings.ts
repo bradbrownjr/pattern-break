@@ -2,15 +2,21 @@
 // blocked (a private window, cleared site data), so reading falls back to the defaults and
 // a failed write is ignored.
 
+import type { Flashing } from '../render/flash.ts';
+
 /** Volume levels: 0 is off, 5 is full. */
 export const VOLUME_LEVELS = 5;
 
 export interface Settings {
   music: number;
   effects: number;
+  /** How strong and how often the screen may flash (render/flash.ts). */
+  flashing: Flashing;
+  /** Whether the screen shakes on a crash. */
+  shake: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { music: 5, effects: 4 };
+export const DEFAULT_SETTINGS: Settings = { music: 5, effects: 4, flashing: 'reduced', shake: true };
 
 const KEY = 'pattern-break.settings';
 
@@ -29,7 +35,12 @@ export function loadSettings(storage: Pick<Storage, 'getItem'> | null): Settings
     const raw = storage?.getItem(KEY);
     const parsed: unknown = raw ? JSON.parse(raw) : null;
     const o = typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : {};
-    return { music: level(o['music'], DEFAULT_SETTINGS.music), effects: level(o['effects'], DEFAULT_SETTINGS.effects) };
+    return {
+      music: level(o['music'], DEFAULT_SETTINGS.music),
+      effects: level(o['effects'], DEFAULT_SETTINGS.effects),
+      flashing: o['flashing'] === 'full' || o['flashing'] === 'reduced' ? o['flashing'] : DEFAULT_SETTINGS.flashing,
+      shake: typeof o['shake'] === 'boolean' ? o['shake'] : DEFAULT_SETTINGS.shake,
+    };
   } catch {
     return { ...DEFAULT_SETTINGS };
   }

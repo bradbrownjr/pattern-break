@@ -13,6 +13,12 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **M3: flashing and shake settings.** Settings has Flashing, Reduced until the player
+  changes it, and Shake. Reduced keeps every flash (the game-over flash, the nuke, the
+  hangar's red strobe) at a quarter of white or less and never starts more than three in a
+  second, under WCAG 2.2's flash thresholds; Full is brighter with no limit on how often.
+  Every crash now shakes the picture for 0.3 s, by whole pixels, the same way in a replay;
+  Shake Off keeps it still.
 * **CI: the browser tests pass in every engine.** The audio tests had failed on every push
   since November 8: Firefox had no sound server to play into, and WebKit rendered the
   worklet test's offline context before the worklet saw its start message. CI now gives

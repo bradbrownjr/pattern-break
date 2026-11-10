@@ -16,8 +16,9 @@ describe('settings', () => {
 
   it('saves and loads', () => {
     const s = memory();
-    saveSettings(s, { music: 2, effects: 0 });
-    expect(loadSettings(s)).toEqual({ music: 2, effects: 0 });
+    const saved = { music: 2, effects: 0, flashing: 'full', shake: false } as const;
+    saveSettings(s, saved);
+    expect(loadSettings(s)).toEqual(saved);
   });
 
   it('falls back to the defaults for missing, broken or out-of-range values', () => {
@@ -26,10 +27,15 @@ describe('settings', () => {
     expect(loadSettings(null)).toEqual(DEFAULT_SETTINGS);
     s.setItem('pattern-break.settings', '{not json');
     expect(loadSettings(s)).toEqual(DEFAULT_SETTINGS);
-    s.setItem('pattern-break.settings', JSON.stringify({ music: 9, effects: 2.5 }));
+    s.setItem('pattern-break.settings', JSON.stringify({ music: 9, effects: 2.5, flashing: 'none', shake: 1 }));
     expect(loadSettings(s)).toEqual(DEFAULT_SETTINGS);
     s.setItem('pattern-break.settings', JSON.stringify({ music: 1 }));
-    expect(loadSettings(s)).toEqual({ music: 1, effects: DEFAULT_SETTINGS.effects });
+    expect(loadSettings(s)).toEqual({ ...DEFAULT_SETTINGS, music: 1 });
+  });
+
+  it('reduces flashing and shakes by default', () => {
+    expect(DEFAULT_SETTINGS.flashing).toBe('reduced');
+    expect(DEFAULT_SETTINGS.shake).toBe(true);
   });
 
   it('ignores storage that throws', () => {

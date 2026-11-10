@@ -33,7 +33,7 @@ import {
 } from '@game/core';
 import { Container, Rectangle, Sprite, Texture } from 'pixi.js';
 import { Explosion, SHIP_EXPLOSION, type ExplosionStyle } from './effects.ts';
-import { flashAlpha } from './flash.ts';
+import { FlashGate, flashAlpha } from './flash.ts';
 import { MeterView } from './meter.ts';
 import { AMBER, BACKGROUND, CYAN, LIME, MAGENTA, WHITE } from './palette.ts';
 import { flipRows, mapTexture } from './pixels.ts';
@@ -276,8 +276,11 @@ export class CombatView {
   #seenHit = -1;
   #shipX = 0;
   #shipY = 0;
+  #flashes: FlashGate;
 
-  constructor() {
+  /** `flashes` decides whether the nuke's flash is shown, and how strong it is. */
+  constructor(flashes: FlashGate = new FlashGate()) {
+    this.#flashes = flashes;
     for (let i = 0; i < ENEMY_SPRITES; i++) this.#enemies.push(this.#add(new Sprite()));
     const tex = getTextures();
     for (let i = 0; i < CAPSULE_SLOTS; i++) this.#capsules.push(this.#add(new Sprite(tex.capsule)));
@@ -490,9 +493,12 @@ export class CombatView {
     }
     this.#seenBlast = state.blastTick;
     if (this.#blastSample >= 0) this.#blast.draw(Math.max(0, samplesToMs(displaySamples - this.#blastSample)));
-    if (state.nukeTick !== this.#seenNuke && state.nukeTick > 0) this.#nukeSample = state.nukeTick * SAMPLES_PER_TICK;
+    if (state.nukeTick !== this.#seenNuke && state.nukeTick > 0) {
+      const at = state.nukeTick * SAMPLES_PER_TICK;
+      this.#nukeSample = this.#flashes.admit(samplesToMs(at)) ? at : -1;
+    }
     this.#seenNuke = state.nukeTick;
-    const nukeAlpha = this.#nukeSample < 0 ? 0 : flashAlpha(samplesToMs(displaySamples - this.#nukeSample));
+    const nukeAlpha = this.#nukeSample < 0 ? 0 : flashAlpha(samplesToMs(displaySamples - this.#nukeSample), this.#flashes.peak);
     this.#nukeFlash.visible = nukeAlpha > 0;
     this.#nukeFlash.alpha = nukeAlpha;
 

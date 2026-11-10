@@ -325,8 +325,9 @@ every bar of every generated level.
   The explosion is a deep boom with echo (a feedback delay) and reverb (a generated impulse
   response). Cosmetic, like every effect: never part of sim state. Research and design:
   `SOUND-EFFECTS.md` (decided with Brad, 2026-11-09).
-- **Accessibility:** a "reduce flashing" option (caps flash intensity and frequency; on by
-  default until the player changes it), a shake toggle, a colour-blind-safe LED palette
+- **Accessibility:** a "reduce flashing" option (caps flash intensity at a quarter of white
+  and frequency at three a second, under WCAG 2.2's flash thresholds; on by default until
+  the player changes it; built 2026-11-10), a shake toggle (built 2026-11-10), a colour-blind-safe LED palette
   option, and remappable controls, for the keyboard and for gamepads and arcade sticks
   (Gamepad API, from M2).
 - **Performance:** object pools for bullets, enemies, and particles. No allocations in the

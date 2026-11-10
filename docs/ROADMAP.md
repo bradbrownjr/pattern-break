@@ -33,14 +33,10 @@ start the next until the current one is done.
 
 **Goal:** it looks and feels like the pitch.
 
-Order of work (2026-11-10): the flashing and shake settings first, since the explosions and
-flashes use them; then the explosions, the look, the results screen, and the rest of
-accessibility.
+Order of work (2026-11-10): the explosions, the look, the results screen, and the rest of
+accessibility. The flashing and shake settings came first (see the changelog, November
+10); every new flash goes through `FlashGate` and every shake through `shakeOffset`.
 
-- [ ] **Settings: reduce flashing and screen shake.** "Flashing" (Reduced by default, or
-      Full) caps every flash's strength and how often it can repeat: the crash flash, the
-      nuke, the hangar's strobe, and those below. "Shake" turns screen shake on or off.
-      Kept with the volumes.
 - [ ] **Big explosions:** a destroyed ship breaks apart pixel by pixel, each pixel of its
       sprite flying off as its own particle in its own colour, with a colourful shockwave
       ring and a short screen shake. With reduced flashing, the ring's brightness is capped.

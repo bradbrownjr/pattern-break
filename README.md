@@ -25,8 +25,8 @@ life.
 A bomb takes out tanks on the floor, and a nuke earned by playing the beat clears the
 screen. Shooting down a whole formation drops a capsule for the power-up meter: boost,
 double shot, laser, missile, drone and a shield refill. Sound effects are synthesized in the
-browser, with the pitched ones on the song's notes, and Settings has the music and
-effects volume. A short black-and-white intro opens each run: the captain boards the
+browser, with the pitched ones on the song's notes. Settings has the music and effects
+volume, reduced flashing (on until changed) and a switch for screen shake. A short black-and-white intro opens each run: the captain boards the
 fighter and puts the first song's cassette in the deck, and pressing Play starts the
 level, which floods into colour with the music. A gamepad works next to the keyboard, and
 a phone or tablet gets on-screen controls. Every

@@ -11,6 +11,7 @@
 import { PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH, type Level } from '@game/core';
 import { Assets, ColorMatrixFilter, Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
 import type { Effect } from '../audio/effects.ts';
+import { FLASH_PEAK } from '../render/flash.ts';
 import { PixelText } from '../render/text.ts';
 import cockpitUrl from './hangar-art/cockpit.png';
 import panelUrl from './hangar-art/cockpit-panel.png';
@@ -110,20 +111,19 @@ export function hangarCues(alarm: boolean): readonly { at: number; effect: Effec
 
 /**
  * The alarm's red strobe, the strength of its flash `ms` into the intro: a double flash
- * every second, each 70 ms fading out, at most 0.32 of red added over the picture. Two
- * flashes a second stays under WCAG 2.2's limit of three in any one second (2.3.1, Three
- * Flashes or Below Threshold).
+ * every second, each 70 ms fading out from `peak` of red added over the picture (the
+ * Flashing setting's peak). Two flashes a second stays under WCAG 2.2's limit of three in
+ * any one second (2.3.1, Three Flashes or Below Threshold) at either setting.
  */
 export const STROBE_PERIOD_MS = 1000;
 const STROBE_FLASHES = [0, 160];
 const STROBE_FLASH_MS = 70;
-const STROBE_ALPHA = 0.32;
 const STROBE_RED = 0xff1a1a;
 
-export function strobeAlpha(ms: number): number {
+export function strobeAlpha(ms: number, peak: number): number {
   const phase = ((ms % STROBE_PERIOD_MS) + STROBE_PERIOD_MS) % STROBE_PERIOD_MS;
   for (const at of STROBE_FLASHES) {
-    if (phase >= at && phase < at + STROBE_FLASH_MS) return STROBE_ALPHA * (1 - (phase - at) / STROBE_FLASH_MS);
+    if (phase >= at && phase < at + STROBE_FLASH_MS) return peak * (1 - (phase - at) / STROBE_FLASH_MS);
   }
   return 0;
 }
@@ -324,6 +324,9 @@ export class HangarIntro {
   }
 
   /** Turns the alarm's red strobe on or off (Impossible). */
+  /** The strobe's strength: the Flashing setting's peak (render/flash.ts). */
+  strobePeak = FLASH_PEAK.reduced;
+
   setAlarm(on: boolean): void {
     this.#alarm = on;
   }
@@ -352,7 +355,7 @@ export class HangarIntro {
     this.#showOutside(0);
     if (inHangar) this.#drawHangarShot(ms);
     else this.#drawCockpitShot(ms);
-    const flash = this.#alarm ? strobeAlpha(ms) : 0;
+    const flash = this.#alarm ? strobeAlpha(ms, this.strobePeak) : 0;
     this.#strobe.visible = flash > 0;
     this.#strobe.alpha = flash;
   }

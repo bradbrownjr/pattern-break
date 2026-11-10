@@ -1,11 +1,11 @@
-// Node tests for the renderer's pure parts: the font, terrain geometry, flash cap, colours,
-// and the jukebox list's fit.
+// Node tests for the renderer's pure parts: the font, terrain geometry, the flash's fade,
+// colours, and the jukebox list's fit. The flash caps are in flashing.test.ts.
 
 import { BAR_LIT_WIDTH, BAR_PITCH, PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH, Q8, SAMPLES_PER_TICK } from '@game/core';
 import { describe, expect, it } from 'vitest';
 import { JUKEBOX_LIMITS, jukeboxRow, jukeboxRowY } from '../src/game/screens.ts';
 import { SONGS } from '../src/game/songs.ts';
-import { FLASH_MAX_ALPHA, FLASH_MS, flashAlpha } from '../src/render/flash.ts';
+import { FLASH_MS, flashAlpha } from '../src/render/flash.ts';
 import { ATLAS_HEIGHT, ATLAS_WIDTH, FIRST_CHAR, LAST_CHAR, buildAtlasPixels, glyphIndex, glyphRows, textWidth } from '../src/render/font.ts';
 import { BACKGROUND, LED_DIM, LED_LIT, mix } from '../src/render/palette.ts';
 import { seededRandom } from '../src/render/random.ts';
@@ -102,12 +102,12 @@ describe('terrain layout', () => {
 });
 
 describe('cosmetics', () => {
-  it('caps the death flash at a quarter of white and ends it', () => {
+  it('fades a flash from its peak to nothing', () => {
     let max = 0;
-    for (let ms = -10; ms < 1000; ms++) max = Math.max(max, flashAlpha(ms));
-    expect(max).toBe(FLASH_MAX_ALPHA);
-    expect(FLASH_MAX_ALPHA).toBeLessThanOrEqual(0.25);
-    expect(flashAlpha(FLASH_MS)).toBe(0);
+    for (let ms = -10; ms < 1000; ms++) max = Math.max(max, flashAlpha(ms, 0.25));
+    expect(max).toBe(0.25);
+    expect(flashAlpha(-1, 0.25)).toBe(0);
+    expect(flashAlpha(FLASH_MS, 0.25)).toBe(0);
   });
 
   it('gives the same random sequence for the same seed', () => {

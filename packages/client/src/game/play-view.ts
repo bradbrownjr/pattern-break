@@ -2,7 +2,7 @@
 // a song position. Shared by the game loop and capture mode, so a capture shows what play
 // shows.
 
-import { Q8, type Level, type SimState } from '@game/core';
+import { Q8, SAMPLE_RATE, SAMPLES_PER_TICK, type Level, type SimState } from '@game/core';
 import type { GameRenderer } from '../render/renderer.ts';
 import { scrollPxAt } from '../render/terrain-layout.ts';
 
@@ -16,6 +16,9 @@ const FLAME_STEP_SAMPLES = 1440;
  */
 export function drawPlay(r: GameRenderer, level: Level, state: SimState, displaySamples: number): void {
   const scrollPx = scrollPxAt(level, displaySamples);
+  // Every crash shakes the picture, the last one included (hitTick is set on each).
+  const sinceHit = state.hitTick < 0 ? -1 : ((displaySamples - state.hitTick * SAMPLES_PER_TICK) * 1000) / SAMPLE_RATE;
+  r.shake(sinceHit, state.hitTick);
   r.starfield.draw(scrollPx);
   r.terrain.draw(scrollPx);
   const visible = !state.dead && r.combat.draw(level, state, scrollPx, displaySamples);

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ControlsPages, JukeboxMenu, PauseMenu, Scroller, SettingsMenu, TitleMenu } from '../src/game/menu.ts';
+import { ControlsPages, JukeboxMenu, PauseMenu, SETTINGS_ITEMS, Scroller, SettingsMenu, TitleMenu } from '../src/game/menu.ts';
+import { DEFAULT_SETTINGS } from '../src/game/settings.ts';
 
 describe('TitleMenu', () => {
   it('moves the cursor with up and down, wrapping at both ends', () => {
@@ -123,7 +124,7 @@ describe('ControlsPages', () => {
 
 describe('SettingsMenu', () => {
   it('changes a volume with left and right, stopping at off and 5', () => {
-    const m = new SettingsMenu({ music: 5, effects: 1 });
+    const m = new SettingsMenu({ ...DEFAULT_SETTINGS, music: 5, effects: 1 });
     expect(m.apply('right')).toBeNull();
     expect(m.apply('left')).toBe('changed');
     expect(m.values.music).toBe(4);
@@ -134,7 +135,7 @@ describe('SettingsMenu', () => {
   });
 
   it('steps a volume up on confirm, wrapping from 5 to off, and leaves from Back', () => {
-    const m = new SettingsMenu({ music: 5, effects: 4 });
+    const m = new SettingsMenu({ ...DEFAULT_SETTINGS, music: 5, effects: 4 });
     expect(m.apply('confirm')).toBe('changed');
     expect(m.values.music).toBe(0);
     m.apply('up');
@@ -145,8 +146,26 @@ describe('SettingsMenu', () => {
     expect(m.apply('back')).toBe('back');
   });
 
+  it('sets Flashing and Shake with left and right, and flips them on confirm', () => {
+    const m = new SettingsMenu(DEFAULT_SETTINGS);
+    m.cursor = SETTINGS_ITEMS.indexOf('flashing');
+    expect(m.apply('left')).toBeNull();
+    expect(m.apply('right')).toBe('changed');
+    expect(m.values.flashing).toBe('full');
+    expect(m.apply('right')).toBeNull();
+    expect(m.apply('confirm')).toBe('changed');
+    expect(m.values.flashing).toBe('reduced');
+    m.apply('down');
+    expect(m.item).toBe('shake');
+    expect(m.apply('right')).toBeNull();
+    expect(m.apply('left')).toBe('changed');
+    expect(m.values.shake).toBe(false);
+    expect(m.apply('confirm')).toBe('changed');
+    expect(m.values.shake).toBe(true);
+  });
+
   it('works on its own copy of the settings', () => {
-    const start = { music: 3, effects: 3 };
+    const start = { ...DEFAULT_SETTINGS, music: 3, effects: 3 };
     new SettingsMenu(start).apply('left');
     expect(start.music).toBe(3);
   });

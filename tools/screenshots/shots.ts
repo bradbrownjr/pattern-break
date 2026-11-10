@@ -134,11 +134,11 @@ export const shots: Shot[] = [
     id: 'settings',
     query: { scene: 'settings', song: 'the_epic_chip', t: '0' },
     alt:
-      '"Settings" in large cyan pixel letters with a magenta shadow. Below it, three rows in small pixel ' +
+      '"Settings" in large cyan pixel letters with a magenta shadow. Below it, five rows in small pixel ' +
       'type. "Music" in amber with an amber ">" before it, then "<", five LED cells lit green, yellow-green, ' +
       'yellow, orange and red, and ">". "Effects" in grey with four of its five cells lit and the fifth dim ' +
-      'red. "Back" in grey.',
-    caption: 'The settings screen at the default volumes. Not used in the README.',
+      'red. "Flashing" with "Reduced", "Shake" with "On", and "Back", all in grey.',
+    caption: 'The settings screen at the defaults. Not used in the README.',
     usedIn: [],
   },
   {

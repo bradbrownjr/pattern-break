@@ -379,7 +379,19 @@ export class PauseScreen {
   }
 }
 
-const SETTINGS_LABELS: Record<SettingsItem, string> = { music: 'Music', effects: 'Effects', back: 'Back' };
+const SETTINGS_LABELS: Record<SettingsItem, string> = {
+  music: 'Music',
+  effects: 'Effects',
+  flashing: 'Flashing',
+  shake: 'Shake',
+  back: 'Back',
+};
+
+/** What Flashing and Shake show for each value. */
+function choiceText(values: Settings, item: 'flashing' | 'shake'): string {
+  if (item === 'flashing') return values.flashing === 'full' ? 'Full' : 'Reduced';
+  return values.shake ? 'On' : 'Off';
+}
 const SETTINGS_TOP = 92;
 const SETTINGS_ROW = 16;
 const CELL_W = 10;
@@ -388,7 +400,7 @@ const CELL_GAP = 3;
 
 /**
  * The settings: Music and Effects as rows of five LED cells, lit up to the volume, green to
- * red, with "Off" at 0; then Back.
+ * red, with "Off" at 0; Flashing and Shake as words; then Back.
  */
 export class SettingsScreen {
   readonly container = new Container();
@@ -411,7 +423,9 @@ export class SettingsScreen {
       const left = new PixelText('<', WHITE).place(VALUE_X - 12, y);
       const right = new PixelText('>', WHITE).place(VALUE_X + VOLUME_LEVELS * (CELL_W + CELL_GAP) + 4, y);
       const off = new PixelText('Off', GREY).place(VALUE_X, y);
-      if (item !== 'back') {
+      if (item === 'flashing' || item === 'shake') {
+        this.container.addChild(left, right, off);
+      } else if (item !== 'back') {
         for (let i = 0; i < VOLUME_LEVELS; i++) {
           const cell = new Sprite(Texture.WHITE);
           cell.width = CELL_W;
@@ -433,6 +447,12 @@ export class SettingsScreen {
       this.#labels[row]!.color = selected ? AMBER : GREY;
       for (const a of this.#arrows[row]!) a.visible = selected;
       if (item === 'back') return;
+      if (item === 'flashing' || item === 'shake') {
+        const value = this.#off[row]!;
+        value.text = choiceText(values, item);
+        value.color = selected ? WHITE : GREY;
+        return;
+      }
       const level = values[item];
       this.#off[row]!.visible = level === 0;
       this.#cells[row]!.forEach((cell, i) => {

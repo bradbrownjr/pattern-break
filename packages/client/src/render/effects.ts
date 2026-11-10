@@ -4,7 +4,7 @@
 
 import { PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH } from '@game/core';
 import { Container, Sprite, Texture } from 'pixi.js';
-import { flashAlpha } from './flash.ts';
+import { flashAlpha, type FlashGate } from './flash.ts';
 import { AMBER, BACKGROUND, CYAN, MAGENTA, WHITE, mix } from './palette.ts';
 
 export interface ExplosionStyle {
@@ -87,20 +87,28 @@ export class Explosion {
   }
 }
 
-/** The screen flash on death; flash.ts has its timing and the reason for its cap. */
+/** The screen flash on game over; flash.ts has its timing and its caps. */
 export class Flash {
   readonly sprite = new Sprite(Texture.WHITE);
+  #gate: FlashGate;
+  #on = false;
 
-  constructor() {
+  constructor(gate: FlashGate) {
+    this.#gate = gate;
     this.sprite.width = PLAYFIELD_WIDTH;
     this.sprite.height = PLAYFIELD_HEIGHT;
     this.sprite.tint = WHITE;
     this.sprite.visible = false;
   }
 
+  /** Starts the flash at song time `atMs`, if the gate lets it. */
+  start(atMs: number): void {
+    this.#on = this.#gate.admit(atMs);
+  }
+
   /** Draws the flash `elapsedMs` after it started. */
   draw(elapsedMs: number): void {
-    const alpha = flashAlpha(elapsedMs);
+    const alpha = this.#on ? flashAlpha(elapsedMs, this.#gate.peak) : 0;
     this.sprite.visible = alpha > 0;
     this.sprite.alpha = alpha;
   }

@@ -29,6 +29,7 @@ import { createAudioPlayer, type AudioPlayer } from '../audio/index.ts';
 import { EffectsMixer } from '../audio/mixer.ts';
 import { MenuSounds, type MenuSound } from '../audio/sfx.ts';
 import { SongNotes } from '../audio/song-notes.ts';
+import { FLASH_PEAK } from '../render/flash.ts';
 import { CYAN, LIME, MAGENTA } from '../render/palette.ts';
 import { seededRandom } from '../render/random.ts';
 import type { GameRenderer } from '../render/renderer.ts';
@@ -286,6 +287,7 @@ export class Game {
     this.#jukeboxMenu = new JukeboxMenu(options.songs.length);
     this.#jukebox = new JukeboxScreen(options.songs);
     this.#settingsMenu = new SettingsMenu(this.#settings);
+    this.#applyLook();
     r.ui.addChild(
       this.#title.container,
       this.#jukebox.container,
@@ -347,6 +349,7 @@ export class Game {
     loadHangarArt().then(
       (art) => {
         this.#hangar = new HangarIntro(art);
+        this.#applyLook();
         this.#hangarLayer.addChild(this.#hangar.container);
       },
       (err: unknown) => console.error('hangar intro unavailable:', err),
@@ -732,6 +735,7 @@ export class Game {
         this.#settings = { ...this.#settingsMenu.values };
         saveSettings(browserStorage(), this.#settings);
         this.#applyVolumes();
+        this.#applyLook();
         // A taste of the new effects level; the music is playing to hear its own.
         if (this.#settings.effects !== before.effects) this.#fx?.play('killShip');
         else this.#sound('change');
@@ -805,6 +809,13 @@ export class Game {
   #applyVolumes(): void {
     if (this.#musicVolume) this.#musicVolume.gain.value = volumeGain(this.#settings.music);
     if (this.#fx) this.#fx.volume = volumeGain(this.#settings.effects);
+  }
+
+  /** Sets the flashes' caps and the shake from the settings. */
+  #applyLook(): void {
+    this.#r.flashes.flashing = this.#settings.flashing;
+    this.#r.shakeOn = this.#settings.shake;
+    if (this.#hangar) this.#hangar.strobePeak = FLASH_PEAK[this.#settings.flashing];
   }
 
   /** Builds `level` from `levelData` and keeps the song's notes for the effects' pitch. */
@@ -1166,6 +1177,7 @@ export class Game {
     this.#offerReplay = true;
     const s = this.#state;
     this.#r.explosion.start(s.shipX / Q8, s.shipY / Q8, seededRandom(this.#runs));
+    this.#r.flash.start((s.deathTick * SAMPLES_PER_TICK * 1000) / SAMPLE_RATE);
     this.#setMode('gameover');
   }
 
@@ -1382,6 +1394,8 @@ export class Game {
     const r = this.#r;
     const level = this.#level;
     const blink = Math.floor(now / PROMPT_BLINK_MS) % 2 === 0;
+    // Still unless play or game over shakes it this frame.
+    r.shake(-1, 0);
     switch (this.#mode) {
       case 'start': {
         this.#title.update(null, blink);
@@ -1477,6 +1491,7 @@ export class Game {
         const elapsed = now - this.#modeSince;
         r.explosion.draw(elapsed);
         r.flash.draw(elapsed);
+        r.shake(elapsed, this.#state.hitTick);
         if (elapsed >= PROMPT_DELAY_MS && !this.#message.container.visible) {
           this.#message.container.visible = true;
           this.#message.show('Game over', MAGENTA, [
