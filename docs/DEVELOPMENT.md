@@ -1016,7 +1016,14 @@ Run `pnpm dev` and open the URL it prints.
     times shows Impossible after the third hard (`TitleMenu`, `IMPOSSIBLE_PASSES`); a step
     back starts the count again. From then on, until the page reloads, it is one of the
     choices. Play on Impossible is one level, Crush (`IMPOSSIBLE_SONG_IDS`), headed
-    "Impossible"; Practice on it plays any song with hard's cave at its own tempo.
+    "Impossible"; Practice on it plays any song with hard's cave at its own tempo. Its
+    walls are red (`LED_RED`, from `0x3a0006` at the screen edge to `0xff2a2a` at the tip,
+    which `TerrainView.setLevel` picks for the difficulty), and its hangar intro is on
+    alert (`HangarIntro.setAlarm`): a red flash added over the picture twice a second
+    (`strobeAlpha`: 70 ms each, fading from 0.32, at 0 and 160 ms of every second, under
+    WCAG 2.2's three flashes a second, 2.3.1), and the siren's wail at 0.15 s and 4.15 s
+    (`ALARM_CUES`, merged into the cue list by `hangarCues`). Impossible runs go on the
+    boards like any other; only cheats keep a run off (Brad, 2026-11-10).
 
   A run with a cheat shows "Cheat" in magenta left of the score, and its replay records the
   flags, so the M5 boards will refuse it. Watching a replay runs with the flags it recorded.

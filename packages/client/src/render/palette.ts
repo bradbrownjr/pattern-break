@@ -35,5 +35,11 @@ export function mix(base: number, color: number, amount256: number): number {
   return out;
 }
 
+/**
+ * Lit segments on Impossible (Brad, 2026-11-10: "a sinister gradient of red"): dried-blood
+ * red at the screen edge brightening to a hot crimson at the tips, in place of LED_LIT.
+ */
+export const LED_RED: readonly number[] = Array.from({ length: 12 }, (_, k) => mix(0x3a0006, 0xff2a2a, Math.round((k * 256) / 11)));
+
 /** Unlit segments: the lit colour at about 12% over the background. */
 export const LED_DIM: readonly number[] = LED_LIT.map((c) => mix(BACKGROUND, c, 30));

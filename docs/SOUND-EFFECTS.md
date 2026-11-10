@@ -99,6 +99,17 @@ Sounds that are too familiar are the other risk: sfxr and ZzFX presets are recog
 from many small games. The fix here is our own parameters, and tying pitched effects to
 the song.
 
+### Sirens
+
+An outdoor warning siren's "wail" is a slowly rising, then falling, tone on a loop, and
+American sirens work between 500 and 1800 Hz under SAE J1849
+([Popular Science](https://www.popsci.com/technology/history-of-police-sirens/)). The US
+attack signal is "an up-and-down, rising and falling tone", against a single tone for an
+alert ([Illinois Ready](https://ready.illinois.gov/plan/sirens.html)). A mechanical siren's
+pitch rises as its fan speeds up (Popular Science, above). Not read: the SAE standard
+itself, and FEMA's outdoor warning systems guide (CPG 1-17), which search summaries give
+as a 3 to 5 minute wavering tone for an attack.
+
 ### Explosions in Web Audio
 
 Web Audio has no noise source; noise is a buffer of random samples. MDN's
@@ -217,6 +228,7 @@ heard time.
 | `click` | the deck's Play key | a short-mode click, 15 ms | |
 | `hiss` | the tape starting | quiet high-passed noise, 0.84 s | |
 | `canopy` | the canopy closing | band-limited noise, falling over 0.75 s | |
+| `siren` | Impossible's hangar intro, twice | one wail: a triangle and a quiet square a fifth up, 520 Hz up to 875 Hz and back over 3 s, low-passed, in echo and reverb | the attack warning's wail |
 
 Enemy bullets make no sound: there are too many.
 

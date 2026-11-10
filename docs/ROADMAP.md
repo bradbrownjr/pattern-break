@@ -70,6 +70,9 @@ start the next until the current one is done.
 - [ ] The bundled music pack (more songs after the first three), attribution with author
       and source links on song cards and level intros, and a credits screen.
       `tools/validate-manifest.ts` is already in CI.
+- [ ] A scroll bar on the jukebox's list, like the help screen's, once the songs no longer
+      fit above the spectrum (Brad, 2026-11-10). At ten songs the rows have already closed
+      up from 11 px to 10.
 
 **Acceptance:** install as a PWA, turn on airplane mode, import a new module, and play it.
 

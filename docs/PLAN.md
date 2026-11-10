@@ -65,7 +65,9 @@ Read before writing core code.
   `node:crypto` on the server). `.gitattributes` marks module and WASM files binary so git
   never rewrites their bytes.
 - **Leaderboard key:** `(moduleHash, difficulty, GEN_VERSION)`. Bump `GEN_VERSION` whenever
-  levelgen or sim output changes, so old scores land on a separate board.
+  levelgen or sim output changes, so old scores land on a separate board. Impossible is a
+  difficulty like the others, with its own boards; only a run with a cheat is kept off
+  (Brad, 2026-11-10).
 - **Pin the libopenmpt WASM build.** Commit the binary and record its version in
   `GEN_VERSION` metadata. WebAssembly float arithmetic gives the same results in every
   engine (NaN bit patterns aside), but different libopenmpt versions can mix differently.
@@ -166,7 +168,9 @@ every bar of every generated level.
   difficulty is analyzed at its own tempo, so it has its own LevelData. Difficulty is a
   constant object (`easy`, `normal`, `hard`, and the secret `impossible`: hard's cave and
   enemies at the song's own tempo, 2026-11-10); the numbers and the exact rounding rules are
-  in `docs/DEVELOPMENT.md`, "Level and sim".
+  in `docs/DEVELOPMENT.md`, "Level and sim". Impossible looks the part: its walls are a
+  gradient of dark to bright red instead of the green to red, and its hangar intro has red
+  strobes and an air raid siren (2026-11-10).
 - **Enemies (2026-11-09):** three kinds, each from one part of the song. Every enemy fires
   on its own instrument's notes, so every shot lands on the music.
   - **Turrets** come from the drums. A turret sits on the tip of the bar its drum note plays

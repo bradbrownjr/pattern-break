@@ -206,6 +206,31 @@ export const shots: Shot[] = [
     usedIn: [],
   },
   {
+    id: 'hangar-alarm',
+    query: { scene: 'hangar', song: 'crush', difficulty: 'impossible', t: '1.0' },
+    alt:
+      'The grey pixel-art hangar of the intro washed in dark red: the back wall, the roof trusses, three ' +
+      'work lights with their cones of light, the fighter with its canopy open and the ladder against it, ' +
+      'and the small pilot in a white helmet walking towards it from the left. Every shade is tinted red, ' +
+      'the darks a deep maroon and the lights a pale pink.',
+    caption: 'The hangar intro on Impossible, at a flash of the red strobe. Not used in the README.',
+    usedIn: [],
+  },
+  {
+    id: 'impossible',
+    query: { scene: 'play', song: 'crush', difficulty: 'impossible', t: '12', seed: '1' },
+    alt:
+      'A frame of play in an LED cavern lit only in red: the columns hanging from the top and rising from ' +
+      'the bottom are dark maroon at the screen edges, brightening to vivid red at their tips. The small ' +
+      'cyan ship on the left is inside a cyan ring, its shield, with an amber capsule marked "P" behind ' +
+      'it and cyan shots ahead. Two magenta enemy ships fly in the middle among small magenta bullets, ' +
+      '"200" shows twice in white where enemies were destroyed, and "400" in amber at the right; a turret ' +
+      'hangs from the ceiling at the top right. The HUD shows three ship icons, a bomb and "x3" in the top ' +
+      'left, "0004300" in the top right, and the power-up meter along the bottom with "Shield 6" lit lime.',
+    caption: 'Crush on Impossible, 12 seconds in, flown by the autopilot. Not used in the README.',
+    usedIn: [],
+  },
+  {
     id: 'run-start',
     query: { scene: 'run-start', song: 'numenchip', difficulty: 'normal', t: '0.25' },
     alt:

@@ -95,6 +95,40 @@ export const HANGAR_CUES: readonly { at: number; effect: Effect; pan: number }[]
 ];
 
 /**
+ * Impossible's hangar is on alert (Brad, 2026-11-10): the siren wails twice, 3 s each, with
+ * a second between, before Play.
+ */
+export const ALARM_CUES: readonly { at: number; effect: Effect; pan: number }[] = [
+  { at: 150, effect: 'siren', pan: -0.3 },
+  { at: 4150, effect: 'siren', pan: 0.3 },
+];
+
+/** The intro's sounds, with the alarm's when `alarm` is on, in time order. */
+export function hangarCues(alarm: boolean): readonly { at: number; effect: Effect; pan: number }[] {
+  return alarm ? [...HANGAR_CUES, ...ALARM_CUES].sort((a, b) => a.at - b.at) : HANGAR_CUES;
+}
+
+/**
+ * The alarm's red strobe, the strength of its flash `ms` into the intro: a double flash
+ * every second, each 70 ms fading out, at most 0.32 of red added over the picture. Two
+ * flashes a second stays under WCAG 2.2's limit of three in any one second (2.3.1, Three
+ * Flashes or Below Threshold).
+ */
+export const STROBE_PERIOD_MS = 1000;
+const STROBE_FLASHES = [0, 160];
+const STROBE_FLASH_MS = 70;
+const STROBE_ALPHA = 0.32;
+const STROBE_RED = 0xff1a1a;
+
+export function strobeAlpha(ms: number): number {
+  const phase = ((ms % STROBE_PERIOD_MS) + STROBE_PERIOD_MS) % STROBE_PERIOD_MS;
+  for (const at of STROBE_FLASHES) {
+    if (phase >= at && phase < at + STROBE_FLASH_MS) return STROBE_ALPHA * (1 - (phase - at) / STROBE_FLASH_MS);
+  }
+  return 0;
+}
+
+/**
  * The intro's clock for `ms` since it started: it stops with the hand over Play until the
  * level is `ready`, and at Play once it is.
  */
@@ -242,6 +276,9 @@ export class HangarIntro {
   #heading = new PixelText('', G6, 2);
   #subhead = new PixelText('', G5);
   #credit = new PixelText('', G4);
+  /** The alarm's red strobe over everything, added to the picture; and whether it is on. */
+  #strobe = new Sprite(Texture.WHITE);
+  #alarm = false;
   readonly #art: HangarArt;
 
   constructor(art: HangarArt) {
@@ -278,7 +315,17 @@ export class HangarIntro {
       this.#subhead,
       this.#credit,
     );
-    this.container.addChild(this.#camera, this.#cockpit, this.#canopy);
+    this.#strobe.width = W;
+    this.#strobe.height = H;
+    this.#strobe.tint = STROBE_RED;
+    this.#strobe.blendMode = 'add';
+    this.#strobe.visible = false;
+    this.container.addChild(this.#camera, this.#cockpit, this.#canopy, this.#strobe);
+  }
+
+  /** Turns the alarm's red strobe on or off (Impossible). */
+  setAlarm(on: boolean): void {
+    this.#alarm = on;
   }
 
   /**
@@ -305,6 +352,9 @@ export class HangarIntro {
     this.#showOutside(0);
     if (inHangar) this.#drawHangarShot(ms);
     else this.#drawCockpitShot(ms);
+    const flash = this.#alarm ? strobeAlpha(ms) : 0;
+    this.#strobe.visible = flash > 0;
+    this.#strobe.alpha = flash;
   }
 
   /**
@@ -313,6 +363,7 @@ export class HangarIntro {
    * view with the frame riding on it.
    */
   drawWipe(ms: number): void {
+    this.#strobe.visible = false;
     this.#camera.visible = false;
     this.#cockpit.visible = true;
     this.#drawCockpitShot(PLAY_AT + ms);

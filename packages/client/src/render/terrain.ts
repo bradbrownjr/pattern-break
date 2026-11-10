@@ -4,7 +4,7 @@
 
 import { BAR_LIT_WIDTH, BAR_PITCH, Difficulty, SEGMENT_LIT_HEIGHT, type Level } from '@game/core';
 import { Container, Sprite, Texture } from 'pixi.js';
-import { LED_LIT, LED_PEAK } from './palette.ts';
+import { LED_LIT, LED_PEAK, LED_RED } from './palette.ts';
 import {
   MAX_VISIBLE_BARS,
   SEGMENTS_PER_SIDE,
@@ -46,15 +46,15 @@ function segment(parent: Container, y: number): Sprite {
   return s;
 }
 
-/** Shows segment `s` (segment k of its side) at x in `state`, or hides it. */
-function place(s: Sprite, x: number, state: number, k: number): void {
+/** Shows segment `s` (segment k of its side) at x in `state`, lit from `lit`, or hides it. */
+function place(s: Sprite, x: number, state: number, k: number, lit: readonly number[]): void {
   if (state === SEGMENT_HIDDEN) {
     s.visible = false;
     return;
   }
   s.visible = true;
   s.x = x;
-  s.tint = state === SEGMENT_LIT ? LED_LIT[segmentColorIndex(k)]! : LED_PEAK;
+  s.tint = state === SEGMENT_LIT ? lit[segmentColorIndex(k)]! : LED_PEAK;
 }
 
 export class TerrainView {
@@ -62,6 +62,8 @@ export class TerrainView {
   #columns: BarColumn[] = [];
   #level: Level | null = null;
   #showPeaks = false;
+  /** The lit colours: the neon green to red, or on Impossible all red (LED_RED). */
+  #lit: readonly number[] = LED_LIT;
   #range: BarRange = { first: 0, end: 0 };
 
   constructor() {
@@ -74,6 +76,7 @@ export class TerrainView {
     // Peak dots are drawn only where they are solid: a dot the ship could fly through
     // would look like terrain.
     this.#showPeaks = level !== null && Difficulty[level.difficulty].solidPeaks;
+    this.#lit = level?.difficulty === 'impossible' ? LED_RED : LED_LIT;
     if (!level) for (const c of this.#columns) c.visible = false;
   }
 
@@ -94,8 +97,8 @@ export class TerrainView {
       const cp = this.#showPeaks ? level.ceilingPeak[i]! : c;
       const fp = this.#showPeaks ? level.floorPeak[i]! : f;
       for (let k = 0; k < SEGMENTS_PER_SIDE; k++) {
-        place(column.ceiling[k]!, x, segmentState(c, cp, k), k);
-        place(column.floor[k]!, x, segmentState(f, fp, k), k);
+        place(column.ceiling[k]!, x, segmentState(c, cp, k), k, this.#lit);
+        place(column.floor[k]!, x, segmentState(f, fp, k), k, this.#lit);
       }
     }
     for (; n < this.#columns.length; n++) this.#columns[n]!.visible = false;

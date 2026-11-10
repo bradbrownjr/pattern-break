@@ -41,7 +41,7 @@ import { InputSampler, keyToMenuAction, type MenuAction } from './input.ts';
 import { DisplayClock, InputLog, catchUp, targetTick } from './loop.ts';
 import { ControlsScreen } from './controls.ts';
 import { SoundCues, type Cue } from './cues.ts';
-import { ColourFlood, HANGAR_CUES, HangarIntro, PLAY_AT, WIPE_MS, introTime, loadHangarArt } from './hangar.ts';
+import { ColourFlood, HangarIntro, PLAY_AT, WIPE_MS, hangarCues, introTime, loadHangarArt } from './hangar.ts';
 import { HelpScreen } from './help.ts';
 import { CONTROL_PAGES, ControlsPages, DIFFICULTY_LABELS, JukeboxMenu, PauseMenu, SettingsMenu, TitleMenu, type TitleEvent } from './menu.ts';
 import type { PerfMeter } from './perf.ts';
@@ -206,7 +206,7 @@ export class Game {
    * The hangar intro playing or skipped: when its clock started, the next of its sound cues,
    * and whether the level is loaded so Play can start the run.
    */
-  #intro: { start: number; cue: number; ready: boolean; skipped: boolean } | null = null;
+  #intro: { start: number; cue: number; cues: ReturnType<typeof hangarCues>; ready: boolean; skipped: boolean } | null = null;
   /** The run started from the intro is flooding into colour, and its canopy is closing. */
   #flooding = false;
   #wiping = false;
@@ -1003,8 +1003,10 @@ export class Game {
     const heading = this.#levelHeading(run);
     // Without its art (still loading, or it failed to) the level gets its usual card.
     if (hangar && this.#hangar) {
-      this.#intro = { start: performance.now(), cue: 0, ready: false, skipped: false };
+      const alarm = difficulty === 'impossible';
+      this.#intro = { start: performance.now(), cue: 0, cues: hangarCues(alarm), ready: false, skipped: false };
       this.#hangar.setSong(heading, song.title, song.credit, DIFFICULTY_LABELS[difficulty]);
+      this.#hangar.setAlarm(alarm);
       this.#setMode('hangar');
     } else {
       this.#intro = null;
@@ -1508,8 +1510,8 @@ export class Game {
     const ms = introTime(now - intro.start, intro.ready);
     // Held, the clock restarts from where it stopped.
     intro.start = now - ms;
-    while (intro.cue < HANGAR_CUES.length && HANGAR_CUES[intro.cue]!.at <= ms) {
-      const cue = HANGAR_CUES[intro.cue++]!;
+    while (intro.cue < intro.cues.length && intro.cues[intro.cue]!.at <= ms) {
+      const cue = intro.cues[intro.cue++]!;
       this.#fx?.play(cue.effect, cue.pan);
     }
     this.#hangar?.draw(ms);

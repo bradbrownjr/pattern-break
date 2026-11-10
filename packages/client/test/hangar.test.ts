@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EFFECTS } from '../src/audio/effects.ts';
+import { LED_LIT, LED_RED } from '../src/render/palette.ts';
 import {
   COCKPIT_AT,
   ColourFlood,
@@ -8,7 +9,9 @@ import {
   HOLD_AT,
   LABEL_CHARS,
   PLAY_AT,
+  hangarCues,
   introTime,
+  strobeAlpha,
   labelText,
 } from '../src/game/hangar.ts';
 
@@ -57,5 +60,37 @@ describe('ColourFlood', () => {
   it('is full colour on a song shorter than the flood', () => {
     const level = { barStartSample: Uint32Array.from([0, 1000, 2000]) };
     expect(ColourFlood.amount(level, 5000)).toBe(3 / FLOOD_ROWS);
+  });
+});
+
+describe('the alarm (Impossible)', () => {
+  it('adds two siren wails before Play, in time order with the rest', () => {
+    const cues = hangarCues(true);
+    expect(cues.filter((c) => c.effect === 'siren').map((c) => c.at)).toEqual([150, 4150]);
+    for (let i = 1; i < cues.length; i++) expect(cues[i]!.at).toBeGreaterThanOrEqual(cues[i - 1]!.at);
+    expect(cues.length).toBe(HANGAR_CUES.length + 2);
+    // A 3 s wail from 4150 ms ends before Play.
+    expect(4150 + 3000).toBeLessThan(PLAY_AT);
+    expect(hangarCues(false)).toBe(HANGAR_CUES);
+  });
+
+  it('strobes red twice a second, under three flashes in any second', () => {
+    const lit: number[] = [];
+    for (let ms = 0; ms < 3000; ms++) if (strobeAlpha(ms) > 0 && strobeAlpha(ms - 1) === 0) lit.push(ms);
+    expect(lit).toEqual([0, 160, 1000, 1160, 2000, 2160]);
+    for (const start of lit) expect(lit.filter((t) => t >= start && t < start + 1000).length).toBeLessThanOrEqual(3);
+    expect(Math.max(...Array.from({ length: 1000 }, (_, ms) => strobeAlpha(ms)))).toBeLessThanOrEqual(0.32);
+  });
+});
+
+describe('the red walls (Impossible)', () => {
+  it('run from dark at the screen edge to bright red at the tips, red in every step', () => {
+    expect(LED_RED.length).toBe(LED_LIT.length);
+    for (let k = 0; k < LED_RED.length; k++) {
+      const c = LED_RED[k]!;
+      const [r, g, b] = [c >> 16, (c >> 8) & 255, c & 255];
+      expect(r, `step ${k}`).toBeGreaterThan(2 * Math.max(g, b));
+      if (k > 0) expect(r).toBeGreaterThan(LED_RED[k - 1]! >> 16);
+    }
   });
 });

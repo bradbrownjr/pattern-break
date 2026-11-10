@@ -33,7 +33,8 @@ export type Effect =
   | 'insert'
   | 'click'
   | 'hiss'
-  | 'canopy';
+  | 'canopy'
+  | 'siren';
 
 /** How an effect plays: its layers, how it varies, and how much goes to the echo and reverb. */
 export interface EffectSpec {
@@ -322,6 +323,21 @@ export const EFFECTS: Record<Effect, EffectSpec> = {
     layers: [
       { wave: 'noise', freq: 2600, slide: -0.9, attack: 0.05, sustain: 0.35, decay: 0.35, highpass: 350, lowpass: 3200, lowpassSlide: -1, volume: 0.22 },
     ],
+    priority: 2,
+  },
+  // Impossible's hangar (Brad, 2026-11-10: an air raid siren, obvious but not annoying): one
+  // wail, the attack warning's rising and falling tone, from 520 Hz up three quarters of an
+  // octave (875 Hz) and back over 3 s, inside the 500 to 1800 Hz of SAE J1849. The slide
+  // starts at 1 octave a second and slows by 2/3 every second, so it turns at 1.5 s. A
+  // triangle with a quiet square a fifth up for the rotor's buzz, low-passed and far off in
+  // the echo and reverb.
+  siren: {
+    layers: [
+      { wave: 'triangle', freq: 520, slide: 1, slideAccel: -2 / 3, attack: 0.6, sustain: 1.8, decay: 0.6, lowpass: 2400, volume: 0.3 },
+      { wave: 'square', freq: 780, slide: 1, slideAccel: -2 / 3, attack: 0.6, sustain: 1.8, decay: 0.6, lowpass: 1400, volume: 0.06 },
+    ],
+    echo: 0.3,
+    reverb: 0.45,
     priority: 2,
   },
 };

@@ -13,6 +13,10 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **Play-test: Impossible looks and sounds the part.** Its walls are a gradient of dark to
+  bright red instead of the neon green to red, and its hangar intro flashes red strobes
+  twice a second while an air raid siren wails twice in the distance. Impossible runs go
+  on the leaderboards; only cheats keep a run off.
 * **Play-test: a shield on every life.** No one had finished a level, so every life now
   starts with a 6-point shield: a ship's bullet costs 2, a tank's shell 3, a turret's shell
   6, ramming 3, and a wall 3, which bounces the ship back towards the middle of the cave

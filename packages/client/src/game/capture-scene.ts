@@ -101,6 +101,7 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
     case 'hangar': {
       const hangar = new HangarIntro(await loadHangarArt());
       hangar.setSong('Level 1', song.title, song.credit, DIFFICULTY_LABELS[difficulty]);
+      hangar.setAlarm(difficulty === 'impossible');
       r.ui.addChild(hangar.container);
       r.world.visible = false;
       r.combat.hud.visible = false;
