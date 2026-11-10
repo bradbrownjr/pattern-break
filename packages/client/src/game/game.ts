@@ -36,16 +36,31 @@ import { seededRandom } from '../render/random.ts';
 import type { GameRenderer } from '../render/renderer.ts';
 import { barBinEdges, barLevels } from '../render/spectrum.ts';
 import { analyzeInWorker } from './analysis.ts';
-import { PadBit, PadTracker, gamepadConnected, padMenuAction, readGamepads } from './gamepad.ts';
+import {
+  STANDARD_PROFILE,
+  assign,
+  defaultBindings,
+  directionWithoutKey,
+  isLockedSlot,
+  isReservedKey,
+  loadBindings,
+  padInputLabel,
+  padLayout,
+  saveBindings,
+  type Bindings,
+  type KeyAction,
+} from './bindings.ts';
+import { PadBit, PadCapture, PadTracker, PadWatcher, connectedPads, padMenuAction, padProfile, readGamepads } from './gamepad.ts';
 import { TouchControls } from './touch.ts';
 import { CodeListener, keyToken, padToken, type CodeToken } from './secrets.ts';
-import { InputSampler, keyToMenuAction, type MenuAction } from './input.ts';
+import { InputSampler, KeyMap, type MenuAction } from './input.ts';
 import { DisplayClock, InputLog, catchUp, targetTick } from './loop.ts';
 import { ControlsScreen } from './controls.ts';
 import { SoundCues, type Cue } from './cues.ts';
 import { ColourFlood, HangarIntro, PLAY_AT, WIPE_MS, hangarCues, introTime, loadHangarArt } from './hangar.ts';
 import { HelpScreen } from './help.ts';
-import { CONTROL_PAGES, ControlsPages, DIFFICULTY_LABELS, JukeboxMenu, PauseMenu, SettingsMenu, TitleMenu, type TitleEvent } from './menu.ts';
+import { CONTROL_PAGES, ControlsPages, DIFFICULTY_LABELS, JukeboxMenu, KeysMenu, PauseMenu, SettingsMenu, TitleMenu, type TitleEvent } from './menu.ts';
+import { KeysScreen } from './keys-screen.ts';
 import type { PerfMeter } from './perf.ts';
 import { drawPlay } from './play-view.ts';
 import {
@@ -79,6 +94,7 @@ type Mode =
   | 'jukebox'
   | 'controls'
   | 'settings'
+  | 'keys'
   | 'help'
   | 'hangar'
   | 'analyzing'
@@ -113,6 +129,10 @@ const PROMPT_DELAY_MS = 700;
 const TITLE_DRIFT_PX_PER_S = 40;
 /** Prompts and the menu cursor blink this often. */
 const PROMPT_BLINK_MS = 600;
+/** The Keys screen waits this long for a key or button, then gives up. */
+const CAPTURE_MS = 5000;
+/** A note on the Keys screen's hint line shows this long. */
+const KEYS_NOTE_MS = 2000;
 /**
  * The demo starts where the title song changes (The_Epic_Chip's fourth pattern, at 18 s),
  * the fade's black falling on the change, if the menu has been left alone for
@@ -201,6 +221,19 @@ export class Game {
   readonly #controlsPages = new ControlsPages();
   readonly #controls = new ControlsScreen();
   readonly #settingsScreen = new SettingsScreen();
+  readonly #keysScreen = new KeysScreen();
+  readonly #keysMenu = new KeysMenu();
+  #bindings: Bindings = loadBindings(browserStorage());
+  readonly #padWatcher = new PadWatcher();
+  /** The pad the Keys screen shows: the last one used. */
+  #activePad: number | null = null;
+  /**
+   * Waiting on the Keys screen for a key or button for the slot under the cursor, until
+   * `until`; `pads` holds each pad's inputs as they were when it started.
+   */
+  #capture: { until: number; pads: Map<number, PadCapture> } | null = null;
+  /** A note over the Keys screen's hint, such as a direction left with no key. */
+  #keysNote: { text: string; until: number } | null = null;
   readonly #help = new HelpScreen();
   /** The hangar intro, once its art has loaded; it shows in #hangarLayer. */
   #hangar: HangarIntro | null = null;
@@ -293,12 +326,14 @@ export class Game {
     this.#jukeboxMenu = new JukeboxMenu(options.songs.length);
     this.#jukebox = new JukeboxScreen(options.songs);
     this.#settingsMenu = new SettingsMenu(this.#settings);
+    this.#input.keys = new KeyMap(this.#bindings.keys);
     this.#applyLook();
     r.ui.addChild(
       this.#title.container,
       this.#jukebox.container,
       this.#controls.container,
       this.#settingsScreen.container,
+      this.#keysScreen.container,
       this.#help.container,
       this.#hangarLayer,
       this.#demoBanner.container,
@@ -373,6 +408,7 @@ export class Game {
     this.#jukebox.container.visible = mode === 'jukebox';
     this.#controls.container.visible = mode === 'controls';
     this.#settingsScreen.container.visible = mode === 'settings';
+    this.#keysScreen.container.visible = mode === 'keys';
     this.#help.container.visible = mode === 'help';
     this.#hangarLayer.visible = mode === 'hangar' || (mode === 'play' && this.#wiping);
     this.#pauseScreen.container.visible = mode === 'paused';
@@ -390,7 +426,8 @@ export class Game {
     this.#r.combat.hud.visible = this.#r.world.visible;
     if (mode === 'analyzing') this.#message.show('', 0, ['Loading']);
     if (mode === 'paused') this.#pauseScreen.update(this.#pauseMenu.cursor);
-    if (mode === 'controls') this.#controls.show(this.#controlsPages.page);
+    if (mode === 'controls') this.#controls.show(this.#controlsPages.page, this.#bindings);
+    if (mode === 'keys') this.#updateKeys(performance.now());
     if (mode === 'settings') this.#settingsScreen.update(this.#settingsMenu.cursor, this.#settingsMenu.values);
   }
 
@@ -418,11 +455,19 @@ export class Game {
   // Input ---------------------------------------------------------------------------------
 
   #onKeyDown(e: KeyboardEvent): void {
-    if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
+    const keys = this.#input.keys;
+    if (this.#capture) {
+      e.preventDefault();
+      if (!e.repeat) this.#captureKey(e.code);
+      return;
+    }
+    // Game keys don't scroll the page or start the browser's find-as-you-type.
+    if (keys.action(e.code) || e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
     this.#input.keyDown(e.code);
     if (e.code === 'Escape') this.#escHeld = true;
     this.#lastPressPad = false;
-    if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta') return;
+    const modifier = e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta';
+    if (modifier && !keys.action(e.code)) return;
     switch (this.#mode) {
       case 'start':
         if (!e.repeat) this.#leaveStart();
@@ -438,8 +483,8 @@ export class Game {
         if (!e.repeat) this.#skipHangar();
         return;
       case 'paused':
-        // Q quits straight to the title, as before the pause menu.
-        if (e.code === 'KeyQ') {
+        // Q quits straight to the title, as before the pause menu, unless it is bound.
+        if (e.code === 'KeyQ' && !keys.action(e.code)) {
           if (!e.repeat) this.#toTitle();
         } else {
           this.#menuKey(e);
@@ -448,6 +493,13 @@ export class Game {
       case 'title':
         if (!e.repeat) this.#codePress(keyToken(e.code));
         this.#menuKey(e);
+        return;
+      case 'keys':
+        if (e.code === 'Delete') {
+          if (!e.repeat) this.#clearSlot();
+        } else {
+          this.#menuKey(e);
+        }
         return;
       case 'jukebox':
       case 'controls':
@@ -459,7 +511,7 @@ export class Game {
         break;
     }
     if (e.repeat) return;
-    if (e.code === 'Escape') {
+    if (keys.action(e.code) === 'pause') {
       if (this.#mode === 'play') void this.#pause();
       else if (this.#mode === 'gameover' || this.#mode === 'complete') this.#toTitle();
       return;
@@ -474,7 +526,7 @@ export class Game {
 
   /** A key on a menu: a held arrow repeats; a held Enter or Esc does not. */
   #menuKey(e: KeyboardEvent): void {
-    const action = keyToMenuAction(e.code);
+    const action = this.#input.keys.menuAction(e.code);
     if (action && (!e.repeat || action === 'up' || action === 'down' || action === 'left' || action === 'right')) {
       e.preventDefault();
       this.#onMenu(action);
@@ -483,12 +535,19 @@ export class Game {
 
   /** Polls the gamepads: their held bits go to the sim, new presses act like keys. */
   #pollPads(now: number): void {
-    const pads = readGamepads();
-    this.#touch?.setPadConnected(gamepadConnected());
-    const bits = pads | (this.#touch?.bits ?? 0);
+    const pads = connectedPads();
+    const active = this.#padWatcher.update(pads);
+    if (active !== null) this.#activePad = active;
+    this.#touch?.setPadConnected(pads.length > 0);
+    // While the Keys screen waits, pads go to it and nothing else.
+    const capturing = this.#capture !== null;
+    if (this.#capture) this.#capturePad(pads, active);
+    const bits = readGamepads(pads, this.#bindings) | (this.#touch?.bits ?? 0);
     this.#padHeld = bits;
     this.#input.setPad(bits);
-    for (const bit of this.#pads.update(bits, now)) this.#onPadPress(bit);
+    const presses = this.#pads.update(bits, now);
+    if (capturing) return;
+    for (const bit of presses) this.#onPadPress(bit);
   }
 
   #onPadPress(bit: number): void {
@@ -520,6 +579,7 @@ export class Game {
       case 'jukebox':
       case 'controls':
       case 'settings':
+      case 'keys':
       case 'help': {
         const action = padMenuAction(bit);
         if (action) this.#onMenu(action);
@@ -552,7 +612,8 @@ export class Game {
   }
 
   #onPointer(): void {
-    if (this.#mode === 'start') this.#leaveStart();
+    if (this.#capture) this.#endCapture();
+    else if (this.#mode === 'start') this.#leaveStart();
     else if (this.#mode === 'demo') this.#toTitle();
     else if (this.#mode === 'replay') this.#endReplay(true);
     else if (this.#mode === 'hangar') this.#skipHangar();
@@ -562,6 +623,7 @@ export class Game {
       this.#mode === 'paused' ||
       this.#mode === 'controls' ||
       this.#mode === 'settings' ||
+      this.#mode === 'keys' ||
       this.#mode === 'help'
     ) {
       this.#onMenu('confirm');
@@ -597,6 +659,10 @@ export class Game {
       this.#onSettingsMenu(action);
       return;
     }
+    if (this.#mode === 'keys') {
+      this.#onKeysMenu(action);
+      return;
+    }
     if (this.#mode === 'help') {
       const event = this.#help.scroller.apply(action);
       if (event === 'moved') this.#help.update();
@@ -610,7 +676,7 @@ export class Game {
       const event = this.#controlsPages.apply(action);
       if (event === 'moved') {
         this.#sound('move');
-        this.#controls.show(this.#controlsPages.page);
+        this.#controls.show(this.#controlsPages.page, this.#bindings);
       } else if (event === 'back') {
         this.#sound('back');
         if (this.#controlsFrom === 'paused') this.#setMode('paused');
@@ -747,6 +813,13 @@ export class Game {
         else this.#sound('change');
         break;
       }
+      case 'keys':
+        this.#sound('select');
+        this.#keysMenu.row = 0;
+        this.#keysMenu.slot = 0;
+        this.#keysMenu.device = this.#lastPressPad ? 'pad' : 'keyboard';
+        this.#setMode('keys');
+        return;
       case 'back':
         this.#sound('back');
         this.#lastInput = performance.now();
@@ -756,6 +829,175 @@ export class Game {
         return;
     }
     this.#settingsScreen.update(this.#settingsMenu.cursor, this.#settingsMenu.values);
+  }
+
+  // Keys ----------------------------------------------------------------------------------
+
+  #onKeysMenu(action: MenuAction): void {
+    const menu = this.#keysMenu;
+    switch (menu.apply(action)) {
+      case 'moved':
+        this.#sound('move');
+        break;
+      case 'device':
+        this.#sound('change');
+        break;
+      case 'set':
+        if (isLockedSlot(menu.action!, menu.slot, menu.device)) {
+          this.#sound('back');
+          this.#note('Esc always pauses');
+          break;
+        }
+        this.#sound('select');
+        this.#keysNote = null;
+        this.#capture = { until: performance.now() + CAPTURE_MS, pads: new Map() };
+        break;
+      case 'reset':
+        if (menu.device === 'keyboard') this.#bindings.keys = defaultBindings().keys;
+        else delete this.#bindings.pads[this.#shownProfile()];
+        this.#saveBindings();
+        this.#sound('change');
+        break;
+      case 'back':
+        this.#sound('back');
+        this.#settingsScreen.update(this.#settingsMenu.cursor, this.#settingsMenu.values);
+        this.#setMode('settings');
+        return;
+      case null:
+        return;
+    }
+    this.#updateKeys(performance.now());
+  }
+
+  /** A key pressed while the Keys screen waits: Esc gives up; on the keyboard page, any other key that may be set is. */
+  #captureKey(code: string): void {
+    if (code === 'Escape') {
+      this.#endCapture();
+      return;
+    }
+    if (this.#keysMenu.device !== 'keyboard') return;
+    if (isReservedKey(code)) {
+      this.#sound('back');
+      this.#note('Key reserved');
+      return;
+    }
+    this.#setSlot(code, null);
+  }
+
+  /** Each frame while the Keys screen waits: the first new input on any pad, on the Pad page; a pad press gives up on the keyboard page. */
+  #capturePad(pads: readonly Gamepad[], active: number | null): void {
+    const capture = this.#capture!;
+    if (this.#keysMenu.device === 'keyboard') {
+      if (active !== null) this.#endCapture();
+      return;
+    }
+    for (const pad of pads) {
+      const seen = capture.pads.get(pad.index);
+      if (!seen) {
+        capture.pads.set(pad.index, new PadCapture(pad));
+        continue;
+      }
+      const input = seen.check(pad);
+      if (input) {
+        this.#activePad = pad.index;
+        this.#setSlot(input, padProfile(pad));
+        return;
+      }
+    }
+  }
+
+  /**
+   * Puts `input` in the slot under the cursor: a key, or an input of the pad layout
+   * `profile`. A keyboard change that leaves a direction with no key is refused, since
+   * menus need all four.
+   */
+  #setSlot(input: string | null, profile: string | null): void {
+    const menu = this.#keysMenu;
+    const action = menu.action;
+    this.#capture = null;
+    if (action === null) return;
+    if (menu.device === 'keyboard') {
+      const keys = assign(this.#bindings.keys, action as KeyAction, menu.slot, input);
+      const missing = directionWithoutKey(keys);
+      if (missing) {
+        this.#sound('back');
+        this.#note(`${missing[0]!.toUpperCase()}${missing.slice(1)} needs a key`);
+        this.#updateKeys(performance.now());
+        return;
+      }
+      this.#bindings.keys = keys;
+    } else {
+      const p = profile ?? this.#shownProfile();
+      this.#bindings.pads[p] = assign(padLayout(this.#bindings, p), action, menu.slot, input);
+    }
+    this.#saveBindings();
+    this.#sound('change');
+    this.#updateKeys(performance.now());
+  }
+
+  /** Delete on the Keys screen empties the slot under the cursor. */
+  #clearSlot(): void {
+    const menu = this.#keysMenu;
+    if (menu.action === null || isLockedSlot(menu.action, menu.slot, menu.device)) return;
+    this.#setSlot(null, null);
+  }
+
+  #endCapture(): void {
+    this.#capture = null;
+    this.#sound('back');
+    this.#updateKeys(performance.now());
+  }
+
+  #note(text: string): void {
+    this.#keysNote = { text, until: performance.now() + KEYS_NOTE_MS };
+  }
+
+  #saveBindings(): void {
+    saveBindings(browserStorage(), this.#bindings);
+    this.#input.keys = new KeyMap(this.#bindings.keys);
+    this.#input.clear();
+  }
+
+  /** The pad the Keys screen shows: the last one used, else the first connected, else none. */
+  #shownPad(): Gamepad | null {
+    const pads = connectedPads();
+    return pads.find((pad) => pad.index === this.#activePad) ?? pads[0] ?? null;
+  }
+
+  #shownProfile(): string {
+    const pad = this.#shownPad();
+    return pad ? padProfile(pad) : STANDARD_PROFILE;
+  }
+
+  #updateKeys(now: number): void {
+    const menu = this.#keysMenu;
+    if (this.#capture && now > this.#capture.until) this.#endCapture();
+    const pad = this.#shownPad();
+    const profile = pad ? padProfile(pad) : STANDARD_PROFILE;
+    const standard = profile === STANDARD_PROFILE;
+    const layout = menu.device === 'keyboard' ? this.#bindings.keys : padLayout(this.#bindings, profile);
+    const note = this.#keysNote && now < this.#keysNote.until ? this.#keysNote.text : '';
+    let hint = 'Enter Set  Del Clear  Esc Back';
+    if (this.#capture) hint = menu.device === 'keyboard' ? 'Press a key  Esc Cancel' : 'Press a button  Esc Cancel';
+    else if (this.#lastPressPad) {
+      // The shown pad's own names for Fire and Bomb: confirm and back.
+      const padLayoutNow = padLayout(this.#bindings, profile);
+      const fire = padLayoutNow.fire.find((i) => i !== null);
+      const bomb = padLayoutNow.bomb.find((i) => i !== null);
+      if (fire && bomb) hint = `${padInputLabel(fire, standard)} Set  ${padInputLabel(bomb, standard)} Back`;
+    }
+    this.#keysScreen.update({
+      device: menu.device,
+      row: menu.row,
+      slot: menu.slot,
+      layout,
+      standard,
+      padName: pad ? (standard ? 'Standard pad' : pad.id) : 'No pad',
+      waiting: this.#capture !== null,
+      blink: Math.floor(now / (PROMPT_BLINK_MS / 2)) % 2 === 0,
+      hint: note || hint,
+      warn: note !== '',
+    });
   }
 
   /** Opens the help screen at its top. */
@@ -1474,6 +1716,11 @@ export class Game {
         break;
       }
       case 'settings': {
+        r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
+        break;
+      }
+      case 'keys': {
+        this.#updateKeys(now);
         r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
         break;
       }

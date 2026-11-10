@@ -391,6 +391,7 @@ const SETTINGS_LABELS: Record<SettingsItem, string> = {
   shake: 'Shake',
   crt: 'CRT',
   leds: 'LEDs',
+  keys: 'Keys',
   back: 'Back',
 };
 
@@ -416,7 +417,7 @@ const CELL_GAP = 3;
 
 /**
  * The settings: Music and Effects as rows of five LED cells, lit up to the volume, green to
- * red, with "Off" at 0; Flashing, Shake, CRT and LED colours as words; then Back.
+ * red, with "Off" at 0; Flashing, Shake, CRT and LED colours as words; Keys; then Back.
  */
 export class SettingsScreen {
   readonly container = new Container();
@@ -442,7 +443,7 @@ export class SettingsScreen {
       if (isChoiceItem(item)) {
         right.place(VALUE_X + CHOICE_WIDTH + 4, y);
         this.container.addChild(left, right, off);
-      } else if (item !== 'back') {
+      } else if (item !== 'back' && item !== 'keys') {
         for (let i = 0; i < VOLUME_LEVELS; i++) {
           const cell = new Sprite(Texture.WHITE);
           cell.width = CELL_W;
@@ -463,7 +464,7 @@ export class SettingsScreen {
       const selected = row === cursor;
       this.#labels[row]!.color = selected ? AMBER : GREY;
       for (const a of this.#arrows[row]!) a.visible = selected;
-      if (item === 'back') return;
+      if (item === 'back' || item === 'keys') return;
       if (isChoiceItem(item)) {
         const value = this.#off[row]!;
         value.text = choiceText(values, item);

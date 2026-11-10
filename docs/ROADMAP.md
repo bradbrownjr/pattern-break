@@ -11,8 +11,7 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 
 | Item | What it delivers | Stage |
 |---|---|---|
-| [M3: effects and look](#m3-effects-and-look) | Particles, big explosions, sound effects, copper bars, starfield, CRT filter, the results screen, accessibility options. | Next |
-| [M4: library, offline, music pack](#m4-library-offline-music-pack) | Import your own songs, install the game, and play with no connection; a bundled, credited music pack. | Planned |
+| [M4: library, offline, music pack](#m4-library-offline-music-pack) | Import your own songs, install the game, and play with no connection; a bundled, credited music pack. | Next |
 | [M5: leaderboards](#m5-leaderboards) | A global board per song, with scores checked by replaying them on the server. | Planned |
 | [M6: mobile and polish](#m6-mobile-and-polish) | Latency calibration, phone performance, tuned difficulty. | Planned |
 | [Boss patterns](#later) | A mini boss at the end of level 4 and the final boss at the end of level 8, from the song's patterns. | Later |
@@ -26,44 +25,6 @@ yet.
 
 Each milestone is finished only when its acceptance checks pass. Work them in order; don't
 start the next until the current one is done.
-
----
-
-## M3: effects and look
-
-**Goal:** it looks and feels like the pitch.
-
-Left (2026-11-10): the rest of accessibility. The flashing and shake settings, the
-explosions, the look and the results screen are done (changelog, November 10); every new
-flash goes through `FlashGate` and every shake through `shakeOffset`.
-
-- [x] Sound effects, made in the browser (no sound files to license): shots, hits,
-      kills, power-ups, and an explosion with a deep boom, echo, and reverb, from our own
-      sfxr-style generator (`@game/chipfx`), with pitched effects on the song's notes.
-      Mixed under the music, with their own volume and an off switch in a new Settings
-      screen (Music and Effects). Research in `SOUND-EFFECTS.md`. Brad listens and says
-      which to change.
-- [x] A help screen (Brad, 2026-11-10), from the title and pause menus: a key to every
-      sprite and HUD icon, drawn with the game's sprites, and what each enemy and bonus
-      scores, from the sim's constants. It scrolls.
-- [x] A hangar intro before level 1 (Brad, 2026-11-10), skippable: in black and white, the
-      captain climbs into the fighter, ejects the deck's door open, puts the song's cassette
-      in it and pushes it shut; Play starts
-      the song, the canopy closes, and the level floods into colour with the song. The
-      hangar, the fighter (in the player ship's shape), the cockpit, the captain and the
-      glove are generated art (`art/hangar/README.md`).
-- [ ] Accessibility: remappable controls (the colour-blind LED colours are done). Remapping
-      also covers pads and arcade sticks without the Gamepad API's standard mapping (moved
-      from M2), tested once there is such a pad: without one, only hand-made gamepad
-      objects could check it.
-
-**Acceptance:** `pnpm check` passes; with reduced flashing no flash exceeds the cap or
-repeats more than three times a second (tested); with shake off the stage never moves
-(tested); captures of an explosion, the copper bars, the CRT filter and the results screen
-are in `docs/img`; a personal best survives a reload.
-
-**Docs:** `DEVELOPMENT.md` ("Playing it" settings, rendering, the results screen), `PLAN.md`
-(visual spec, accessibility), `SOUND-EFFECTS.md` if sounds change, the help screen.
 
 ---
 
@@ -138,52 +99,3 @@ These need Brad's answer before the work that depends on them. Don't guess.
 4. **Shots through walls:** the player's shots pass through the LED walls, so turrets on
    the bar tips can be hit; enemy bullets stop on them (2026-11-09, for Brad's play-test).
    The other way, turrets are hard to reach behind taller bars.
-5. **Hit-stop:** PLAN.md lists a short freeze on a hit (cosmetic only). The picture follows
-   the song's clock, so a freeze would show the picture behind the music it lines up with.
-   Build it, or drop it from the plan (2026-11-10).
-
-## Decided
-
-- **Title:** Pattern Break (2026-11-08).
-- **Free and open source,** with the code under MIT (2026-11-08). Bundled music keeps its
-  own licenses.
-- **Hosting:** Docker on Brad's Unraid server, with images published to GitHub Container
-  Registry (2026-11-08).
-- **Terrain:** one LED bar per row of the song, a cavern that squeezes on every hit and winds
-  with the melody (2026-11-09; until then the ceiling came from the left channel and the
-  floor from the right). What matters is that it feels like playing the beat and that
-  there is always a path for the ship, even a hard one (2026-11-08).
-- **Enemies:** drums make turrets on the floor and ceiling, the bass makes tanks on the
-  floor, and the other instruments make ships. Every enemy shot lands on a note of its
-  instrument (2026-11-09).
-- **M2 comes in slices,** enemies and shooting first, each play-tested (2026-11-09).
-- **Power-ups:** shooting down a whole formation of ships drops a capsule, which falls to
-  the cave's floor so collecting one means flying low (2026-11-09). Each capsule unlocks
-  the next power-up in order: double shot, missile, shield, drone, laser, boost; there is
-  no buy button (2026-11-10). Boost is an afterburner on its own button, more unlocks
-  adding fuel, since a permanent speed-up made the ship too hard to steer. The missile is
-  the bomb for air to air: its own button, one per press, area damage, a reload. The gun is
-  the standard weapon and sprays freely. Losing a life loses every power-up (2026-11-09).
-- **Lives:** three; a hit costs one and the ship flies back in at the playhead (2026-11-09,
-  the fly-in 2026-11-10).
-- **Bomb:** its own button from the start; a concussive bomb falls to the floor and
-  destroys the tanks and turrets near where it bursts (2026-11-09).
-- **Nuke:** a last resort on its own button that clears the screen of enemies and
-  bullets. One charges per 10 on-beat kills, up to 3 held; a level starts with none
-  (2026-11-09).
-- **Difficulty sets the song's speed and the cave's width;** the beat and the winding are
-  the same on every difficulty, and enemies add the rest of the challenge (2026-11-09).
-- **Terrain height comes from the song as it is,** with no per-song normalization. A quiet
-  song makes an easy level; enemies still make it a challenge (2026-11-08).
-- **Wording:** player-facing text calls modules songs and says what a module is on first
-  mention (2026-11-08).
-- **libopenmpt patch:** we carry `tools/libopenmpt/deterministic-prng.patch`, which seeds
-  playback randomness with a fixed value so a song renders the same on every load
-  (2026-11-08).
-- **Server-side replay checks** stay, measured before they're turned on (2026-11-08; see
-  M5).
-
-## Out of scope (decided)
-
-- **MP3, OGG, and streaming audio.** Levels come from tracker pattern data, which those
-  formats don't have.

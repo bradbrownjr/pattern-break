@@ -69,9 +69,9 @@ export const shots: Shot[] = [
     alt:
       '"Controls" in large cyan pixel letters with a magenta shadow. Below it, a drawing of a keyboard: ' +
       'dark keycaps with dim labels, and the keys of this layout filled in colour. Esc is grey; the four ' +
-      'arrow keys to the right are white; Z and Space are cyan, X amber, C magenta, V red, and the left ' +
-      'Shift violet. Under it, a legend in two columns, a coloured square before each action: Fly, ' +
-      'Arrows; Fire, Z, Space; Bomb, X; Missile, C; Nuke, V; Boost, Shift; Pause, Esc. At the bottom, ' +
+      'arrow keys to the right are white; Z and Space are cyan, X amber, C magenta, V red, and both ' +
+      'Shift keys violet. Under it, a legend in two columns, a coloured square before each action: Fly, ' +
+      'Arrows; Fire, Z, Space; Bomb, X; Missile, C; Nuke, V; Boost, L Shift, R Shift; Pause, Esc. At the bottom, ' +
       '"< Arrows  WASD  Gamepad >" with "Arrows" in cyan.',
     caption: 'The controls screen, arrows page. Not used in the README.',
     usedIn: [],
@@ -81,8 +81,8 @@ export const shots: Shot[] = [
     query: { scene: 'controls-wasd', song: 'the_epic_chip', t: '0' },
     alt:
       'The same keyboard with the other layout lit: Esc grey; W, A, S and D white; J and Space cyan, K ' +
-      'amber, L magenta, ; red, and \' violet; the arrow keys dark. The legend reads Fly, WASD; Fire, J, ' +
-      'Space; Bomb, K; Missile, L; Nuke, ;; Boost, \'; Pause, Esc. At the bottom, "< Arrows  WASD  ' +
+      'amber, L magenta, ; red, and \' and the right Shift violet; the arrow keys dark. The legend reads Fly, WASD; Fire, J, ' +
+      'Space; Bomb, K; Missile, L; Nuke, ;; Boost, \', R Shift; Pause, Esc. At the bottom, "< Arrows  WASD  ' +
       'Gamepad >" with "WASD" in cyan.',
     caption: 'The controls screen, WASD page. Not used in the README.',
     usedIn: [],
@@ -96,7 +96,7 @@ export const shots: Shot[] = [
       'and a dim one for the right, two small buttons in the middle with "Start" under the right one, and ' +
       'four round face buttons: Y dim grey at the top, X red on the left, B amber on the right, A cyan at ' +
       'the bottom. Above the body, shoulder buttons: LT and LB violet on the left, RT cyan and RB magenta ' +
-      'on the right. Under it, a legend in two columns: Fly, Stick, D-pad; Fire, A, RT; Bomb, B; Missile, ' +
+      'on the right. Under it, a legend in two columns: Fly, D-pad, Stick; Fire, A, RT; Bomb, B; Missile, ' +
       'RB; Nuke, X; Boost, LB, LT; Pause, Start. At the bottom, "< Arrows  WASD  Gamepad >" with "Gamepad" ' +
       'in cyan.',
     caption: 'The controls screen, gamepad page. Not used in the README.',
@@ -137,9 +137,22 @@ export const shots: Shot[] = [
       '"Settings" in large cyan pixel letters with a magenta shadow. Below it, five rows in small pixel ' +
       'type. "Music" in amber with an amber ">" before it, then "<", five LED cells lit green, yellow-green, ' +
       'yellow, orange and red, and ">". "Effects" in grey with four of its five cells lit and the fifth dim ' +
-      'red. "Flashing" with "Reduced", "Shake" with "On", "CRT" with "Off", "LEDs" with "Neon", and "Back", ' +
-      'all in grey.',
+      'red. "Flashing" with "Reduced", "Shake" with "On", "CRT" with "Off", "LEDs" with "Neon", "Keys", and ' +
+      '"Back", all in grey.',
     caption: 'The settings screen at the defaults. Not used in the README.',
+    usedIn: [],
+  },
+  {
+    id: 'keys',
+    query: { scene: 'keys', song: 'the_epic_chip', t: '0' },
+    alt:
+      '"Keys" in large cyan pixel letters with a magenta shadow. Under it, "Device" with "< Keyboard >", ' +
+      'then a row for each action with its three slots: Up, Up, W, -; Down, Down, S, -; Left, Left, A, -; ' +
+      'Right, Right, D, -; Fire, Z, J, Space; Bomb, X, K, -; Missile, C, L, -; Nuke, V, ;, -; Boost, ' +
+      'L Shift, \', R Shift; Pause, Esc in dim grey, -, -. "Fire" is amber with an amber ">" before it, ' +
+      'and its first slot, Z, is white on a dim grey box. Then "Reset" and "Back", and at the bottom, ' +
+      '"Enter Set  Del Clear  Esc Back" in grey.',
+    caption: 'The Keys screen at the defaults, on Fire. Not used in the README.',
     usedIn: [],
   },
   {

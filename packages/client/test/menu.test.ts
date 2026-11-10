@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ControlsPages, JukeboxMenu, PauseMenu, SETTINGS_ITEMS, Scroller, SettingsMenu, TitleMenu } from '../src/game/menu.ts';
+import { ControlsPages, JukeboxMenu, KeysMenu, PauseMenu, SETTINGS_ITEMS, Scroller, SettingsMenu, TitleMenu, keysRows } from '../src/game/menu.ts';
 import { DEFAULT_SETTINGS } from '../src/game/settings.ts';
 
 describe('TitleMenu', () => {
@@ -119,6 +119,61 @@ describe('ControlsPages', () => {
     expect(p.apply('confirm')).toBe('back');
     expect(p.apply('back')).toBe('back');
     expect(p.apply('up')).toBeNull();
+  });
+});
+
+describe('SettingsMenu: Keys', () => {
+  it('opens the Keys screen on confirm and ignores left and right there', () => {
+    const m = new SettingsMenu(DEFAULT_SETTINGS);
+    m.cursor = SETTINGS_ITEMS.indexOf('keys');
+    expect(m.apply('left')).toBeNull();
+    expect(m.apply('right')).toBeNull();
+    expect(m.apply('confirm')).toBe('keys');
+  });
+});
+
+describe('KeysMenu', () => {
+  it('lists the device, each action, Reset and Back; the pad adds Cancel and Replay', () => {
+    expect(keysRows('keyboard')).toEqual(['device', 'up', 'down', 'left', 'right', 'fire', 'bomb', 'missile', 'nuke', 'boost', 'pause', 'reset', 'back']);
+    expect(keysRows('pad').slice(-4)).toEqual(['cancel', 'replay', 'reset', 'back']);
+  });
+
+  it('changes the device with left, right or confirm on its row', () => {
+    const m = new KeysMenu();
+    expect(m.apply('right')).toBe('device');
+    expect(m.device).toBe('pad');
+    expect(m.apply('confirm')).toBe('device');
+    expect(m.device).toBe('keyboard');
+  });
+
+  it('moves between slots on an action row, stopping at the ends, and keeps the slot between rows', () => {
+    const m = new KeysMenu();
+    m.apply('down');
+    expect(m.action).toBe('up');
+    expect(m.apply('left')).toBeNull();
+    expect(m.apply('right')).toBe('moved');
+    expect(m.apply('right')).toBe('moved');
+    expect(m.apply('right')).toBeNull();
+    expect(m.slot).toBe(2);
+    m.apply('down');
+    expect(m.action).toBe('down');
+    expect(m.slot).toBe(2);
+    expect(m.apply('confirm')).toBe('set');
+  });
+
+  it('resets and leaves from its last rows, wraps, and leaves on back', () => {
+    const m = new KeysMenu();
+    m.apply('up');
+    expect(m.item).toBe('back');
+    expect(m.action).toBeNull();
+    expect(m.apply('right')).toBeNull();
+    expect(m.apply('confirm')).toBe('back');
+    m.apply('up');
+    expect(m.apply('confirm')).toBe('reset');
+    expect(m.apply('back')).toBe('back');
+    m.apply('down');
+    m.apply('down');
+    expect(m.item).toBe('device');
   });
 });
 

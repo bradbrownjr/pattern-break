@@ -3,6 +3,7 @@
 // display objects, so tests run in Node.
 
 import { Difficulty, type DifficultyName } from '@game/core';
+import { KEY_ACTIONS, PAD_ACTIONS, SLOTS, type PadAction } from './bindings.ts';
 import type { MenuAction } from './input.ts';
 import { VOLUME_LEVELS, type Settings } from './settings.ts';
 
@@ -235,7 +236,7 @@ export class ControlsPages {
   }
 }
 
-export const SETTINGS_ITEMS = ['music', 'effects', 'flashing', 'shake', 'crt', 'leds', 'back'] as const;
+export const SETTINGS_ITEMS = ['music', 'effects', 'flashing', 'shake', 'crt', 'leds', 'keys', 'back'] as const;
 export type SettingsItem = (typeof SETTINGS_ITEMS)[number];
 
 /** The two-way settings, each value left to right as the screen shows them. */
@@ -253,7 +254,7 @@ function isChoice(item: SettingsItem): item is Choice {
 
 /**
  * Music and Effects volume, 0 (off) to 5; Flashing (Reduced or Full), Shake and CRT (Off or
- * On), LED colours (Neon or Colour-blind);
+ * On), LED colours (Neon or Colour-blind); Keys, which opens the Keys screen;
  * then Back. Left and right change a value and stop at the ends; confirm steps a volume up
  * and wraps from 5 to off, and flips a two-way setting, so a click alone can reach every
  * value. Back, or confirm on Back, leaves.
@@ -274,7 +275,7 @@ export class SettingsMenu {
     this.values[item] = v;
   }
 
-  apply(action: MenuAction): 'moved' | 'changed' | 'back' | null {
+  apply(action: MenuAction): 'moved' | 'changed' | 'keys' | 'back' | null {
     const item = this.item;
     switch (action) {
       case 'up':
@@ -283,7 +284,7 @@ export class SettingsMenu {
         return 'moved';
       case 'left':
       case 'right': {
-        if (item === 'back') return null;
+        if (item === 'back' || item === 'keys') return null;
         if (isChoice(item)) {
           const v = SETTINGS_CHOICES[item][action === 'left' ? 0 : 1];
           if (v === this.values[item]) return null;
@@ -296,7 +297,7 @@ export class SettingsMenu {
         return 'changed';
       }
       case 'confirm':
-        if (item === 'back') return 'back';
+        if (item === 'back' || item === 'keys') return item;
         if (isChoice(item)) {
           const [a, b] = SETTINGS_CHOICES[item];
           this.#set(item, this.values[item] === a ? b : a);
@@ -307,6 +308,74 @@ export class SettingsMenu {
       case 'back':
         return 'back';
     }
+  }
+}
+
+export type KeysDevice = 'keyboard' | 'pad';
+/** One row of the Keys screen: the device, an action, Reset or Back. */
+export type KeysRow = 'device' | PadAction | 'reset' | 'back';
+
+/** The Keys screen's rows for `device`. */
+export function keysRows(device: KeysDevice): readonly KeysRow[] {
+  return ['device', ...(device === 'keyboard' ? KEY_ACTIONS : PAD_ACTIONS), 'reset', 'back'];
+}
+
+/** What one action did on the Keys screen. */
+export type KeysEvent = 'moved' | 'device' | 'set' | 'reset' | 'back' | null;
+
+/**
+ * The Keys screen: the device (Keyboard or Pad), a row per action with SLOTS slots, Reset
+ * and Back. Up and down move between rows and keep the slot; left and right move between
+ * slots, or change the device on its row. Confirm changes the device, sets the slot under
+ * the cursor (the game then waits for a key or button), resets the device's layout, or
+ * leaves; back leaves.
+ */
+export class KeysMenu {
+  device: KeysDevice = 'keyboard';
+  row = 0;
+  slot = 0;
+
+  get rows(): readonly KeysRow[] {
+    return keysRows(this.device);
+  }
+
+  get item(): KeysRow {
+    return this.rows[this.row]!;
+  }
+
+  /** The action under the cursor, or null on the device, Reset or Back. */
+  get action(): PadAction | null {
+    const item = this.item;
+    return item === 'device' || item === 'reset' || item === 'back' ? null : item;
+  }
+
+  apply(action: MenuAction): KeysEvent {
+    switch (action) {
+      case 'up':
+      case 'down':
+        this.row = wrap(this.row, action === 'up' ? -1 : 1, this.rows.length);
+        return 'moved';
+      case 'left':
+      case 'right': {
+        if (this.item === 'device') return this.#switchDevice();
+        if (this.action === null) return null;
+        const slot = Math.max(0, Math.min(SLOTS - 1, this.slot + (action === 'left' ? -1 : 1)));
+        if (slot === this.slot) return null;
+        this.slot = slot;
+        return 'moved';
+      }
+      case 'confirm':
+        if (this.item === 'device') return this.#switchDevice();
+        if (this.item === 'reset' || this.item === 'back') return this.item;
+        return 'set';
+      case 'back':
+        return 'back';
+    }
+  }
+
+  #switchDevice(): KeysEvent {
+    this.device = this.device === 'keyboard' ? 'pad' : 'keyboard';
+    return 'device';
   }
 }
 

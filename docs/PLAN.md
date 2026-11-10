@@ -308,10 +308,11 @@ every bar of every generated level.
   White peak-hold dots are drawn only on a difficulty with solid peaks (none, for now).
 - Backgrounds: animated copper-bar gradients (horizontal colour bands) and a parallax
   starfield. The bars pulse with the bass (the low spectrum bands; built 2026-11-10).
-- Effects: pooled particle emitters on note hits and kills, hit-stop (cosmetic only; an
-  open decision), screen shake, a flash on downbeats (the copper bars pulse), a white flash
-  on an enemy that survives a hit, and a CRT filter (scanlines, slight bloom, vignette) as
-  a toggle (built 2026-11-10, except hit-stop).
+- Effects: pooled particle emitters on note hits and kills, screen shake, a flash on
+  downbeats (the copper bars pulse), a white flash on an enemy that survives a hit, and a
+  CRT filter (scanlines, slight bloom, vignette) as a toggle (built 2026-11-10). No
+  hit-stop: the picture follows the song's clock, so a freeze would put it out of step with
+  the music (Brad, 2026-11-10).
 - Enemies are small pixel-art sprites: magenta and amber turrets (upside down on the
   ceiling), lime tanks, magenta ships facing left, and white-cored bullets in the colour of
   what fired them: a ship's magenta, a tank's lime, a turret's a larger amber pellet. The
@@ -330,7 +331,8 @@ every bar of every generated level.
   and frequency at three a second, under WCAG 2.2's flash thresholds; on by default until
   the player changes it; built 2026-11-10), a shake toggle (built 2026-11-10), a
   colour-blind-safe LED palette option (cividis; built 2026-11-10), and remappable controls, for the keyboard and for gamepads and arcade sticks
-  (Gamepad API, from M2).
+  (Gamepad API; built 2026-11-10): up to three keys or inputs per action, menus following
+  them.
 - **Performance:** object pools for bullets, enemies, and particles. No allocations in the
   per-frame loop. Particles use a ParticleContainer. Target 2 ms or less per frame of sim
   and render work on desktop.

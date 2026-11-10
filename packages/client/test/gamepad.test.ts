@@ -1,12 +1,17 @@
 import { InputBit } from '@game/core';
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_PAD, assign, emptyPad } from '../src/game/bindings.ts';
 import {
   PadBit,
+  PadCapture,
   PadTracker,
+  PadWatcher,
   REPEAT_DELAY_MS,
   REPEAT_INTERVAL_MS,
-  padBits,
+  inputHeld,
+  padBits as layoutBits,
   padMenuAction,
+  padProfile,
   type PadSnapshot,
 } from '../src/game/gamepad.ts';
 import { InputSampler } from '../src/game/input.ts';
@@ -20,7 +25,10 @@ function pad(buttons: number[], axes: number[] = [0, 0, 0, 0], mapping = 'standa
   };
 }
 
-describe('padBits', () => {
+/** A pad's bits through the standard layout. */
+const padBits = (p: PadSnapshot): number => layoutBits(p, DEFAULT_PAD);
+
+describe('padBits with the standard layout', () => {
   it('reads the D-pad and the left stick as directions', () => {
     expect(padBits(pad([12]))).toBe(PadBit.up);
     expect(padBits(pad([13]))).toBe(PadBit.down);
@@ -33,9 +41,9 @@ describe('padBits', () => {
     expect(padBits(pad([], [0.49, -0.49]))).toBe(0);
   });
 
-  it('fires on A and RT, bombs on B, nukes on X, missiles on RB, boosts on LB or LT; A also confirms; Y is for menus', () => {
+  it('fires on A and RT, bombs on B, nukes on X, missiles on RB, boosts on LB or LT; Fire also confirms; Y is for menus', () => {
     expect(padBits(pad([0]))).toBe(PadBit.fire | PadBit.a);
-    expect(padBits(pad([7]))).toBe(PadBit.fire);
+    expect(padBits(pad([7]))).toBe(PadBit.fire | PadBit.a);
     expect(padBits(pad([1]))).toBe(PadBit.b | InputBit.bomb);
     expect(padBits(pad([2]))).toBe(InputBit.nuke);
     expect(padBits(pad([3]))).toBe(PadBit.y);
@@ -44,7 +52,7 @@ describe('padBits', () => {
     expect(padBits(pad([8, 9]))).toBe(PadBit.select | PadBit.start);
   });
 
-  it('shares the sim bits with InputBit, and ignores pads without the standard mapping', () => {
+  it('shares the sim bits with InputBit', () => {
     expect([PadBit.up, PadBit.down, PadBit.left, PadBit.right, PadBit.fire]).toEqual([
       InputBit.up,
       InputBit.down,
@@ -52,12 +60,84 @@ describe('padBits', () => {
       InputBit.right,
       InputBit.fire,
     ]);
-    expect(padBits(pad([0, 12], [-1, 0], ''))).toBe(0);
+  });
+});
+
+describe('pad layouts', () => {
+  it('gives a pad without the standard mapping its own layout, empty until set', () => {
+    expect(padProfile({ mapping: 'standard', id: 'x' })).toBe('standard');
+    expect(padProfile({ mapping: '', id: 'Arcade stick' })).toBe('id:Arcade stick');
+    expect(layoutBits(pad([0, 12], [-1, 0], ''), emptyPad())).toBe(0);
+  });
+
+  it('reads a remapped layout', () => {
+    const layout = assign(assign(emptyPad(), 'fire', 0, 'b4'), 'up', 0, 'a7-');
+    expect(layoutBits(pad([4], [0, 0, 0, 0, 0, 0, 0, -1], ''), layout)).toBe(PadBit.fire | PadBit.a | PadBit.up);
+    expect(layoutBits(pad([0], [0, 0, 0, 0, 0, 0, 0, 1], ''), layout)).toBe(0);
+  });
+
+  it('reads a hat position, and the diagonals either side of it', () => {
+    const at = (v: number): PadSnapshot => pad([], [0, 0, 0, 0, 0, 0, 0, 0, 0, v], '');
+    const up = 'h9@-1.000';
+    expect(inputHeld(at(-1), up)).toBe(true);
+    // Up-right (-1 + 2/7) and up-left (+1, the step before -1 around the circle).
+    expect(inputHeld(at(-1 + 2 / 7), up)).toBe(true);
+    expect(inputHeld(at(1), up)).toBe(true);
+    // Right, and the hat at rest above 1.
+    expect(inputHeld(at(-1 + 4 / 7), up)).toBe(false);
+    expect(inputHeld(at(9 / 7), up)).toBe(false);
+  });
+
+  it('never reads a hat at rest as an axis leaning positive', () => {
+    expect(inputHeld(pad([], [9 / 7], ''), 'a0+')).toBe(false);
+  });
+});
+
+describe('PadCapture', () => {
+  it('takes the first button pressed after it starts, not one already held', () => {
+    const c = new PadCapture(pad([0]));
+    expect(c.check(pad([0]))).toBeNull();
+    expect(c.check(pad([0, 5]))).toBe('b5');
+  });
+
+  it('takes a held button once it is let go and pressed again', () => {
+    const c = new PadCapture(pad([0]));
+    expect(c.check(pad([]))).toBeNull();
+    expect(c.check(pad([0]))).toBe('b0');
+  });
+
+  it('takes an axis leaning past the threshold, with its direction', () => {
+    const c = new PadCapture(pad([], [0, 0.1]));
+    expect(c.check(pad([], [0, 0.4]))).toBeNull();
+    expect(c.check(pad([], [0, -0.8]))).toBe('a1-');
+  });
+
+  it('ignores an axis resting off centre, such as a trigger at -1', () => {
+    const c = new PadCapture(pad([], [0, 0, -1]));
+    expect(c.check(pad([], [0, 0, -1]))).toBeNull();
+    expect(c.check(pad([], [0, 0, 1]))).toBe('a2+');
+  });
+
+  it('takes an axis resting out of range as a hat, at the nearest of its eight positions', () => {
+    const c = new PadCapture(pad([], [9 / 7]));
+    expect(c.check(pad([], [-0.43]))).toBe('h0@-0.429');
+  });
+});
+
+describe('PadWatcher', () => {
+  it('reports the pad with a new press or a newly moved axis', () => {
+    const w = new PadWatcher();
+    const a = { ...pad([]), index: 0 };
+    const b = { ...pad([], [0, 0], ''), index: 1 };
+    expect(w.update([a, b])).toBeNull();
+    expect(w.update([a, { ...pad([3], [0, 0], ''), index: 1 }])).toBe(1);
+    expect(w.update([{ ...pad([], [0.9, 0]), index: 0 }, { ...pad([3], [0, 0], ''), index: 1 }])).toBe(0);
+    expect(w.update([{ ...pad([], [0.9, 0]), index: 0 }, { ...pad([3], [0, 0], ''), index: 1 }])).toBeNull();
   });
 });
 
 describe('padMenuAction', () => {
-  it('maps directions, A and Start to confirm, B and Select to back', () => {
+  it('maps directions, A (Fire) and Start to confirm, B (Bomb) and Select to back', () => {
     expect([PadBit.up, PadBit.down, PadBit.left, PadBit.right].map(padMenuAction)).toEqual(['up', 'down', 'left', 'right']);
     expect([PadBit.a, PadBit.start].map(padMenuAction)).toEqual(['confirm', 'confirm']);
     expect([PadBit.b, PadBit.select].map(padMenuAction)).toEqual(['back', 'back']);
@@ -66,6 +146,10 @@ describe('padMenuAction', () => {
 });
 
 describe('PadTracker', () => {
+  it('reports Y, for the replay on the end screens', () => {
+    expect(new PadTracker().update(PadBit.y, 0)).toEqual([PadBit.y]);
+  });
+
   it('reports each button once as it goes down', () => {
     const t = new PadTracker();
     expect(t.update(PadBit.a | PadBit.fire, 0)).toEqual([PadBit.a]);

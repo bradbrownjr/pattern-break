@@ -13,6 +13,16 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **M3: remappable controls. M3 is finished.** Settings has Keys: each action can have up
+  to three keys, so the defaults still fit (Z, J and Space all fire), and menus follow
+  them: the directions move, Fire confirms, Bomb backs out. Esc always pauses, and Enter,
+  Esc and Backspace always work in menus, so no layout can lock a player out. A pad can be
+  remapped too, one layout for standard pads and one for each other pad, so pads and
+  arcade sticks without the standard mapping now work once their buttons are set. The
+  Controls screen draws whatever is set. Y on a pad now watches the replay on the end
+  screens; it never did, since the pad's Y presses weren't passed on. Hit-stop is dropped
+  from the plan: a freeze would put the picture out of step with the music.
+
 * **M3: colour-blind LED colours.** Settings has LEDs, Neon or Colour-blind. Colour-blind
   lights the walls dark blue to yellow (cividis, a colour map made to read the same with
   red-green colour blindness), each segment brighter than the one before, on every

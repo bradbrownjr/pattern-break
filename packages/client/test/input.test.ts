@@ -1,8 +1,13 @@
 import { InputBit } from '@game/core';
 import { describe, expect, it } from 'vitest';
-import { InputSampler, keyToBit, keyToMenuAction } from '../src/game/input.ts';
+import { assign, DEFAULT_KEYS } from '../src/game/bindings.ts';
+import { InputSampler, KeyMap } from '../src/game/input.ts';
 
-describe('keyToBit', () => {
+const keys = new KeyMap();
+const keyToBit = (code: string): number => keys.bit(code);
+const keyToMenuAction = (code: string): string | null => keys.menuAction(code);
+
+describe('KeyMap.bit with the default keys', () => {
   it('maps arrows and WASD to the movement bits', () => {
     expect(keyToBit('ArrowUp')).toBe(InputBit.up);
     expect(keyToBit('KeyW')).toBe(InputBit.up);
@@ -26,31 +31,47 @@ describe('keyToBit', () => {
     expect(['ShiftLeft', 'ShiftRight', 'Quote'].map(keyToBit)).toEqual([InputBit.boost, InputBit.boost, InputBit.boost]);
   });
 
-  it('ignores other keys', () => {
+  it('ignores other keys; Esc pauses but sets no sim bit', () => {
     expect(keyToBit('Escape')).toBe(0);
+    expect(keys.action('Escape')).toBe('pause');
     expect(keyToBit('KeyB')).toBe(0);
     expect(keyToBit('KeyQ')).toBe(0);
   });
 });
 
-describe('keyToMenuAction', () => {
-  it('maps arrows and WASD to directions, Enter and Space to confirm, Esc and Backspace to back', () => {
+describe('KeyMap.menuAction', () => {
+  it('maps the directions, Fire to confirm, Bomb and Pause to back, and always Enter, Esc and Backspace', () => {
     expect(['ArrowUp', 'KeyW', 'ArrowDown', 'KeyS', 'ArrowLeft', 'KeyA', 'ArrowRight', 'KeyD'].map(keyToMenuAction)).toEqual([
       'up', 'up', 'down', 'down', 'left', 'left', 'right', 'right',
     ]);
-    expect(['Enter', 'NumpadEnter', 'Space'].map(keyToMenuAction)).toEqual(['confirm', 'confirm', 'confirm']);
-    expect(['Escape', 'Backspace'].map(keyToMenuAction)).toEqual(['back', 'back']);
+    expect(['Enter', 'NumpadEnter', 'Space', 'KeyZ', 'KeyJ'].map(keyToMenuAction)).toEqual(['confirm', 'confirm', 'confirm', 'confirm', 'confirm']);
+    expect(['Escape', 'Backspace', 'KeyX', 'KeyK'].map(keyToMenuAction)).toEqual(['back', 'back', 'back', 'back']);
   });
 
-  it('ignores other keys, the fire keys Z and J among them', () => {
-    expect(keyToMenuAction('KeyZ')).toBeNull();
-    expect(keyToMenuAction('KeyJ')).toBeNull();
+  it('ignores keys that do nothing in menus', () => {
     expect(keyToMenuAction('KeyQ')).toBeNull();
     expect(keyToMenuAction('ShiftLeft')).toBeNull();
+    expect(keyToMenuAction('KeyV')).toBeNull();
+  });
+
+  it('follows remapped keys', () => {
+    const remapped = new KeyMap(assign(DEFAULT_KEYS, 'up', 0, 'KeyI'));
+    expect(remapped.menuAction('KeyI')).toBe('up');
+    expect(remapped.bit('KeyI')).toBe(InputBit.up);
+    expect(remapped.menuAction('ArrowUp')).toBeNull();
+    expect(remapped.bit('ArrowUp')).toBe(0);
   });
 });
 
 describe('InputSampler', () => {
+  it('reads keys through its KeyMap', () => {
+    const s = new InputSampler();
+    s.keys = new KeyMap(assign(DEFAULT_KEYS, 'fire', 0, 'KeyF'));
+    s.keyDown('KeyF');
+    s.keyDown('KeyZ');
+    expect(s.sample()).toBe(InputBit.fire);
+  });
+
   it('reports held keys on every sample until released', () => {
     const s = new InputSampler();
     s.keyDown('ArrowUp');

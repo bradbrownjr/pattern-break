@@ -2,7 +2,8 @@
 // `t`, and the ship flown by the autopilot's input log replayed through the sim up to `t`.
 // Everything on screen is a function of the query parameters. Scenes: title, jukebox (the
 // first song playing, its spectrum dark), controls-arrows, controls-wasd and
-// controls-gamepad, settings (at the defaults), help and help-end (scrolled to the top and to the end), hangar (the intro,
+// controls-gamepad, settings (at the defaults), keys (the Keys screen at the defaults, on
+// Fire's first slot), help and help-end (scrolled to the top and to the end), hangar (the intro,
 // `t` seconds from its start, for `song` as level 1), play (with `boom`, the ship blowing
 // up), run-start (play from the
 // hangar: the canopy closing and the colour flooding in), paused (play with the pause
@@ -30,7 +31,9 @@ import type { GameRenderer } from '../render/renderer.ts';
 import { analyzeInWorker } from './analysis.ts';
 import { catchUp, targetTick } from './loop.ts';
 import { drawPlay } from './play-view.ts';
+import { defaultBindings } from './bindings.ts';
 import { ControlsScreen } from './controls.ts';
+import { KeysScreen } from './keys-screen.ts';
 import { JukeboxScreen, MessageScreen, PauseScreen, SPECTRUM_BARS, SettingsScreen, TitleScreen } from './screens.ts';
 import { REPLAY_HINT, resultRows, scoreBreakdown } from './results.ts';
 import { DEFAULT_SETTINGS } from './settings.ts';
@@ -90,7 +93,7 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
     case 'controls-wasd':
     case 'controls-gamepad': {
       const controls = new ControlsScreen();
-      controls.show(params.scene.slice('controls-'.length) as ControlPage);
+      controls.show(params.scene.slice('controls-'.length) as ControlPage, defaultBindings());
       return menuScene(controls.container);
     }
     case 'help':
@@ -104,6 +107,22 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
       const settings = new SettingsScreen();
       settings.update(0, DEFAULT_SETTINGS);
       return menuScene(settings.container);
+    }
+    case 'keys': {
+      const keys = new KeysScreen();
+      keys.update({
+        device: 'keyboard',
+        row: 5,
+        slot: 0,
+        layout: defaultBindings().keys,
+        standard: true,
+        padName: '',
+        waiting: false,
+        blink: true,
+        hint: 'Enter Set  Del Clear  Esc Back',
+        warn: false,
+      });
+      return menuScene(keys.container);
     }
     case 'hangar': {
       const hangar = new HangarIntro(await loadHangarArt());

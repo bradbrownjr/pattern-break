@@ -29,8 +29,8 @@ browser, with the pitched ones on the song's notes. Settings has the music and e
 volume, reduced flashing (on until changed), switches for screen shake and a CRT look, and
 colour-blind LED colours. A short black-and-white intro opens each run: the captain boards the
 fighter and puts the first song's cassette in the deck, and pressing Play starts the
-level, which floods into colour with the music. A gamepad works next to the keyboard, and
-a phone or tablet gets on-screen controls. Every
+level, which floods into colour with the music. A gamepad works next to the keyboard, both
+can be remapped, and a phone or tablet gets on-screen controls. Every
 run can be watched again or saved as a replay file. Level data and replays come out
 byte-for-byte the same in Node, Chromium, Firefox, and WebKit, which is what lets one song
 have one leaderboard.

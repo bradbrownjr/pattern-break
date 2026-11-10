@@ -786,7 +786,7 @@ The client reads query parameters; `packages/client/src/capture.ts` parses them
 | Parameter | Meaning |
 |---|---|
 | `capture` | `1` turns capture mode on. Without it the page behaves normally. |
-| `scene` | Which screen to show: `title`, `jukebox`, `controls-arrows`, `controls-wasd`, `controls-gamepad`, `help`, `help-end`, `settings`, `hangar`, `play`, `run-start`, or `paused`. |
+| `scene` | Which screen to show: `title`, `jukebox`, `controls-arrows`, `controls-wasd`, `controls-gamepad`, `help`, `help-end`, `settings`, `keys`, `hangar`, `play`, `run-start`, `paused`, or `results`. |
 | `song` | Song id: a bundled song's file name without its extension (`numenchip`), or `pb-fixture-01` for the test song. |
 | `t` | Song clock in seconds. |
 | `difficulty` | Difficulty name. |
@@ -813,7 +813,8 @@ In capture mode the renderer must:
   an analysis of the song, and the spectrum dark. **`scene=controls-arrows`**,
   **`scene=controls-wasd`** and **`scene=controls-gamepad`** draw the three controls pages, **`scene=help`** and
   **`scene=help-end`** the help screen scrolled to its top and its end, and
-  **`scene=settings`** the settings at their defaults. All of these show the stars as the title does.
+  **`scene=settings`** the settings at their defaults, and **`scene=keys`** the Keys screen
+  at the defaults with the cursor on Fire's first slot. All of these show the stars as the title does.
 - **`scene=hangar`** draws the hangar intro `t` seconds from its start, with `song` on the
   cassette as level 1 at `difficulty`. `window.__pbCaptureSeek(t)` redraws it at another
   time, so a clip of the intro works too.
@@ -1028,11 +1029,12 @@ Run `pnpm dev` and open the URL it prints.
   (footsteps, ladder, seat, cassette, Play key, tape hiss, then the canopy) are a timed
   list, `HANGAR_CUES`, that `Game.#drawHangar` plays as the intro's clock passes each one.
   Everything on screen is a function of the time, so capture mode can show any moment.
-- **In play,** two keyboard layouts work at once: arrows with Z, X, C, V and Shift, or
+- **In play,** by default two keyboard layouts work at once (the Keys screen, below,
+  changes them): arrows with Z, X, C, V and Shift, or
   WASD with J, K, L, ; (semicolon) and ' (quote). Arrows or WASD move; Space, Z or J fire
   (hold to keep firing); X or K drop a bomb (one per press, 1 s to reload after it bursts);
-  C or L launch a missile once unlocked; V or ; nuke; Shift or ' boosts once unlocked; and
-  Esc pauses (a gamepad and touch are below). Capsules unlock power-ups as they are picked up. Losing the last
+  C or L launch a missile once unlocked; V or ; nuke; either Shift or ' boosts once unlocked; and
+  Esc, always, pauses (a gamepad and touch are below). Capsules unlock power-ups as they are picked up. Losing the last
   life is game over: any key retries the level, Esc goes to the title, and R and S watch
   and save the run's replay (see "Replays"). Game over and level complete ignore keys for 0.7 s, so a key still held from
   play doesn't skip them. The game pauses when the window loses focus or the tab is hidden.
@@ -1062,12 +1064,16 @@ Run `pnpm dev` and open the URL it prints.
   flags, so the M5 boards will refuse it. Watching a replay runs with the flags it recorded.
 - **Pause menu:** "Paused" over the frozen game, with Resume, Controls, Help and Quit,
   worked like the title menu. Esc (or Backspace) resumes, as does Start on a pad, from any
-  item; Q, or Select on a pad, quits to the title. The cursor starts on Resume each time.
+  item; Q (unless it is bound to an action), or Select on a pad, quits to the title. The cursor starts on Resume each time.
 - **Controls** (`controls.ts`), from the title menu or the pause menu: three pages, Arrows,
   WASD and Gamepad (Brad, 2026-11-10: one keyboard page with both layouts showed too
-  many keys). Each draws the keyboard or pad with only that page's keys or buttons filled
+  many keys). Each draws the keyboard or a standard pad from the bindings, with only that
+  page's keys or buttons filled
   in their action's colour (fly white, fire cyan, bomb amber, missile magenta, nuke red,
-  boost violet, pause grey), over a legend of the actions and their keys. It opens on the
+  boost violet, pause grey), over a legend of the actions and their keys. The first
+  keyboard page shows each action's first and third keys, the second its second and third,
+  and Esc on both; a page's tab is named from its Fly keys ("Arrows", "WASD", "IJKL")
+  when they read as a name, else "Keys 1" or "Keys 2". It opens on the
   gamepad page if the last press was on a pad. Left and right switch pages, Enter goes to
   the next page and leaves from the last (so a click alone sees them all), and Esc goes
   back to where it was opened. The title and jukebox show no control hints of their own
@@ -1081,7 +1087,8 @@ Run `pnpm dev` and open the URL it prints.
   Esc goes back to where it was opened.
 - **Settings** (`settings.ts`, `SettingsMenu`, `SettingsScreen`), from the title menu: Music
   and Effects volume as five LED cells each, off to 5; Flashing (Reduced or Full), Shake and
-  CRT (Off or On), and LEDs (Neon or Colour-blind) as words; then Back. Left and right
+  CRT (Off or On), and LEDs (Neon or Colour-blind) as words; Keys, which opens the Keys
+  screen; then Back. Left and right
   change a value and stop at the ends; Enter steps a volume up and wraps to off, and flips
   the others. Each volume step halves the gain. The defaults are Music 5, Effects 4,
   Flashing Reduced, Shake On, CRT Off and LEDs Neon.
@@ -1089,6 +1096,37 @@ Run `pnpm dev` and open the URL it prints.
   `localStorage` under `pattern-break.settings`; where storage is blocked, the defaults
   apply and changes last until the page closes. What Flashing and Shake do is under
   "Flashing and shake" in "Rendering", CRT under "CRT", and LEDs under "Terrain".
+- **Keys** (`bindings.ts`, `KeysMenu` in `menu.ts`, `keys-screen.ts`; Brad, 2026-11-10),
+  from Settings: remappable controls. A Device row (Keyboard or Pad), a row per action with
+  three slots, then Reset and Back. The keyboard has Up, Down, Left, Right, Fire, Bomb,
+  Missile, Nuke, Boost and Pause; the pad adds Cancel (Select: back in menus, quit from
+  pause) and Replay (Y). Three slots, not two, so the defaults fit: Z, J and Space all
+  fire, and both Shifts and ' boost. Enter on a slot waits 5 s for a key or button ("?"
+  blinks; Esc, a click, or on the keyboard page a pad press, gives up); Delete empties the
+  slot; Reset puts the device's defaults back. A key or input already used elsewhere
+  swaps: its old slot takes what the new one held, so nothing is lost.
+  - **Keys** are `KeyboardEvent.code` values (https://www.w3.org/TR/uievents-code/): the
+    key's place, not its letter, so the screen names them as a US keyboard prints them.
+    Esc is locked in Pause's first slot. Enter, Backspace, Delete, Tab, the Windows or
+    Command keys, the menu key and F1 to F12 can't be set ("Key reserved"), so Enter always
+    confirms and Esc and Backspace always back out. A change that would leave Up, Down,
+    Left or Right with no key is refused ("Up needs a key"), since menus need all four.
+  - **Menus follow the keys,** as on a pad: the directions move, Fire confirms, Bomb and
+    Pause back out (`KeyMap.menuAction` in `input.ts`), besides Enter, Esc and Backspace.
+  - **Pads** have a layout per profile (`padProfile` in `gamepad.ts`): one shared by every
+    pad with the standard mapping, defaulting to the layout under "Gamepad", and one per
+    other pad, by its `id`, empty until set, since its numbers are the device's own. The
+    Pad page shows the pad used last (`PadWatcher`) and its name ("Standard pad", or the
+    id); a new input from any pad is set in that pad's layout. An input is `b3` (button 3),
+    `a1-` or `a1+` (axis 1 leaning past half way), or `h9@-1.000` (axis 9 as a hat switch,
+    at that position). The spec doesn't cover hats; some browsers report an eight-way hat
+    as one axis, -1 at up and 2/7 more for each 45 degrees, above 1 when centred
+    (https://3960.org/sandbox/gamepad-test.html), so an axis resting above 1 when an input
+    is set is taken as a hat, and a hat position also counts on the diagonals next to it.
+    Unverified on a real non-standard pad or arcade stick.
+  - Kept in `localStorage` under `pattern-break.bindings`; invalid, reserved or repeated
+    entries are dropped on load, and a keyboard layout with a direction left empty falls
+    back to the defaults.
 - **Sound effects** play in runs, replays, and the demo (see "Sound effects" under "Audio
   and clock").
 - **Score:** top right in play. Each kill shows its points where the enemy was, amber when
@@ -1111,12 +1149,13 @@ Run `pnpm dev` and open the URL it prints.
   Double to Boost, each lit (green to red) while the ship has that power-up. A label shows
   the count held for drones, shield points and boost; the next capsule's power-up has a grey
   label and the rest a darker one; a cyan bar in the Boost cell shows the fuel left.
-- **Gamepad:** any pad that reports the Gamepad API's "standard" mapping
-  (https://w3c.github.io/gamepad/, "Remapping"), which fixes its button and axis numbers;
-  other pads are ignored for now. In play the left stick (past half way) or the D-pad
-  flies; A and RT (buttons 0, 7) fire; B (1) drops bombs; X (2) nukes; LB
+- **Gamepad:** a pad that reports the Gamepad API's "standard" mapping
+  (https://w3c.github.io/gamepad/, "Remapping"), which fixes its button and axis numbers,
+  works at once; any other pad does nothing until its inputs are set on the Keys screen.
+  The standard layout, which the Keys screen changes: in play the left stick (past half
+  way) or the D-pad flies; A and RT (buttons 0, 7) fire; B (1) drops bombs; X (2) nukes; LB
   and LT (4, 6) boost; RB (5) launches a missile; Start pauses. In menus the stick or D-pad moves (held, it repeats after 400 ms, then
-  every 100 ms), A or Start selects, and B or Select goes back. On game over and level
+  every 100 ms), Fire (A or RT) or Start selects, and Bomb (B) or Select goes back. On game over and level
   complete B or Select is Esc, Y (3) watches the replay, and any other button is any key. A pad can't leave the start
   screen on a fresh page: browsers start sound only after a user activation, and the HTML
   spec's activation-triggering input events
@@ -1227,7 +1266,7 @@ is added.
 
 - **Menu state** is in `game/menu.ts`, apart from drawing, and tested in Node. `TitleMenu`
   and `JukeboxMenu` take a `MenuAction` (up, down, left, right, confirm, back), not a key.
-  `keyToMenuAction()` in `input.ts` maps the keyboard and `padMenuAction()` in
+  `KeyMap.menuAction()` in `input.ts` maps the keyboard and `padMenuAction()` in
   `gamepad.ts` the pad. A held arrow, D-pad direction or stick repeats in a menu; a held
   Enter, Esc or button does not.
 - **Screens:** `TitleScreen` (with the start screen), `JukeboxScreen`, `DemoBanner` and
@@ -1411,8 +1450,9 @@ Node):
    is cosmetic; the sim only reads whole ticks.
 5. Draw and render.
 
-**Input.** `keyToBit()` maps arrows and WASD to the movement bits and Space, Z and J to
-fire in play (menus use `keyToMenuAction()`, above, where Space confirms). A key held during a frame sets
+**Input.** `KeyMap.bit()` maps each bound key to its action's sim bit (by default arrows
+and WASD to the movement bits, and Space, Z and J to fire; menus use `KeyMap.menuAction()`,
+above). A key held during a frame sets
 its bit on every tick that frame runs, and a key pressed and released between two ticks
 still sets its bit for one tick.
 
