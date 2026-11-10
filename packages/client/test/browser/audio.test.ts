@@ -5,7 +5,7 @@
 import { analyze, loadOpenMpt } from '@game/analysis';
 import fixtureUrl from '@game/analysis/fixtures/pb-fixture-01.mod?url';
 import { CHUNK_FRAMES, SAMPLE_RATE } from '@game/core';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { createAudioPlayer, type AudioPlayer, type PositionMessage } from '../../src/audio/index.ts';
 
 const QUANTUM = 128;
@@ -82,27 +82,27 @@ describe('libopenmpt worklet', () => {
 });
 
 describe('song clock', () => {
-  // In CI, WebKit's first live AudioContext in a page stayed suspended (60 s and more), and so
-  // did the next one made after it was closed; but while a stuck one was still open, later
-  // ones started at once. So open contexts until one runs, and keep the stuck ones open until
-  // the clock tests are done.
-  const stuck: AudioContext[] = [];
+  // In CI, WebKit's first player in a page (createAudioPlayer, load, start) didn't finish
+  // within 30 s, whatever ran before it, and the next one always did. Set one up first with
+  // more time, logging how long each step took and the context's state while it waits.
   beforeAll(async () => {
-    for (let attempt = 1; attempt <= 5; attempt++) {
-      const context = new AudioContext({ sampleRate: SAMPLE_RATE });
-      const t0 = performance.now();
-      await Promise.race([context.resume(), sleep(5000)]);
-      console.log(`live context ${attempt}: ${context.state} after ${Math.round(performance.now() - t0)} ms`);
-      if (context.state === 'running') {
-        await context.close();
-        return;
-      }
-      stuck.push(context);
+    const t0 = performance.now();
+    const ms = (): number => Math.round(performance.now() - t0);
+    const context = new AudioContext({ sampleRate: SAMPLE_RATE, latencyHint: 'interactive' });
+    const watch = setInterval(() => console.log(`first player: ${ms()} ms, context ${context.state}`), 5000);
+    try {
+      const player = await createAudioPlayer({ context });
+      console.log(`first player: created after ${ms()} ms, context ${context.state}`);
+      await player.load(await fixture());
+      console.log(`first player: loaded after ${ms()} ms`);
+      await player.start();
+      console.log(`first player: started after ${ms()} ms, context ${context.state}`);
+      await player.close();
+    } finally {
+      clearInterval(watch);
+      await context.close();
     }
-  }, 40_000);
-  afterAll(async () => {
-    for (const context of stuck) await context.close();
-  });
+  }, 120_000);
 
   async function playing(): Promise<AudioPlayer> {
     const player = await createAudioPlayer();

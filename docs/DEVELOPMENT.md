@@ -672,11 +672,12 @@ found then:
 - Firefox's `currentTime` on the main thread can trail the worklet's last position message
   by about one audio callback (512 frames in CI, 256 locally), where Chromium and WebKit
   are at or past it.
-- In CI, WebKit's first live `AudioContext` in a page stays suspended, with or without a
-  sound server (60 s and more), and so does the next one made after it is closed; while a
-  stuck one is still open, later ones start at once. The clock tests' `beforeAll` opens
-  contexts (5 s each, up to five) until one runs, logs each, and keeps the stuck ones open
-  until `afterAll`.
+- In CI, WebKit's first player in a page (`createAudioPlayer`, `load`, `start`) didn't
+  finish within 30 s, whatever ran before it (plain live contexts, open or closed, or an
+  offline one), and the next one always did. A plain `new AudioContext()` there stays
+  suspended after `resume()` (5 s and 60 s were tried), so it is no warm-up. The clock
+  tests' `beforeAll` sets one player up with 120 s to spare and logs each step's time and
+  the context's state every 5 s.
 
 - `PB_BROWSERS` picks the engines: `chromium` by default; CI sets
   `chromium,firefox,webkit`.
