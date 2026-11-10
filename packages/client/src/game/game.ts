@@ -38,6 +38,7 @@ import { InputSampler, keyToMenuAction, type MenuAction } from './input.ts';
 import { DisplayClock, InputLog, catchUp, targetTick } from './loop.ts';
 import { ControlsScreen } from './controls.ts';
 import { SoundCues, type Cue } from './cues.ts';
+import { ColourFlood, HANGAR_CUES, HangarIntro, PLAY_AT, WIPE_MS, introTime } from './hangar.ts';
 import { HelpScreen } from './help.ts';
 import { ControlsPages, DIFFICULTY_LABELS, JukeboxMenu, PauseMenu, SettingsMenu, TitleMenu, type TitleEvent } from './menu.ts';
 import type { PerfMeter } from './perf.ts';
@@ -72,6 +73,7 @@ type Mode =
   | 'controls'
   | 'settings'
   | 'help'
+  | 'hangar'
   | 'analyzing'
   | 'intro'
   | 'play'
@@ -144,6 +146,9 @@ interface CompleteView {
 /** How far effects pan towards the side they happened on: 1 would be hard left or right. */
 const PAN_WIDTH = 0.6;
 
+/** Keys in the hangar intro count after this long, so the press that chose Play doesn't skip it. */
+const HANGAR_SKIP_DELAY_MS = 300;
+
 /** Shown on game over and level complete when the run has a replay. */
 const REPLAY_HINT = 'R Replay  S Save';
 
@@ -175,6 +180,16 @@ export class Game {
   readonly #controls = new ControlsScreen();
   readonly #settingsScreen = new SettingsScreen();
   readonly #help = new HelpScreen();
+  readonly #hangar = new HangarIntro();
+  readonly #flood = new ColourFlood();
+  /**
+   * The hangar intro playing or skipped: when its clock started, the next of its sound cues,
+   * and whether the level is loaded so Play can start the run.
+   */
+  #intro: { start: number; cue: number; ready: boolean; skipped: boolean } | null = null;
+  /** The run started from the intro is flooding into colour, and its canopy is closing. */
+  #flooding = false;
+  #wiping = false;
   /** Where the help screen returns to. */
   #helpFrom: 'title' | 'paused' = 'title';
   #settingsMenu: SettingsMenu;
@@ -257,6 +272,7 @@ export class Game {
       this.#controls.container,
       this.#settingsScreen.container,
       this.#help.container,
+      this.#hangar.container,
       this.#demoBanner.container,
       this.#replayBanner.container,
       this.#message.container,
@@ -303,6 +319,7 @@ export class Game {
     this.#controls.container.visible = mode === 'controls';
     this.#settingsScreen.container.visible = mode === 'settings';
     this.#help.container.visible = mode === 'help';
+    this.#hangar.container.visible = mode === 'hangar' || (mode === 'play' && this.#wiping);
     this.#pauseScreen.container.visible = mode === 'paused';
     this.#demoBanner.container.visible = mode === 'demo';
     this.#replayBanner.container.visible = mode === 'replay';
@@ -360,6 +377,9 @@ export class Game {
         return;
       case 'replay':
         if (!e.repeat) this.#endReplay(true);
+        return;
+      case 'hangar':
+        if (!e.repeat) this.#skipHangar();
         return;
       case 'paused':
         // Q quits straight to the title, as before the pause menu.
@@ -424,6 +444,9 @@ export class Game {
       case 'replay':
         this.#endReplay(true);
         return;
+      case 'hangar':
+        this.#skipHangar();
+        return;
       case 'title':
       case 'jukebox':
       case 'controls':
@@ -463,6 +486,7 @@ export class Game {
     if (this.#mode === 'start') this.#leaveStart();
     else if (this.#mode === 'demo') this.#toTitle();
     else if (this.#mode === 'replay') this.#endReplay(true);
+    else if (this.#mode === 'hangar') this.#skipHangar();
     else if (
       this.#mode === 'title' ||
       this.#mode === 'jukebox' ||
@@ -562,7 +586,7 @@ export class Game {
         this.#sound('start');
         this.#run = { kind: 'arcade', level: 0 };
         this.#runScore = 0;
-        void this.#beginLevel();
+        void this.#beginLevel(true);
         break;
       case 'practice':
         this.#sound('start');
@@ -808,6 +832,7 @@ export class Game {
   #toTitle(): void {
     this.#cancelFade();
     this.#fx?.stopAll();
+    this.#endFlood();
     this.#run = null;
     this.#r.terrain.setLevel(null);
     this.#r.explosion.hide();
@@ -880,16 +905,28 @@ export class Game {
     return run.kind === 'arcade' ? this.#levelSongs[run.level]! : run.song;
   }
 
-  /** Analyzes the run's song if needed, builds its level, and shows the intro card. */
-  async #beginLevel(): Promise<void> {
+  /**
+   * Analyzes the run's song if needed, builds its level, and shows the intro card; or, with
+   * `hangar`, plays the hangar intro while it loads, and the intro's Play key starts the run.
+   */
+  async #beginLevel(hangar = false): Promise<void> {
     const run = this.#run;
     if (!run) return;
     const song = this.#runSong(run);
     const difficulty = this.#menu.difficulty;
     this.#cancelFade();
     this.#stopMusic();
+    this.#endFlood();
     const request = this.#musicRequest;
-    this.#setMode('analyzing');
+    const heading = this.#levelHeading(run);
+    if (hangar) {
+      this.#intro = { start: performance.now(), cue: 0, ready: false, skipped: false };
+      this.#hangar.setSong(heading, song.title, song.credit, DIFFICULTY_LABELS[difficulty]);
+      this.#setMode('hangar');
+    } else {
+      this.#intro = null;
+      this.#setMode('analyzing');
+    }
     try {
       const cache = this.#cacheFor(song);
       const tempo = Difficulty[difficulty].tempoPermille;
@@ -898,7 +935,7 @@ export class Game {
         return p;
       });
       const [player, levelData] = await Promise.all([loading, this.#levelData(song, difficulty)]);
-      if (request !== this.#musicRequest || this.#mode !== 'analyzing') return;
+      if (request !== this.#musicRequest || (this.#mode !== 'analyzing' && this.#mode !== 'hangar')) return;
       this.#playerReady = player;
       this.#song = song;
       this.#difficulty = difficulty;
@@ -915,9 +952,14 @@ export class Game {
       resetSimState(this.#state);
       this.#r.explosion.hide();
       this.#r.flash.hide();
+      const intro = this.#intro;
+      if (intro) {
+        // The hangar's Play key starts the run, or it was skipped and starts now.
+        intro.ready = true;
+        if (intro.skipped) void this.#startRun();
+        return;
+      }
       this.#setMode('intro');
-      const last = run.kind === 'arcade' && run.level === this.#levelSongs.length - 1;
-      const heading = run.kind === 'practice' ? 'Practice' : last ? 'Final level' : `Level ${run.level + 1}`;
       this.#message.show(heading, CYAN, [song.title, song.credit, DIFFICULTY_LABELS[difficulty]]);
     } catch (err) {
       this.#cache.delete(song);
@@ -925,9 +967,35 @@ export class Game {
     }
   }
 
+  #levelHeading(run: Run): string {
+    if (run.kind === 'practice') return 'Practice';
+    return run.level === this.#levelSongs.length - 1 ? 'Final level' : `Level ${run.level + 1}`;
+  }
+
+  /** A key in the hangar: start the run now, or as soon as the level has loaded. */
+  #skipHangar(): void {
+    const intro = this.#intro;
+    if (!intro || performance.now() - this.#modeSince < HANGAR_SKIP_DELAY_MS) return;
+    intro.skipped = true;
+    this.#fx?.stopAll();
+    if (intro.ready) void this.#startRun();
+    else this.#setMode('analyzing');
+  }
+
+  /** Takes the colour flood and the canopy off the screen. */
+  #endFlood(): void {
+    this.#flooding = false;
+    this.#wiping = false;
+    this.#r.stage.filters = null;
+    this.#hangar.container.visible = false;
+  }
+
   async #startRun(): Promise<void> {
     const level = this.#level;
     if (!level) return;
+    // A run from the hangar floods into colour; skipped, it does without the canopy.
+    const intro = this.#intro;
+    this.#intro = null;
     const request = ++this.#musicRequest;
     try {
       const player = await this.#getPlayer();
@@ -941,6 +1009,14 @@ export class Game {
       this.#r.flash.hide();
       this.#runs++;
       this.#options.perf?.reset();
+      this.#endFlood();
+      if (intro) {
+        this.#flooding = true;
+        this.#flood.set(0);
+        this.#r.stage.filters = [this.#flood.filter];
+        this.#wiping = !intro.skipped;
+        if (this.#wiping) this.#fx?.play('canopy');
+      }
       this.#setMode('play');
       this.#music = 'run';
       player.setVolume(1);
@@ -985,6 +1061,7 @@ export class Game {
 
   #onCrash(): void {
     this.#finishRun();
+    this.#endFlood();
     this.#stopMusic();
     this.#showGameOver();
     // Game over plays the opening of a song and fades it out.
@@ -1006,6 +1083,7 @@ export class Game {
 
   #onComplete(): void {
     this.#finishRun();
+    this.#endFlood();
     const run = this.#run;
     const difficulty = DIFFICULTY_LABELS[this.#difficulty];
     const s = this.#state;
@@ -1260,6 +1338,10 @@ export class Game {
         if (this.#helpFrom === 'title') r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
         break;
       }
+      case 'hangar': {
+        this.#drawHangar(now);
+        break;
+      }
       case 'intro': {
         if (level) drawPlay(r, level, this.#state, 0);
         if (now - this.#modeSince >= INTRO_MS) {
@@ -1283,6 +1365,7 @@ export class Game {
           this.#onComplete();
         }
         drawPlay(r, level, this.#state, this.#displaySamples);
+        if (this.#mode === 'play') this.#drawRunStart(level);
         break;
       }
       case 'replay': {
@@ -1326,6 +1409,49 @@ export class Game {
     this.#options.perf?.record(performance.now() - start);
     requestAnimationFrame(this.#frame);
   };
+
+  /**
+   * The hangar intro at its clock, playing its sounds as the clock passes them. The clock
+   * holds with the hand over Play until the level is loaded, then Play starts the run.
+   */
+  #drawHangar(now: number): void {
+    const intro = this.#intro;
+    if (!intro) return;
+    const ms = introTime(now - intro.start, intro.ready);
+    // Held, the clock restarts from where it stopped.
+    intro.start = now - ms;
+    while (intro.cue < HANGAR_CUES.length && HANGAR_CUES[intro.cue]!.at <= ms) {
+      const cue = HANGAR_CUES[intro.cue++]!;
+      this.#fx?.play(cue.effect, cue.pan);
+    }
+    this.#hangar.draw(ms);
+    // #startRun takes #intro at once, so this starts the run one time; the last frame stays
+    // up until the run's first.
+    if (intro.ready && ms >= PLAY_AT) void this.#startRun();
+  }
+
+  /** The start of a run from the hangar: the canopy closing and the colour flooding in. */
+  #drawRunStart(level: Level): void {
+    if (this.#wiping) {
+      const ms = (this.#displaySamples * 1000) / SAMPLE_RATE;
+      if (ms >= WIPE_MS) {
+        this.#wiping = false;
+        this.#hangar.container.visible = false;
+        this.#fx?.play('thunk');
+      } else {
+        this.#hangar.drawWipe(ms);
+      }
+    }
+    if (this.#flooding) {
+      const amount = ColourFlood.amount(level, this.#displaySamples);
+      if (amount >= 1) {
+        this.#flooding = false;
+        this.#r.stage.filters = null;
+      } else {
+        this.#flood.set(amount);
+      }
+    }
+  }
 
   /** The title song's level, flown by the autopilot at the point the music has reached. */
   #drawDemo(now: number, blink: boolean): void {

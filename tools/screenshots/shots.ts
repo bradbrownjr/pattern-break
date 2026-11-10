@@ -131,6 +131,74 @@ export const shots: Shot[] = [
     usedIn: [],
   },
   {
+    id: 'hangar-walk',
+    query: { scene: 'hangar', song: 'numenchip', difficulty: 'normal', t: '1.3' },
+    alt:
+      'A hangar in shades of grey: a dark back wall with steel girders, a row of roof trusses, and three ' +
+      'hanging work lights casting faint cones onto a grey floor marked with a dashed line. On the right, a ' +
+      'grey fighter jet faces right on two landing struts over hazard stripes, its canopy raised open and a ' +
+      'ladder leaning against its side. On the left, a small pilot in a white helmet with a dark visor walks ' +
+      'towards it.',
+    caption: 'The hangar intro: the captain walks to the fighter. Not used in the README.',
+    usedIn: [],
+  },
+  {
+    id: 'hangar-climb',
+    query: { scene: 'hangar', song: 'numenchip', difficulty: 'normal', t: '3.6' },
+    alt:
+      'The same grey hangar, closer in on the fighter. The pilot, in a white helmet, is near the top of the ' +
+      'ladder against the fuselage, just below the open canopy and the dark cockpit opening.',
+    caption: 'The hangar intro: the captain climbs the ladder. Not used in the README.',
+    usedIn: [],
+  },
+  {
+    id: 'hangar-cockpit',
+    query: { scene: 'hangar', song: 'numenchip', difficulty: 'normal', t: '6' },
+    alt:
+      'Inside the cockpit, in shades of grey. Through the open canopy at the top, the dark hangar wall and ' +
+      'its girders. Below, the instrument panel: a row of small indicator lights, two round gauges, and in ' +
+      'the middle a cassette deck with a dark window and five keys under it: rewind, play, fast forward, ' +
+      'stop and eject. A gloved hand on a dark sleeve reaches in from the right holding a light grey cassette ' +
+      'labelled "Numen in Da Chip", half way into the deck.',
+    caption: 'The hangar intro: the cassette goes into the deck. Not used in the README.',
+    usedIn: [],
+  },
+  {
+    id: 'hangar-play',
+    query: { scene: 'hangar', song: 'numenchip', difficulty: 'normal', t: '8.1' },
+    alt:
+      'The cockpit with the cassette "Numen in Da Chip" in the deck window. Above the panel, "Level 1" in ' +
+      'large white pixel letters, "by JAM. Public Domain." and "Normal" in grey. The gloved hand presses ' +
+      'the Play key, which sits lower than the others.',
+    caption: 'The hangar intro: Play pressed. Not used in the README.',
+    usedIn: [],
+  },
+  {
+    id: 'hangar-clip',
+    query: { scene: 'hangar', song: 'numenchip', difficulty: 'normal' },
+    clip: { from: 0, to: 8.2, fps: 10 },
+    alt:
+      'Eight seconds in shades of grey. A pilot walks across a hangar to a fighter jet with its canopy open, ' +
+      'climbs the ladder as the view closes in on the cockpit, and drops into the seat. The view cuts to the ' +
+      'instrument panel: a gloved hand slides a cassette labelled "Numen in Da Chip" into the deck, "Level ' +
+      '1", the credit and "Normal" appear above the panel, and the hand comes back and presses Play, and the ' +
+      'cassette reels start to turn.',
+    caption: 'The hangar intro from the start to Play. Not used in the README.',
+    usedIn: [],
+  },
+  {
+    id: 'run-start',
+    query: { scene: 'run-start', song: 'numenchip', difficulty: 'normal', t: '0.25' },
+    alt:
+      'The start of level 1. In the top quarter of the screen, through the cockpit glass, the LED cavern with ' +
+      'its columns in pale, washed-out greens and the HUD: three ship icons and a bomb icon on the left, the ' +
+      'score on the right. Under it, a dark canopy frame with a light edge crosses the screen, with struts ' +
+      'down both sides, on its way down. Below the frame, a strip of the dark hangar, then the grey ' +
+      'instrument panel as before Play: the gauges, the cassette deck, and the gloved hand on the Play key.',
+    caption: 'Level 1 a quarter of a second after Play: the canopy closing over the grey level. Not used in the README.',
+    usedIn: [],
+  },
+  {
     id: 'paused',
     query: { scene: 'paused', song: 'pb-fixture-01', t: '21.5', difficulty: 'normal', seed: '1' },
     alt:

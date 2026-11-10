@@ -25,7 +25,14 @@ export type Effect =
   | 'pickup'
   | 'buy'
   | 'nukeReady'
-  | 'boost';
+  | 'boost'
+  | 'step'
+  | 'clank'
+  | 'thunk'
+  | 'insert'
+  | 'click'
+  | 'hiss'
+  | 'canopy';
 
 /** How an effect plays: its layers, how it varies, and how much goes to the echo and reverb. */
 export interface EffectSpec {
@@ -218,6 +225,64 @@ export const EFFECTS: Record<Effect, EffectSpec> = {
     layers: [{ wave: 'noise', freq: 3000, slide: -2, attack: 0.03, sustain: 0.12, decay: 0.2, lowpass: 2500, highpass: 300, volume: 0.32 }],
     variants: 2,
     jitter: 0.05,
+    priority: 2,
+  },
+
+  // The hangar intro (game/hangar.ts). A boot on a metal deck: a short low-passed thud with
+  // a tick on top, in the hangar's reverb.
+  step: {
+    layers: [
+      { wave: 'noise', freq: 1100, slide: -3, sustain: 0.004, decay: 0.07, punch: 0.6, lowpass: 1600, volume: 0.26 },
+      { wave: 'metal', freq: 5000, decay: 0.02, highpass: 1500, volume: 0.05 },
+    ],
+    variants: 3,
+    jitter: 0.08,
+    reverb: 0.3,
+    priority: 2,
+  },
+  // A boot on a ladder rung: a metallic knock over a short triangle ring.
+  clank: {
+    layers: [
+      { wave: 'metal', freq: 3800, slide: -2, sustain: 0.005, decay: 0.09, punch: 0.4, highpass: 600, volume: 0.18 },
+      { wave: 'triangle', freq: 590, decay: 0.16, decayCurve: 1.5, volume: 0.2 },
+    ],
+    variants: 2,
+    jitter: 0.06,
+    reverb: 0.35,
+    priority: 2,
+  },
+  // Dropping into the seat, and the canopy locking shut: a low sine thump with a muffled knock.
+  thunk: {
+    layers: [
+      { wave: 'sine', freq: 120, slide: -2.5, sustain: 0.02, decay: 0.16, volume: 0.36 },
+      { wave: 'noise', freq: 900, slide: -2, decay: 0.07, punch: 0.5, lowpass: 900, volume: 0.24 },
+    ],
+    reverb: 0.2,
+    priority: 3,
+  },
+  // The cassette pushed home: a plastic clack, bright and short, over a small knock.
+  insert: {
+    layers: [
+      { wave: 'metal', freq: 7000, decay: 0.025, punch: 0.5, highpass: 1800, volume: 0.2 },
+      { wave: 'square', freq: 330, slide: -6, duty: 0.25, decay: 0.045, lowpass: 2200, volume: 0.14 },
+    ],
+    priority: 3,
+  },
+  // The deck's Play key going down.
+  click: {
+    layers: [{ wave: 'metal', freq: 9000, decay: 0.015, punch: 0.4, highpass: 2500, volume: 0.18 }],
+    priority: 3,
+  },
+  // Tape hiss as the tape starts, fading under the song.
+  hiss: {
+    layers: [{ wave: 'noise', freq: 9000, attack: 0.04, sustain: 0.3, decay: 0.5, highpass: 3500, lowpass: 9000, volume: 0.07 }],
+    priority: 1,
+  },
+  // The canopy closing: a falling pneumatic rush.
+  canopy: {
+    layers: [
+      { wave: 'noise', freq: 2600, slide: -0.9, attack: 0.05, sustain: 0.35, decay: 0.35, highpass: 350, lowpass: 3200, lowpassSlide: -1, volume: 0.22 },
+    ],
     priority: 2,
   },
 };

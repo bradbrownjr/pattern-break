@@ -593,6 +593,8 @@ NES noise register's periods). In the client, `test/effects.test.ts` renders eve
 and checks it doesn't clip, `test/cues.test.ts` runs the autopilot and checks the cues
 (one bomb cue per burst, the same events at any number of ticks per frame, none after a
 retry), and `test/song-notes.test.ts` and `test/settings.test.ts` cover the rest.
+`test/hangar.test.ts` checks the hangar intro's sound list, its hold over Play, and the
+colour flood's steps.
 
 **Browsers.** The analysis package's `vitest.config.ts` has two projects. `node` runs every
 test in Node and is what `pnpm test` runs. `browser` runs the golden and replay tests in real browsers
@@ -713,7 +715,7 @@ The client reads query parameters; `packages/client/src/capture.ts` parses them
 | Parameter | Meaning |
 |---|---|
 | `capture` | `1` turns capture mode on. Without it the page behaves normally. |
-| `scene` | Which screen to show: `title`, `jukebox`, `controls-keyboard`, `controls-gamepad`, `help`, `help-end`, `settings`, `play`, or `paused`. |
+| `scene` | Which screen to show: `title`, `jukebox`, `controls-keyboard`, `controls-gamepad`, `help`, `help-end`, `settings`, `hangar`, `play`, `run-start`, or `paused`. |
 | `song` | Song id: a bundled song's file name without its extension (`numenchip`), or `pb-fixture-01` for the test song. |
 | `t` | Song clock in seconds. |
 | `difficulty` | Difficulty name. |
@@ -740,6 +742,11 @@ In capture mode the renderer must:
   **`scene=controls-gamepad`** draw the two controls pages, **`scene=help`** and
   **`scene=help-end`** the help screen scrolled to its top and its end, and
   **`scene=settings`** the settings at their defaults. All of these show the stars as the title does.
+- **`scene=hangar`** draws the hangar intro `t` seconds from its start, with `song` on the
+  cassette as level 1 at `difficulty`. `window.__pbCaptureSeek(t)` redraws it at another
+  time, so a clip of the intro works too.
+- **`scene=run-start`** is `scene=play` as a run from the hangar starts: the canopy closing
+  for the first second of song time and the colour flooding in.
 - **`scene=paused`** is `scene=play` with the pause menu over it, the cursor on Resume.
 - **`scene=play`** analyzes the song in the analysis worker, builds the level for
   `difficulty`, records `autopilotInputs(level)`, and runs the sim from tick 0 to
@@ -895,6 +902,8 @@ The research and design are in [`SOUND-EFFECTS.md`](SOUND-EFFECTS.md). In code:
   and boost. It only reads, and it starts over without cues when the level changes or the
   tick goes back (a retry, the demo looping). `Game.#playCues` runs it after each frame's
   `catchUp` in play, replays, and the demo.
+- **The hangar intro's sounds** are a fixed list of times (`HANGAR_CUES` in
+  `game/hangar.ts`), not sim cues: see "Playing it".
 
 ## Renderer and game loop
 
@@ -918,7 +927,23 @@ Run `pnpm dev` and open the URL it prints.
 - **Play** starts the arcade run at level 1; finishing a level offers the next, and the
   last ends the run. **Practice** plays one song. Each level opens with a 2 s card: the
   level number ("Final level" for the last), the song's title and credit, and the
-  difficulty.
+  difficulty. Level 1 from Play opens with the hangar intro instead.
+- **Hangar intro** (`hangar.ts`, Brad, 2026-11-10): before level 1 of each run started with
+  Play, in black and white, drawn with PixiJS Graphics. The captain walks across the
+  hangar, climbs the ladder into the fighter, and the camera closes in (0 to 5.2 s); in the
+  cockpit a gloved hand pushes a cassette labelled with level 1's song into the deck, the
+  level number, credit and difficulty show, and the hand presses Play (8.15 s), which
+  starts the run with the song at 0. While the level is still loading, the hand waits over
+  Play (`introTime`). The run starts with the canopy frame coming down over the window,
+  the level showing through the glass, then the cockpit dropping out of view (`drawWipe`,
+  1 s of song time); meanwhile the level floods from black and white into colour, one step
+  per row of the song over 32 rows (`ColourFlood`, a `ColorMatrixFilter` on the stage,
+  removed at full colour). Any key, click or pad button skips it after 0.3 s: the run
+  starts at once, or shows Loading until the level is ready, and floods into colour
+  without the canopy. Practice, retries and later levels don't show it. Its sounds
+  (footsteps, ladder, seat, cassette, Play key, tape hiss, then the canopy) are a timed
+  list, `HANGAR_CUES`, that `Game.#drawHangar` plays as the intro's clock passes each one.
+  Everything on screen is a function of the time, so capture mode can show any moment.
 - **In play,** arrows or WASD move, Space, Z or J fire (hold to keep firing), X or K drop
   a bomb (one per press, 1 s to reload after it bursts), C or L launch a missile once
   bought, V or ; (semicolon) nuke, F or ' (quote) buy the highlighted power-up, Shift

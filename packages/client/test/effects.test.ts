@@ -13,8 +13,10 @@ describe('effects', () => {
       expect(samples.length, name).toBe(Math.ceil(seconds * RATE));
       expect(peak(samples), name).toBeGreaterThan(0.05);
       expect(peak(samples), name).toBeLessThan(1);
-      // Only the booms ring longer than half a second.
-      if (!['bomb', 'missileBlast', 'nuke', 'lifeLost'].includes(name)) expect(seconds, name).toBeLessThanOrEqual(0.5);
+      // Only the booms, and the hangar intro's tape hiss and canopy, last longer than half a second.
+      if (!['bomb', 'missileBlast', 'nuke', 'lifeLost', 'hiss', 'canopy'].includes(name)) {
+        expect(seconds, name).toBeLessThanOrEqual(0.5);
+      }
     }
   });
 

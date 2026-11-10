@@ -41,6 +41,42 @@
     "caption": "The settings screen at the default volumes. Not used in the README.",
     "usedIn": []
   },
+  "hangar-walk": {
+    "path": "docs/img/hangar-walk.png",
+    "alt": "TBD",
+    "caption": "The hangar intro: the captain walks to the fighter. Not used in the README.",
+    "usedIn": []
+  },
+  "hangar-climb": {
+    "path": "docs/img/hangar-climb.png",
+    "alt": "TBD",
+    "caption": "The hangar intro: the captain climbs the ladder. Not used in the README.",
+    "usedIn": []
+  },
+  "hangar-cockpit": {
+    "path": "docs/img/hangar-cockpit.png",
+    "alt": "TBD",
+    "caption": "The hangar intro: the cassette goes into the deck. Not used in the README.",
+    "usedIn": []
+  },
+  "hangar-play": {
+    "path": "docs/img/hangar-play.png",
+    "alt": "TBD",
+    "caption": "The hangar intro: Play pressed. Not used in the README.",
+    "usedIn": []
+  },
+  "hangar-clip": {
+    "path": "docs/img/hangar-clip.gif",
+    "alt": "TBD",
+    "caption": "The hangar intro from the start to Play. Not used in the README.",
+    "usedIn": []
+  },
+  "run-start": {
+    "path": "docs/img/run-start.png",
+    "alt": "TBD",
+    "caption": "Level 1 starting after the intro: the canopy closes and the colour floods in. Not used in the README.",
+    "usedIn": []
+  },
   "paused": {
     "path": "docs/img/paused.png",
     "alt": "A frame of play in an LED cavern, with a dark translucent panel in the middle. On the panel, \"Paused\" in large amber pixel letters, and below it a menu: \"Resume\" in amber with an amber \">\" before it, then \"Controls\", \"Help\" and \"Quit\" in grey. The HUD shows three ship icons, a bomb icon and \"x2\" in the top left, the score \"0002200\" in the top right, and the power-up meter along the bottom edge, all six cells dark.",

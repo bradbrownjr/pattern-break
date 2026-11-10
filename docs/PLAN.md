@@ -329,6 +329,10 @@ every bar of every generated level.
   stored in IndexedDB.
 - Song select: metadata, difficulty, personal best, the global top 10 when online, and
   attribution.
+- Hangar intro before level 1 of each run from Play, skippable: in black and white, the
+  captain boards the fighter and puts the song's cassette in the deck; pressing Play
+  starts the song, the canopy closes, and the level floods into colour with the song
+  (built 2026-11-10).
 - Help, from the title and pause menus: a key to every sprite and HUD icon, and what each
   enemy and bonus scores (built 2026-11-10).
 - Settings, from the title menu: Music and Effects volume (built); to come, audio latency

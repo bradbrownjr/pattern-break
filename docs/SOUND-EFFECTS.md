@@ -209,6 +209,13 @@ heard time.
 | `buy` | an upgrade bought | square rising, repeated, from the song's note | `powerUp` |
 | `nukeReady` | a nuke charged | root, fifth, octave, twelfth from the song's note | |
 | `boost` | boost starts | band-limited noise, falling a little | |
+| `step` | a footstep in the hangar intro | a short low-passed noise thud with a short-mode tick, in reverb | |
+| `clank` | a boot on a ladder rung | a short-mode knock over a ringing triangle | |
+| `thunk` | dropping into the seat; the canopy locking | a sine thump under a muffled noise knock | |
+| `insert` | the cassette pushed into the deck | a bright short-mode clack over a short square | |
+| `click` | the deck's Play key | a short-mode click, 15 ms | |
+| `hiss` | the tape starting | quiet high-passed noise, 0.84 s | |
+| `canopy` | the canopy closing | band-limited noise, falling over 0.75 s | |
 
 Enemy bullets make no sound: there are too many.
 
@@ -221,7 +228,8 @@ On the development server (Xeon E5-2640, Node 26.13), 2026-11-09:
 - **Render time.** Every effect and variant at one pitch: about 0.3 to 0.5 s in all, the
   nuke the longest at 28 to 57 ms. That's why they render one per timer callback.
 - **Levels.** Every effect peaks between 0.2 and 0.96 of full scale before the
-  compressor (`test/effects.test.ts` checks each stays under 1).
+  compressor (`test/effects.test.ts` checks each stays under 1), except the hangar intro's
+  tape hiss at 0.07, which sits under the song (measured 2026-11-10).
 - **Against the music** (headless Chromium, the autopilot playing level 1 for 20 s, RMS over
   the last 15 s): music alone at Music 5 measured 0.093, effects alone at Effects 4 measured
   0.062, about 3.5 dB under the music. That was with the shot at volume 0.18; it is 0.15

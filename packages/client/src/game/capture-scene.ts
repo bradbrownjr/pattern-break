@@ -2,8 +2,10 @@
 // `t`, and the ship flown by the autopilot's input log replayed through the sim up to `t`.
 // Everything on screen is a function of the query parameters. Scenes: title, jukebox (the
 // first song playing, its spectrum dark), controls-keyboard, controls-gamepad, settings (at
-// the defaults), help and help-end (scrolled to the top and to the end), play, and paused
-// (play with the pause menu over it).
+// the defaults), help and help-end (scrolled to the top and to the end), hangar (the intro,
+// `t` seconds from its start, for `song` as level 1), play, run-start (play from the
+// hangar: the canopy closing and the colour flooding in), and paused (play with the pause
+// menu over it).
 
 import {
   Difficulty,
@@ -27,7 +29,9 @@ import { drawPlay } from './play-view.ts';
 import { ControlsScreen } from './controls.ts';
 import { JukeboxScreen, PauseScreen, SPECTRUM_BARS, SettingsScreen, TitleScreen } from './screens.ts';
 import { DEFAULT_SETTINGS } from './settings.ts';
+import { ColourFlood, HangarIntro, WIPE_MS } from './hangar.ts';
 import { HelpScreen } from './help.ts';
+import { DIFFICULTY_LABELS } from './menu.ts';
 import { SONGS, TITLE_SONG_ID, fetchSongBytes, findSong, songById } from './songs.ts';
 
 declare global {
@@ -93,8 +97,28 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
       settings.update(0, DEFAULT_SETTINGS);
       return menuScene(settings.container);
     }
+    case 'hangar': {
+      const hangar = new HangarIntro();
+      hangar.setSong('Level 1', song.title, song.credit, DIFFICULTY_LABELS[difficulty]);
+      r.ui.addChild(hangar.container);
+      r.world.visible = false;
+      r.combat.hud.visible = false;
+      const drawHangar = (t: number) => {
+        hangar.draw(t * 1000);
+        r.render();
+      };
+      window.__pbCaptureSeek = async (t: number) => {
+        drawHangar(t);
+        await afterPresent();
+      };
+      drawHangar(params.t);
+      await afterPresent();
+      markCaptureReady();
+      return;
+    }
     case 'play':
     case 'paused':
+    case 'run-start':
       break;
     default:
       throw new Error(`unknown scene ${params.scene}`);
@@ -109,6 +133,12 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
   const inputs = autopilotInputs(level);
   const state = createSimState();
   r.terrain.setLevel(level);
+  const runStart =
+    params.scene === 'run-start' ? { hangar: new HangarIntro(), flood: new ColourFlood() } : null;
+  if (runStart) {
+    runStart.hangar.setSong('Level 1', song.title, song.credit, DIFFICULTY_LABELS[difficulty]);
+    r.ui.addChild(runStart.hangar.container);
+  }
 
   const draw = (t: number) => {
     const samples = Math.round(t * SAMPLE_RATE);
@@ -119,6 +149,14 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
     const shown = state.dead ? state.deathTick * SAMPLES_PER_TICK : samples;
     drawPlay(r, level, state, Math.max(0, Math.min(shown, level.tickCount * SAMPLES_PER_TICK)));
     drawCrash(r, state, samples, params.seed);
+    if (runStart) {
+      const ms = (samples * 1000) / SAMPLE_RATE;
+      runStart.hangar.container.visible = ms < WIPE_MS;
+      if (ms < WIPE_MS) runStart.hangar.drawWipe(ms);
+      const amount = ColourFlood.amount(level, samples);
+      runStart.flood.set(amount);
+      r.stage.filters = amount < 1 ? [runStart.flood.filter] : null;
+    }
     r.render();
   };
 
