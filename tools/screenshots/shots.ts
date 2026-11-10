@@ -133,15 +133,32 @@ export const shots: Shot[] = [
   },
   {
     id: 'credits',
-    query: { scene: 'credits', song: 'the_epic_chip', t: '0' },
+    query: { scene: 'credits', song: 'the_epic_chip', t: '18' },
     alt:
-      '"Credits" in large cyan pixel letters with a magenta shadow, over a list with a grey scroll bar on ' +
-      'the right, its thumb at the top. The cyan section name Music, then song titles in grey with ' +
-      '"Drozerix" right-aligned in dim grey: The_Epic_Chip in amber with an amber ">" before it, Neon ' +
-      'Techno, RNDD_Keygen#1.0, CHiP_OVERTURE, The_Dim_Dungeon, 4_RNDD!, Girl From Mars, ' +
-      'Wrath_of_the_Djinn, Keygen 9000, Crush, Augmented_Emotions, The_Dim_Dungeon_2 and Cabin Fever!. ' +
-      'At the bottom, "Public Domain modarchive.org" in grey.',
-    caption: 'The credits screen at its top. Not used in the README.',
+      '"Credits" in large cyan pixel letters with a magenta shadow. Under it the roll, 18 seconds in: the ' +
+      'cyan section name Music near the top, then song titles in grey with "Drozerix" right-aligned in dim ' +
+      'grey, from The_Epic_Chip down to The_Dim_Dungeon_2, the lowest cut off at the bottom edge of the roll. ' +
+      'At the bottom, "Up Down Select" in dim grey.',
+    caption: 'The title menu\'s credits, rolling. Not used in the README.',
+    usedIn: [],
+  },
+  {
+    id: 'credits-ending',
+    query: { scene: 'credits-ending', song: 'the_epic_chip', t: '12' },
+    alt:
+      'The ending after the last level, 12 seconds into its roll, with no heading: "Thank you for playing" in ' +
+      'large cyan letters, "Normal Total 1234560" in amber under it, then "Credits" in large cyan letters ' +
+      'and the start of the Music section. At the bottom, "Up Down Select Esc Skip" in dim grey.',
+    caption: 'The ending\'s credit roll, opening. Not used in the README.',
+    usedIn: [],
+  },
+  {
+    id: 'credits-end',
+    query: { scene: 'credits-ending', song: 'the_epic_chip', t: '300' },
+    alt:
+      'The end of the ending\'s roll: "The End" in large cyan letters in the middle of the screen, the last ' +
+      'credit, "Pattern Break" with "MIT", above it, and "Any key Title" in cyan at the bottom.',
+    caption: 'The ending\'s credit roll, finished. Not used in the README.',
     usedIn: [],
   },
   {

@@ -60,7 +60,7 @@ import { DisplayClock, InputLog, catchUp, targetTick } from './loop.ts';
 import { ControlsScreen } from './controls.ts';
 import { SoundCues, type Cue } from './cues.ts';
 import { ColourFlood, HangarIntro, PLAY_AT, WIPE_MS, hangarCues, introTime, loadHangarArt } from './hangar.ts';
-import { CreditsMenu, CreditsScreen, creditRows } from './credits.ts';
+import { CreditsRoll, CreditsScreen, creditRows, endingRows, viewHeight } from './credits.ts';
 import { HelpScreen } from './help.ts';
 import { CONTROL_PAGES, ControlsPages, DIFFICULTY_LABELS, JukeboxMenu, KeysMenu, PauseMenu, SettingsMenu, TitleMenu, type TitleEvent } from './menu.ts';
 import { KeysScreen } from './keys-screen.ts';
@@ -82,6 +82,7 @@ import {
   IMPOSSIBLE_SONG_IDS,
   LEVEL_SONG_IDS,
   TITLE_SONG_ID,
+  CREDITS_SONG_ID,
   fetchSongBytes,
   songById,
   FOLDER_PICKER,
@@ -115,7 +116,7 @@ type Mode =
   | 'error';
 
 /** What the player is playing, which decides what happens when a song ends. */
-type Music = 'title' | 'jukebox' | 'run' | 'gameover' | null;
+type Music = 'title' | 'jukebox' | 'run' | 'gameover' | 'credits' | null;
 
 /** A run: the arcade levels in order from `level` (0-based), or one song in practice. */
 /** An arcade run plays `songs` in order: the eight levels, or Impossible's one. */
@@ -157,6 +158,8 @@ const DEMO_DIFFICULTY: DifficultyName = 'normal';
 const FADE_HALF_MS = 400;
 /** The title music fades in over this long. */
 const TITLE_FADE_IN_S = 1;
+/** The ending's credits song fades in over this long. */
+const CREDITS_FADE_IN_S = 2;
 /** The card before each level stays this long. */
 const INTRO_MS = 2000;
 /** The jukebox spectrum: analyser size and the range its bars cover. */
@@ -254,8 +257,11 @@ export class Game {
   /** A note over the Keys screen's hint, such as a direction left with no key. */
   #keysNote: { text: string; until: number } | null = null;
   readonly #help = new HelpScreen();
-  readonly #creditsMenu: CreditsMenu;
-  readonly #credits: CreditsScreen;
+  readonly #credits = new CreditsScreen();
+  /** The credits rolling now: the title menu's, or the ending's after a finished run. */
+  #creditsRoll: CreditsRoll | null = null;
+  /** When the roll last moved on, for the frame's time step. */
+  #creditsAt = 0;
   /** A note in place of the Credits screen's detail line, such as a link a pad can't open. */
   #creditsNote: { text: string; until: number } | null = null;
   /** The hangar intro, once its art has loaded; it shows in #hangarLayer. */
@@ -350,9 +356,6 @@ export class Game {
     this.#menu = new TitleMenu(options.songs.length, Math.max(0, options.songs.indexOf(options.song)));
     this.#jukeboxMenu = new JukeboxMenu(options.songs.length, FOLDER_PICKER);
     this.#jukebox = new JukeboxScreen(this.#songs, FOLDER_PICKER);
-    const credits = creditRows(options.songs);
-    this.#creditsMenu = new CreditsMenu(credits);
-    this.#credits = new CreditsScreen(credits);
     this.#settingsMenu = new SettingsMenu(this.#settings);
     this.#input.keys = new KeyMap(this.#bindings.keys);
     this.#applyLook();
@@ -831,9 +834,7 @@ export class Game {
         break;
       case 'credits':
         this.#sound('select');
-        this.#creditsMenu.reset();
-        this.#creditsNote = null;
-        this.#setMode('credits');
+        this.#openCredits(null);
         break;
       case null:
         break;
@@ -1069,8 +1070,30 @@ export class Game {
     });
   }
 
+  /**
+   * Starts the credits rolling: the title menu's (`ending` null), looping over the title
+   * music, or the ending after a finished run, once, with the credits song.
+   */
+  #openCredits(ending: { difficulty: string; total: number } | null): void {
+    const roll = ending
+      ? new CreditsRoll(endingRows(this.#options.songs, ending.difficulty, ending.total), viewHeight('ending'), false)
+      : new CreditsRoll(creditRows(this.#options.songs), viewHeight('menu'), true);
+    this.#creditsRoll = roll;
+    this.#creditsNote = null;
+    this.#creditsAt = performance.now();
+    this.#credits.show(roll, ending ? 'ending' : 'menu');
+    if (ending) this.#clearPlay();
+    this.#setMode('credits');
+    if (ending) {
+      this.#stopMusic();
+      void this.#playMusic(CREDITS_SONG_ID ? songById(CREDITS_SONG_ID) : this.#titleSong, 'credits', CREDITS_FADE_IN_S);
+    }
+  }
+
   #onCreditsMenu(action: MenuAction): void {
-    const command = this.#creditsMenu.apply(action);
+    const roll = this.#creditsRoll;
+    if (!roll) return;
+    const command = roll.apply(action);
     switch (command?.type) {
       case 'moved':
         this.#sound('move');
@@ -1078,10 +1101,18 @@ export class Game {
       case 'open':
         this.#openLink(command.url);
         break;
+      case 'skipped':
+        this.#sound('back');
+        break;
       case 'back':
         this.#sound('back');
-        this.#lastInput = performance.now();
-        this.#setMode('title');
+        if (roll.loop) {
+          // The title music plays on.
+          this.#lastInput = performance.now();
+          this.#setMode('title');
+        } else {
+          this.#toTitle();
+        }
         break;
       default:
         break;
@@ -1286,8 +1317,10 @@ export class Game {
   }
 
   #onSongEnded(): void {
-    if (this.#music === 'title' && (this.#mode === 'title' || this.#mode === 'demo')) {
+    if (this.#music === 'title' && (this.#mode === 'title' || this.#mode === 'demo' || this.#mode === 'credits')) {
       void this.#playMusic(this.#titleSong, 'title');
+    } else if (this.#music === 'credits' && this.#mode === 'credits') {
+      void this.#playMusic(CREDITS_SONG_ID ? songById(CREDITS_SONG_ID) : this.#titleSong, 'credits');
     } else if (this.#music === 'jukebox' && this.#mode === 'jukebox' && this.#jukeboxMenu.playing !== null) {
       // In the jukebox, a song that ends hands over to the next one.
       void this.#jukeboxPlay(this.#jukeboxMenu.next(this.#jukeboxMenu.playing));
@@ -1304,7 +1337,8 @@ export class Game {
     void this.#prepareDemo();
   }
 
-  #toTitle(): void {
+  /** Clears the run from the screen: its level, effects and sounds. */
+  #clearPlay(): void {
     this.#cancelFade();
     this.#fx?.stopAll();
     this.#endFlood();
@@ -1312,6 +1346,10 @@ export class Game {
     this.#showLevel(null);
     this.#r.explosion.hide();
     this.#r.flash.hide();
+  }
+
+  #toTitle(): void {
+    this.#clearPlay();
     this.#lastInput = performance.now();
     this.#setMode('title');
     // From the demo the title music is already playing.
@@ -1760,11 +1798,12 @@ export class Game {
         },
       };
     } else if (run?.kind === 'arcade') {
+      const total = this.#runScore;
       this.#completeView = {
         heading: 'All clear',
-        lines: [difficulty, ...score, 'Any key Title'],
+        lines: [difficulty, ...score, 'Any key Credits'],
         highlight,
-        after: () => this.#toTitle(),
+        after: () => this.#openCredits({ difficulty, total }),
       };
     } else {
       this.#completeView = {
@@ -2017,8 +2056,11 @@ export class Game {
         break;
       }
       case 'credits': {
+        // The time step is capped, so a tab left in the background doesn't jump the roll.
+        this.#creditsRoll?.tick(Math.min(100, now - this.#creditsAt));
+        this.#creditsAt = now;
         const note = this.#creditsNote && now < this.#creditsNote.until ? this.#creditsNote.text : '';
-        this.#credits.update(this.#creditsMenu.cursor, note);
+        this.#credits.update(note);
         r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
         break;
       }

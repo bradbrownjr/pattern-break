@@ -1419,13 +1419,30 @@ the event never came (reproduced locally with Chromium's CPU throttled 8 times).
 
 ### Credits
 
-The title menu's last row, Credits (`game/credits.ts`), lists the bundled songs with their
-authors, the code the game is built on with its licenses, and the game itself. Up and down
-move between the rows that open something, skipping the section headings; the line under
-the list shows the selected row's license and site, or what a library does; Enter opens
-the row's page in a new tab, and Esc returns to the title. Like the file picker, a new tab
-opens only during a key press, click or tap, so a pad's confirm shows "Open: keys or
-touch". The list scrolls to keep the cursor in view (`creditsTop`), with a scroll bar.
+The credits (`game/credits.ts`) list the bundled songs with their authors, the code the
+game is built on with its licenses, and the game itself, and roll slowly up the screen
+like a film's, at `ROLL_PX_PER_S` (10 px a second; Brad, 2026-11-10). There are two rolls:
+
+- **From the title menu** (its last row, Credits): under a fixed "Credits" heading, over
+  the title music, looping back to the start once the last row has gone. Esc returns to
+  the title, the music playing on.
+- **After the last level of a run** ("All clear", then "Any key Credits"): the ending.
+  It opens with "Thank you for playing" and the run's difficulty and total, then
+  "Credits" and the sections, and stops on "The End" in the middle of the screen; any key
+  then returns to the title. Esc jumps to The End. It plays `CREDITS_SONG_ID` from
+  `songs.ts`, looping, faded in over 2 s; until Brad picks the song (ROADMAP, "Open
+  decisions") it plays the title song. The run's level, effects and sounds are cleared
+  first (`Game.#clearPlay`, shared with the way back to the title).
+
+`CreditsRoll` holds the roll's state, apart from the drawing, so the tests can step it.
+Up, down or Enter stops the roll with a cursor on the row that opens something nearest
+the middle of the view; then up and down move between those rows, skipping headings and
+text, the roll scrolling just enough to keep the cursor in view, and Enter opens the
+row's page in a new tab. The line under the roll shows the selected row's license and
+site, or what a library does. After `RESUME_MS` (4 s) with no input the cursor goes and
+the roll carries on from where it is. Like the file picker, a new tab opens only during a
+key press, click or tap, so a pad's confirm shows "Open: keys or touch". The rows sit in
+one container, moved each frame and clipped by a mask, so a frame does no text work.
 
 - **Songs** open their page on The Mod Archive (`sourceUrl` in the manifest). Imported
   songs and the test song have no page and aren't listed.

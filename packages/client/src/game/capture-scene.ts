@@ -3,8 +3,8 @@
 // Everything on screen is a function of the query parameters. Scenes: title, jukebox (the
 // first song playing, its spectrum dark), controls-arrows, controls-wasd and
 // controls-gamepad, settings (at the defaults), keys (the Keys screen at the defaults, on
-// Fire's first slot), help and help-end (scrolled to the top and to the end), credits (at its
-// top), hangar (the intro,
+// Fire's first slot), help and help-end (scrolled to the top and to the end), credits and
+// credits-ending (the roll `t` seconds in), hangar (the intro,
 // `t` seconds from its start, for `song` as level 1), play (with `boom`, the ship blowing
 // up), run-start (play from the
 // hangar: the canopy closing and the colour flooding in), paused (play with the pause
@@ -39,7 +39,7 @@ import { JukeboxScreen, MessageScreen, PauseScreen, SPECTRUM_BARS, SettingsScree
 import { REPLAY_HINT, resultRows, scoreBreakdown } from './results.ts';
 import { DEFAULT_SETTINGS } from './settings.ts';
 import { ColourFlood, HangarIntro, WIPE_MS, loadHangarArt } from './hangar.ts';
-import { CreditsScreen, creditRows } from './credits.ts';
+import { CreditsRoll, CreditsScreen, creditRows, endingRows, viewHeight } from './credits.ts';
 import { HelpScreen } from './help.ts';
 import { DIFFICULTY_LABELS, type ControlPage } from './menu.ts';
 import { FOLDER_PICKER, SONGS, TITLE_SONG_ID, fetchSongBytes, findSong, songById } from './songs.ts';
@@ -105,10 +105,17 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
       help.update();
       return menuScene(help.container);
     }
-    case 'credits': {
-      const rows = creditRows(SONGS);
-      const credits = new CreditsScreen(rows);
-      credits.update(rows.findIndex((r) => 'url' in r));
+    case 'credits':
+    case 'credits-ending': {
+      // `t` seconds into the roll.
+      const ending = params.scene === 'credits-ending';
+      const roll = ending
+        ? new CreditsRoll(endingRows(SONGS, 'Normal', 1234560), viewHeight('ending'), false)
+        : new CreditsRoll(creditRows(SONGS), viewHeight('menu'), true);
+      for (let ms = 0; ms < params.t * 1000; ms += 100) roll.tick(100);
+      const credits = new CreditsScreen();
+      credits.show(roll, ending ? 'ending' : 'menu');
+      credits.update();
       return menuScene(credits.container);
     }
     case 'settings': {

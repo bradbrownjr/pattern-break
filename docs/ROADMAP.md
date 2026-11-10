@@ -78,6 +78,10 @@ These need Brad's answer before the work that depends on them. Don't guess.
    Needed before M5.
 3. **Peak dots:** they are off on every difficulty (2026-11-08). They could come back as a
    display option, as solid obstacles on hard, or not at all.
-4. **Shots through walls:** the player's shots pass through the LED walls, so turrets on
+4. **Credits song:** the ending's credit roll wants a slow, satisfying, triumphant
+   Drozerix song of its own (Brad, 2026-11-10). Six previews went to Brad on 2026-11-10:
+   AI Renaissance, The Hawk's Claw, War Path, Mecanum Overdrive, May is 4 Her and Sleepy
+   Snow. Until he picks, the title song plays.
+5. **Shots through walls:** the player's shots pass through the LED walls, so turrets on
    the bar tips can be hit; enemy bullets stop on them (2026-11-09, for Brad's play-test).
    The other way, turrets are hard to reach behind taller bars.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import manifest from '../../../music/manifest.json';
-import { CREDITS_VISIBLE_ROWS, CreditsMenu, creditRows, creditsTop, type CreditRow } from '../src/game/credits.ts';
+import { CreditsRoll, RESUME_MS, ROLL_PX_PER_S, ROW, creditRows, endingRows, isLink, type CreditRow } from '../src/game/credits.ts';
 import { SONGS, TEST_SONG, importedSong } from '../src/game/songs.ts';
 
 describe('credit rows', () => {
@@ -31,40 +31,82 @@ describe('credit rows', () => {
   });
 });
 
-describe('CreditsMenu', () => {
+describe('CreditsRoll', () => {
   const rows: CreditRow[] = [
     { heading: 'A' },
     { label: 'one', value: '', detail: '', url: 'u1' },
     { label: 'two', value: '', detail: '', url: 'u2' },
+    { text: '' },
     { heading: 'B' },
     { label: 'three', value: '', detail: '', url: 'u3' },
   ];
+  const VIEW = 3 * ROW;
 
-  it('moves over the links only, wrapping, and opens the one under the cursor', () => {
-    const m = new CreditsMenu(rows);
-    expect(m.cursor).toBe(1);
-    m.apply('down');
-    m.apply('down');
-    expect(m.cursor).toBe(4);
-    expect(m.apply('confirm')).toEqual({ type: 'open', url: 'u3' });
-    m.apply('down');
-    expect(m.cursor).toBe(1);
-    expect(m.apply('up')).toEqual({ type: 'moved' });
-    expect(m.cursor).toBe(4);
-    expect(m.apply('back')).toEqual({ type: 'back' });
-    m.reset();
-    expect(m.cursor).toBe(1);
+  it('starts below the view and rolls up at its speed', () => {
+    const roll = new CreditsRoll(rows, VIEW, true);
+    expect(roll.offset).toBe(-VIEW);
+    roll.tick(1000);
+    expect(roll.offset).toBe(-VIEW + ROLL_PX_PER_S);
   });
 
-  it('scrolls as little as it can, showing the heading above a section\'s first link', () => {
-    const long = creditRows(SONGS);
-    const visible = CREDITS_VISIBLE_ROWS;
-    expect(long.length).toBeGreaterThan(visible);
-    const last = long.length - 1;
-    expect(creditsTop(0, last, long, visible)).toBe(long.length - visible);
-    expect(creditsTop(long.length - visible, 1, long, visible)).toBe(0);
-    // Back up to the first song: the Music heading above it comes into view too.
-    expect(creditsTop(5, 1, long, visible)).toBe(0);
-    expect(creditsTop(5, 2, long, visible)).toBe(2);
+  it('loops on the title menu once the last row has gone', () => {
+    const roll = new CreditsRoll(rows, VIEW, true);
+    roll.tick(((VIEW + roll.contentHeight) * 1000) / ROLL_PX_PER_S);
+    expect(roll.offset).toBe(-VIEW);
+    expect(roll.ended).toBe(false);
+    expect(roll.apply('back')).toEqual({ type: 'back' });
+  });
+
+  it('stops on a row at a press, moves between links, opens one, and rolls on after a pause', () => {
+    const roll = new CreditsRoll(rows, VIEW, true);
+    roll.offset = 0;
+    // The view's middle is at 16.5 px: row 1 ("one", 11 to 22) is the nearest link.
+    expect(roll.apply('down')).toEqual({ type: 'moved' });
+    expect(roll.cursor).toBe(1);
+    roll.tick(1000);
+    expect(roll.offset).toBe(0);
+    roll.apply('down');
+    roll.apply('down');
+    expect(roll.cursor).toBe(5);
+    // Row 5 ends at 66 px, below the 33 px view: the roll scrolls just enough to show it.
+    expect(roll.offset).toBe(66 - VIEW);
+    expect(roll.apply('down')).toBeNull();
+    expect(roll.apply('confirm')).toEqual({ type: 'open', url: 'u3' });
+    roll.tick(RESUME_MS - 1);
+    expect(roll.cursor).toBe(5);
+    roll.tick(1);
+    expect(roll.cursor).toBeNull();
+    const at = roll.offset;
+    roll.tick(1000);
+    expect(roll.offset).toBe(at + ROLL_PX_PER_S);
+  });
+
+  it('a first confirm only stops the roll; it opens nothing', () => {
+    const roll = new CreditsRoll(rows, VIEW, true);
+    roll.offset = 0;
+    expect(roll.apply('confirm')).toEqual({ type: 'moved' });
+    expect(roll.cursor).toBe(1);
+  });
+
+  it('ends the ending on The End in the middle of the view, and Esc skips there', () => {
+    const songs = SONGS.slice(0, 2);
+    const ending = endingRows(songs, 'Normal', 5000);
+    expect(ending[0]).toEqual({ text: 'Thank you for playing', color: expect.any(Number), size: 2 });
+    expect(ending).toContainEqual({ text: 'Normal  Total 5000', color: expect.any(Number) });
+    expect(ending.at(-1)).toMatchObject({ text: 'The End', size: 2 });
+    expect(ending.filter(isLink)).toHaveLength(creditRows(songs).filter(isLink).length);
+
+    const roll = new CreditsRoll(ending, 100, false);
+    roll.tick(10 * 60 * 1000);
+    expect(roll.ended).toBe(true);
+    const last = ending.length - 1;
+    expect(roll.offset + 50).toBe(roll.rowTops[last]! + ROW);
+    expect(roll.apply('down')).toBeNull();
+    expect(roll.apply('confirm')).toEqual({ type: 'back' });
+
+    const skipped = new CreditsRoll(ending, 100, false);
+    expect(skipped.apply('back')).toEqual({ type: 'skipped' });
+    expect(skipped.ended).toBe(true);
+    expect(skipped.offset).toBe(roll.offset);
   });
 });

@@ -13,6 +13,12 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **A credit roll, from Brad's review.** The credits roll slowly up the screen like a
+  film's. Up, down or Enter stops the roll on a row, Enter opens its page, and after 4 s
+  with no input it rolls on. From the title menu the roll loops over the title music.
+  Finishing a run now leads to an ending: "Thank you for playing" with the run's
+  difficulty and total, the credits, and "The End", then the title; Esc skips to The End.
+  The ending's own song waits for Brad's pick, so the title song plays for now.
 * **No license on the song lines, from Brad's review.** The title, the Jukebox and the
   level intro credit a song as "by Drozerix"; its license is on the Credits screen.
 * **M4 finished: library, offline, music pack.** Its acceptance check passes: the game
