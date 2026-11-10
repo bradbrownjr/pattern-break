@@ -13,6 +13,8 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **No license on the song lines, from Brad's review.** The title, the Jukebox and the
+  level intro credit a song as "by Drozerix"; its license is on the Credits screen.
 * **M4 finished: library, offline, music pack.** Its acceptance check passes: the game
   installs, plays with no connection, and imports and plays a new song offline
   (`pnpm check:offline`). The last step adds the music pack and a Credits screen:

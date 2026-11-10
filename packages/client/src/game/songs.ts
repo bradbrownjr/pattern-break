@@ -14,7 +14,10 @@ export interface BundledSong {
   title: string;
   author: string;
   license: string;
-  /** Who made it and the license, as one line for the screen. */
+  /**
+   * Who made it, as one line for the screen ("by Drozerix"). The license is on the Credits
+   * screen, not here (Brad, 2026-11-10: on every song line it was redundant).
+   */
   credit: string;
   /** The song's page where it was published (The Mod Archive), or null. */
   sourceUrl: string | null;
@@ -39,7 +42,7 @@ export const SONGS: readonly BundledSong[] = manifest.map((entry) => {
     title: entry.title,
     author: entry.author,
     license: entry.license,
-    credit: `by ${entry.author}. ${entry.license}.`,
+    credit: `by ${entry.author}`,
     sourceUrl: entry.sourceUrl,
     sha256: entry.sha256,
     imported: false,

@@ -1437,9 +1437,10 @@ touch". The list scrolls to keep the cursor in view (`creditsTop`), with a scrol
   libopenmpt's license is BSD-3-Clause, which asks that binary copies carry its notice.
 - **Game** opens the source code on GitHub.
 
-The song lines elsewhere (the title's Practice line, the Jukebox, the level intro) keep
-"by Drozerix. Public Domain." without a link (Brad, 2026-11-10: Credits is the one place
-for the links; a canvas line can't be clicked, and a URL doesn't fit).
+The song lines elsewhere (the title's Practice line, the Jukebox, the level intro) name
+the author only, "by Drozerix": no link and no license (Brad, 2026-11-10: Credits is the
+one place for both; a canvas line can't be clicked, a URL doesn't fit, and the license on
+every line was redundant).
 
 ### Renderer
 

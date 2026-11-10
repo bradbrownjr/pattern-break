@@ -46,7 +46,7 @@ export const shots: Shot[] = [
       'letters with a magenta shadow, over a row of small LED segments shading from green to red. Below it, a ' +
       'menu in small pixel type: "Play" in amber with an amber ">" before it, then "Practice" with ' +
       '"The_Epic_Chip", "Difficulty" with "Normal", "Jukebox", "Controls", "Settings", "Help" and "Credits", in grey. Under the menu, ' +
-      '"Music: The_Epic_Chip by Drozerix. Public Domain."',
+      '"Music: The_Epic_Chip by Drozerix"',
     caption: 'The title menu. Not used in the README.',
     usedIn: [],
   },
@@ -60,7 +60,7 @@ export const shots: Shot[] = [
       'Keygen 9000, Crush and Augmented_Emotions; four more songs, "Import" and "Back" are below, out of view, and a thin ' +
       'scroll bar on the right has its grey thumb at the top. The first song is lime with an amber ">" before it. Under the list, a dim ' +
       'row of 24 LED bars, green at the bottom to red at the top, all unlit. At the bottom, "The_Epic_Chip ' +
-      'by Drozerix. Public Domain." in grey and "0:12 / 3:48" in cyan.',
+      'by Drozerix" in grey and "0:12 / 3:48" in cyan.',
     caption: 'The jukebox, playing the first song. Not used in the README.',
     usedIn: [],
   },
@@ -212,7 +212,7 @@ export const shots: Shot[] = [
     alt:
       'The cockpit with the cassette in the deck: through the door\'s window, its label reading "Neon Techno" ' +
       'and its two hubs. Above the panel, "Level 1" in large white pixel letters, "Neon Techno" in ' +
-      'light grey, and "by Drozerix. Public Domain.  Normal" in grey. The glove, coming in from the bottom ' +
+      'light grey, and "by Drozerix  Normal" in grey. The glove, coming in from the bottom ' +
       'right, presses the Play key with its index finger, covering the keys to its right.',
     caption: 'The hangar intro: Play pressed. Not used in the README.',
     usedIn: [],
