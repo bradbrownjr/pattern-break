@@ -5,7 +5,7 @@
 import { GEN_VERSION } from '@game/core';
 import { deleteDB, openDB } from 'idb';
 import { afterEach, describe, expect, it } from 'vitest';
-import { levelKey, openLibrary, type Library, type StoredSong } from '../../src/game/library.ts';
+import { keepStorage, levelKey, openLibrary, type Library, type StoredSong } from '../../src/game/library.ts';
 
 const opened: { name: string; library: Library | null }[] = [];
 let counter = 0;
@@ -92,5 +92,13 @@ describe('imported songs', () => {
     expect(await library.level(HASH_A, 1000)).toBeNull();
     expect(await library.song(HASH_B)).not.toBeNull();
     expect(await library.level(HASH_B, 1000)).toEqual(new Uint8Array([3]));
+  });
+});
+
+describe('keeping storage', () => {
+  // Firefox asks the player, and the promise waits for an answer no one gives here
+  // (checked 2026-11-10: the test timed out). Chromium and WebKit decide without asking.
+  it.skipIf(navigator.userAgent.includes('Firefox'))('asks without failing and answers yes or no', async () => {
+    expect(typeof (await keepStorage())).toBe('boolean');
   });
 });

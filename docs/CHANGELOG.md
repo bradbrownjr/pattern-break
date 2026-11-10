@@ -13,6 +13,9 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **Keep imported songs.** After the first import, the game asks the browser to keep its
+  data when the device runs low on space. Firefox asks the player; Chrome, Edge and Safari
+  decide on their own.
 * **M4: install and offline play.** The game has a web app manifest and icons, and a
   service worker that caches every built file, the bundled songs included, on the first
   visit, so it installs as an app and plays with no connection; imported songs work

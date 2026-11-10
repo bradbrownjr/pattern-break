@@ -55,6 +55,23 @@ export async function sha256Hex(bytes: Uint8Array): Promise<string | null> {
   return Array.from(digest, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/**
+ * Asks the browser to keep this site's data when the device runs short of space, so
+ * imported songs aren't deleted with the rest of a site's "best-effort" data. Firefox asks
+ * the player; Chromium and Safari decide from how the site has been used, without asking
+ * (MDN, "Storage quotas and eviction criteria"). Does nothing once granted. Resolves to
+ * whether the data is now kept.
+ */
+export async function keepStorage(): Promise<boolean> {
+  const storage = globalThis.navigator?.storage;
+  if (!storage?.persist || !storage.persisted) return false;
+  try {
+    return (await storage.persisted()) || (await storage.persist());
+  } catch {
+    return false;
+  }
+}
+
 /** The level cache's key for a song at a tempo, under a GEN_VERSION. */
 export function levelKey(sha256: string, tempoPermille: number, genVersion: number = GEN_VERSION): string {
   return `${sha256}:${tempoPermille}:${genVersion}`;

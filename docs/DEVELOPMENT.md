@@ -1320,6 +1320,14 @@ newer build in another tab asks to upgrade the database, this tab closes its con
 rather than block it. `test/browser/library.test.ts` checks the cache, the pruning, and
 song storage in Chromium, Firefox and WebKit.
 
+Browsers may delete a site's data when the device runs short of space, unless the site has
+asked to keep it (MDN, "Storage quotas and eviction criteria"). After an import stores a
+song, `keepStorage()` calls `navigator.storage.persist()` if the data isn't kept already
+(Brad, 2026-11-10: ask at the first import, not at start). Firefox shows the player a
+prompt; Chromium and Safari decide from how the site has been used, without one. Safari
+also deletes a site's script-made data after seven days of browser use with no click or
+tap on it, while cross-site tracking prevention is on.
+
 ### Install and offline
 
 The game installs as an app and plays with no connection (PLAN.md, "Offline-first"), through

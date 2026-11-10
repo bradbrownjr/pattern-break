@@ -37,7 +37,7 @@ import { seededRandom } from '../render/random.ts';
 import type { GameRenderer } from '../render/renderer.ts';
 import { barBinEdges, barLevels } from '../render/spectrum.ts';
 import { analyzeSerializedInWorker } from './analysis.ts';
-import { openLibrary, sha256Hex, type Library, type StoredSong } from './library.ts';
+import { keepStorage, openLibrary, sha256Hex, type Library, type StoredSong } from './library.ts';
 import {
   STANDARD_PROFILE,
   assign,
@@ -1420,6 +1420,8 @@ export class Game {
       if (unsaved) parts.push(`${unsaved} not saved`);
       this.#jukeboxNoteShow(parts.join(', '), added.length === 0 || unsaved > 0);
       if (added.length > 0) this.#sound('select');
+      // The first song kept is the moment to ask that the browser not delete them.
+      if (added.length > unsaved) void keepStorage();
     } finally {
       this.#importing = false;
     }
