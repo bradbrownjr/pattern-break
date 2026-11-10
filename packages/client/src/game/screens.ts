@@ -191,6 +191,8 @@ export interface JukeboxView {
   removeHint: string;
   /** The first press came; the hint asks for the second ("Del Confirm", magenta). */
   removeArmed: boolean;
+  /** Import picks a folder rather than files. */
+  importFolder: boolean;
 }
 
 export const SPECTRUM_BARS = 24;
@@ -266,7 +268,7 @@ export class JukeboxScreen {
   /** What the list last showed, so an unchanged frame skips the text work. */
   #drawn = '';
 
-  /** `folder`: show the Import folder row. */
+  /** `folder`: Import offers Folder as well as File. */
   constructor(songs: readonly BundledSong[], folder = false) {
     this.#folder = folder;
     const shadow = new PixelText('Jukebox', MAGENTA, 2).place(CENTER + 1, 12 + 1, 'center');
@@ -307,9 +309,9 @@ export class JukeboxScreen {
     this.#drawn = '';
   }
 
-  /** Rows in the list: the songs, Import, Import folder if shown, and Back. */
+  /** Rows in the list: the songs, Import and Back. */
   get rowCount(): number {
-    return this.#songs.length + (this.#folder ? 3 : 2);
+    return this.#songs.length + 2;
   }
 
   /** The first row in view. */
@@ -317,13 +319,14 @@ export class JukeboxScreen {
     return this.#top;
   }
 
-  #label(i: number): { title: string; right: string; song: BundledSong | null } {
+  #label(i: number, view: JukeboxView): { title: string; right: string; song: BundledSong | null } {
     const song = this.#songs[i];
     if (song) return { title: song.title, right: song.author, song };
-    const extra = i - this.#songs.length;
-    if (extra === 0) return { title: 'Import', right: '', song: null };
-    if (extra === 1 && this.#folder) return { title: 'Import folder', right: '', song: null };
-    return { title: 'Back', right: '', song: null };
+    if (i > this.#songs.length) return { title: 'Back', right: '', song: null };
+    if (!this.#folder) return { title: 'Import', right: '', song: null };
+    // "< File >" on the selected row, like the title screen's choices: left and right change it.
+    const value = view.importFolder ? 'Folder' : 'File';
+    return { title: 'Import', right: i === view.cursor ? `< ${value} >` : `${value}  `, song: null };
   }
 
   update(view: JukeboxView): void {
@@ -338,7 +341,7 @@ export class JukeboxScreen {
       this.#nowTime.text = `${clockText(view.seconds)} / ${clockText(view.durationSeconds)}`;
       this.#nowTime.place(CENTER, NOW_Y + 12, 'center');
     }
-    const key = `${view.cursor}|${view.playing}|${view.note}|${view.warn}|${view.removeHint}|${view.removeArmed}`;
+    const key = `${view.cursor}|${view.playing}|${view.note}|${view.warn}|${view.removeHint}|${view.removeArmed}|${view.importFolder}`;
     if (key === this.#drawn) return;
     this.#drawn = key;
     const rows = this.rowCount;
@@ -351,14 +354,14 @@ export class JukeboxScreen {
       title.visible = right.visible = slot < visible;
       if (slot >= visible) continue;
       const y = jukeboxRowY(slot, visible);
-      const row = this.#label(i);
+      const row = this.#label(i, view);
       const onCursor = i === view.cursor;
       title.text = row.title;
       title.color = i === view.playing ? LIME : onCursor ? AMBER : GREY;
       title.place(LIST_LEFT, y);
       const hint = onCursor && row.song?.imported ? view.removeHint : '';
       right.text = hint || row.right;
-      right.color = hint ? (view.removeArmed ? MAGENTA : AMBER) : DIM_GREY;
+      right.color = hint ? (view.removeArmed ? MAGENTA : AMBER) : onCursor && !row.song && row.right ? AMBER : DIM_GREY;
       right.place(LIST_RIGHT, y, 'right');
     }
     this.#marker.place(LIST_LEFT - 10, jukeboxRowY(view.cursor - this.#top, visible));

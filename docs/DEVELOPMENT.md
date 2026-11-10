@@ -1182,17 +1182,18 @@ Run `pnpm dev` and open the URL it prints.
   2.5.5 Target Size), one column if not, and at the right edge over the picture if the
   bar is narrower still. Pointer Events track each finger by `pointerId`, so the stick and
   buttons work together; `Game.#pollPads` ORs the touch bits with the pads'.
-- **Jukebox:** the bundled songs, then the imported ones, then Import, Import folder (where
-  the browser's file picker can pick a folder: `webkitdirectory`, Baseline since August
-  2025 per MDN) and Back, with a 24-bar spectrum of what is playing under them, and the
-  song's title, credit and time below that. Enter plays the song under the cursor or stops
+- **Jukebox:** the bundled songs, then the imported ones, then Import and Back. Where the
+  browser's file picker can pick a folder (`webkitdirectory`, Baseline since August 2025
+  per MDN), left and right on Import choose "< File >" or "< Folder >" (Brad, 2026-11-10:
+  one row, not two). Under the list is a 24-bar spectrum of what is playing, and under
+  that the song's title, credit and time. Enter plays the song under the cursor or stops
   it if it is playing, a song that ends hands over to the next, and Esc or Back returns to
   the title, where the title music starts again. The list shows 11 rows at 10 px
   (`JUKEBOX_VISIBLE_ROWS`); a longer one scrolls to keep the cursor in view
   (`jukeboxTop`), with a scroll bar like the help screen's.
 - **Importing songs** (Brad, 2026-11-10: in the Jukebox, not a menu of its own): Import
-  opens the file picker for `.mod .xm .s3m .it` files, several at once; Import folder takes
-  every song file in a folder and its subfolders; song files dropped on the title or the
+  on File opens the file picker for `.mod .xm .s3m .it` files, several at once; on Folder
+  it takes every song file in a folder and its subfolders; song files dropped on the title or the
   jukebox are imported too (a dropped replay file still plays). Browsers open a file picker
   only during a key press, click or tap, so a pad's confirm on Import shows "Import: keys
   or touch". Each file is hashed (SHA-256 through WebCrypto, which needs HTTPS or

@@ -86,7 +86,7 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
       const jukebox = new JukeboxScreen(SONGS, FOLDER_PICKER);
       const data = await analyzeInWorker(await fetchSongBytes(SONGS[0]!), 1000);
       const durationSeconds = data.totalSamples / SAMPLE_RATE;
-      jukebox.update({ cursor: 0, playing: 0, seconds: params.t, durationSeconds, levels: new Uint8Array(SPECTRUM_BARS), note: '', warn: false, removeHint: '', removeArmed: false });
+      jukebox.update({ cursor: 0, playing: 0, seconds: params.t, durationSeconds, levels: new Uint8Array(SPECTRUM_BARS), note: '', warn: false, removeHint: '', removeArmed: false, importFolder: false });
       return menuScene(jukebox.container);
     }
     case 'controls-arrows':

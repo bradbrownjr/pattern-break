@@ -351,8 +351,8 @@ every bar of every generated level.
 - Jukebox: plays the bundled songs, with an LED spectrum and each song's title, author and
   license.
 - Library: bundled songs plus imported ones, managed in the Jukebox (Brad, 2026-11-10):
-  Import (file picker or drag and drop), Import folder (the file picker's folder mode, in
-  every current browser), and Del to remove. Imported files are stored in IndexedDB
+  Import (file picker or drag and drop; left and right choose File or Folder, the file
+  picker's folder mode, in every current browser), and Del to remove. Imported files are stored in IndexedDB
   (built 2026-11-10).
 - Song select: metadata, difficulty, personal best, the global top 10 when online, and
   attribution.

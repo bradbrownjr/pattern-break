@@ -151,26 +151,28 @@ export type JukeboxCommand =
   | { type: 'moved' }
   | { type: 'play'; song: number }
   | { type: 'stop' }
-  | { type: 'import' }
-  | { type: 'folder' }
+  | { type: 'import'; folder: boolean }
   | { type: 'back' };
 
 /** A row of the jukebox's list. */
-export type JukeboxRow = { kind: 'song'; song: number } | { kind: 'import' } | { kind: 'folder' } | { kind: 'back' };
+export type JukeboxRow = { kind: 'song'; song: number } | { kind: 'import' } | { kind: 'back' };
 
 /**
- * The songs (bundled, then imported), Import, Import folder where the browser can pick a
- * folder, then Back. Confirm plays the song under the cursor, or stops it if it is the one
- * playing; on Import it opens the file picker. Back, or confirm on Back, returns to the
- * title. The song list grows and shrinks as songs are imported and removed.
+ * The songs (bundled, then imported), Import, then Back. Confirm plays the song under the
+ * cursor, or stops it if it is the one playing; on Import it opens the file picker. Where
+ * the browser can pick a folder, left and right on Import choose File or Folder. Back, or
+ * confirm on Back, returns to the title. The song list grows and shrinks as songs are
+ * imported and removed.
  */
 export class JukeboxMenu {
   cursor = 0;
   /** The song playing, or null. The game sets it as playback starts and stops. */
   playing: number | null = null;
   #songCount: number;
-  /** Whether the Import folder row is shown. */
+  /** Whether Import offers Folder as well as File. */
   readonly folder: boolean;
+  /** Import picks a folder rather than files. */
+  importFolder = false;
 
   constructor(songCount: number, folder = false) {
     this.#songCount = songCount;
@@ -181,16 +183,15 @@ export class JukeboxMenu {
     return this.#songCount;
   }
 
-  /** Every row: the songs, Import, Import folder (if shown) and Back. */
+  /** Every row: the songs, Import and Back. */
   get rowCount(): number {
-    return this.#songCount + (this.folder ? 3 : 2);
+    return this.#songCount + 2;
   }
 
   rowAt(i: number): JukeboxRow {
     if (i < this.#songCount) return { kind: 'song', song: i };
     const extra = i - this.#songCount;
     if (extra === 0) return { kind: 'import' };
-    if (extra === 1 && this.folder) return { kind: 'folder' };
     return { kind: 'back' };
   }
 
@@ -212,8 +213,13 @@ export class JukeboxMenu {
       case 'confirm': {
         const row = this.row;
         if (row.kind === 'song') return this.playing === row.song ? { type: 'stop' } : { type: 'play', song: row.song };
-        return { type: row.kind === 'import' ? 'import' : row.kind === 'folder' ? 'folder' : 'back' };
+        return row.kind === 'import' ? { type: 'import', folder: this.importFolder } : { type: 'back' };
       }
+      case 'left':
+      case 'right':
+        if (this.row.kind !== 'import' || !this.folder) return null;
+        this.importFolder = !this.importFolder;
+        return { type: 'moved' };
       case 'back':
         return { type: 'back' };
       default:

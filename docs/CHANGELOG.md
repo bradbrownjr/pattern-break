@@ -13,6 +13,8 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **One Import row, from Brad's review.** Import and Import folder become one Jukebox row,
+  "Import < File >", where left and right choose File or Folder.
 * **M4: import songs.** The Jukebox has Import and Import folder rows, and song files can
   be dropped on the title or the Jukebox. Each `.mod .xm .s3m .it` file is hashed, checked
   by analyzing it, and kept in the browser; imported songs join Practice and the Jukebox,

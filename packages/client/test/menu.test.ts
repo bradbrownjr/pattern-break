@@ -83,15 +83,20 @@ describe('JukeboxMenu', () => {
     expect(j.next(2)).toBe(0);
   });
 
-  it('lists Import, then Import folder where the browser has it, then Back', () => {
+  it('lists Import, then Back; left and right choose File or Folder where the browser has it', () => {
     const plain = new JukeboxMenu(2);
     expect([0, 1, 2, 3].map((i) => plain.rowAt(i).kind)).toEqual(['song', 'song', 'import', 'back']);
     plain.cursor = 2;
-    expect(plain.apply('confirm')).toEqual({ type: 'import' });
+    expect(plain.apply('right')).toBeNull();
+    expect(plain.apply('confirm')).toEqual({ type: 'import', folder: false });
     const folder = new JukeboxMenu(2, true);
-    expect(folder.rowCount).toBe(5);
-    folder.cursor = 3;
-    expect(folder.apply('confirm')).toEqual({ type: 'folder' });
+    expect(folder.rowCount).toBe(4);
+    expect(folder.apply('right')).toBeNull(); // on a song
+    folder.cursor = 2;
+    expect(folder.apply('right')).toEqual({ type: 'moved' });
+    expect(folder.apply('confirm')).toEqual({ type: 'import', folder: true });
+    folder.apply('left');
+    expect(folder.apply('confirm')).toEqual({ type: 'import', folder: false });
     folder.apply('down');
     expect(folder.onBack).toBe(true);
   });

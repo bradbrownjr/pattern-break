@@ -737,8 +737,7 @@ export class Game {
         void this.#jukeboxPlay(command.song);
         break;
       case 'import':
-      case 'folder':
-        this.#openFilePicker(command.type === 'folder');
+        this.#openFilePicker(command.folder);
         break;
       case 'stop':
         this.#sound('back');
@@ -2136,6 +2135,7 @@ export class Game {
       warn: note?.warn ?? false,
       removeHint: song?.imported ? `${key} ${isArmed ? 'Confirm' : 'Remove'}` : '',
       removeArmed: isArmed,
+      importFolder: this.#jukeboxMenu.importFolder,
     });
   }
 }

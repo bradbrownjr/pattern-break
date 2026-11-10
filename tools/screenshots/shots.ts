@@ -57,7 +57,7 @@ export const shots: Shot[] = [
       '"Jukebox" in large cyan pixel letters with a magenta shadow over a starfield. Below it, a list of ' +
       'ten songs in grey pixel type with their authors right-aligned in dim grey: The_Epic_Chip, ' +
       'Neon Techno, RNDD_Keygen#1.0, CHiP_OVERTURE, The_Dim_Dungeon, 4_RNDD!, Girl From Mars, Wrath_of_the_Djinn, ' +
-      'Keygen 9000 and Crush, then "Import"; "Import folder" and "Back" are below, out of view, and a thin ' +
+      'Keygen 9000 and Crush, then "Import" with "File" right-aligned in dim grey; "Back" is below, out of view, and a thin ' +
       'scroll bar on the right has its grey thumb at the top. The first song is lime with an amber ">" before it. Under the list, a dim ' +
       'row of 24 LED bars, green at the bottom to red at the top, all unlit. At the bottom, "The_Epic_Chip ' +
       'by Drozerix. Public Domain." in grey and "0:12 / 3:48" in cyan.',

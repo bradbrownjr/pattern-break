@@ -4,7 +4,6 @@
 import { BAR_LIT_WIDTH, BAR_PITCH, PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH, Q8, SAMPLES_PER_TICK } from '@game/core';
 import { describe, expect, it } from 'vitest';
 import { JUKEBOX_LIMITS, JUKEBOX_VISIBLE_ROWS, jukeboxRow, jukeboxRowY, jukeboxTop } from '../src/game/screens.ts';
-import { SONGS } from '../src/game/songs.ts';
 import { FLASH_MS, flashAlpha } from '../src/render/flash.ts';
 import { ATLAS_HEIGHT, ATLAS_WIDTH, FIRST_CHAR, LAST_CHAR, buildAtlasPixels, glyphIndex, glyphRows, textWidth } from '../src/render/font.ts';
 import { BACKGROUND, LED_DIM, LED_LIT, mix } from '../src/render/palette.ts';
@@ -146,7 +145,7 @@ describe('jukebox list', () => {
   });
 
   it('scrolls as little as it can to keep the cursor in view', () => {
-    const rows = SONGS.length + 3; // the songs, Import, Import folder and Back
+    const rows = 16; // say 14 songs, Import and Back
     expect(jukeboxTop(0, 5, rows)).toBe(0);
     expect(jukeboxTop(0, rows - 1, rows)).toBe(rows - JUKEBOX_VISIBLE_ROWS);
     expect(jukeboxTop(rows - JUKEBOX_VISIBLE_ROWS, 0, rows)).toBe(0);
