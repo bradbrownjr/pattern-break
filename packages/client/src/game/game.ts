@@ -24,6 +24,7 @@ import {
   type Level,
   type LevelData,
 } from '@game/core';
+import { Container } from 'pixi.js';
 import { createAudioPlayer, type AudioPlayer } from '../audio/index.ts';
 import { EffectsMixer } from '../audio/mixer.ts';
 import { MenuSounds, type MenuSound } from '../audio/sfx.ts';
@@ -38,7 +39,7 @@ import { InputSampler, keyToMenuAction, type MenuAction } from './input.ts';
 import { DisplayClock, InputLog, catchUp, targetTick } from './loop.ts';
 import { ControlsScreen } from './controls.ts';
 import { SoundCues, type Cue } from './cues.ts';
-import { ColourFlood, HANGAR_CUES, HangarIntro, PLAY_AT, WIPE_MS, introTime } from './hangar.ts';
+import { ColourFlood, HANGAR_CUES, HangarIntro, PLAY_AT, WIPE_MS, introTime, loadHangarArt } from './hangar.ts';
 import { HelpScreen } from './help.ts';
 import { ControlsPages, DIFFICULTY_LABELS, JukeboxMenu, PauseMenu, SettingsMenu, TitleMenu, type TitleEvent } from './menu.ts';
 import type { PerfMeter } from './perf.ts';
@@ -180,7 +181,9 @@ export class Game {
   readonly #controls = new ControlsScreen();
   readonly #settingsScreen = new SettingsScreen();
   readonly #help = new HelpScreen();
-  readonly #hangar = new HangarIntro();
+  /** The hangar intro, once its art has loaded; it shows in #hangarLayer. */
+  #hangar: HangarIntro | null = null;
+  readonly #hangarLayer = new Container();
   readonly #flood = new ColourFlood();
   /**
    * The hangar intro playing or skipped: when its clock started, the next of its sound cues,
@@ -272,7 +275,7 @@ export class Game {
       this.#controls.container,
       this.#settingsScreen.container,
       this.#help.container,
-      this.#hangar.container,
+      this.#hangarLayer,
       this.#demoBanner.container,
       this.#replayBanner.container,
       this.#message.container,
@@ -306,6 +309,14 @@ export class Game {
       const file = e.dataTransfer?.files[0];
       if (file) void this.#onDropReplay(file);
     });
+    // The hangar intro's art: a few KB, ready long before anyone presses Play.
+    loadHangarArt().then(
+      (art) => {
+        this.#hangar = new HangarIntro(art);
+        this.#hangarLayer.addChild(this.#hangar.container);
+      },
+      (err: unknown) => console.error('hangar intro unavailable:', err),
+    );
     requestAnimationFrame(this.#frame);
   }
 
@@ -319,7 +330,7 @@ export class Game {
     this.#controls.container.visible = mode === 'controls';
     this.#settingsScreen.container.visible = mode === 'settings';
     this.#help.container.visible = mode === 'help';
-    this.#hangar.container.visible = mode === 'hangar' || (mode === 'play' && this.#wiping);
+    this.#hangarLayer.visible = mode === 'hangar' || (mode === 'play' && this.#wiping);
     this.#pauseScreen.container.visible = mode === 'paused';
     this.#demoBanner.container.visible = mode === 'demo';
     this.#replayBanner.container.visible = mode === 'replay';
@@ -919,7 +930,8 @@ export class Game {
     this.#endFlood();
     const request = this.#musicRequest;
     const heading = this.#levelHeading(run);
-    if (hangar) {
+    // Without its art (still loading, or it failed to) the level gets its usual card.
+    if (hangar && this.#hangar) {
       this.#intro = { start: performance.now(), cue: 0, ready: false, skipped: false };
       this.#hangar.setSong(heading, song.title, song.credit, DIFFICULTY_LABELS[difficulty]);
       this.#setMode('hangar');
@@ -987,7 +999,7 @@ export class Game {
     this.#flooding = false;
     this.#wiping = false;
     this.#r.stage.filters = null;
-    this.#hangar.container.visible = false;
+    this.#hangarLayer.visible = false;
   }
 
   async #startRun(): Promise<void> {
@@ -1424,7 +1436,7 @@ export class Game {
       const cue = HANGAR_CUES[intro.cue++]!;
       this.#fx?.play(cue.effect, cue.pan);
     }
-    this.#hangar.draw(ms);
+    this.#hangar?.draw(ms);
     // #startRun takes #intro at once, so this starts the run one time; the last frame stays
     // up until the run's first.
     if (intro.ready && ms >= PLAY_AT) void this.#startRun();
@@ -1436,10 +1448,10 @@ export class Game {
       const ms = (this.#displaySamples * 1000) / SAMPLE_RATE;
       if (ms >= WIPE_MS) {
         this.#wiping = false;
-        this.#hangar.container.visible = false;
+        this.#hangarLayer.visible = false;
         this.#fx?.play('thunk');
       } else {
-        this.#hangar.drawWipe(ms);
+        this.#hangar?.drawWipe(ms);
       }
     }
     if (this.#flooding) {

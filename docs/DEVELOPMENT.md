@@ -11,6 +11,8 @@ a program that sequences short samples in rows of notes; every level is built fr
 - **Node 26.** The version is in `.nvmrc`. Node runs the workspace's TypeScript directly
   (type stripping), so `core`, `analysis`, and `server` have no build step.
 - **pnpm 12.** The exact version is in `packageManager` in the root `package.json`.
+- **Python 3 with Pillow**, only to rebuild the hangar intro's art (`tools/hangar-art.py`;
+  see "Hangar intro art").
 
 ```sh
 pnpm install
@@ -57,6 +59,7 @@ pattern-break/
 │   ├── SELF-HOSTING.md            # running the Docker image: Docker, Compose, Unraid, HTTPS
 │   ├── SOUND-EFFECTS.md           # sound effects: the research, the design, measurements
 │   └── DOC-STYLE.md               # writing and voice
+├── art/hangar/                    # the hangar intro's generated art as it came back, and how it was made (README.md)
 ├── music/                         # the bundled songs, and manifest.json with their credits and licenses
 ├── packages/
 │   ├── core/                      # @game/core: deterministic levelgen, sim, PRNG, replays
@@ -96,6 +99,7 @@ pattern-break/
 │   ├── libopenmpt/*.patch         # our patches to libopenmpt (see "libopenmpt build")
 │   ├── make-fixture-mod.ts        # writes the test modules in packages/analysis/fixtures
 │   ├── gen-spectrum-tables.ts     # writes core's spectrum tables
+│   ├── hangar-art.py              # makes the hangar intro's game-sized art from art/hangar
 │   └── lint/determinism-plugin.js # Oxlint JS plugin for core
 ├── tsconfig.base.json             # shared compiler options
 └── pnpm-workspace.yaml
@@ -929,7 +933,7 @@ Run `pnpm dev` and open the URL it prints.
   level number ("Final level" for the last), the song's title and credit, and the
   difficulty. Level 1 from Play opens with the hangar intro instead.
 - **Hangar intro** (`hangar.ts`, Brad, 2026-11-10): before level 1 of each run started with
-  Play, in black and white, drawn with PixiJS Graphics. The captain walks across the
+  Play, in black and white (see "Hangar intro art" below). The captain walks across the
   hangar, climbs the ladder into the fighter, and the camera closes in (0 to 5.2 s); in the
   cockpit a gloved hand pushes a cassette labelled with level 1's song into the deck, the
   level number, credit and difficulty show, and the hand presses Play (8.15 s), which
@@ -1010,6 +1014,26 @@ Two query parameters help in development:
 | `autopilot=1` | `autopilotInputs(level)` flies the ship; the keyboard doesn't move it. |
 | `perf=1` | Records the cost of each frame. `window.__pbPerf()` in the console returns the mean, p50, p95, p99 and maximum in ms. |
 | `song=<id>` | Starts Practice on that song (ids as in capture mode). `song=pb-fixture-01` adds the test song to Practice and the jukebox. |
+
+#### Hangar intro art
+
+The hangar with the fighter, the cockpit, the captain, and the glove are generated images
+(Brad, 2026-11-10): `art/hangar/README.md` has the model, the prompts, the references
+(the first version's frames, and the player ship's sprite so the fighter has its shape),
+and the files' hashes. The cassette, the symbols on the deck's keys, the canopy frame, and
+the text are drawn in code.
+
+`python3 tools/hangar-art.py` makes the game's copies in
+`packages/client/src/game/hangar-art/`: it box-filters each source to the 384x216 grid
+(the captain to 28 px tall, the glove to 0.4 of its source), snaps every pixel to the
+intro's seven greys and its alpha to on or off, cuts the captain's sheet into frames
+(`pilot.png`: four of the walk, then two of the climb, 12x33 each, feet at the bottom
+centre; `pilot-seated.png`), cuts the cockpit's panel away from the view out of the canopy
+along the glare shield (`cockpit-panel.png`), and prints the glove's anchor points.
+`hangar.ts` has the positions measured on these files (the ladder, the cockpit opening,
+the deck's window and keys) and the anchors; rebuilding the art from new sources means
+measuring them again. `loadHangarArt()` loads the PNGs once; `Game` starts it at start-up
+and shows the usual level card instead of the intro if it hasn't loaded.
 
 ### Bundled songs
 

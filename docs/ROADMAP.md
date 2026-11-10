@@ -50,8 +50,9 @@ start the next until the current one is done.
       scores, from the sim's constants. It scrolls.
 - [x] A hangar intro before level 1 (Brad, 2026-11-10), skippable: in black and white, the
       captain climbs into the fighter and puts the song's cassette in the deck; Play starts
-      the song, the canopy closes, and the level floods into colour with the song. Drawn in
-      code for now; drawn or generated stills could replace shots later.
+      the song, the canopy closes, and the level floods into colour with the song. The
+      hangar, the fighter (in the player ship's shape), the cockpit, the captain and the
+      glove are generated art (`art/hangar/README.md`).
 - [ ] Accessibility toggles: reduce flashing (on by default), shake, colour-blind-safe LED
       palette, remappable controls. Remapping also covers pads and arcade sticks without
       the Gamepad API's standard mapping (moved from M2), tested once there is such a pad:

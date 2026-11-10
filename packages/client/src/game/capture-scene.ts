@@ -29,7 +29,7 @@ import { drawPlay } from './play-view.ts';
 import { ControlsScreen } from './controls.ts';
 import { JukeboxScreen, PauseScreen, SPECTRUM_BARS, SettingsScreen, TitleScreen } from './screens.ts';
 import { DEFAULT_SETTINGS } from './settings.ts';
-import { ColourFlood, HangarIntro, WIPE_MS } from './hangar.ts';
+import { ColourFlood, HangarIntro, WIPE_MS, loadHangarArt } from './hangar.ts';
 import { HelpScreen } from './help.ts';
 import { DIFFICULTY_LABELS } from './menu.ts';
 import { SONGS, TITLE_SONG_ID, fetchSongBytes, findSong, songById } from './songs.ts';
@@ -98,7 +98,7 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
       return menuScene(settings.container);
     }
     case 'hangar': {
-      const hangar = new HangarIntro();
+      const hangar = new HangarIntro(await loadHangarArt());
       hangar.setSong('Level 1', song.title, song.credit, DIFFICULTY_LABELS[difficulty]);
       r.ui.addChild(hangar.container);
       r.world.visible = false;
@@ -134,7 +134,7 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
   const state = createSimState();
   r.terrain.setLevel(level);
   const runStart =
-    params.scene === 'run-start' ? { hangar: new HangarIntro(), flood: new ColourFlood() } : null;
+    params.scene === 'run-start' ? { hangar: new HangarIntro(await loadHangarArt()), flood: new ColourFlood() } : null;
   if (runStart) {
     runStart.hangar.setSong('Level 1', song.title, song.credit, DIFFICULTY_LABELS[difficulty]);
     r.ui.addChild(runStart.hangar.container);

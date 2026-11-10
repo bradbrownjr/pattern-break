@@ -14,3 +14,5 @@
 
 # Replays are binary input logs.
 *.pbreplay binary
+# Generated art sources (art/hangar).
+*.webp binary

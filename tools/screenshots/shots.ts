@@ -134,11 +134,12 @@ export const shots: Shot[] = [
     id: 'hangar-walk',
     query: { scene: 'hangar', song: 'numenchip', difficulty: 'normal', t: '1.3' },
     alt:
-      'A hangar in shades of grey: a dark back wall with steel girders, a row of roof trusses, and three ' +
-      'hanging work lights casting faint cones onto a grey floor marked with a dashed line. On the right, a ' +
-      'grey fighter jet faces right on two landing struts over hazard stripes, its canopy raised open and a ' +
-      'ladder leaning against its side. On the left, a small pilot in a white helmet with a dark visor walks ' +
-      'towards it.',
+      'A hangar in shades of grey, in pixel art: a dark back wall with steel girders, a row of roof ' +
+      'trusses, and three hanging work lights casting cones of light onto a grey floor with a dashed line. ' +
+      'Right of centre, a grey fighter faces right on two landing struts over hazard stripes: a long needle ' +
+      'nose, a swept fin on top and one underneath at the rear, a light window on its side, and its canopy ' +
+      'raised open. A ladder leans against it up to the cockpit. A small pilot in a grey flight suit and a ' +
+      'white helmet with a dark visor walks towards it from the left, level with its tail.',
     caption: 'The hangar intro: the captain walks to the fighter. Not used in the README.',
     usedIn: [],
   },
@@ -146,8 +147,8 @@ export const shots: Shot[] = [
     id: 'hangar-climb',
     query: { scene: 'hangar', song: 'numenchip', difficulty: 'normal', t: '3.6' },
     alt:
-      'The same grey hangar, closer in on the fighter. The pilot, in a white helmet, is near the top of the ' +
-      'ladder against the fuselage, just below the open canopy and the dark cockpit opening.',
+      'The grey hangar, closer in on the fighter. The pilot in the white helmet is near the top of the ' +
+      'ladder, one arm reaching up, just below the raised canopy and the dark cockpit opening.',
     caption: 'The hangar intro: the captain climbs the ladder. Not used in the README.',
     usedIn: [],
   },
@@ -155,11 +156,12 @@ export const shots: Shot[] = [
     id: 'hangar-cockpit',
     query: { scene: 'hangar', song: 'numenchip', difficulty: 'normal', t: '6' },
     alt:
-      'Inside the cockpit, in shades of grey. Through the open canopy at the top, the dark hangar wall and ' +
-      'its girders. Below, the instrument panel: a row of small indicator lights, two round gauges, and in ' +
-      'the middle a cassette deck with a dark window and five keys under it: rewind, play, fast forward, ' +
-      'stop and eject. A gloved hand on a dark sleeve reaches in from the right holding a light grey cassette ' +
-      'labelled "Numen in Da Chip", half way into the deck.',
+      'Inside the cockpit, in shades of grey, in pixel art. Through the open canopy at the top, the dark ' +
+      'hangar wall and its girders. Below, a riveted instrument panel: a row of small indicator lights, two ' +
+      'round gauges, two toggle switches, and in the middle a cassette deck with a dark window and five keys ' +
+      'marked rewind, play, fast forward, stop and eject. A padded grey glove on a dark sleeve reaches in ' +
+      'from the right, its fingers over the end of a light grey cassette labelled "Numen in Da Chip", which ' +
+      'is most of the way into the deck.',
     caption: 'The hangar intro: the cassette goes into the deck. Not used in the README.',
     usedIn: [],
   },
@@ -168,8 +170,8 @@ export const shots: Shot[] = [
     query: { scene: 'hangar', song: 'numenchip', difficulty: 'normal', t: '8.1' },
     alt:
       'The cockpit with the cassette "Numen in Da Chip" in the deck window. Above the panel, "Level 1" in ' +
-      'large white pixel letters, "by JAM. Public Domain." and "Normal" in grey. The gloved hand presses ' +
-      'the Play key, which sits lower than the others.',
+      'large white pixel letters, "by JAM. Public Domain." and "Normal" in grey. The glove, coming in from ' +
+      'the bottom right, presses the Play key with its index finger, covering the keys to its right.',
     caption: 'The hangar intro: Play pressed. Not used in the README.',
     usedIn: [],
   },
@@ -178,10 +180,11 @@ export const shots: Shot[] = [
     query: { scene: 'hangar', song: 'numenchip', difficulty: 'normal' },
     clip: { from: 0, to: 8.2, fps: 10 },
     alt:
-      'Eight seconds in shades of grey. A pilot walks across a hangar to a fighter jet with its canopy open, ' +
-      'climbs the ladder as the view closes in on the cockpit, and drops into the seat. The view cuts to the ' +
-      'instrument panel: a gloved hand slides a cassette labelled "Numen in Da Chip" into the deck, "Level ' +
-      '1", the credit and "Normal" appear above the panel, and the hand comes back and presses Play, and the ' +
+      'Eight seconds in shades of grey, in pixel art. A pilot in a white helmet walks across a hangar to a ' +
+      'fighter with a needle nose and its canopy open, climbs the ladder as the view closes in on the ' +
+      'cockpit, and drops into the seat until only the helmet shows. The view cuts to the instrument panel: ' +
+      'a gloved hand slides a cassette labelled "Numen in Da Chip" into the deck and pulls away, "Level 1", ' +
+      'the credit and "Normal" appear above the panel, and the hand comes back and presses Play, and the ' +
       'cassette reels start to turn.',
     caption: 'The hangar intro from the start to Play. Not used in the README.',
     usedIn: [],
@@ -194,7 +197,7 @@ export const shots: Shot[] = [
       'its columns in pale, washed-out greens and the HUD: three ship icons and a bomb icon on the left, the ' +
       'score on the right. Under it, a dark canopy frame with a light edge crosses the screen, with struts ' +
       'down both sides, on its way down. Below the frame, a strip of the dark hangar, then the grey ' +
-      'instrument panel as before Play: the gauges, the cassette deck, and the gloved hand on the Play key.',
+      'instrument panel as before Play: the gauges, the cassette in the deck, and the glove on the Play key.',
     caption: 'Level 1 a quarter of a second after Play: the canopy closing over the grey level. Not used in the README.',
     usedIn: [],
   },
