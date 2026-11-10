@@ -15,8 +15,9 @@ Fixes**, in that order.
 
 * **CI: the browser tests pass in every engine.** The audio tests had failed on every push
   since November 8: Firefox had no sound server to play into, and WebKit rendered the
-  worklet test's offline context before the worklet saw its start message. CI now starts
-  PulseAudio, and the test waits for the song to start before rendering on.
+  worklet test's offline context before the worklet saw its start message. CI now gives
+  Firefox a PulseAudio null sink, and the test waits for the song to start before rendering
+  on.
 
 ---
 

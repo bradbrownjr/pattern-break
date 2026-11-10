@@ -35,13 +35,16 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @game/analysis exec playwright install --with-deps chromium firefox webkit
       # Firefox's live AudioContext never leaves "suspended" without a sound server to play
-      # into, and the runner has none. PulseAudio's default.pa loads module-always-sink, so
-      # with no sound card it plays into a null sink.
-      - name: Start a sound server
+      # into, and the runner has none. This one plays into a null sink on its own socket, so
+      # only Firefox, told by PB_FIREFOX_PULSE_SERVER, uses it: at the default socket,
+      # WebKit's first live context hung.
+      - name: Start a sound server for Firefox
         run: |
           sudo apt-get install -y pulseaudio
-          pulseaudio --start --exit-idle-time=-1
-          pactl info
+          pulseaudio -n --daemonize=yes --exit-idle-time=-1 \
+            -L "module-native-protocol-unix socket=/tmp/pb-pulse.sock" -L "module-null-sink sink_name=null"
+          PULSE_SERVER=unix:/tmp/pb-pulse.sock pactl info
       - run: pnpm test:browser
         env:
           PB_BROWSERS: chromium,firefox,webkit
+          PB_FIREFOX_PULSE_SERVER: unix:/tmp/pb-pulse.sock

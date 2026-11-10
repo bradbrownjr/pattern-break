@@ -9,6 +9,10 @@ import viteConfig from './vite.config.ts';
 // launch settings that let a page start audio without a click.
 const browsers = (process.env['PB_BROWSERS'] ?? 'chromium').split(',').map((b) => b.trim());
 const chromiumPath = process.env['PB_CHROMIUM'];
+// A PulseAudio server for Firefox only (docs/DEVELOPMENT.md, "Browsers"): without a sound
+// server its live AudioContext never starts, and with one at the default socket WebKit's
+// first context hung in CI, so the server listens on its own socket and only Firefox is told.
+const firefoxPulse = process.env['PB_FIREFOX_PULSE_SERVER'];
 
 type Engine = 'chromium' | 'firefox' | 'webkit';
 
@@ -25,6 +29,8 @@ function providerFor(browser: Engine) {
     case 'firefox':
       return playwright({
         launchOptions: {
+          // Playwright's `env` replaces the browser's environment, so it carries the rest over.
+          ...(firefoxPulse ? { env: { ...process.env, PULSE_SERVER: firefoxPulse } } : {}),
           firefoxUserPrefs: {
             'media.autoplay.default': 0,
             'media.autoplay.block-webaudio': false,

@@ -653,15 +653,18 @@ is launched with audio allowed to start without a click: Chromium with
 `--autoplay-policy=no-user-gesture-required`, Firefox with the `media.autoplay.default` and
 `media.autoplay.block-webaudio` preferences, WebKit with Playwright's defaults.
 
-A live `AudioContext` needs somewhere to play: without a sound server, Firefox's and
-WebKit's never leave "suspended" (`resume()` never resolves), so the clock tests time out.
-CI starts PulseAudio, whose default config plays into a null sink when there's no sound
-card; WebKit plays through GStreamer, whose audio plugins Playwright's `--with-deps`
-installs. Locally, run Firefox with a PulseAudio server and `PULSE_SERVER` pointing at its
-socket (it doesn't need root: `pulseaudio -n -L module-native-protocol-unix -L
-module-null-sink`; keep the socket path under 108 bytes). Until 2026-11-10 CI had no sound
-server and the job failed on every push from 2026-11-08 on. Two engine quirks the audio
-tests allow for, both found then:
+A live `AudioContext` needs somewhere to play. Without a sound server, Firefox's never
+leaves "suspended" (`resume()` never resolves), so its clock tests time out. CI starts
+PulseAudio playing into a null sink on its own socket, `/tmp/pb-pulse.sock`, and
+`PB_FIREFOX_PULSE_SERVER` passes it to Firefox alone (as `PULSE_SERVER`, through
+Playwright's launch `env`): with the server at the default socket, WebKit's first live
+context hung in CI, while with none WebKit and Chromium play there anyway. Locally, run
+PulseAudio the same way (no root needed: `pulseaudio -n -L "module-native-protocol-unix
+socket=..." -L module-null-sink`; keep the socket path under 108 bytes) and set
+`PB_FIREFOX_PULSE_SERVER=unix:<socket>`. On the development server WebKit's live context
+never starts at all, so its clock tests only pass in CI. Until 2026-11-10 the browsers job
+failed on every push from 2026-11-08 on. Two engine quirks the audio tests allow for, both
+found then:
 
 - Offline rendering doesn't wait for messages in flight. With the main thread busy before
   it, WebKit rendered all 50 s of the worklet test's context before the worklet saw
