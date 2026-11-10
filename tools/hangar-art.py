@@ -95,6 +95,9 @@ def shield_edge(x: int) -> float:
 # The cassette deck's window in cockpit.png (measured on it). The source draws a faint
 # cassette in it; the window is painted out empty, since the tape goes in during the intro.
 DECK_WINDOW = (145, 105, 241, 139)
+# The deck's door (measured on cockpit.png), cut out so it can swing open, with its
+# window clear so the tape shows through it.
+DOOR = (135, 97, 252, 154)
 
 
 def backgrounds() -> None:
@@ -114,6 +117,11 @@ def backgrounds() -> None:
                 px[x, y] = (0, 0, 0, 0)
     panel.save(OUT / "cockpit-panel.png", optimize=True)
     print("cockpit-panel.png")
+    door = Image.open(OUT / "cockpit.png").convert("RGBA").crop(DOOR)
+    x0, y0, x1, y1 = DECK_WINDOW
+    ImageDraw.Draw(door).rectangle((x0 - DOOR[0], y0 - DOOR[1], x1 - DOOR[0], y1 - DOOR[1]), fill=(0, 0, 0, 0))
+    door.save(OUT / "door.png", optimize=True)
+    print(f"door.png {door.size}")
 
 
 def pilot() -> None:

@@ -55,19 +55,19 @@
   },
   "hangar-cockpit": {
     "path": "docs/img/hangar-cockpit.png",
-    "alt": "Inside the cockpit, in shades of grey, in pixel art. Through the open canopy at the top, the dark hangar wall and its girders. Below, a riveted instrument panel: a row of small indicator lights, two round gauges, two toggle switches, and in the middle a cassette deck with a dark window and five keys marked rewind, play, fast forward, stop and eject. A padded grey glove on a dark sleeve reaches in from the right, its fingers over the end of a light grey cassette labelled \"Numen in Da Chip\", which is most of the way into the deck.",
+    "alt": "Inside the cockpit, in shades of grey, in pixel art. Through the open canopy at the top, the dark hangar wall and its girders. Below, a riveted instrument panel: a row of small indicator lights, two round gauges, a toggle switch, and in the middle a cassette deck: a door with a dark window, and under it five keys marked rewind, play, fast forward, stop and eject. A padded grey glove on a dark sleeve reaches in from the right holding a cassette by its end, most of the way into the door: a dark shell with screws in its corners, a white label reading \"Numen in Da\" with a window across it showing two hubs, and a raised strip along the bottom with small openings.",
     "caption": "The hangar intro: the cassette goes into the deck. Not used in the README.",
     "usedIn": []
   },
   "hangar-play": {
     "path": "docs/img/hangar-play.png",
-    "alt": "The cockpit with the cassette \"Numen in Da Chip\" in the deck window. Above the panel, \"Level 1\" in large white pixel letters, \"by JAM. Public Domain.\" and \"Normal\" in grey. The glove, coming in from the bottom right, presses the Play key with its index finger, covering the keys to its right.",
+    "alt": "The cockpit with the cassette in the deck: through the door's window, its label reading \"Numen in Da\" and its two hubs. Above the panel, \"Level 1\" in large white pixel letters, \"Numen in Da Chip\" in light grey, and \"by JAM. Public Domain.  Normal\" in grey. The glove, coming in from the bottom right, presses the Play key with its index finger, covering the keys to its right.",
     "caption": "The hangar intro: Play pressed. Not used in the README.",
     "usedIn": []
   },
   "hangar-clip": {
     "path": "docs/img/hangar-clip.gif",
-    "alt": "Eight seconds in shades of grey, in pixel art. A pilot in a white helmet walks across a hangar to a fighter with a needle nose and its canopy open, climbs the ladder as the view closes in on the cockpit, and drops into the seat until only the helmet shows. The view cuts to the instrument panel: a gloved hand slides a cassette labelled \"Numen in Da Chip\" into the deck and pulls away, \"Level 1\", the credit and \"Normal\" appear above the panel, and the hand comes back and presses Play, and the cassette reels start to turn.",
+    "alt": "Eight seconds in shades of grey, in pixel art. A pilot in a white helmet walks across a hangar to a fighter with a needle nose and its canopy open, climbs the ladder as the view closes in on the cockpit, and drops into the seat until only the helmet shows. The view cuts to the instrument panel: a gloved hand pushes a cassette labelled \"Numen in Da\" into the deck's door and pulls away, leaving the label and hubs showing through the door's window; \"Level 1\", \"Numen in Da Chip\", the credit and \"Normal\" appear above the panel, and the hand comes back and presses Play, and the hubs start to turn.",
     "caption": "The hangar intro from the start to Play. Not used in the README.",
     "usedIn": []
   },

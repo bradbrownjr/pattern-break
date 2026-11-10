@@ -49,7 +49,8 @@ start the next until the current one is done.
       sprite and HUD icon, drawn with the game's sprites, and what each enemy and bonus
       scores, from the sim's constants. It scrolls.
 - [x] A hangar intro before level 1 (Brad, 2026-11-10), skippable: in black and white, the
-      captain climbs into the fighter and puts the song's cassette in the deck; Play starts
+      captain climbs into the fighter, ejects the deck's door open, puts the song's cassette
+      in it and pushes it shut; Play starts
       the song, the canopy closes, and the level floods into colour with the song. The
       hangar, the fighter (in the player ship's shape), the cockpit, the captain and the
       glove are generated art (`art/hangar/README.md`).

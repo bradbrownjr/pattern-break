@@ -154,21 +154,22 @@ export const shots: Shot[] = [
   },
   {
     id: 'hangar-cockpit',
-    query: { scene: 'hangar', song: 'numenchip', difficulty: 'normal', t: '6' },
+    query: { scene: 'hangar', song: 'numenchip', difficulty: 'normal', t: '6.3' },
     alt:
       'Inside the cockpit, in shades of grey, in pixel art. Through the open canopy at the top, the dark ' +
       'hangar wall and its girders. Below, a riveted instrument panel: a row of small indicator lights, two ' +
-      'round gauges, a toggle switch, and in the middle a cassette deck: a door with a dark window, and ' +
-      'under it five keys marked rewind, play, fast forward, stop and eject. A padded grey glove on a dark ' +
-      'sleeve reaches in from the right holding a cassette by its end, most of the way into the door: a ' +
-      'dark shell with screws in its corners, a white label reading "Numen in Da" with a window across it ' +
-      'showing two hubs, and a raised strip along the bottom with small openings.',
-    caption: 'The hangar intro: the cassette goes into the deck. Not used in the README.',
+      'round gauges, a toggle switch, and in the middle a cassette deck, its door tilted open forward on ' +
+      'its bottom hinge, showing the dark deck and its two spindles behind it; under it, five keys marked ' +
+      'rewind, play, fast forward, stop and eject. A padded grey glove on a dark sleeve reaches in from ' +
+      'the right holding a cassette by its end, on its way into the open door: a dark shell, a white label ' +
+      'reading "Numen in Da" with a window across it showing two hubs, and a raised strip along the ' +
+      'bottom with small openings.',
+    caption: 'The hangar intro: the cassette goes into the open deck. Not used in the README.',
     usedIn: [],
   },
   {
     id: 'hangar-play',
-    query: { scene: 'hangar', song: 'numenchip', difficulty: 'normal', t: '8.1' },
+    query: { scene: 'hangar', song: 'numenchip', difficulty: 'normal', t: '8.2' },
     alt:
       'The cockpit with the cassette in the deck: through the door\'s window, its label reading "Numen in ' +
       'Da" and its two hubs. Above the panel, "Level 1" in large white pixel letters, "Numen in Da Chip" in ' +
@@ -180,14 +181,15 @@ export const shots: Shot[] = [
   {
     id: 'hangar-clip',
     query: { scene: 'hangar', song: 'numenchip', difficulty: 'normal' },
-    clip: { from: 0, to: 8.2, fps: 10 },
+    clip: { from: 0, to: 8.3, fps: 10 },
     alt:
       'Eight seconds in shades of grey, in pixel art. A pilot in a white helmet walks across a hangar to a ' +
       'fighter with a needle nose and its canopy open, climbs the ladder as the view closes in on the ' +
       'cockpit, and drops into the seat until only the helmet shows. The view cuts to the instrument panel: ' +
-      'a gloved hand pushes a cassette labelled "Numen in Da" into the deck\'s door and pulls away, leaving ' +
-      'the label and hubs showing through the door\'s window; "Level 1", "Numen in Da Chip", the credit ' +
-      'and "Normal" appear above the panel, and the hand comes back and presses Play, and the hubs start ' +
+      'a gloved finger presses the deck\'s eject key and the door tips open forward; the glove brings in a ' +
+      'cassette labelled "Numen in Da", lays it in the open door and pulls away, then a finger pushes the ' +
+      'door shut, leaving the label and hubs showing through the door\'s window. "Level 1", "Numen in Da ' +
+      'Chip", the credit and "Normal" appear above the panel, the finger presses Play, and the hubs start ' +
       'to turn.',
     caption: 'The hangar intro from the start to Play. Not used in the README.',
     usedIn: [],

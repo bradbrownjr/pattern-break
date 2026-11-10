@@ -14,6 +14,7 @@ import type { Effect } from '../audio/effects.ts';
 import { PixelText } from '../render/text.ts';
 import cockpitUrl from './hangar-art/cockpit.png';
 import panelUrl from './hangar-art/cockpit-panel.png';
+import doorUrl from './hangar-art/door.png';
 import hangarUrl from './hangar-art/hangar.png';
 import gripUrl from './hangar-art/hand-grip.png';
 import pointUrl from './hangar-art/hand-point.png';
@@ -24,6 +25,7 @@ const W = PLAYFIELD_WIDTH;
 const H = PLAYFIELD_HEIGHT;
 
 /** Greys, darkest first. */
+const G0 = 0x08090c;
 const G1 = 0x1a1c22;
 const G2 = 0x30333b;
 const G3 = 0x4d515b;
@@ -38,16 +40,27 @@ const BOARD_END = 5000;
 const ZOOM_START = 2400;
 /** The cut to the cockpit. */
 export const COCKPIT_AT = 5200;
-const CASSETTE_IN = 5400;
-const INSERTED = 6200;
-const HAND_OUT = 6800;
-const TO_PLAY = 7200;
+/** A finger presses Eject, and the deck's door springs open. */
+const EJECT_REACH = 5300;
+const EJECT_AT = 5600;
+const DOOR_OPEN = 5800;
+const EJECT_LEAVE = 5750;
+const EJECT_GONE = 5950;
+/** The glove sets the cassette in the open door's holder, and goes. */
+const CASSETTE_IN = 5950;
+const INSERTED = 6500;
+const GRIP_GONE = 6650;
+/** A finger pushes the door shut. */
+const PUSH_REACH = 6850;
+const DOOR_SHUT = 7050;
+const PUSH_GONE = 7300;
+const TO_PLAY = 7300;
 /** The hand waits over Play here until the level is loaded. */
-export const HOLD_AT = 7900;
+export const HOLD_AT = 8000;
 /** Play goes down. */
-const PRESS_AT = 8000;
+const PRESS_AT = 8100;
 /** The run starts: the song plays from the tape. */
-export const PLAY_AT = 8150;
+export const PLAY_AT = 8250;
 /** How long the canopy takes to close over the start of the run. */
 export const WIPE_MS = 1000;
 /** The share of the wipe the canopy takes to come down; then the cockpit drops away. */
@@ -74,7 +87,9 @@ export const HANGAR_CUES: readonly { at: number; effect: Effect; pan: number }[]
   { at: 3750, effect: 'clank', pan: 0.14 },
   { at: 4200, effect: 'clank', pan: 0.16 },
   { at: 4950, effect: 'thunk', pan: 0.2 },
+  { at: EJECT_AT, effect: 'click', pan: 0.2 },
   { at: INSERTED, effect: 'insert', pan: 0 },
+  { at: DOOR_SHUT, effect: 'insert', pan: 0.05 },
   { at: PRESS_AT, effect: 'click', pan: 0 },
   { at: PRESS_AT + 30, effect: 'hiss', pan: 0 },
 ];
@@ -120,8 +135,12 @@ const KEY_TOP = 158;
 const KEY_W = 21;
 const KEY_H = 14;
 const PLAY = 1;
-/** The window in the deck's door: once the door shuts, the tape shows only through it. */
+/** The deck's door, hinged along its bottom edge, and the window in it. */
+const DOOR = new Rectangle(135, 97, 117, 57);
 const DECK_WINDOW = new Rectangle(145, 105, 97, 35);
+/** How far the door tilts open, in radians (a guess: no source gives the angle). */
+const DOOR_ANGLE = Math.PI / 3;
+const EJECT = 4;
 /**
  * The cassette, in a compact cassette's proportions (4 by 2.5 inches: Wikipedia, "Cassette
  * tape"), as big as the deck's door allows, and where it sits behind the door.
@@ -150,6 +169,8 @@ export interface HangarArt {
   hangar: Texture;
   cockpit: Texture;
   panel: Texture;
+  /** The deck's door, its window clear. */
+  door: Texture;
   pilot: Texture[];
   seated: Texture;
   grip: Texture;
@@ -161,17 +182,26 @@ let artLoad: Promise<HangarArt> | null = null;
 /** Loads the intro's art (a few KB, bundled with the client), once. */
 export function loadHangarArt(): Promise<HangarArt> {
   artLoad ??= (async () => {
-    const urls = [hangarUrl, cockpitUrl, panelUrl, pilotUrl, seatedUrl, gripUrl, pointUrl];
+    const urls = [hangarUrl, cockpitUrl, panelUrl, doorUrl, pilotUrl, seatedUrl, gripUrl, pointUrl];
     const textures = await Promise.all(urls.map((url) => Assets.load<Texture>(url)));
     for (const t of textures) t.source.scaleMode = 'nearest';
-    const [hangar, cockpit, panel, strip, seated, grip, point] = textures as [Texture, Texture, Texture, Texture, Texture, Texture, Texture];
+    const [hangar, cockpit, panel, door, strip, seated, grip, point] = textures as [
+      Texture,
+      Texture,
+      Texture,
+      Texture,
+      Texture,
+      Texture,
+      Texture,
+      Texture,
+    ];
     const frames = WALK_FRAMES + 2;
     const fw = strip.width / frames;
     const pilot = Array.from(
       { length: frames },
       (_, i) => new Texture({ source: strip.source, frame: new Rectangle(i * fw, 0, fw, strip.height) }),
     );
-    return { hangar, cockpit, panel, pilot, seated, grip, point };
+    return { hangar, cockpit, panel, door, pilot, seated, grip, point };
   })();
   artLoad.catch(() => {
     artLoad = null;
@@ -192,7 +222,14 @@ export class HangarIntro {
   #outsideMask = new Graphics();
   #keys = new Graphics();
   #cassette = new Container();
-  #tapeMask = new Graphics();
+  /** Behind the door: the dark deck and its spindles. */
+  #cavity = new Graphics();
+  /**
+   * The door and the cassette in its holder, tilting together on the hinge along the door's
+   * bottom edge: seen face on, the tilt foreshortens them towards the hinge.
+   */
+  #doorGroup = new Container();
+  #door: Sprite;
   #reels = new Graphics();
   #grip: Sprite;
   #point: Sprite;
@@ -212,9 +249,15 @@ export class HangarIntro {
 
     this.#outside = new Sprite(art.cockpit);
     this.#outside.mask = this.#outsideMask;
+    this.#door = new Sprite(art.door);
+    this.#door.position.set(DOOR.x, DOOR.y);
+    const hinge = DOOR.y + DOOR.height;
+    this.#doorGroup.position.set(0, hinge);
+    this.#doorGroup.pivot.set(0, hinge);
+    this.#doorGroup.addChild(this.#door);
+    drawCavity(this.#cavity);
     this.#label.place(8, 8);
     this.#cassette.addChild(drawCassette(), this.#reels, this.#label);
-    this.#tapeMask.rect(DECK_WINDOW.x, DECK_WINDOW.y, DECK_WINDOW.width, DECK_WINDOW.height).fill(0xffffff);
     this.#grip = new Sprite(art.grip);
     this.#point = new Sprite(art.point);
     this.#cockpit.addChild(
@@ -222,7 +265,8 @@ export class HangarIntro {
       this.#outsideMask,
       new Sprite(art.panel),
       this.#keys,
-      this.#tapeMask,
+      this.#cavity,
+      this.#doorGroup,
       this.#cassette,
       this.#grip,
       this.#point,
@@ -339,16 +383,34 @@ export class HangarIntro {
   }
 
   #drawCockpitShot(ms: number): void {
-    // The cassette comes in from the right in the gloved hand and into the deck's window.
+    // The door: springing open on Eject, then pushed shut once the tape is in.
+    const open = ms < DOOR_SHUT ? ease(span(ms, EJECT_AT, DOOR_OPEN)) * (1 - span(ms, PUSH_REACH, DOOR_SHUT)) : 0;
+    const foreshortened = Math.cos(open * DOOR_ANGLE);
+    const hinge = DOOR.y + DOOR.height;
+    this.#doorGroup.scale.y = foreshortened;
+    // Tilted away from the light, its face darkens.
+    this.#door.tint = Math.round(lerp(255, 150, open)) * 0x010101;
+    const doorTop = hinge - DOOR.height * foreshortened;
+
+    // The cassette comes in from the right in the gloved hand, tilting to lie in the open
+    // door's holder; seated, it rides in the door behind its face, showing through the
+    // window.
     const inP = ease(span(ms, CASSETTE_IN, INSERTED));
-    const cx = Math.round(lerp(W + 30, TAPE_AT.x, inP));
-    const cy = Math.round(lerp(150, TAPE_AT.y, inP));
-    this.#cassette.position.set(cx, cy);
-    this.#cassette.visible = ms >= CASSETTE_IN;
-    // Pushed home, the door shuts on it: it shows through the door's window.
-    const home = ms >= INSERTED;
-    this.#cassette.mask = home ? this.#tapeMask : null;
-    this.#tapeMask.visible = home;
+    const seated = ms >= INSERTED;
+    const tape = this.#cassette;
+    tape.visible = ms >= CASSETTE_IN;
+    if (seated) {
+      if (tape.parent !== this.#doorGroup) this.#doorGroup.addChildAt(tape, 0);
+      tape.position.set(TAPE_AT.x, TAPE_AT.y);
+      tape.scale.y = 1;
+    } else {
+      if (tape.parent !== this.#cockpit) this.#cockpit.addChildAt(tape, this.#cockpit.getChildIndex(this.#doorGroup) + 1);
+      const seatY = hinge - (hinge - TAPE_AT.y) * foreshortened;
+      tape.position.set(Math.round(lerp(W + 30, TAPE_AT.x, inP)), Math.round(lerp(150, seatY, inP)));
+      tape.scale.y = lerp(1, foreshortened, inP);
+    }
+    const cx = tape.x;
+    const cy = tape.y;
 
     // The reels turn once Play is down.
     const r = this.#reels;
@@ -356,32 +418,51 @@ export class HangarIntro {
     const turning = ms >= PRESS_AT ? (ms - PRESS_AT) / 1000 : 0;
     for (const rx of HUB_X) drawReel(r, rx, HUB_Y, turning * Math.PI * 2 * 0.8);
 
-    // The glove: holding the cassette's end, then away down to the right; then pointing,
-    // over Play, and pressing it.
-    const holding = ms >= CASSETTE_IN && ms < HAND_OUT;
+    // The glove holding the cassette's end, then away down to the right.
+    const holding = ms >= CASSETTE_IN && ms < GRIP_GONE;
     this.#grip.visible = holding;
     if (holding) {
-      const out = ease(span(ms, INSERTED, HAND_OUT));
+      const out = ease(span(ms, INSERTED, GRIP_GONE));
       this.#grip.position.set(
         Math.round(cx + TAPE_W - GRIP_AT.x + out * 140),
-        Math.round(cy + TAPE_H / 2 - GRIP_AT.y + out * 150),
+        Math.round(cy + (TAPE_H * tape.scale.y) / 2 - GRIP_AT.y + out * 150),
       );
     }
-    const pointing = ms >= TO_PLAY;
-    this.#point.visible = pointing;
-    if (pointing) {
-      const to = ease(span(ms, TO_PLAY, HOLD_AT));
-      const tipX = KEY_LEFT[PLAY]! + KEY_W / 2;
-      const tipY = KEY_TOP + KEY_H / 2 + (ms >= PRESS_AT ? 1 : 0);
-      this.#point.position.set(
-        Math.round(lerp(W + 10, tipX - TIP_AT.x, to)),
-        Math.round(lerp(H + 40, tipY - TIP_AT.y, to)),
-      );
-    }
-    drawKeys(this.#keys, ms >= PRESS_AT);
 
-    // The level's heading, its difficulty, and the song's credit, once the tape is in.
-    const shown = ms >= INSERTED;
+    // The pointing finger: on Eject, then on the door's top edge to push it shut, then on
+    // Play.
+    const key = (i: number, down: boolean) => ({
+      x: KEY_LEFT[i]! + KEY_W / 2,
+      y: KEY_TOP + KEY_H / 2 + (down ? 1 : 0),
+    });
+    let tip: { x: number; y: number } | null = null;
+    let reach = 0;
+    if (ms >= EJECT_REACH && ms < EJECT_GONE) {
+      tip = key(EJECT, ms >= EJECT_AT && ms < EJECT_LEAVE);
+      reach = ms < EJECT_LEAVE ? span(ms, EJECT_REACH, EJECT_AT) : 1 - span(ms, EJECT_LEAVE, EJECT_GONE);
+    } else if (ms >= GRIP_GONE && ms < PUSH_GONE) {
+      tip = { x: DOOR.x + DOOR.width - 24, y: doorTop + 2 };
+      reach = ms < DOOR_SHUT ? span(ms, GRIP_GONE, PUSH_REACH) : 1 - span(ms, DOOR_SHUT, PUSH_GONE);
+    } else if (ms >= TO_PLAY) {
+      tip = key(PLAY, ms >= PRESS_AT);
+      reach = span(ms, TO_PLAY, HOLD_AT);
+    }
+    this.#point.visible = tip !== null && reach > 0;
+    if (tip) {
+      const p = ease(reach);
+      this.#point.position.set(
+        Math.round(lerp(W + 10, tip.x - TIP_AT.x, p)),
+        Math.round(lerp(H + 40, tip.y - TIP_AT.y, p)),
+      );
+    }
+    const down: number[] = [];
+    if (ms >= EJECT_AT && ms < EJECT_LEAVE) down.push(EJECT);
+    if (ms >= PRESS_AT) down.push(PLAY);
+    drawKeys(this.#keys, down);
+
+    // The level's heading, the song's title, its credit and the difficulty, once the
+    // tape is in.
+    const shown = ms >= DOOR_SHUT;
     this.#heading.visible = shown;
     this.#subhead.visible = shown;
     this.#credit.visible = shown;
@@ -411,11 +492,11 @@ export class ColourFlood {
 
 // Drawing ----------------------------------------------------------------------------------
 
-/** The symbols on the deck's keys in cockpit.png. Play is down once pressed. */
-function drawKeys(g: Graphics, playDown: boolean): void {
+/** The symbols on the deck's keys in cockpit.png, with the keys in `pressed` held down. */
+function drawKeys(g: Graphics, pressed: readonly number[]): void {
   g.clear();
   KEY_LEFT.forEach((kx, i) => {
-    const down = i === PLAY && playDown;
+    const down = pressed.includes(i);
     if (down) {
       // The key sunk a pixel into the deck, darker.
       g.rect(kx - 1, KEY_TOP, KEY_W + 2, KEY_H + 1).fill(G1);
@@ -478,6 +559,26 @@ function drawCassette(): Graphics {
     g.rect(sx, sy, 2, 2).fill(G1);
   }
   return g;
+}
+
+/**
+ * Behind the open door: the dark inside of the deck, with the two spindles that turn the
+ * cassette's hubs, where the hubs sit once it is in.
+ */
+function drawCavity(g: Graphics): void {
+  g.rect(DOOR.x, DOOR.y, DOOR.width, DOOR.height).fill(G0);
+  g.rect(DOOR.x, DOOR.y, DOOR.width, 2).fill(G2);
+  // Seen through the shut door's window when it is empty: the same dark as the window.
+  g.rect(DECK_WINDOW.x, DECK_WINDOW.y, DECK_WINDOW.width, DECK_WINDOW.height).fill(G1);
+  for (const hx of HUB_X) {
+    const x = TAPE_AT.x + hx;
+    const y = TAPE_AT.y + HUB_Y;
+    g.circle(x, y, 3).fill(G2);
+    for (let k = 0; k < 6; k++) {
+      const a = (k / 6) * Math.PI * 2;
+      g.rect(Math.round(x + Math.cos(a) * 3), Math.round(y + Math.sin(a) * 3), 1, 1).fill(G3);
+    }
+  }
 }
 
 /** A cassette reel hub at (x, y), turned `angle` radians. */

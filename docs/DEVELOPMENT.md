@@ -934,11 +934,18 @@ Run `pnpm dev` and open the URL it prints.
   difficulty. Level 1 from Play opens with the hangar intro instead.
 - **Hangar intro** (`hangar.ts`, Brad, 2026-11-10): before level 1 of each run started with
   Play, in black and white (see "Hangar intro art" below). The captain walks across the
-  hangar, climbs the ladder into the fighter, and the camera closes in (0 to 5.2 s); in the
-  cockpit a gloved hand pushes a cassette labelled with level 1's song into the deck's door
-  (after that it shows through the door's window), the level number, the song's title,
-  credit and difficulty show, and the hand presses Play (8.15 s), which
-  starts the run with the song at 0. While the level is still loading, the hand waits over
+  hangar, climbs the ladder into the fighter, and the camera closes in (0 to 5.2 s). In the
+  cockpit a gloved finger presses Eject and the deck's door springs open, tilting forward on
+  a hinge along its bottom edge; the hand lays a cassette labelled with level 1's song in
+  the door's holder and a finger pushes the door shut, after which the tape shows through
+  the door's window. The level number, the song's title, credit and difficulty show, and
+  the finger presses Play (8.25 s), which starts the run with the song at 0. Real decks
+  differ: US patent 4087844 hinges its door at the top. The bottom hinge, the spring that
+  opens it, and the button that releases it follow the outer door of US patent 4607301 (a
+  car stereo); that door doesn't hold the cassette, so the holder is the intro's own, and
+  the opening angle, 60 degrees (`DOOR_ANGLE`), is a guess. The tilt is drawn by squashing
+  the door and the tape in it towards the hinge (`door.png`, cut from the cockpit by
+  `tools/hangar-art.py`, its window clear). While the level is still loading, the hand waits over
   Play (`introTime`). The run starts with the canopy frame coming down over the window,
   the level showing through the glass, then the cockpit dropping out of view (`drawWipe`,
   1 s of song time); meanwhile the level floods from black and white into colour, one step
