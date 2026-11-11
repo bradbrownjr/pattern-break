@@ -41,10 +41,10 @@ if (capture) {
     console.error('capture failed:', err);
   });
 } else {
-  const perf = query.get('perf') === '1' ? new PerfMeter() : null;
+  const perf = query.get('perf') === '1' ? new PerfMeter(undefined, performance.now()) : null;
   if (perf) {
     window.__pbPerf = () => perf.summary();
-    window.__pbPerfReset = () => perf.reset();
+    window.__pbPerfReset = () => perf.reset(performance.now());
   }
   // `?song=<id>` puts that song on the Levels row; the test song is offered only when named.
   const named = query.get('song');

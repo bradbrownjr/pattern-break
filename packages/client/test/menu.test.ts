@@ -308,6 +308,18 @@ describe('SettingsMenu', () => {
     expect(m.apply('confirm')).toBe('sync');
   });
 
+  it('turns Perf on and off with left and right or confirm', () => {
+    const m = new SettingsMenu(DEFAULT_SETTINGS);
+    while (m.item !== 'perf') m.apply('down');
+    expect(m.apply('left')).toBeNull();
+    expect(m.apply('right')).toBe('changed');
+    expect(m.values.perf).toBe(true);
+    expect(m.apply('confirm')).toBe('changed');
+    expect(m.values.perf).toBe(false);
+    m.apply('down');
+    expect(m.item).toBe('keys');
+  });
+
   it('works on its own copy of the settings', () => {
     const start = { ...DEFAULT_SETTINGS, music: 3, effects: 3 };
     new SettingsMenu(start).apply('left');

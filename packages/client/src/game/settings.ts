@@ -21,9 +21,11 @@ export interface Settings {
   leds: 'neon' | 'colourBlind';
   /** The audio offset in ms, from the Sync screen or set by hand (SongClock.userOffsetMs). */
   syncMs: number;
+  /** Frame stats: the corner readout and a report on game over and the clear screens (perf.ts). */
+  perf: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { music: 5, effects: 4, flashing: 'reduced', shake: true, crt: true, leds: 'neon', syncMs: 0 };
+export const DEFAULT_SETTINGS: Settings = { music: 5, effects: 4, flashing: 'reduced', shake: true, crt: true, leds: 'neon', syncMs: 0, perf: false };
 
 const KEY = 'pattern-break.settings';
 
@@ -56,6 +58,7 @@ export function loadSettings(storage: Pick<Storage, 'getItem'> | null): Settings
       crt: typeof o['crt'] === 'boolean' ? o['crt'] : DEFAULT_SETTINGS.crt,
       leds: o['leds'] === 'neon' || o['leds'] === 'colourBlind' ? o['leds'] : DEFAULT_SETTINGS.leds,
       syncMs: syncMs(o['syncMs']),
+      perf: typeof o['perf'] === 'boolean' ? o['perf'] : DEFAULT_SETTINGS.perf,
     };
   } catch {
     return { ...DEFAULT_SETTINGS };

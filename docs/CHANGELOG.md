@@ -13,6 +13,13 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **M6: a Perf setting, with a report on the end screens.** Settings, Perf On does what
+  `?perf=1` did: frames a second and frame times in the corner, now under the score instead
+  of over it. Game over and the clear screens then end with three lines for a screenshot:
+  the level, song and difficulty; frames a second, frames, the window size and the CRT
+  setting; and the mean, 95th and 99th percentile and slowest frame's work over the whole
+  run. For checking Brad's phone without reading the corner mid-run. `?perf=1` still works
+  for `tools/perf-check.ts`.
 * **M6: difficulty guardrails, in place of fixed targets.** No published standard sets
   enemies a minute or bullets on screen for an arcade shooter, and rhythm games, the
   nearest match to levels built from music, step their difficulties against each other.

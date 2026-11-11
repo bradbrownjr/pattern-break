@@ -1288,7 +1288,7 @@ Two query parameters help in development:
 | Parameter | Effect |
 |---|---|
 | `autopilot=1` | `autopilotInputs(level)` flies the ship; the keyboard doesn't move it. |
-| `perf=1` | Records the cost of each frame and shows a readout in the top right corner: frames a second, then the mean and 95th percentile of the frames' work over the last half second ("60 fps  1.2 ms  p95 2.8"). `window.__pbPerf()` in the console returns the mean, p50, p95, p99 and maximum in ms since the run started; `window.__pbPerfReset()` starts it again. |
+| `perf=1` | Turns the frame stats on whatever the Perf setting says (see "Performance"): a readout in the top right corner, under the score, of frames a second, then the mean and 95th percentile of the frames' work over the last half second ("60 fps  1.2 ms  p95 2.8"), and the run's report on game over and the clear screens. `window.__pbPerf()` in the console returns the mean, p50, p95, p99 and maximum in ms since the run started; `window.__pbPerfReset()` starts it again. |
 | `song=<id>` | Puts that song on the Levels row (ids as in capture mode). `song=pb-fixture-01` adds the test song to Levels and the jukebox. |
 
 #### Hangar intro art
@@ -1769,6 +1769,23 @@ Headless Chromium renders WebGL with SwiftShader on the CPU, and that GPU-side t
 in the number, so the headless frame rate says nothing about real hardware. M1's 60 fps check
 is done by hand in desktop Chrome. `PLAN.md` sets a target of 2 ms or less per frame of sim
 and render work on desktop.
+
+**The Perf setting** (2026-11-11, Brad: a screenshot of the end screen is quicker on a
+phone than reading the corner mid-run). Settings, Perf On turns on what `?perf=1` does,
+kept with the settings. `PerfMeter` (`game/perf.ts`) keeps every frame's work in a ring
+of 72 000 (ten minutes at 120 Hz, 288 KB, made the first time the stats are on) and counts
+frames since the run started. When a run ends in game over or a clear, `perfReport` adds
+three lines above the prompt:
+
+- `Perf  Level 3  CHiP_OVERTURE  Hard`: where (an arcade level, or Levels for one song), the
+  song and the difficulty;
+- `59.8 fps  6345 frames  915x412 x2.63  CRT on`: frames a second over the run, the frames,
+  the window in CSS px with its device pixel ratio, and the CRT setting, which costs GPU
+  time that the work figures don't show;
+- `Work ms  mean 2.1  p95 4.3  p99 6.0  max 12.4`: the frames' JavaScript work.
+
+A run counts from the start of play to the crash or the song's end, paused time included. The report is made when the run ends, so it stays the same after watching the
+replay.
 
 **The throttled check** (`tools/perf-check.ts`, M6). After `pnpm build`, it serves the client,
 plays each bundled song's level on Hard in headless Chromium with the autopilot and infinite

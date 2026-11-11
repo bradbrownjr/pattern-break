@@ -391,8 +391,9 @@ every bar of every generated level.
 - Help, from the title and pause menus: a key to every sprite and HUD icon, and what each
   enemy and bonus scores (built 2026-11-10).
 - Settings, from the title menu: Music and Effects volume, Flashing, Shake, CRT, LED
-  colours, Sync (the audio offset, and the screen that measures it, 2026-11-10) and Keys
-  (built). Keyboard, gamepad
+  colours, Sync (the audio offset, and the screen that measures it, 2026-11-10), Perf
+  (frame stats in the corner and a report on game over and the clear screens, for checking
+  a phone, 2026-11-11) and Keys (built). Keyboard, gamepad
   (Gamepad API) and on-screen touch controls are built (touch 2026-11-10).
 - Results screen: score breakdown, personal best in this browser, watch or save the
   replay, and the run's place on the board once posted (built 2026-11-10).

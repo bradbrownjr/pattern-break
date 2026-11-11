@@ -25,7 +25,7 @@ import {
   type Level,
   type LevelData,
 } from '@game/core';
-import { Container } from 'pixi.js';
+import { Container, Sprite, Texture } from 'pixi.js';
 import { createAudioPlayer, outputLatencyOf, type AudioPlayer } from '../audio/index.ts';
 import { SyncSession, type SyncResult } from '../audio/sync.ts';
 import { EffectsMixer } from '../audio/mixer.ts';
@@ -33,7 +33,7 @@ import { MenuSounds, type MenuSound } from '../audio/sfx.ts';
 import { SongNotes } from '../audio/song-notes.ts';
 import { songLook, type SongLook } from '../render/copper.ts';
 import { FLASH_PEAK } from '../render/flash.ts';
-import { CYAN, LIME, MAGENTA } from '../render/palette.ts';
+import { BACKGROUND, CYAN, LIME, MAGENTA } from '../render/palette.ts';
 import { PixelText } from '../render/text.ts';
 import { seededRandom } from '../render/random.ts';
 import type { GameRenderer } from '../render/renderer.ts';
@@ -81,7 +81,7 @@ import { FIELD_MAX, ProfileForm, ProfileScreen, saveError, type PadEdit } from '
 import { TouchTextEntry } from './touch-text.ts';
 import { ScoresMenu, ScoresScreen, type BoardChoice } from './scores.ts';
 import { KeysScreen } from './keys-screen.ts';
-import { perfText, type PerfMeter } from './perf.ts';
+import { PerfMeter, perfReport, perfText } from './perf.ts';
 import { drawPlay } from './play-view.ts';
 import {
   DemoBanner,
@@ -155,6 +155,8 @@ interface SongCache {
 
 /** How long game over and level complete ignore keys, so a key held from play doesn't skip them. */
 const PROMPT_DELAY_MS = 700;
+/** The frame-stats readout's top edge, below the HUD's score and its backing. */
+const PERF_READOUT_Y = 17;
 /** The title screen's stars drift at this many px per second of terrain scroll. */
 const TITLE_DRIFT_PX_PER_S = 40;
 /** Prompts and the menu cursor blink this often. */
@@ -225,6 +227,7 @@ export interface GameOptions {
   song: BundledSong;
   /** Fly the ship with the autopilot instead of the keyboard (a development aid). */
   autopilot: boolean;
+  /** With `?perf=1`: the frame meter, on whatever the Perf setting says (tools/perf-check.ts reads it). */
   perf: PerfMeter | null;
 }
 
@@ -379,10 +382,16 @@ export class Game {
   #scoresRequest = 0;
   readonly #profileScreen = new ProfileScreen();
   #profileForm: ProfileForm | null = null;
-  /** With `?perf=1`: frames a second and the frames' work, over each half second. */
+  /** With the Perf setting or `?perf=1`: frames a second and the frames' work, over each half second. */
   readonly #perfReadout = new PixelText('', LIME);
+  /** A dark panel behind the readout, as behind the score, so the walls don't hide it. */
+  readonly #perfBacking = new Sprite(Texture.WHITE);
   #perfFrames = 0;
   #perfSince = 0;
+  /** The frame meter, made when the stats are first on. */
+  #perf: PerfMeter | null;
+  /** The last run's report for game over and the clear screens, or null with the stats off. */
+  #perfLines: string[] | null = null;
   /** The hidden input that opens a phone's keyboard on the name entry. */
   #touchText: TouchTextEntry | null = null;
   /** The screen the name entry returns to. */
@@ -400,6 +409,7 @@ export class Game {
     this.#songs = [...options.songs];
     this.#song = options.song;
     this.#options = options;
+    this.#perf = options.perf;
     this.#menu = new TitleMenu(options.songs.length, Math.max(0, options.songs.indexOf(options.song)));
     this.#jukeboxMenu = new JukeboxMenu(options.songs.length, FOLDER_PICKER);
     this.#jukebox = new JukeboxScreen(this.#songs, FOLDER_PICKER);
@@ -424,7 +434,11 @@ export class Game {
       this.#pauseScreen.container,
       this.#fade.container,
     );
-    if (options.perf) r.ui.addChild(this.#perfReadout);
+    this.#perfBacking.tint = BACKGROUND;
+    this.#perfBacking.alpha = 0.85;
+    this.#perfBacking.height = 11;
+    r.ui.addChild(this.#perfBacking, this.#perfReadout);
+    this.#perfReadout.visible = this.#perfBacking.visible = this.#perfOn;
     this.#setMode('start');
   }
 
@@ -1665,6 +1679,7 @@ export class Game {
 
   /** Sets the flashes' caps, the shake, the CRT look and the LED colours from the settings. */
   #applyLook(): void {
+    this.#perfReadout.visible = this.#perfBacking.visible = this.#perfOn;
     this.#r.flashes.flashing = this.#settings.flashing;
     this.#r.copper.flashing = this.#settings.flashing;
     this.#r.shakeOn = this.#settings.shake;
@@ -2157,7 +2172,7 @@ export class Game {
       this.#r.explosion.hide();
       this.#r.flash.hide();
       this.#runs++;
-      this.#options.perf?.reset();
+      if (this.#perfOn) this.#perfMeter().reset(performance.now());
       this.#endFlood();
       if (intro) {
         this.#flooding = true;
@@ -2209,7 +2224,38 @@ export class Game {
         : null;
   }
 
+  /** The frame stats are on: the Perf setting, or `?perf=1`. */
+  get #perfOn(): boolean {
+    return this.#options.perf !== null || this.#settings.perf;
+  }
+
+  #perfMeter(): PerfMeter {
+    this.#perf ??= new PerfMeter(undefined, performance.now());
+    return this.#perf;
+  }
+
+  /** The run just ended's report (perf.ts), with the level, song and difficulty, or null with the stats off. */
+  #perfReport(): string[] | null {
+    if (!this.#perfOn) return null;
+    const perf = this.#perfMeter();
+    const run = this.#run;
+    return perfReport(
+      {
+        where: run?.kind === 'arcade' ? `Level ${run.level + 1}` : 'Levels',
+        song: this.#song.title,
+        difficulty: DIFFICULTY_LABELS[this.#difficulty],
+        width: window.innerWidth,
+        height: window.innerHeight,
+        pixelRatio: window.devicePixelRatio,
+        crt: this.#settings.crt,
+      },
+      perf.fps(performance.now()),
+      perf.summary(),
+    );
+  }
+
   #onCrash(): void {
+    this.#perfLines = this.#perfReport();
     this.#finishRun();
     this.#postRun();
     this.#endFlood();
@@ -2239,6 +2285,7 @@ export class Game {
         ...(results?.rows ?? [`Score ${this.#state.score}`]),
         ...(this.#offerReplay && this.#lastReplay ? [REPLAY_HINT] : []),
         ...(this.#boardLine ? [this.#boardLine] : []),
+        ...(this.#perfLines ?? []),
         'Esc Title  Any key Retry',
       ],
       results?.highlight ?? -1,
@@ -2255,6 +2302,7 @@ export class Game {
   }
 
   #onComplete(): void {
+    this.#perfLines = this.#perfReport();
     this.#finishRun();
     this.#postRun();
     this.#endFlood();
@@ -2320,6 +2368,7 @@ export class Game {
     this.#message.container.visible = true;
     const lines = [...view.lines];
     if (this.#boardLine) lines.splice(lines.length - 1, 0, this.#boardLine);
+    if (this.#perfLines) lines.splice(lines.length - 1, 0, ...this.#perfLines);
     this.#message.show(view.heading, LIME, lines, view.highlight ?? -1);
     this.#afterComplete = view.after;
   }
@@ -2631,14 +2680,17 @@ export class Game {
     }
     this.#drawFade(now);
     r.render();
-    const perf = this.#options.perf;
-    if (perf) {
+    if (this.#perfOn) {
+      const perf = this.#perfMeter();
       perf.record(performance.now() - start);
       this.#perfFrames++;
       if (now - this.#perfSince >= 500) {
         const fps = (this.#perfFrames * 1000) / (now - this.#perfSince);
         this.#perfReadout.text = perfText(fps, perf.summary(this.#perfFrames));
-        this.#perfReadout.place(PLAYFIELD_WIDTH - 2, 2, 'right');
+        // Under the HUD's score, which sits in the top right corner.
+        this.#perfReadout.place(PLAYFIELD_WIDTH - 2, PERF_READOUT_Y, 'right');
+        this.#perfBacking.width = this.#perfReadout.textWidth + 4;
+        this.#perfBacking.position.set(PLAYFIELD_WIDTH - 4 - this.#perfReadout.textWidth, PERF_READOUT_Y - 2);
         this.#perfFrames = 0;
         this.#perfSince = now;
       }

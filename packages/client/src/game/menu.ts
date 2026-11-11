@@ -322,7 +322,7 @@ export class ControlsPages {
   }
 }
 
-export const SETTINGS_ITEMS = ['music', 'effects', 'flashing', 'shake', 'crt', 'leds', 'sync', 'keys', 'back'] as const;
+export const SETTINGS_ITEMS = ['music', 'effects', 'flashing', 'shake', 'crt', 'leds', 'sync', 'perf', 'keys', 'back'] as const;
 export type SettingsItem = (typeof SETTINGS_ITEMS)[number];
 
 /** The two-way settings, each value left to right as the screen shows them. */
@@ -331,6 +331,7 @@ export const SETTINGS_CHOICES = {
   shake: [false, true],
   crt: [false, true],
   leds: ['neon', 'colourBlind'],
+  perf: [false, true],
 } as const;
 type Choice = keyof typeof SETTINGS_CHOICES;
 
@@ -341,7 +342,8 @@ function isChoice(item: SettingsItem): item is Choice {
 /**
  * Music and Effects volume, 0 (off) to 5; Flashing (Reduced or Full), Shake and CRT (Off or
  * On), LED colours (Neon or Colour-blind); Sync, the audio offset, where left and right
- * step SYNC_STEP_MS and confirm opens the Sync screen; Keys, which opens the Keys screen;
+ * step SYNC_STEP_MS and confirm opens the Sync screen; Perf, the frame stats (Off or On);
+ * Keys, which opens the Keys screen;
  * then Back. Left and right change a value and stop at the ends; confirm steps a volume up
  * and wraps from 5 to off, and flips a two-way setting, so a click alone can reach every
  * value. Back, or confirm on Back, leaves.
