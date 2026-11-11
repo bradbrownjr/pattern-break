@@ -615,7 +615,10 @@ replay, for a bundled song (its hash comes from `music/manifest.json`). On those
 the song from the start at the replay's tempo, the sim fed the replay's inputs against the
 song clock as in play, and "Replay" over it. Any key stops it. At the end it shows the
 score and "Score matches", the recorded score when they differ, or "Stopped", then returns
-to the screen it came from. A `.pbreplay` file dropped on the title screen plays the same
+to the screen it came from. Back on game over, the run is replayed to its end and its last
+two frames drawn, as play drew them, so a replay stopped early doesn't leave its frame
+behind; the explosion, flash and shake don't play again, and the results show at once
+(Brad, 2026-11-11). A `.pbreplay` file dropped on the title screen plays the same
 way if its hash names a bundled song; one from other versions of the level or sim says
 which.
 
@@ -1113,7 +1116,7 @@ Run `pnpm dev` and open the URL it prints.
   life is game over: any key retries the level, Esc goes to the title, and R and S watch
   and save the run's replay (see "Replays"). Game over and level complete ignore keys for 0.7 s, so a key still held from
   play doesn't skip them. The game pauses when the window loses focus or the tab is hidden.
-- **Secrets** (Brad and his son, 2026-11-10), none of them shown in the game's help:
+- **Secrets** (Brad and Brad's son, 2026-11-10), none of them shown in the game's help:
   - **Konami code:** up, up, down, down, left, right, left, right, B, A on the title
     screen (the arrow keys and the B and A keys, or a pad's D-pad and B and A buttons;
     `secrets.ts`) turns infinite lives on, or off again, with a trill (`secret` in

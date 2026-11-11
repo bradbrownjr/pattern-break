@@ -2250,10 +2250,6 @@ export class Game {
   }
 
   /**
-   * The crash's explosion, then the game-over message (drawn by the frame loop). Back from
-   * watching the replay (`fresh` false), it keeps the results it had.
-   */
-  /**
    * The game over's message: the results, the replay keys, the leaderboard line or the name
    * entry, the prompt. The replay keys wait until the name is done, since R and S type.
    */
@@ -2276,13 +2272,28 @@ export class Game {
     );
   }
 
+  /**
+   * The crash's explosion, then the game-over message (drawn by the frame loop). Back from
+   * watching the replay (`fresh` false), it keeps the results it had and shows the message
+   * without the crash.
+   */
   #showGameOver(fresh = true): void {
     this.#offerReplay = true;
     const s = this.#state;
     if (fresh || !this.#results) this.#results = this.#resultLines();
-    this.#r.explosion.start(s.shipX / Q8, s.shipY / Q8, seededRandom(this.#runs));
-    this.#r.flash.start((s.deathTick * SAMPLES_PER_TICK * 1000) / SAMPLE_RATE);
+    if (fresh) {
+      this.#r.explosion.start(s.shipX / Q8, s.shipY / Q8, seededRandom(this.#runs));
+      this.#r.flash.start((s.deathTick * SAMPLES_PER_TICK * 1000) / SAMPLE_RATE);
+      this.#setMode('gameover');
+      return;
+    }
+    // Back from the replay the crash isn't shown again, stopped early or not (Brad,
+    // 2026-11-11): no explosion, flash or shake, and the message at once, as though the
+    // game over had been showing all along.
+    this.#r.explosion.hide();
+    this.#r.flash.hide();
     this.#setMode('gameover');
+    this.#modeSince -= 60_000;
   }
 
   #onComplete(): void {

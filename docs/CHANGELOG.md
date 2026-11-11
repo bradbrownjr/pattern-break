@@ -18,7 +18,9 @@ Fixes**, in that order.
   the rank follows when the server answers, and the run just posted now goes ahead of any
   older ones waiting. And back from a replay stopped early, game over showed the replay's
   last frame: its ship still flying, shielded, over a level with no walls, with the HUD
-  as the replay left it. The run's last frames are drawn again now, as play drew them.
+  as the replay left it. The run's last frames are drawn again now, as play drew them, and
+  the crash's explosion, flash and shake don't play a second time: the results come back
+  at once.
 * **Names on the end screens, arcade style, from Brad's play-test.** Game over and the
   clear screens now ask for a name for every run that can be posted, filled in with the
   last name used: Enter posts, typing replaces it, up and down change a letter, and Esc
