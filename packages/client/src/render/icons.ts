@@ -2,9 +2,9 @@
 // so a button shows the same symbol as the HUD. One character a pixel: '.' is clear, the
 // rest are ICON_COLORS keys. No Pixi here, so the DOM side can draw them too.
 
-import { AMBER, CYAN, LIME, MAGENTA, VIOLET, WHITE } from './palette.ts';
+import { AMBER, BACKGROUND, CYAN, LIME, MAGENTA, VIOLET, WHITE } from './palette.ts';
 
-export const ICON_COLORS: Record<string, number> = { m: MAGENTA, w: WHITE, a: AMBER, l: LIME, g: 0x3c7a1a, c: CYAN, v: VIOLET };
+export const ICON_COLORS: Record<string, number> = { m: MAGENTA, w: WHITE, a: AMBER, l: LIME, g: 0x3c7a1a, c: CYAN, v: VIOLET, k: BACKGROUND };
 
 /** The bomb in the HUD. */
 export const BOMB_ICON_MAP = [
@@ -56,6 +56,66 @@ export const BOOST_ICON_MAP = [
   'v..v...',
   '.......',
 ];
+/** Double, in the HUD and on its capsule: a shot ahead and the angled one above it. */
+export const DOUBLE_ICON_MAP = [
+  '......c',
+  '.....c.',
+  '....c..',
+  '...c...',
+  '.......',
+  'ccccccw',
+  '.......',
+];
+/** Shield, on its capsule and in the help: a crest. */
+export const SHIELD_ICON_MAP = [
+  'ccccccc',
+  'cwwwwwc',
+  'cwwwwwc',
+  'cwwwwwc',
+  '.cwwwc.',
+  '..cwc..',
+  '...c...',
+];
+/** A drone, in the HUD and on its capsule. */
+export const DRONE_ICON_MAP = [
+  '..ccc..',
+  '.cwwwc.',
+  'cwwwwwc',
+  'cwwwwwc',
+  'cwwwwwc',
+  '.cwwwc.',
+  '..ccc..',
+];
+/** The laser, in the HUD and on its capsule: a white beam with a cyan glow. */
+export const LASER_ICON_MAP = [
+  '.......',
+  '.......',
+  'ccccccc',
+  'wwwwwww',
+  'ccccccc',
+  '.......',
+  '.......',
+];
+
+/** Each power-up's icon, in PowerUp order (double, missile, shield, drone, laser, boost). */
+export const POWER_UP_ICON_MAPS: readonly (readonly string[])[] = [
+  DOUBLE_ICON_MAP,
+  MISSILE_ICON_MAP,
+  SHIELD_ICON_MAP,
+  DRONE_ICON_MAP,
+  LASER_ICON_MAP,
+  BOOST_ICON_MAP,
+];
+
+/**
+ * A capsule showing the power-up it unlocks: `icon` (7 x 7) on a dark face inside an amber
+ * frame with cut corners, 9 x 9.
+ */
+export function capsuleMap(icon: readonly string[]): string[] {
+  const edge = `.${'a'.repeat(icon[0]!.length)}.`;
+  return [edge, ...icon.map((row) => `a${row.replaceAll('.', 'k')}a`), edge];
+}
+
 /** Pause, on the touch buttons. */
 export const PAUSE_ICON_MAP = [
   '.......',

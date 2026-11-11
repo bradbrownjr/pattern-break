@@ -1,14 +1,17 @@
 // Enemies, shots, bullets, the bomb, missiles, drones, capsules and the shield drawn from
 // the sim state, plus their cosmetics: a burst and the points scored when an enemy is
 // destroyed, "1UP" for an extra life, the bomb's and missiles' blasts, the nuke's flash, the
-// shield flickering when it takes a hit, an explosion when the ship loses a life, and the HUD: lives left, the bomb and missile reloading, the streak
-// multiplier, nukes held, the score, and the power-up meter (meter.ts; docs/PLAN.md,
-// "Enemies" and "Scoring"). Turrets and tanks are placed against the terrain as drawn, so
-// they stay on their bars. Effect timing comes from song time, so capture mode reproduces
-// it. Sprites are pooled; drawing allocates nothing.
+// shield flickering when it takes a hit, an explosion when the ship loses a life, and the
+// HUD (docs/PLAN.md, "HUD"): the arsenal in the top left (bomb and missile reloading,
+// power-ups held, nukes held), the multiplier and score in the top right, lives in the
+// bottom left and shield points in the bottom right. Turrets and tanks are placed against
+// the terrain as drawn, so they stay on their bars. Effect timing comes from song time, so
+// capture mode reproduces it. Sprites are pooled; drawing allocates nothing.
 
 import {
   BOMB_RELOAD_TICKS,
+  BOOST_FUEL_PER_LEVEL,
+  BOOST_MAX_LEVEL,
   BULLET_SLOTS,
   EnemyKind,
   CAPSULE_SLOTS,
@@ -27,6 +30,7 @@ import {
   SHOT_SLOTS,
   SHOT_WIDTH,
   TANK_SPEED_Q8,
+  nextUnlock,
   scoreMultiplier,
   type Level,
   type SimState,
@@ -34,10 +38,20 @@ import {
 import { Container, Rectangle, Sprite, Texture } from 'pixi.js';
 import { Explosion, ShipBreakup, type ExplosionStyle } from './effects.ts';
 import { FlashGate, flashAlpha } from './flash.ts';
-import { MeterView } from './meter.ts';
 import { AMBER, BACKGROUND, CYAN, LIME, MAGENTA, WHITE } from './palette.ts';
 import { flipRows, mapTexture } from './pixels.ts';
-import { BOMB_ICON_MAP, ICON_COLORS, MISSILE_ICON_MAP, NUKE_MAP } from './icons.ts';
+import {
+  BOMB_ICON_MAP,
+  BOOST_ICON_MAP,
+  DOUBLE_ICON_MAP,
+  DRONE_ICON_MAP,
+  ICON_COLORS,
+  LASER_ICON_MAP,
+  MISSILE_ICON_MAP,
+  NUKE_MAP,
+  POWER_UP_ICON_MAPS,
+  capsuleMap,
+} from './icons.ts';
 import { seededRandom } from './random.ts';
 import { PixelText } from './text.ts';
 import { SHIP_SPRITE_HEIGHT, SHIP_SPRITE_WIDTH, shipTexture } from './ship.ts';
@@ -87,13 +101,15 @@ const BOMB_MAP = ['.aa.', 'awwa', 'aaaa', '.aa.'];
 
 /** The HUD bomb's and missile's empty part: they fill from the bottom as they reload. */
 const BOMB_ICON_DIM = 0.3;
+/** An arsenal icon for something the ship doesn't have: a power-up not unlocked, a nuke not held. */
+const NOT_HELD_ALPHA = 0.2;
 const ICON_ROWS = BOMB_ICON_MAP.length;
 
 /** The double's angled shot. */
 const SHOT_UP_MAP = ['...c', '..c.', '.c..', 'c...'];
 const MISSILE_MAP = ['..cc....', 'mcccccww', 'mcccccww', '..cc....'];
 const DRONE_MAP = ['.cccc.', 'ccwwcc', 'cwwwwc', 'cwwwwc', 'ccwwcc', '.cccc.'];
-/** A power-up capsule: an amber pill marked P. */
+/** A capsule when every power-up is at its most, so it unlocks nothing: an amber pill marked P. */
 const CAPSULE_MAP = [
   '.aaaaaa.',
   'aawwwwaa',
@@ -155,6 +171,28 @@ const POPUP_MS = 600;
 const POPUP_RISE_PX = 8;
 const SCORE_DIGITS = 7;
 const HUD_PAD = 2;
+/** The HUD's panels: as tall as a life icon plus a 2 px margin each side. */
+const PANEL_HEIGHT = SHIP_SPRITE_HEIGHT + 4;
+/** The top row's icons, 7 px square, centred in its panel. */
+const ICON_SIZE = BOMB_ICON_MAP.length;
+const ICON_Y = 4 + Math.floor((SHIP_SPRITE_HEIGHT - ICON_SIZE) / 2);
+/**
+ * The arsenal's slots, left to right; each keeps its place whether held or not, so it can
+ * be read without looking: bomb, missile, double, laser, two drones, boost, three nukes.
+ */
+const Slot = { bomb: 0, missile: 1, double: 2, laser: 3, drone: 4, boost: 6, nuke: 7 } as const;
+const SLOTS = Slot.nuke + NUKE_ICONS;
+/** Slot `i`'s x: icons 2 px apart, with a further gap before the nukes. */
+function slotX(i: number): number {
+  return 4 + i * (ICON_SIZE + LIFE_ICON_GAP) + (i >= Slot.nuke ? HUD_PAD : 0);
+}
+/** The bottom panels' top edge. */
+const BOTTOM_Y = PLAYFIELD_HEIGHT - 2 - PANEL_HEIGHT;
+/** Shield pips, one per point, in the bottom right corner. */
+const PIP_WIDTH = 6;
+const PIP_GAP = 2;
+const PIP_DIM_ALPHA = 0.2;
+const PIPS_WIDTH = SHIELD_MAX * PIP_WIDTH + (SHIELD_MAX - 1) * PIP_GAP;
 
 export interface Textures {
   turret: Texture;
@@ -175,7 +213,15 @@ export interface Textures {
   shotUp: Texture;
   missile: Texture;
   drone: Texture;
+  /** The capsule marked P, for when no power-up is left to unlock. */
   capsule: Texture;
+  /** A capsule showing each power-up, in PowerUp order. */
+  capsules: Texture[];
+  /** The HUD's power-up icons. */
+  doubleIcon: Texture;
+  laserIcon: Texture;
+  droneIcon: Texture;
+  boostIcon: Texture;
   shield: Texture;
   /** The shield in white, for its flicker. */
   shieldFlash: Texture;
@@ -211,6 +257,11 @@ export function getTextures(): Textures {
     missile: mapTexture(MISSILE_MAP, COLORS, 'missile'),
     drone: mapTexture(DRONE_MAP, COLORS, 'drone'),
     capsule: mapTexture(CAPSULE_MAP, COLORS, 'capsule'),
+    capsules: POWER_UP_ICON_MAPS.map((icon, i) => mapTexture(capsuleMap(icon), COLORS, `capsule-${i}`)),
+    doubleIcon: mapTexture(DOUBLE_ICON_MAP, COLORS, 'double-icon'),
+    laserIcon: mapTexture(LASER_ICON_MAP, COLORS, 'laser-icon'),
+    droneIcon: mapTexture(DRONE_ICON_MAP, COLORS, 'drone-icon'),
+    boostIcon: mapTexture(BOOST_ICON_MAP, COLORS, 'boost-icon'),
     shield: mapTexture(SHIELD_MAP, COLORS, 'shield'),
     shieldFlash: mapTexture(SHIELD_MAP, { c: WHITE }, 'shield-flash'),
   };
@@ -236,16 +287,25 @@ export class CombatView {
   // "Performance").
   readonly container = new Container({ isRenderGroup: true });
   /**
-   * The lives left, drawn over the playfield in the top left corner. Its own render group
-   * too: life icons, the multiplier and popups come and go.
+   * The HUD, drawn over the playfield. Its own render group too: icons, the multiplier and
+   * popups come and go.
    */
   readonly hud = new Container({ isRenderGroup: true });
   #enemies: Sprite[] = [];
   #shots: Sprite[] = [];
   #bullets: Sprite[] = [];
   #lives: Sprite[] = [];
-  /** A dark panel behind the life icons, so they read over the ceiling's LEDs. */
+  /** Dark panels behind the HUD's groups, so they read over the walls' LEDs. */
   #livesBacking = new Sprite(Texture.WHITE);
+  #arsenalBacking = new Sprite(Texture.WHITE);
+  #shieldBacking = new Sprite(Texture.WHITE);
+  #doubleIcon = new Sprite();
+  #laserIcon = new Sprite();
+  #droneIcons: Sprite[] = [];
+  #boostIcon = new Sprite();
+  /** Boost's fuel, a line under its icon. */
+  #fuel = new Sprite(Texture.WHITE);
+  #pips: Sprite[] = [];
   #bursts: Explosion[] = [];
   #burstSample: number[] = [];
   #nextBurst = 0;
@@ -281,7 +341,7 @@ export class CombatView {
   #capsules: Sprite[] = [];
   #shield = new Sprite();
   #seenExtraLife = -1;
-  readonly #meter = new MeterView();
+  #shownMultiplier = -1;
 
   #lifeLost: ShipBreakup;
   #lifeLostSample = -1;
@@ -329,35 +389,70 @@ export class CombatView {
     this.#nukeFlash.height = PLAYFIELD_HEIGHT;
     this.#nukeFlash.visible = false;
     this.hud.addChild(this.#nukeFlash);
-    this.#livesBacking.tint = BACKGROUND;
-    this.#livesBacking.alpha = 0.85;
-    this.#livesBacking.position.set(2, 2);
-    this.#livesBacking.height = SHIP_SPRITE_HEIGHT + 4;
-    this.hud.addChild(this.#livesBacking);
+    for (const backing of [this.#livesBacking, this.#arsenalBacking, this.#shieldBacking]) {
+      backing.tint = BACKGROUND;
+      backing.alpha = 0.85;
+      backing.height = PANEL_HEIGHT;
+      this.hud.addChild(backing);
+    }
+    // Lives, in the bottom left corner: they grow to MAX_LIFE_ICONS with a good run.
+    this.#livesBacking.position.set(2, BOTTOM_Y);
     for (let i = 0; i < MAX_LIFE_ICONS; i++) {
       const icon = new Sprite(shipTexture());
-      icon.position.set(4 + i * (SHIP_SPRITE_WIDTH + LIFE_ICON_GAP), 4);
+      icon.position.set(4 + i * (SHIP_SPRITE_WIDTH + LIFE_ICON_GAP), BOTTOM_Y + 2);
       icon.visible = false;
       this.hud.addChild(icon);
       this.#lives.push(icon);
     }
+    // The arsenal, in the top left corner.
+    this.#arsenalBacking.position.set(2, 2);
+    this.#arsenalBacking.width = slotX(SLOTS - 1) + ICON_SIZE + HUD_PAD - 2;
     this.#bombIcon.texture = tex.bombIcon;
     this.#bombIcon.alpha = BOMB_ICON_DIM;
+    this.#bombIcon.position.set(slotX(Slot.bomb), ICON_Y);
     this.#missileIcon.texture = tex.missileIcon;
-    this.#missileIcon.alpha = BOMB_ICON_DIM;
-    this.hud.addChild(this.#multiplier, this.#bombIcon, this.#bombFill, this.#missileIcon, this.#missileFill, this.#meter.container);
-
+    this.#missileIcon.position.set(slotX(Slot.missile), ICON_Y);
+    const icons: [Sprite, Texture, number][] = [
+      [this.#doubleIcon, tex.doubleIcon, Slot.double],
+      [this.#laserIcon, tex.laserIcon, Slot.laser],
+      [this.#boostIcon, tex.boostIcon, Slot.boost],
+    ];
+    for (let i = 0; i < MAX_DRONES; i++) {
+      const drone = new Sprite();
+      this.#droneIcons.push(drone);
+      icons.push([drone, tex.droneIcon, Slot.drone + i]);
+    }
+    for (const [sprite, texture, slot] of icons) {
+      sprite.texture = texture;
+      sprite.position.set(slotX(slot), ICON_Y);
+    }
+    this.#fuel.tint = CYAN;
+    this.#fuel.height = 1;
+    this.#fuel.position.set(slotX(Slot.boost), ICON_Y + ICON_SIZE + 1);
+    this.hud.addChild(this.#bombIcon, this.#bombFill, this.#missileIcon, this.#missileFill, ...icons.map(([sprite]) => sprite), this.#fuel);
     for (let i = 0; i < NUKE_ICONS; i++) {
-      const icon = new Sprite(getTextures().nuke);
-      icon.visible = false;
+      const icon = new Sprite(tex.nuke);
+      icon.position.set(slotX(Slot.nuke + i), ICON_Y);
       this.hud.addChild(icon);
       this.#nukes.push(icon);
+    }
+    // Shield points, in the bottom right corner.
+    this.#shieldBacking.width = PIPS_WIDTH + 2 * HUD_PAD;
+    this.#shieldBacking.position.set(PLAYFIELD_WIDTH - 2 - this.#shieldBacking.width, BOTTOM_Y);
+    for (let i = 0; i < SHIELD_MAX; i++) {
+      const pip = new Sprite(Texture.WHITE);
+      pip.tint = CYAN;
+      pip.width = PIP_WIDTH;
+      pip.height = SHIP_SPRITE_HEIGHT;
+      pip.position.set(this.#shieldBacking.x + HUD_PAD + i * (PIP_WIDTH + PIP_GAP), BOTTOM_Y + 2);
+      this.hud.addChild(pip);
+      this.#pips.push(pip);
     }
     this.#scoreBacking.tint = BACKGROUND;
     this.#scoreBacking.alpha = 0.85;
     this.#scoreBacking.height = SHIP_SPRITE_HEIGHT + 4;
     this.#cheat.visible = false;
-    this.hud.addChild(this.#scoreBacking, this.#score, this.#cheat);
+    this.hud.addChild(this.#scoreBacking, this.#multiplier, this.#score, this.#cheat);
     for (let i = 0; i < POPUPS; i++) {
       const popup = new PixelText('', WHITE);
       popup.visible = false;
@@ -395,7 +490,7 @@ export class CombatView {
       this.#seenMissileBlast[m] = -1;
       this.#missileBlasts[m]!.hide();
     }
-    this.#meter.reset();
+    this.#shownScore = -1;
     for (let i = 0; i < BURSTS; i++) {
       this.#burstSample[i] = -1;
       this.#bursts[i]!.hide();
@@ -499,7 +594,12 @@ export class CombatView {
     for (let c = 0; c < CAPSULE_SLOTS; c++) {
       const sprite = this.#capsules[c]!;
       sprite.visible = state.capsuleActive[c] === 1;
-      if (sprite.visible) placeCentred(sprite, state.capsuleX[c]! / Q8, state.capsuleY[c]! / Q8);
+      if (sprite.visible) {
+        // Every capsule shows what the next one picked up unlocks.
+        const next = nextUnlock(state);
+        sprite.texture = next < 0 ? tex.capsule : tex.capsules[next]!;
+        placeCentred(sprite, state.capsuleX[c]! / Q8, state.capsuleY[c]! / Q8);
+      }
     }
     const shipVisible = state.tick >= state.safeUntil || Math.floor(state.tick / BLINK_TICKS) % 2 === 0;
     const points = state.shield < SHIELD_MAX ? state.shield : SHIELD_MAX;
@@ -581,14 +681,14 @@ export class CombatView {
     this.#seenHit = state.hitTick;
     if (this.#lifeLostSample >= 0) this.#lifeLost.draw(Math.max(0, samplesToMs(displaySamples - this.#lifeLostSample)));
 
-    // Lives.
+    // Lives, in the bottom left corner.
     const lives = state.lives < MAX_LIFE_ICONS ? state.lives : MAX_LIFE_ICONS;
     for (let i = 0; i < MAX_LIFE_ICONS; i++) this.#lives[i]!.visible = i < lives;
-    const iconsWidth = lives * (SHIP_SPRITE_WIDTH + LIFE_ICON_GAP) + LIFE_ICON_GAP;
-    // The bomb: bright when one can drop, dim while one falls or reloads.
-    const bombX = 2 + iconsWidth + HUD_PAD;
-    const iconY = 4 + Math.floor((SHIP_SPRITE_HEIGHT - ICON_ROWS) / 2);
-    this.#bombIcon.position.set(bombX, iconY);
+    this.#livesBacking.visible = lives > 0;
+    this.#livesBacking.width = lives * (SHIP_SPRITE_WIDTH + LIFE_ICON_GAP) + LIFE_ICON_GAP;
+
+    // The arsenal. The bomb: bright when one can drop, filling from the bottom while one
+    // falls or reloads.
     // The sim drops a bomb on tick state.tick + 1 if that is at least bombReadyTick.
     const reloadLeft = state.bombReadyTick - (state.tick + 1);
     const bombRows = state.bombActive
@@ -597,10 +697,9 @@ export class CombatView {
         ? ICON_ROWS
         : Math.floor(((BOMB_RELOAD_TICKS - reloadLeft) * ICON_ROWS) / BOMB_RELOAD_TICKS);
     this.#bombFill.texture = tex.bombFill[bombRows]!;
-    this.#bombFill.position.set(bombX, iconY + ICON_ROWS - bombRows);
-    let afterBomb = bombX + BOMB_ICON_MAP[0]!.length + LIFE_ICON_GAP;
-    // The missile, once bought, the same way.
-    this.#missileIcon.visible = state.missile;
+    this.#bombFill.position.set(slotX(Slot.bomb), ICON_Y + ICON_ROWS - bombRows);
+    // The missile the same way once unlocked; faint until then, like every power-up.
+    this.#missileIcon.alpha = state.missile ? BOMB_ICON_DIM : NOT_HELD_ALPHA;
     this.#missileFill.visible = state.missile;
     if (state.missile) {
       const left = state.missileReadyTick - (state.tick + 1);
@@ -609,36 +708,38 @@ export class CombatView {
         : left <= 0
           ? ICON_ROWS
           : Math.floor(((MISSILE_RELOAD_TICKS - left) * ICON_ROWS) / MISSILE_RELOAD_TICKS);
-      this.#missileIcon.position.set(afterBomb, iconY);
       this.#missileFill.texture = tex.missileFill[rows]!;
-      this.#missileFill.position.set(afterBomb, iconY + ICON_ROWS - rows);
-      afterBomb += MISSILE_ICON_MAP[0]!.length + LIFE_ICON_GAP;
+      this.#missileFill.position.set(slotX(Slot.missile), ICON_Y + ICON_ROWS - rows);
     }
+    this.#doubleIcon.alpha = state.double ? 1 : NOT_HELD_ALPHA;
+    this.#laserIcon.alpha = state.laser ? 1 : NOT_HELD_ALPHA;
+    for (let i = 0; i < MAX_DRONES; i++) this.#droneIcons[i]!.alpha = i < state.drones ? 1 : NOT_HELD_ALPHA;
+    this.#boostIcon.alpha = state.boostLevel > 0 ? 1 : NOT_HELD_ALPHA;
+    this.#fuel.visible = state.boostLevel > 0;
+    this.#fuel.width = Math.max(1, Math.floor((ICON_SIZE * state.boostFuel) / (BOOST_MAX_LEVEL * BOOST_FUEL_PER_LEVEL)));
+    for (let i = 0; i < NUKE_ICONS; i++) this.#nukes[i]!.alpha = i < state.nukes ? 1 : NOT_HELD_ALPHA;
+
+    // Shield points, in the bottom right corner.
+    for (let i = 0; i < SHIELD_MAX; i++) this.#pips[i]!.alpha = i < points ? 1 : PIP_DIM_ALPHA;
+
+    // The score in the top right corner, with the streak multiplier left of it.
     const multiplier = scoreMultiplier(state.streak);
-    this.#multiplier.visible = multiplier > 1;
-    this.#multiplier.text = `x${multiplier}`;
-    this.#multiplier.place(afterBomb + HUD_PAD, 4 + Math.floor((SHIP_SPRITE_HEIGHT - 7) / 2));
-    let right = afterBomb + (multiplier > 1 ? this.#multiplier.textWidth + 2 * HUD_PAD : 0);
-    const nukes = state.nukes < NUKE_ICONS ? state.nukes : NUKE_ICONS;
-    for (let i = 0; i < NUKE_ICONS; i++) {
-      const icon = this.#nukes[i]!;
-      icon.visible = i < nukes;
-      if (!icon.visible) continue;
-      icon.position.set(right + (i === 0 ? HUD_PAD : 0), 4 + Math.floor((SHIP_SPRITE_HEIGHT - NUKE_MAP.length) / 2));
-      right = icon.x + NUKE_MAP.length + LIFE_ICON_GAP;
-    }
-    this.#livesBacking.width = right - 2;
-
-    this.#meter.draw(state);
-
-    // Score, in the top right corner.
-    if (state.score !== this.#shownScore) {
+    if (state.score !== this.#shownScore || multiplier !== this.#shownMultiplier) {
       this.#shownScore = state.score;
+      this.#shownMultiplier = multiplier;
       this.#score.text = String(state.score).padStart(SCORE_DIGITS, '0');
       const right = PLAYFIELD_WIDTH - 4;
-      this.#score.place(right, 4 + Math.floor((SHIP_SPRITE_HEIGHT - 7) / 2), 'right');
-      this.#scoreBacking.width = this.#score.textWidth + 2 * HUD_PAD + 1;
-      this.#scoreBacking.position.set(right - this.#score.textWidth - HUD_PAD, 2);
+      const y = 4 + Math.floor((SHIP_SPRITE_HEIGHT - 7) / 2);
+      this.#score.place(right, y, 'right');
+      let left = right - this.#score.textWidth;
+      this.#multiplier.visible = multiplier > 1;
+      if (multiplier > 1) {
+        this.#multiplier.text = `x${multiplier}`;
+        this.#multiplier.place(left - 2 * HUD_PAD, y, 'right');
+        left = this.#multiplier.x;
+      }
+      this.#scoreBacking.width = right - left + 2 * HUD_PAD + 1;
+      this.#scoreBacking.position.set(left - HUD_PAD, 2);
       this.#cheat.place(this.#scoreBacking.x - 4, this.#score.y, 'right');
     }
     this.#cheat.visible = state.cheats !== 0;

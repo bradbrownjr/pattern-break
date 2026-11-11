@@ -1220,10 +1220,13 @@ Run `pnpm dev` and open the URL it prints.
   `songId:difficulty` to score. A run sets a best when it beats the old one, has no cheat
   and scored above 0; game over counts. Watching a replay sets none, and the game-over
   results are kept when you come back from watching its replay.
-- **Power-up meter:** six LED cells along the bottom in the order capsules unlock them,
-  Double to Boost, each lit (green to red) while the ship has that power-up. A label shows
-  the count held for drones, shield points and boost; the next capsule's power-up has a grey
-  label and the rest a darker one; a cyan bar in the Boost cell shows the fuel left.
+- **HUD** (`render/combat.ts`, the icons in `render/icons.ts`; layout in `docs/PLAN.md`,
+  "HUD"): the arsenal's ten slots sit at fixed x (`slotX`), 7 px icons 2 px apart, with
+  alpha 0.2 for what the ship doesn't have. Lives and shield pips sit on the bottom row,
+  `BOTTOM_Y`, the multiplier left of the score inside the score's panel (added after the
+  panel, so the panel doesn't dim it). A capsule's texture is `Textures.capsules[nextUnlock(state)]`,
+  made by `capsuleMap(icon)`: the 7x7 icon on a dark face in a 9x9 amber frame. Until
+  2026-11-11 a power-up meter of six labelled LED cells ran along the bottom.
 - **Gamepad:** a pad that reports the Gamepad API's "standard" mapping
   (https://w3c.github.io/gamepad/, "Remapping"), which fixes its button and axis numbers,
   works at once; any other pad does nothing until its inputs are set on the Keys screen.
@@ -1591,7 +1594,7 @@ boards.
 - **Layers,** back to front: the copper bars, the starfield, the world (terrain, tip sparks,
   capsules, enemies, shots, missiles, drones, the shield and bullets, ship, explosion, point
   popups), the HUD
-  (lives, bomb and missile, multiplier, nukes, score, power-up meter), the game-over flash, and
+  (the arsenal, multiplier and score, lives, shield pips), the game-over flash, and
   the UI (title screen, jukebox, controls, demo banner, messages, the pause menu, and the
   fade). With CRT on, the stage sits in a root container that carries the bloom, and a CSS
   overlay lies over the canvas.
@@ -1637,9 +1640,6 @@ boards.
   turret's a 6x6 amber pellet (the hitbox is 4x4 for all three). An extra life shows a
   lime "1UP" rising from the ship, in the popups' pool. The missile icon follows the bomb icon once unlocked and fills the
   same way over `MISSILE_RELOAD_TICKS`.
-- **Meter** (`meter.ts`): `MeterView` draws six 62x11 cells on a dark backing at the
-  bottom of the HUD, tinted from `LED_LIT` and `LED_DIM` green to red, with a label in each.
-  It changes a cell's tint or label only when that cell's state does.
 - **Starfield** (`starfield.ts`): 112 stars in three layers placed by `seededRandom(seed)`,
   scrolling at 0.12, 0.25 and 0.5 of the terrain's speed.
 - **Copper bars** (`copper.ts`; `test/copper.test.ts`): five 14 px bands behind the stars,

@@ -261,8 +261,8 @@ every bar of every generated level.
   the enemy bullets. One charges per 10 kills on the beat, up to 3 held, kept when a life
   is lost; a level starts with none. Its kills score their points times the multiplier,
   never doubled.
-- **Power-ups (2026-11-09):** a meter drawn as a row of VU meter LEDs along the bottom,
-  each cell lit while the ship has that power-up. Shooting down every ship of a formation,
+- **Power-ups (2026-11-09):** shown as icons in the HUD's top left, bright while the ship
+  has them (see "HUD" below). Shooting down every ship of a formation,
   by any weapon, drops a capsule; a ship that gets away or is rammed spoils it. The
   capsule falls with the bomb's gravity to the cave's floor and scrolls away on it, so
   collecting one means flying low. Each capsule picked up unlocks the next power-up in
@@ -341,8 +341,20 @@ every bar of every generated level.
 - Enemies are small pixel-art sprites: magenta and amber turrets (upside down on the
   ceiling), lime tanks, magenta ships facing left, and white-cored bullets in the colour of
   what fired them: a ship's magenta, a tank's lime, a turret's a larger amber pellet. The
-  player's shots are cyan dashes. A destroyed enemy bursts into a few particles; the
-  lives left are ship icons in the top left corner.
+  player's shots are cyan dashes. A destroyed enemy bursts into a few particles.
+- **HUD (2026-11-11, Brad: graphical, not textual; the power-up bar and its labels were
+  more text than a player reads in flight).** Icons and digits only, each group on a dark
+  panel so it reads over the walls:
+  - **Top left, the arsenal:** the bomb and the missile, each filling from the bottom as it
+    reloads; then Double, Laser, two drones and Boost (with a cyan line for its fuel); then
+    three nukes. Every slot keeps its place, faint until the ship has it, so it can be read
+    without looking straight at it.
+  - **Top right:** the streak multiplier in amber ("x4"), then the score.
+  - **Bottom left:** a ship icon for each life, up to 9; it grows with a good run, so it
+    has the bottom row to itself.
+  - **Bottom right:** six cyan pips, one per shield point, faint once spent.
+  - **Capsules** show the icon of the power-up the next one picked up unlocks, in an amber
+    frame; a "P" once every power-up is at its most.
 - Explosions: a destroyed ship breaks apart pixel by pixel; every pixel of its sprite
   becomes a particle in its own colour and flies outward, with an expanding colourful
   shockwave ring and a short shake (built 2026-11-10).

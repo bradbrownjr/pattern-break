@@ -23,13 +23,12 @@ import {
   START_LIVES,
   STREAK_STEP,
   SURVIVAL_POINTS_PER_LIFE,
-  LASER_WIDTH,
   SHOT_HEIGHT,
   SHOT_WIDTH,
 } from '@game/core';
 import { Container, Sprite, Texture } from 'pixi.js';
 import { getTextures } from '../render/combat.ts';
-import { AMBER, CYAN, DIM_GREY, GREY, LED_LIT, LIME, MAGENTA, WHITE } from '../render/palette.ts';
+import { AMBER, CYAN, DIM_GREY, GREY, LIME, MAGENTA, WHITE } from '../render/palette.ts';
 import { shipTexture } from '../render/ship.ts';
 import { PixelText } from '../render/text.ts';
 import { Scroller } from './menu.ts';
@@ -89,22 +88,18 @@ export function helpRows(): HelpRow[] {
     { icon: { textures: () => [tex().bomb] }, label: 'Bomb', value: 'Hits tanks', valueColor: GREY },
     { icon: { textures: () => [tex().nuke] }, label: 'Nuke', value: 'Clears screen', valueColor: GREY },
     { heading: 'Power-ups' },
-    { icon: { textures: () => [tex().capsule] }, label: 'Capsule', value: 'Next power-up', valueColor: GREY },
-    { icon: { bar: LED_LIT[2]!, width: 12, height: 6 }, label: 'Lit cell', value: 'Held', valueColor: GREY },
-    { icon: { textures: () => [tex().shotUp] }, label: 'Double', value: 'Angled shot', valueColor: GREY },
-    { icon: { textures: () => [tex().missile] }, label: 'Missile', value: 'Air to air', valueColor: GREY },
-    {
-      icon: { textures: () => [tex().shield, shipTexture()], alpha: 0.8 },
-      label: 'Shield',
-      value: 'Refill',
-      valueColor: GREY,
-    },
-    { icon: { textures: () => [tex().drone] }, label: 'Drone', value: `Copies fire  Max ${MAX_DRONES}`, valueColor: GREY },
-    { icon: { bar: WHITE, width: LASER_WIDTH, height: SHOT_HEIGHT }, label: 'Laser', value: 'Pierces', valueColor: GREY },
-    { label: 'Boost', value: `Speed  Max ${BOOST_MAX_LEVEL}`, valueColor: GREY },
+    { icon: { textures: () => [tex().capsules[0]!] }, label: 'Capsule', value: 'Shows next', valueColor: GREY },
+    { icon: { textures: () => [tex().doubleIcon] }, label: 'Double', value: 'Angled shot', valueColor: GREY },
+    { icon: { textures: () => [tex().missileIcon] }, label: 'Missile', value: 'Air to air', valueColor: GREY },
+    { icon: { textures: () => [tex().capsules[2]!] }, label: 'Shield', value: 'Refill', valueColor: GREY },
+    { icon: { textures: () => [tex().droneIcon] }, label: 'Drone', value: `Copies fire  Max ${MAX_DRONES}`, valueColor: GREY },
+    { icon: { textures: () => [tex().laserIcon] }, label: 'Laser', value: 'Pierces', valueColor: GREY },
+    { icon: { textures: () => [tex().boostIcon] }, label: 'Boost', value: `Speed  Max ${BOOST_MAX_LEVEL}`, valueColor: GREY },
     { label: 'Life lost', value: 'Power-ups lost', valueColor: MAGENTA },
     { heading: 'Display' },
-    { icon: { textures: () => [shipTexture()] }, label: 'Lives', value: `${START_LIVES} to start`, valueColor: GREY },
+    { icon: { textures: () => [tex().doubleIcon], alpha: 1 }, label: 'Top left', value: 'Bright held', valueColor: GREY },
+    { icon: { textures: () => [shipTexture()] }, label: 'Lives  Bottom left', value: `${START_LIVES} to start`, valueColor: GREY },
+    { icon: { bar: CYAN, width: 6, height: 8 }, label: 'Shield  Bottom right', value: `${SHIELD_MAX} pips`, valueColor: GREY },
     { icon: { text: '1UP', color: LIME }, label: 'Extra life', value: `${EXTRA_LIFE_POINTS}  Max ${MAX_LIVES}`, valueColor: GREY },
     { icon: { textures: () => [tex().bombIcon, tex().bombFill.at(-1)!] }, label: 'Bomb ready', value: 'Fills', valueColor: GREY },
     {
@@ -113,7 +108,7 @@ export function helpRows(): HelpRow[] {
       value: 'Fills',
       valueColor: GREY,
     },
-    { icon: { text: 'x3', color: AMBER }, label: 'Multiplier' },
+    { icon: { text: 'x3', color: AMBER }, label: 'Multiplier  By score' },
     { icon: { textures: () => [tex().nuke] }, label: 'Nukes held' },
   ];
 }

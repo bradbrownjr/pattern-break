@@ -24,8 +24,8 @@ notes; you have three lives, a shield that takes a few hits and bounces you off 
 and a gun, and kills score double on their instrument's beat. Every 20 000 points gives a
 life.
 A bomb takes out tanks on the floor, and a nuke earned by playing the beat clears the
-screen. Shooting down a whole formation drops a capsule for the power-up meter: boost,
-double shot, laser, missile, drone and a shield refill. Sound effects are synthesized in the
+screen. Shooting down a whole formation drops a capsule that unlocks the next power-up:
+boost, double shot, laser, missile, drone or a shield refill. Sound effects are synthesized in the
 browser, with the pitched ones on the song's notes. Settings has the music and effects
 volume, reduced flashing (on until changed), switches for screen shake and a CRT look,
 colour-blind LED colours, and Sync, which measures the audio delay from presses on a click

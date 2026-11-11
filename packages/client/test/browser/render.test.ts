@@ -68,7 +68,10 @@ describe.skipIf(!hasWebGl)('renderer', () => {
     r.starfield.container.visible = false;
     // Song start: scroll is -64 px, so bar 0 starts at screen x 64 and bar 1 at x 74.
     drawPlay(r, level, state, 0);
+    // The HUD's panels sit over the top and bottom rows of LEDs checked below.
+    r.combat.hud.visible = false;
     r.render();
+    r.combat.hud.visible = true;
     const px = readCanvas();
     const x = 74 + 3;
     expect(rgbAt(px, x, 2)).toBe(LED_LIT[0]);

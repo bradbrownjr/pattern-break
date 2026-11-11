@@ -13,6 +13,13 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **A graphical HUD, from Brad's play-test.** The power-up bar and its six labels along
+  the bottom are gone, and the HUD is icons and digits. Top left, the arsenal: bomb,
+  missile, double, laser, two drones, boost with its fuel, and three nukes, each in a fixed
+  place and faint until held. Top right, the multiplier beside the score, where it reads
+  as part of the score (after the missile icon it read as a missile count). Bottom left, a
+  ship per life, with room for a long run's nine; bottom right, six shield pips. A capsule
+  now shows the icon of the power-up it gives. The Help screen matches.
 * **M6: mobile and polish, closed with phone tuning parked.** Brad parked further
   performance tuning so the game can be finished. Where it stands: Brad's PC holds 60 fps
   with 1.9 ms of frame work at the 95th percentile; under 4x CPU throttling on a clean
