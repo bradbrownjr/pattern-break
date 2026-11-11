@@ -13,6 +13,15 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **M6: mobile and polish, closed with phone tuning parked.** Brad parked further
+  performance tuning so the game can be finished. Where it stands: Brad's PC holds 60 fps
+  with 1.9 ms of frame work at the 95th percentile; under 4x CPU throttling on a clean
+  GitHub runner, 13 of the 16 levels are under the 8 ms goal and the worst is 9.6 ms. The
+  Galaxy S25 check moved to the new `docs/PLAYTEST.md`, a short list of tests that need
+  people and real hardware (the phone at 120 Hz, how each difficulty feels, Sync with
+  Bluetooth headphones, name entry on a phone and a gamepad, the new demo flight), with how
+  to report them: a screenshot of the end screen with Perf on. What they find becomes
+  roadmap items.
 * **M6: a Perf setting, with a report on the end screens.** Settings, Perf On does what
   `?perf=1` did: frames a second and frame times in the corner, now under the score instead
   of over it. Game over and the clear screens then end with three lines for a screenshot:

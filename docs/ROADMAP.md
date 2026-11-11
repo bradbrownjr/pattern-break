@@ -11,7 +11,6 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 
 | Item | What it delivers | Stage |
 |---|---|---|
-| [M6: mobile and polish](#m6-mobile-and-polish) | Phone performance. | Next |
 | [Boss patterns](#later) | A mini boss at the end of level 4 and the final boss at the end of level 8, from the song's patterns. | Later |
 | [Per-song enemy overrides](#later) | A sidecar file that changes which instrument spawns which enemy for one song. | Later |
 | [Amiga PAL mode](#later) | An optional 320x256 display mode. | Later |
@@ -24,28 +23,6 @@ yet.
 
 Each milestone is finished only when its acceptance checks pass. Work them in order; don't
 start the next until the current one is done.
-
----
-
-## M6: mobile and polish
-
-**Goal:** as good on a phone as on a computer.
-
-Decided 2026-11-10: desktop and phone count equally; a change is done when it is right on
-both.
-
-- [ ] **Performance:** an on-screen frame-time readout; a measured pass under Chrome's 4x
-      and 6x CPU throttling, fixing what stands out; then Brad's phone, a Samsung Galaxy
-      S25 (Snapdragon 8 Elite for Galaxy, 6.2 inch 1080 x 2340 display, 1 to 120 Hz
-      adaptive refresh, per the launch spec tables; Brad, 2026-11-10). At 120 Hz a frame
-      has 8.3 ms, so the game has to hold that, not only 60 fps.
-
-**Acceptance:**
-
-- Under 4x CPU throttling in headless Chromium, the sim and renderer work of a frame
-  stays under 8 ms at the 95th percentile on the busiest bundled level.
-
-**Docs:** `DEVELOPMENT.md` "Performance".
 
 ---
 

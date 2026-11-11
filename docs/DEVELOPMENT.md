@@ -1827,6 +1827,10 @@ ran from 12.8 ms (Neon Techno) to 17.8 ms (Girl From Mars). The songs differ lit
 of the cost is the same every frame. Without throttling, Keygen 9000 took 1.6 ms on average
 and 3.7 ms at p95. The 8 ms target under 4x throttling is not met on this host.
 
+Brad's PC (2026-11-11, Chrome, a 1536 x 695 window at device pixel ratio 1.25, CRT on),
+from the Perf report on game over: Neon Techno on normal, 1540 frames at 59.9 fps, frame
+work 1.0 ms mean, 1.9 ms p95, 2.5 ms p99 and 33.5 ms at most.
+
 The "Perf check" workflow's first run (2026-11-11, commit `3c11c14`, 4x, 30 s a song) on a
 GitHub runner with nothing else on it came close: the 95th percentile ran from 5.9 ms
 (Chica-pop!) to 9.6 ms (The_Epic_Chip), and the mean from 1.8 to 3.8 ms. Three songs were
@@ -1950,6 +1954,9 @@ needs no approval. Player-facing release notes wait until the finished game is p
   together, and becomes an entry in `CHANGELOG.md`. A milestone is finished when the
   acceptance checks the agent can run pass; it doesn't wait for Brad's play-test, and what
   the play-test finds becomes new roadmap items (Brad, 2026-11-09).
+- **A test that needs a person or real hardware** goes in `PLAYTEST.md`, with why it's
+  needed and what to look for; Brad runs them as time allows, and what one finds becomes a
+  roadmap item (Brad, 2026-11-11). Remove a test once it's reported.
 - **A new roadmap item** gets an "At a glance" row (one plain sentence and a stage) and, once
   planned, its own section with tasks, acceptance checks, and a **Docs:** line naming the
   files the work will change.
