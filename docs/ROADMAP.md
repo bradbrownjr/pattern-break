@@ -11,7 +11,7 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 
 | Item | What it delivers | Stage |
 |---|---|---|
-| [M6: mobile and polish](#m6-mobile-and-polish) | Name entry without a keyboard, phone performance, difficulty targets. | Next |
+| [M6: mobile and polish](#m6-mobile-and-polish) | Phone performance and difficulty targets. | Next |
 | [Boss patterns](#later) | A mini boss at the end of level 4 and the final boss at the end of level 8, from the song's patterns. | Later |
 | [Per-song enemy overrides](#later) | A sidecar file that changes which instrument spawns which enemy for one song. | Later |
 | [Amiga PAL mode](#later) | An optional 320x256 display mode. | Later |
@@ -35,8 +35,6 @@ Decided 2026-11-10: desktop and phone count equally; a change is done when it is
 both. Difficulty is tuned to measured targets, on the bundled songs plus a few varied
 public-domain or CC0 test songs kept in test fixtures, never bundled.
 
-- [ ] **Name entry without a keyboard:** a gamepad cycles each character with up and
-      down and moves with left and right; a touch on a field opens the phone's keyboard.
 - [ ] **Performance:** an on-screen frame-time readout; a measured pass under Chrome's 4x
       and 6x CPU throttling, fixing what stands out; then Brad's phone.
 - [ ] **Difficulty targets:** per difficulty, set and test enemies a minute, bullets on
@@ -46,14 +44,12 @@ public-domain or CC0 test songs kept in test fixtures, never bundled.
 
 **Acceptance:**
 
-- A gamepad alone and a touch screen alone can each set a name (model tests, and a browser
-  test for the touch path).
 - Under 4x CPU throttling in headless Chromium, the sim and renderer work of a frame
   stays under 8 ms at the 95th percentile on the busiest bundled level.
 - Every bundled and test song meets its difficulty's targets on every difficulty.
 
-**Docs:** `PLAN.md` "Level generation"; `DEVELOPMENT.md` "Performance", "Leaderboards in
-the game"; `SONG-DIGEST.md` for the test songs.
+**Docs:** `PLAN.md` "Level generation"; `DEVELOPMENT.md` "Performance"; `SONG-DIGEST.md`
+for the test songs.
 
 ---
 

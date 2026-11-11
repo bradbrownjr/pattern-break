@@ -76,7 +76,8 @@ import {
   type TitleEvent,
 } from './menu.ts';
 import { Leaderboards, outcomeLine, type Outcome } from './net.ts';
-import { ProfileForm, ProfileScreen, saveError } from './profile.ts';
+import { FIELD_MAX, ProfileForm, ProfileScreen, saveError, type PadEdit } from './profile.ts';
+import { TouchTextEntry } from './touch-text.ts';
 import { ScoresMenu, ScoresScreen, type BoardChoice } from './scores.ts';
 import { KeysScreen } from './keys-screen.ts';
 import type { PerfMeter } from './perf.ts';
@@ -377,6 +378,8 @@ export class Game {
   #scoresRequest = 0;
   readonly #profileScreen = new ProfileScreen();
   #profileForm: ProfileForm | null = null;
+  /** The hidden input that opens a phone's keyboard on the name entry. */
+  #touchText: TouchTextEntry | null = null;
   /** The screen the name entry returns to. */
   #profileFrom: 'scores' | 'gameover' | 'complete' = 'scores';
   /** The arcade run's cleared levels' replays, sent with the run when it ends. */
@@ -429,10 +432,10 @@ export class Game {
     // HTML spec's activation-triggering input events: pointerdown only for a mouse,
     // pointerup for anything else).
     window.addEventListener('pointerdown', (e) => {
-      if (e.pointerType === 'mouse') this.#onPointer();
+      if (e.pointerType === 'mouse') this.#onPointer(false);
     });
     window.addEventListener('pointerup', (e) => {
-      if (e.pointerType !== 'mouse') this.#onPointer();
+      if (e.pointerType !== 'mouse') this.#onPointer(true);
     });
     // On the Sync screen a click or touch counts on its press, before the touch controls take it.
     window.addEventListener(
@@ -442,7 +445,11 @@ export class Game {
       },
       { capture: true },
     );
-    this.#touch = new TouchControls(document.body, this.#r.renderer.canvas as HTMLCanvasElement, () => this.#onPointer());
+    this.#touch = new TouchControls(document.body, this.#r.renderer.canvas as HTMLCanvasElement, () => this.#onPointer(true));
+    this.#touchText = new TouchTextEntry(document.body);
+    this.#touchText.onChange = (text) => {
+      if (this.#mode === 'profile') this.#profileForm?.replace(text);
+    };
     this.#touch.setStartScreen(this.#mode === 'start');
     window.addEventListener('blur', () => {
       this.#input.clear();
@@ -563,6 +570,17 @@ export class Game {
     if (this.#capture) {
       e.preventDefault();
       if (!e.repeat) this.#captureKey(e.code);
+      return;
+    }
+    // The phone's keyboard types into its input, which tells the form (#touchText.onChange);
+    // only Enter and Esc act here.
+    if (this.#touchText?.owns(e)) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (!e.repeat) this.#onMenu('confirm');
+      } else if (e.key === 'Escape') {
+        this.#onMenu('back');
+      }
       return;
     }
     // Game keys don't scroll the page or start the browser's find-as-you-type.
@@ -717,10 +735,15 @@ export class Game {
       case 'keys':
       case 'help':
       case 'credits':
-      case 'scores':
-      case 'profile': {
+      case 'scores': {
         const action = padMenuAction(bit);
         if (action) this.#onMenu(action);
+        return;
+      }
+      case 'profile': {
+        const edit: PadEdit | null = bit === PadBit.y ? 'erase' : padMenuAction(bit);
+        const form = this.#profileForm;
+        if (edit && form) this.#onProfileEvent(form.applyPad(edit));
         return;
       }
       case 'play':
@@ -749,8 +772,10 @@ export class Game {
     }
   }
 
-  #onPointer(): void {
+  /** A click, or a touch (`touch`) on its lift. */
+  #onPointer(touch: boolean): void {
     if (this.#capture) this.#endCapture();
+    else if (this.#mode === 'profile' && touch && this.#profileForm?.field) this.#openTouchText();
     // A click or touch while the clicks play counted on its pointerdown (start()).
     else if (this.#mode === 'sync') {
       if (this.#sync?.result !== undefined) this.#syncKey('Enter');
@@ -1113,10 +1138,20 @@ export class Game {
 
   #onProfileMenu(action: MenuAction): void {
     const form = this.#profileForm;
+    if (form) this.#onProfileEvent(form.apply(action));
+  }
+
+  /** What a key, a click or a pad did on the name entry. */
+  #onProfileEvent(event: ReturnType<ProfileForm['applyPad']>): void {
+    const form = this.#profileForm;
     if (!form) return;
-    switch (form.apply(action)) {
+    switch (event) {
       case 'moved':
         this.#sound('move');
+        this.#followTouchText();
+        break;
+      case 'changed':
+        this.#sound('change');
         break;
       case 'back':
         this.#sound('back');
@@ -1150,9 +1185,28 @@ export class Game {
   }
 
   /** Back from the name entry; once saved, runs held for a name are sent. */
+  /** Opens the phone's keyboard on the field under the cursor. Call it from a touch's handler. */
+  #openTouchText(): void {
+    const form = this.#profileForm;
+    const field = form?.field;
+    if (!form || !field) return;
+    this.#touchText?.open(form[field], FIELD_MAX[field], field === 'link');
+  }
+
+  /** The keyboard follows the cursor to the next field, and goes away on Save. */
+  #followTouchText(): void {
+    const text = this.#touchText;
+    const form = this.#profileForm;
+    if (!text?.isOpen || !form) return;
+    const field = form.field;
+    if (field) text.set(form[field], FIELD_MAX[field], field === 'link');
+    else text.close();
+  }
+
   #leaveProfile(saved: boolean): void {
     const from = this.#profileFrom;
     this.#profileForm = null;
+    this.#touchText?.close();
     if (from === 'scores') {
       this.#setMode('scores');
       if (saved) void this.#boards?.flush().then(() => this.#loadBoard());
@@ -2486,7 +2540,7 @@ export class Game {
         break;
       }
       case 'profile': {
-        if (this.#profileForm) this.#profileScreen.update(this.#profileForm, blink);
+        if (this.#profileForm) this.#profileScreen.update(this.#profileForm, blink, this.#lastPressPad);
         r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
         break;
       }

@@ -92,6 +92,7 @@ pattern-break/
 │   │   ├── src/game/net.ts        # the leaderboard client: device key, signed requests, the queue
 │   │   ├── src/game/scores.ts     # the Scores screen
 │   │   ├── src/game/profile.ts    # the name entry
+│   │   ├── src/game/touch-text.ts # the hidden input that opens a phone's keyboard there
 │   │   ├── public/icons/          # app icons, drawn by tools/make-icons.ts
 │   │   ├── audio-debug.html       # dev-server page that plays the fixture and shows the clock
 │   │   └── vitest.config.ts       # the node and browser test projects
@@ -1528,10 +1529,26 @@ boards.
   the levels an arcade run reached when it ended in a game over ("L6", empty otherwise, so
   the scores stay aligned), score. A name with a link shows "*"; Enter on it opens the
   link in a new tab. Enter on Name opens the name entry.
-- **The name entry** has Name, Link and Save. It takes typing and pasting only: a pad or a
-  touch screen can't enter text yet (M6). The form checks the name with the server's rule
-  before sending; the server's answers show as "Name taken", "Bad name", "Bad link",
-  "Offline".
+- **The name entry** has Name, Link and Save. The form checks the name with the server's
+  rule before sending, after trimming spaces from its ends; the server's answers show as
+  "Name taken", "Bad name", "Bad link", "Offline". Three ways to fill it:
+  - **Keyboard:** typing and pasting add to the field's end, Backspace erases, up and down
+    move between rows.
+  - **Gamepad** (`ProfileForm.applyPad`): in a field, up and down cycle the character
+    under the cursor through `PAD_CHARS` (A to Z first, then a to z, digits, a space and
+    the rest of printable ASCII), left and right move the cursor, and Y erases. One past
+    the end, up adds an A. A moves to the next row; on Save, up and down move between rows.
+    The hint under the form shows the pad's buttons when the last press was a pad's.
+  - **Touch** (`TouchTextEntry`): a page can only open a phone's keyboard by focusing a text
+    field inside a touch's own event handler, so the touch's pointerup focuses a hidden
+    input on the field under the cursor. The form takes the input's whole text on every
+    `input` event (`ProfileForm.replace`), since a phone keyboard's key events often carry
+    no key. Enter on the keyboard moves to the next field and the input follows; on Save
+    it closes, and a touch saves. The touch's compatibility `mousedown` would move focus
+    off the input straight away, so a capture listener cancels it while the input is open.
+    `#onKeyDown` lets keys from the input through untouched, except Enter and Esc.
+  - Tests: `scores.test.ts` sets a name with pad edits alone; `browser/touch-text.test.ts`
+    focuses the input from a touch's pointerup and types into it in all three engines.
 
 `net.test.ts` runs `Leaderboards` against the real server in Node, through Fastify's
 `inject`: Node's Web Crypto signs with Ed25519 as the browsers do.

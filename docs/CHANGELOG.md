@@ -13,6 +13,13 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **M6: name entry by gamepad and touch.** A gamepad sets a name the arcade way: up and
+  down cycle the letter under the cursor, capitals first, left and right move, Y erases,
+  and the hint shows the pad's buttons. On a phone, a touch on the name entry opens the
+  phone's keyboard, Enter moves to the next field, and a touch on Save saves. Spaces at a
+  name's ends are trimmed before saving, as the server wants none. Tested with pad edits
+  alone in Node, typing into the touch input in Chromium, Firefox and WebKit, and a touch
+  run end to end against a local server.
 * **M6: a Sync screen for the audio offset.** Under Settings, clicks play every half
   second and the player presses on each; the median gap over 16 presses, after 4 warm-up
   presses and any slips over 100 ms, becomes the offset, so the walls and the presses line
