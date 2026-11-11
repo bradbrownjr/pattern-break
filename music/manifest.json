@@ -7,7 +7,8 @@
     "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=172424",
     "license": "Public Domain",
     "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
-    "sha256": "7cd184c5f9c6962c3d37df0b3e94709695c824a4ea17ed8b195d2fe3b9231882"
+    "sha256": "7cd184c5f9c6962c3d37df0b3e94709695c824a4ea17ed8b195d2fe3b9231882",
+    "seconds": 228
   },
   {
     "file": "neon_techno.mod",
@@ -17,7 +18,8 @@
     "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=178172",
     "license": "Public Domain",
     "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
-    "sha256": "65113989b86c165a5087106d7b40c55255a4e7c2a7b109755f678f7e1d47c142"
+    "sha256": "65113989b86c165a5087106d7b40c55255a4e7c2a7b109755f678f7e1d47c142",
+    "seconds": 212.28
   },
   {
     "file": "rndd_keygen_1.xm",
@@ -27,7 +29,8 @@
     "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=172896",
     "license": "Public Domain",
     "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
-    "sha256": "166e785aedc765077c81e874cbed8e7951cdd73c8fffacca2f01ab0bc8eae98a"
+    "sha256": "166e785aedc765077c81e874cbed8e7951cdd73c8fffacca2f01ab0bc8eae98a",
+    "seconds": 70.08
   },
   {
     "file": "chip_overture.xm",
@@ -37,7 +40,8 @@
     "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=172185",
     "license": "Public Domain",
     "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
-    "sha256": "060dfb9143611e48d45a0a26960d147fac669fbce5cba2d890c0d367b798068d"
+    "sha256": "060dfb9143611e48d45a0a26960d147fac669fbce5cba2d890c0d367b798068d",
+    "seconds": 135
   },
   {
     "file": "the_dim_dungeon.xm",
@@ -47,7 +51,8 @@
     "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=172732",
     "license": "Public Domain",
     "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
-    "sha256": "7cb0dc8247341bc731d4462c89cf8c5437d0c183d3f40baa1225c84a083095af"
+    "sha256": "7cb0dc8247341bc731d4462c89cf8c5437d0c183d3f40baa1225c84a083095af",
+    "seconds": 101.333
   },
   {
     "file": "4_rndd.xm",
@@ -57,7 +62,8 @@
     "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=172898",
     "license": "Public Domain",
     "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
-    "sha256": "f2f69f75c140c9c3c86c85a6be8318ed8185372669d645132d8885567ae99310"
+    "sha256": "f2f69f75c140c9c3c86c85a6be8318ed8185372669d645132d8885567ae99310",
+    "seconds": 121.68
   },
   {
     "file": "girl_from_mars.xm",
@@ -67,7 +73,8 @@
     "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=173935",
     "license": "Public Domain",
     "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
-    "sha256": "3378aa34ddfbf7ee19003ca337f7711f28d16938bf734565026cb0bb7b61756c"
+    "sha256": "3378aa34ddfbf7ee19003ca337f7711f28d16938bf734565026cb0bb7b61756c",
+    "seconds": 111.626
   },
   {
     "file": "wrath_of_the_djinn.xm",
@@ -77,7 +84,8 @@
     "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=173080",
     "license": "Public Domain",
     "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
-    "sha256": "d79d2158d7e8217cbf489d0e53243c7dd79f3f921cce76416ffd12cba1e26ced"
+    "sha256": "d79d2158d7e8217cbf489d0e53243c7dd79f3f921cce76416ffd12cba1e26ced",
+    "seconds": 112
   },
   {
     "file": "keygen_9000.xm",
@@ -87,7 +95,8 @@
     "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=173938",
     "license": "Public Domain",
     "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
-    "sha256": "ebf28394b14fe4fece4a5ff174ab57c5388f48e3a6ebcf3fecb701f13c829027"
+    "sha256": "ebf28394b14fe4fece4a5ff174ab57c5388f48e3a6ebcf3fecb701f13c829027",
+    "seconds": 200
   },
   {
     "file": "crush.xm",
@@ -97,7 +106,8 @@
     "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=179581",
     "license": "Public Domain",
     "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
-    "sha256": "ca14c44d3e70030b31aef0354ad13dccda46402d7d0ccdf928b2aaf06af8eb14"
+    "sha256": "ca14c44d3e70030b31aef0354ad13dccda46402d7d0ccdf928b2aaf06af8eb14",
+    "seconds": 124.719
   },
   {
     "file": "augmented_emotions.xm",
@@ -107,7 +117,8 @@
     "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=172184",
     "license": "Public Domain",
     "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
-    "sha256": "bda329f17eedb42d6d639797de9f95bfbe5ae9bc0ed927459ef4b00a83e579b2"
+    "sha256": "bda329f17eedb42d6d639797de9f95bfbe5ae9bc0ed927459ef4b00a83e579b2",
+    "seconds": 225
   },
   {
     "file": "the_dim_dungeon_2.xm",
@@ -117,7 +128,8 @@
     "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=172897",
     "license": "Public Domain",
     "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
-    "sha256": "eab71260ba67fe38188f8a7b80e7e4f05fb2e804e8b5a50529ee8940ec1305cb"
+    "sha256": "eab71260ba67fe38188f8a7b80e7e4f05fb2e804e8b5a50529ee8940ec1305cb",
+    "seconds": 135.64
   },
   {
     "file": "cabin_fever.xm",
@@ -127,7 +139,8 @@
     "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=174833",
     "license": "Public Domain",
     "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
-    "sha256": "d7f6ca27ec83dd2e5e605f4686d7415125b9a8087cd1453ef4d374127e27dfe5"
+    "sha256": "d7f6ca27ec83dd2e5e605f4686d7415125b9a8087cd1453ef4d374127e27dfe5",
+    "seconds": 119.59
   },
   {
     "file": "chica_pop.xm",
@@ -137,7 +150,8 @@
     "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=189433",
     "license": "Public Domain",
     "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
-    "sha256": "25649d63a343686dd4aa129f0cdbc8c28323e366b7c48ab421ece9b5cec6c9b6"
+    "sha256": "25649d63a343686dd4aa129f0cdbc8c28323e366b7c48ab421ece9b5cec6c9b6",
+    "seconds": 182.784
   },
   {
     "file": "peachy_chip.xm",
@@ -147,7 +161,8 @@
     "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=191437",
     "license": "Public Domain",
     "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
-    "sha256": "31ea4ac6380ad3571522153f05785a0dab7d8bb3e9ff13d00a266cbe67ef964d"
+    "sha256": "31ea4ac6380ad3571522153f05785a0dab7d8bb3e9ff13d00a266cbe67ef964d",
+    "seconds": 132.435
   },
   {
     "file": "sleepy_snow.xm",
@@ -157,6 +172,7 @@
     "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=196372",
     "license": "Public Domain",
     "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
-    "sha256": "d1908346216549f72ba84bb7b78be51da6e10718ce9ec3bb171bd6c9a156693e"
+    "sha256": "d1908346216549f72ba84bb7b78be51da6e10718ce9ec3bb171bd6c9a156693e",
+    "seconds": 87.03
   }
 ]

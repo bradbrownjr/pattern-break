@@ -26,6 +26,11 @@ export interface BundledSong {
   sha256: string | null;
   /** Imported by the player (library.ts) rather than bundled; `url` is then an object URL. */
   imported: boolean;
+  /**
+   * The song's length in seconds, shown in the jukebox, or null until it's known. Bundled
+   * songs have it in the manifest (checked against libopenmpt by tools/validate-manifest.ts).
+   */
+  seconds: number | null;
 }
 
 const urls = import.meta.glob<string>('../../../../music/*.{mod,xm,s3m,it,mptm}', {
@@ -47,6 +52,7 @@ export const SONGS: readonly BundledSong[] = manifest.map((entry) => {
     sourceUrl: entry.sourceUrl,
     sha256: entry.sha256,
     imported: false,
+    seconds: entry.seconds,
   };
 });
 
@@ -94,6 +100,7 @@ export const TEST_SONG: BundledSong = {
   sourceUrl: null,
   sha256: null,
   imported: false,
+  seconds: null,
 };
 
 /**
@@ -133,6 +140,7 @@ export function importedSong(stored: StoredSong): BundledSong {
     sourceUrl: null,
     sha256: stored.sha256,
     imported: true,
+    seconds: stored.seconds ?? null,
   };
 }
 

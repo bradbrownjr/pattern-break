@@ -307,7 +307,10 @@ every bar of every generated level.
 
 ## 9. Bundled music (`/music`)
 
-- `manifest.json` entries: `{ file, title, author, authorUrl, sourceUrl, license, licenseUrl, sha256 }`.
+- `manifest.json` entries: `{ file, title, author, authorUrl, sourceUrl, license, licenseUrl, sha256, seconds }`.
+  `seconds` is the song's length for the jukebox, libopenmpt's `get_duration_seconds` to the
+  millisecond; `pnpm check:music` checks it. It equals the rendered length on every bundled
+  song (measured 2026-11-11).
 - **License allowlist: Public Domain, CC0, CC BY.** Exclude NC and ND. Flag **CC BY-SA for
   manual review** instead of accepting it automatically: the CC 3.0 and 4.0 licenses treat
   syncing music to moving images as creating an adaptation, and ShareAlike would then apply
@@ -386,8 +389,8 @@ every bar of every generated level.
   Keygen 9000 last), each opening with a card that credits its song. Levels plays any one
   song. A mini boss ends level 4 and the final boss ends level 8 (see "Level generation").
 - Game over plays the sparse opening of Keygen 9000 and fades out.
-- Jukebox: plays the bundled songs, with an LED spectrum and each song's title, author and
-  license.
+- Jukebox: plays the bundled songs and imported ones, with an LED spectrum and each song's
+  title, length and author (lengths since 2026-11-11). Licenses are on the Credits screen.
 - Library: bundled songs plus imported ones, managed in the Jukebox (Brad, 2026-11-10):
   Import (file picker or drag and drop; left and right choose File or Folder, the file
   picker's folder mode, in every current browser), and Del to remove. Imported files are stored in IndexedDB

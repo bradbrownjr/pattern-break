@@ -13,6 +13,10 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **Song lengths in the jukebox.** Each song's row shows its length between the title and
+  the author, as Brad asked. Bundled songs' lengths are in the music manifest, checked
+  against libopenmpt by `pnpm check:music`; an imported song's is measured when it's
+  imported, or the first time it plays for one imported earlier.
 * **Every weapon stops on the walls, peak dots are gone, and the autopilot plays like a
   person.** Brad didn't like the peak dots and wanted shots to hit walls. Shots, double
   shots, drone shots and the laser now stop on the LED walls, and a missile bursts on them,

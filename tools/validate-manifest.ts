@@ -2,11 +2,13 @@
 // and their credits (docs/PLAN.md, "Bundled music"), and the test songs' manifest in
 // packages/analysis/fixtures/test-songs the same way. Fails when a song file isn't listed, a
 // listed file is missing, a hash doesn't match, a field is empty, or a license isn't on the
-// allowlist. CC BY-SA fails until the entry records who reviewed it and when.
+// allowlist. CC BY-SA fails until the entry records who reviewed it and when. A bundled song's
+// "seconds", its length for the jukebox, must match libopenmpt's to the millisecond.
 // Usage: node tools/validate-manifest.ts
 
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
+import { loadOpenMpt } from '../packages/analysis/src/index.ts';
 
 const MUSIC = new URL('../music/', import.meta.url);
 const TEST_SONGS = new URL('../packages/analysis/fixtures/test-songs/', import.meta.url);
@@ -16,9 +18,13 @@ const ALLOWED = /^(?:Public Domain|CC0(?: 1\.0)?|CC BY(?: [1-4]\.0)?)$/;
 const NEEDS_REVIEW = /^CC BY-SA(?: [1-4]\.0)?$/;
 
 const errors: string[] = [];
+const openmpt = await loadOpenMpt();
 
-/** Checks `manifest.json` in `folder` (shown as `label`) and returns the files it lists. */
-function checkFolder(folder: URL, label: string): Set<string> {
+/**
+ * Checks `manifest.json` in `folder` (shown as `label`) and returns the files it lists. With
+ * `lengths`, each entry also needs its song's length in seconds.
+ */
+function checkFolder(folder: URL, label: string, lengths: boolean): Set<string> {
   const listed = new Set<string>();
   const manifest: unknown = JSON.parse(readFileSync(new URL('manifest.json', folder), 'utf8'));
   if (!Array.isArray(manifest)) {
@@ -57,6 +63,12 @@ function checkFolder(folder: URL, label: string): Set<string> {
     }
     const hash = createHash('sha256').update(bytes).digest('hex');
     if (hash !== entry['sha256']) fail(`sha256 is ${hash}, the manifest says ${String(entry['sha256'])}`);
+    if (lengths) {
+      const mod = openmpt.load(new Uint8Array(bytes));
+      const seconds = Math.round(mod.durationSeconds() * 1000) / 1000;
+      mod.destroy();
+      if (entry['seconds'] !== seconds) fail(`"seconds" must be ${seconds}, libopenmpt's length; the manifest says ${String(entry['seconds'])}`);
+    }
   }
   for (const file of readdirSync(folder)) {
     if (SONG_FILE.test(file) && !listed.has(file)) errors.push(`${label}${file}: not in manifest.json`);
@@ -64,8 +76,8 @@ function checkFolder(folder: URL, label: string): Set<string> {
   return listed;
 }
 
-const listed = checkFolder(MUSIC, 'music/');
-const tests = checkFolder(TEST_SONGS, 'packages/analysis/fixtures/test-songs/');
+const listed = checkFolder(MUSIC, 'music/', true);
+const tests = checkFolder(TEST_SONGS, 'packages/analysis/fixtures/test-songs/', false);
 
 // music/arcade.json names the arcade run's songs by file name without the extension.
 const arcade: unknown = JSON.parse(readFileSync(new URL('arcade.json', MUSIC), 'utf8'));
@@ -80,4 +92,4 @@ if (errors.length > 0) {
   for (const e of errors) console.error(e);
   process.exit(1);
 }
-console.log(`${listed.size} bundled songs and ${tests.size} test songs, all listed, hashed and licensed`);
+console.log(`${listed.size} bundled songs and ${tests.size} test songs, all listed, hashed and licensed, lengths checked`);

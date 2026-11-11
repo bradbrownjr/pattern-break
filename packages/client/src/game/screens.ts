@@ -6,7 +6,7 @@ import { Container, Sprite, Texture } from 'pixi.js';
 import { BRAND } from '../config/brand.ts';
 import { AMBER, BACKGROUND, CYAN, DIM_GREY, GREY, LED_DIM, LED_LIT, LIME, MAGENTA, WHITE } from '../render/palette.ts';
 import { PixelText } from '../render/text.ts';
-import { textWidth } from '../render/font.ts';
+import { GLYPH_ADVANCE, textWidth } from '../render/font.ts';
 import { DIFFICULTY_LABELS, PAUSE_ITEMS, SETTINGS_ITEMS, TITLE_ITEMS, type PauseItem, type SettingsItem, type TitleItem } from './menu.ts';
 import { VOLUME_LEVELS, type Settings } from './settings.ts';
 import type { BundledSong } from './songs.ts';
@@ -240,6 +240,14 @@ export function jukeboxTop(top: number, cursor: number, rows: number): number {
 }
 
 const SCROLL_BAR_X = LIST_RIGHT + 6;
+/**
+ * A row is the title, the length right-aligned in a column, and the author at the right
+ * edge (Brad, 2026-11-11). Authors keep 9 characters and titles 18, the longest bundled
+ * ones; an imported song's longer title or author is cut to fit.
+ */
+const AUTHOR_CHARS = 9;
+const TITLE_CHARS = 18;
+const TIME_RIGHT = LIST_RIGHT - AUTHOR_CHARS * GLYPH_ADVANCE - GLYPH_ADVANCE;
 
 /** Where the list's last row ends and the spectrum starts, for tests. */
 export const JUKEBOX_LIMITS = { spectrumTop: SPECTRUM_TOP, textHeight: TEXT_HEIGHT };
@@ -259,6 +267,7 @@ export class JukeboxScreen {
   #marker = new PixelText('>', AMBER);
   /** One title and one right-hand text per visible row, filled from `#top`. */
   #titles: PixelText[] = [];
+  #times: PixelText[] = [];
   #rights: PixelText[] = [];
   #track = new Sprite(Texture.WHITE);
   #thumb = new Sprite(Texture.WHITE);
@@ -278,10 +287,12 @@ export class JukeboxScreen {
     this.container.addChild(shadow, heading, this.#marker);
     for (let i = 0; i < JUKEBOX_VISIBLE_ROWS; i++) {
       const title = new PixelText('');
+      const time = new PixelText('', DIM_GREY);
       const right = new PixelText('', DIM_GREY);
       this.#titles.push(title);
+      this.#times.push(time);
       this.#rights.push(right);
-      this.container.addChild(title, right);
+      this.container.addChild(title, time, right);
     }
     this.#track.tint = DIM_GREY;
     this.#track.alpha = 0.4;
@@ -321,14 +332,21 @@ export class JukeboxScreen {
     return this.#top;
   }
 
-  #label(i: number, view: JukeboxView): { title: string; right: string; song: BundledSong | null } {
+  #label(i: number, view: JukeboxView): { title: string; time: string; right: string; song: BundledSong | null } {
     const song = this.#songs[i];
-    if (song) return { title: song.title, right: song.author, song };
-    if (i > this.#songs.length) return { title: 'Back', right: '', song: null };
-    if (!this.#folder) return { title: 'Import', right: '', song: null };
+    if (song) {
+      return {
+        title: song.title.slice(0, TITLE_CHARS),
+        time: song.seconds === null ? '' : clockText(song.seconds),
+        right: song.author.slice(0, AUTHOR_CHARS),
+        song,
+      };
+    }
+    if (i > this.#songs.length) return { title: 'Back', time: '', right: '', song: null };
+    if (!this.#folder) return { title: 'Import', time: '', right: '', song: null };
     // "< File >" on the selected row, like the title screen's choices: left and right change it.
     const value = view.importFolder ? 'Folder' : 'File';
-    return { title: 'Import', right: i === view.cursor ? `< ${value} >` : `${value}  `, song: null };
+    return { title: 'Import', time: '', right: i === view.cursor ? `< ${value} >` : `${value}  `, song: null };
   }
 
   update(view: JukeboxView): void {
@@ -351,9 +369,10 @@ export class JukeboxScreen {
     this.#top = jukeboxTop(this.#top, view.cursor, rows);
     for (let slot = 0; slot < JUKEBOX_VISIBLE_ROWS; slot++) {
       const title = this.#titles[slot]!;
+      const time = this.#times[slot]!;
       const right = this.#rights[slot]!;
       const i = this.#top + slot;
-      title.visible = right.visible = slot < visible;
+      title.visible = time.visible = right.visible = slot < visible;
       if (slot >= visible) continue;
       const y = jukeboxRowY(slot, visible);
       const row = this.#label(i, view);
@@ -362,6 +381,9 @@ export class JukeboxScreen {
       title.color = i === view.playing ? LIME : onCursor ? AMBER : GREY;
       title.place(LIST_LEFT, y);
       const hint = onCursor && row.song?.imported ? view.removeHint : '';
+      // The remove hint is wider than an author, so the length gives way to it.
+      time.text = hint ? '' : row.time;
+      time.place(TIME_RIGHT, y, 'right');
       right.text = hint || row.right;
       right.color = hint ? (view.removeArmed ? MAGENTA : AMBER) : onCursor && !row.song && row.right ? AMBER : DIM_GREY;
       right.place(LIST_RIGHT, y, 'right');

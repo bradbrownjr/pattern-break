@@ -28,6 +28,8 @@ export interface StoredSong {
   bytes: ArrayBuffer;
   /** When it was imported, in ms since the epoch. */
   added: number;
+  /** Its length in seconds; songs imported before 2026-11-11 learn it the first time they play. */
+  seconds?: number;
 }
 
 export interface CachedLevel {

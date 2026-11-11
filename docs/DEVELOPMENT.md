@@ -1269,7 +1269,10 @@ Run `pnpm dev` and open the URL it prints.
 - **Jukebox:** the bundled songs, then the imported ones, then Import and Back. Where the
   browser's file picker can pick a folder (`webkitdirectory`, Baseline since August 2025
   per MDN), left and right on Import choose "< File >" or "< Folder >" (Brad, 2026-11-10:
-  one row, not two). Under the list is a 24-bar spectrum of what is playing, and under
+  one row, not two). Each song's row has its title, its length (m:ss) in a column, and its
+  author at the right edge (Brad, 2026-11-11). A title keeps 18 characters and an author 9,
+  the longest bundled ones; an imported song's longer ones are cut, and on an imported
+  song under the cursor the remove hint takes the length's place. Under the list is a 24-bar spectrum of what is playing, and under
   that the song's title, credit and time. Enter plays the song under the cursor or stops
   it if it is playing, a song that ends hands over to the next, and Esc or Back returns to
   the title, where the title music starts again. The list shows 11 rows at 10 px
@@ -1351,7 +1354,8 @@ The part each song plays is set in `songs.ts`, not the manifest:
 song file in `music/` has no entry or an entry has no file, a SHA-256 doesn't match, a
 credit field is empty or a link isn't https, or a license is off the allowlist (Public
 Domain, CC0, CC BY). A CC BY-SA entry fails until it has a `"reviewed"` field saying who
-reviewed it and when.
+reviewed it and when. A bundled song's `"seconds"` must equal libopenmpt's length,
+rounded to the millisecond; the test songs need none.
 
 The sixteen songs so far, all by Drozerix (Brad, 2026-11-10: JAM's songs sound out of place
 beside Drozerix's), each marked Public Domain on its Mod Archive page, with the file's MD5
@@ -1397,7 +1401,9 @@ through `idb` 8.0.4, in the database `pattern-break` (version 1):
   screen's two levels took 13 s to appear on the first load and 3 s after a reload, with no
   analysis worker started.
 - **`songs`**: imported song files, keyed by SHA-256, with the file name, title, artist,
-  bytes and import time (see "Importing songs" under "Menus and the jukebox"). Deleting a
+  bytes, import time and length in seconds. The length is the analysis's `totalSamples`
+  at tempo 1000, unless analysis stopped at its cap; a song without one (imported before
+  2026-11-11, or capped) gets libopenmpt's length the first time it plays, and it is saved (see "Importing songs" under "Menus and the jukebox"). Deleting a
   song deletes its cached levels. At start the game adds the stored songs after the
   bundled ones, with an object URL for each so they load like bundled songs.
 

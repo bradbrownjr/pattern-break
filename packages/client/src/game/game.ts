@@ -1741,6 +1741,22 @@ export class Game {
     this.#loaded = song;
     this.#loadedTempo = tempoPermille;
     this.#loadedSeconds = loaded.durationSeconds;
+    if (song.seconds === null && tempoPermille === 1000) this.#learnLength(song, loaded.durationSeconds);
+  }
+
+  /**
+   * Records the length of a song imported before lengths were kept, once it has played, for
+   * the jukebox's list and the library.
+   */
+  #learnLength(song: BundledSong, seconds: number): void {
+    song.seconds = Math.round(seconds * 1000) / 1000;
+    this.#jukebox.setSongs(this.#songs);
+    const hash = song.sha256;
+    if (!song.imported || !hash) return;
+    void this.#library.then(async (library) => {
+      const stored = await library?.song(hash);
+      if (library && stored) await library.putSong({ ...stored, seconds: song.seconds! });
+    }).catch((err: unknown) => console.warn('song length not saved:', err));
   }
 
   /**
@@ -1942,7 +1958,8 @@ export class Game {
           bad++;
           continue;
         }
-        const meta = deserializeLevelData(serialized).meta;
+        const data = deserializeLevelData(serialized);
+        const meta = data.meta;
         const stored: StoredSong = {
           sha256: hash,
           fileName: file.name,
@@ -1950,6 +1967,9 @@ export class Game {
           artist: meta.artist.trim(),
           bytes: bytes.buffer as ArrayBuffer,
           added: Date.now(),
+          // Analyzed as written (tempo 1000), so this is its length as the jukebox plays it,
+          // unless analysis stopped at its cap; then it's learned on the first play.
+          ...(data.hitDurationCap ? {} : { seconds: Math.round((data.totalSamples / SAMPLE_RATE) * 1000) / 1000 }),
         };
         if (library) {
           try {
