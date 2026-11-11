@@ -1,0 +1,32 @@
+name: Perf check
+
+# M6's performance check (tools/perf-check.ts) on a runner with nothing else on it, started
+# by hand from the Actions tab: every bundled level on Hard, flown by the autopilot under
+# Chrome's CPU throttling. Fails when the worst 95th percentile frame is at the limit or over.
+on:
+  workflow_dispatch:
+    inputs:
+      rate:
+        description: CPU slowdown (1 for none)
+        default: '4'
+      seconds:
+        description: Seconds of each level
+        default: '30'
+
+jobs:
+  perf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @game/analysis exec playwright install --with-deps chromium
+      - run: pnpm --filter @game/client build
+      - run: node tools/perf-check.ts --rate "$RATE" --seconds "$LEVEL_SECONDS"
+        env:
+          RATE: ${{ inputs.rate }}
+          LEVEL_SECONDS: ${{ inputs.seconds }}

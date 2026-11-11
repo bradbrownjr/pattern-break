@@ -1753,7 +1753,9 @@ lives (the Konami code), turns on Chrome's CPU throttling once play starts
 (`Emulation.setCPUThrottlingRate`), starts the meter again (`window.__pbPerfReset()`), and
 reads it after `--seconds`. It prints a row per song and exits 1 if the worst 95th percentile
 is `--limit` ms (default 8) or over. `--dist` serves another build, for before and after
-comparisons. A CPU profile of the same run (CDP `Profiler`, on a `vite build --minify false`)
+comparisons. The "Perf check" workflow (`.github/workflows/perf.yml`, started by hand from
+the Actions tab, with the rate and seconds as inputs) runs it on a runner with nothing else
+on it. A CPU profile of the same run (CDP `Profiler`, on a `vite build --minify false`)
 shows where the time goes.
 
 **What Pixi does with visibility** (Pixi 8.22 source, `Container.visible` and
