@@ -13,6 +13,13 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **M6: faster drawing, and a frame-time readout.** The LED walls made the renderer rebuild
+  its whole draw list every frame, as segments came and went; they now scroll as one piece
+  and a column is redrawn only when it takes a new bar. Under 4x CPU throttling, frame work
+  on Neon Techno fell from about 14 ms to 7 ms on average, with the picture unchanged.
+  `?perf=1` now shows frames a second and frame times in the corner, for checking a phone,
+  and `tools/perf-check.ts` measures every bundled level under throttling. Brad's phone, a
+  Galaxy S25, is the target; the 8 ms goal under 4x throttling isn't met yet.
 * **M6: name entry by gamepad and touch.** A gamepad sets a name the arcade way: up and
   down cycle the letter under the cursor, capitals first, left and right move, Y erases,
   and the hint shows the pad's buttons. On a phone, a touch on the name entry opens the

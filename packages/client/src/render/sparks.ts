@@ -21,7 +21,10 @@ const SPEED_MAX = 115;
 const SPREAD = 1.1;
 
 export class TipSparks {
-  readonly container = new Container();
+  // A render group of its own: its sprites come and go every frame, and a visibility change
+  // rebuilds only this group's draw list, not the whole scene's (docs/DEVELOPMENT.md,
+  // "Performance").
+  readonly container = new Container({ isRenderGroup: true });
   #sparks: Sprite[] = [];
   #level: Level | null = null;
   #look: SongLook | null = null;

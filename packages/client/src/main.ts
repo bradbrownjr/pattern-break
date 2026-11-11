@@ -10,6 +10,8 @@ declare global {
   interface Window {
     /** With `?perf=1`: the per-frame cost summary since the run started. */
     __pbPerf?: () => PerfSummary;
+    /** With `?perf=1`: starts the summary again (tools/perf-check.ts, once throttling is on). */
+    __pbPerfReset?: () => void;
   }
 }
 
@@ -40,7 +42,10 @@ if (capture) {
   });
 } else {
   const perf = query.get('perf') === '1' ? new PerfMeter() : null;
-  if (perf) window.__pbPerf = () => perf.summary();
+  if (perf) {
+    window.__pbPerf = () => perf.summary();
+    window.__pbPerfReset = () => perf.reset();
+  }
   // `?song=<id>` puts that song on the Levels row; the test song is offered only when named.
   const named = query.get('song');
   const song = (named === null ? null : findSong(named)) ?? songById(TITLE_SONG_ID);

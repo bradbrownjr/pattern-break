@@ -89,4 +89,34 @@ describe.skipIf(!hasWebGl)('renderer', () => {
     expect(state.shipX / Q8).toBe(64);
     expect(rgbAt(px, 64 + 4, 108)).toBe(CYAN);
   });
+
+  it('keeps each bar its own height as the terrain scrolls, jumps and goes back', () => {
+    // Bar i has 1 + i % 5 lit ceiling segments, so a column showing the wrong bar shows.
+    const bars = 400;
+    const level = makeLevel({
+      ceiling: Array.from({ length: bars }, (_, i) => 1 + (i % 5)),
+      ceilingPeak: Array.from({ length: bars }, (_, i) => 1 + (i % 5)),
+      floor: Array.from({ length: bars }, () => 1),
+    });
+    r.terrain.setLevel(level);
+    r.world.visible = true;
+    r.starfield.container.visible = false;
+    // Only the terrain: the HUD and the sparks sit over it.
+    const others = [r.combat.container, r.combat.hud, r.ship.container, r.sparks.container];
+    const shown = others.map((c) => c.visible);
+    for (const c of others) c.visible = false;
+    for (const scroll of [0, 3, 10, 2000, 2007, 2017, 300, 0]) {
+      r.terrain.draw(scroll);
+      r.render();
+      const px = readCanvas();
+      const first = Math.ceil(scroll / 10);
+      for (let i = first; i < first + 30; i++) {
+        const x = i * 10 - scroll + 3;
+        const lit = 1 + (i % 5);
+        expect(rgbAt(px, x, 7 * (lit - 1) + 2), `scroll ${scroll}, bar ${i}`).toBe(LED_LIT[lit - 1]);
+        expect(rgbAt(px, x, 7 * lit + 2), `scroll ${scroll}, bar ${i}`).toBe(BACKGROUND);
+      }
+    }
+    others.forEach((c, i) => (c.visible = shown[i]!));
+  });
 });

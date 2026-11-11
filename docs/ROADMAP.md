@@ -36,7 +36,10 @@ both. Difficulty is tuned to measured targets, on the bundled songs plus a few v
 public-domain or CC0 test songs kept in test fixtures, never bundled.
 
 - [ ] **Performance:** an on-screen frame-time readout; a measured pass under Chrome's 4x
-      and 6x CPU throttling, fixing what stands out; then Brad's phone.
+      and 6x CPU throttling, fixing what stands out; then Brad's phone, a Samsung Galaxy
+      S25 (Snapdragon 8 Elite for Galaxy, 6.2 inch 1080 x 2340 display, 1 to 120 Hz
+      adaptive refresh, per the launch spec tables; Brad, 2026-11-10). At 120 Hz a frame
+      has 8.3 ms, so the game has to hold that, not only 60 fps.
 - [ ] **Difficulty targets:** per difficulty, set and test enemies a minute, bullets on
       screen, the narrowest gap, and how far a scripted bot gets, on the 16 bundled songs
       and 4 to 6 varied test songs (licenses checked as for bundled songs, kept in

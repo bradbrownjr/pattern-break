@@ -231,9 +231,15 @@ function placeCentred(sprite: Sprite, x: number, y: number): void {
 }
 
 export class CombatView {
-  readonly container = new Container();
-  /** The lives left, drawn over the playfield in the top left corner. */
-  readonly hud = new Container();
+  // A render group of its own: its sprites come and go every frame, and a visibility change
+  // rebuilds only this group's draw list, not the whole scene's (docs/DEVELOPMENT.md,
+  // "Performance").
+  readonly container = new Container({ isRenderGroup: true });
+  /**
+   * The lives left, drawn over the playfield in the top left corner. Its own render group
+   * too: life icons, the multiplier and popups come and go.
+   */
+  readonly hud = new Container({ isRenderGroup: true });
   #enemies: Sprite[] = [];
   #shots: Sprite[] = [];
   #bullets: Sprite[] = [];

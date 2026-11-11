@@ -34,6 +34,7 @@ import { SongNotes } from '../audio/song-notes.ts';
 import { songLook, type SongLook } from '../render/copper.ts';
 import { FLASH_PEAK } from '../render/flash.ts';
 import { CYAN, LIME, MAGENTA } from '../render/palette.ts';
+import { PixelText } from '../render/text.ts';
 import { seededRandom } from '../render/random.ts';
 import type { GameRenderer } from '../render/renderer.ts';
 import { barBinEdges, barLevels } from '../render/spectrum.ts';
@@ -80,7 +81,7 @@ import { FIELD_MAX, ProfileForm, ProfileScreen, saveError, type PadEdit } from '
 import { TouchTextEntry } from './touch-text.ts';
 import { ScoresMenu, ScoresScreen, type BoardChoice } from './scores.ts';
 import { KeysScreen } from './keys-screen.ts';
-import type { PerfMeter } from './perf.ts';
+import { perfText, type PerfMeter } from './perf.ts';
 import { drawPlay } from './play-view.ts';
 import {
   DemoBanner,
@@ -378,6 +379,10 @@ export class Game {
   #scoresRequest = 0;
   readonly #profileScreen = new ProfileScreen();
   #profileForm: ProfileForm | null = null;
+  /** With `?perf=1`: frames a second and the frames' work, over each half second. */
+  readonly #perfReadout = new PixelText('', LIME);
+  #perfFrames = 0;
+  #perfSince = 0;
   /** The hidden input that opens a phone's keyboard on the name entry. */
   #touchText: TouchTextEntry | null = null;
   /** The screen the name entry returns to. */
@@ -419,6 +424,7 @@ export class Game {
       this.#pauseScreen.container,
       this.#fade.container,
     );
+    if (options.perf) r.ui.addChild(this.#perfReadout);
     this.#setMode('start');
   }
 
@@ -2625,7 +2631,18 @@ export class Game {
     }
     this.#drawFade(now);
     r.render();
-    this.#options.perf?.record(performance.now() - start);
+    const perf = this.#options.perf;
+    if (perf) {
+      perf.record(performance.now() - start);
+      this.#perfFrames++;
+      if (now - this.#perfSince >= 500) {
+        const fps = (this.#perfFrames * 1000) / (now - this.#perfSince);
+        this.#perfReadout.text = perfText(fps, perf.summary(this.#perfFrames));
+        this.#perfReadout.place(PLAYFIELD_WIDTH - 2, 2, 'right');
+        this.#perfFrames = 0;
+        this.#perfSince = now;
+      }
+    }
     requestAnimationFrame(this.#frame);
   };
 

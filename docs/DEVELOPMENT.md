@@ -116,6 +116,7 @@ pattern-break/
 │   ├── make-fixture-mod.ts        # writes the test modules in packages/analysis/fixtures
 │   ├── make-icons.ts              # draws the app icons
 │   ├── offline-check.ts           # pnpm check:offline: install, offline, import and play
+│   ├── perf-check.ts              # frame work per bundled level under CPU throttling
 │   ├── gen-spectrum-tables.ts     # writes core's spectrum tables
 │   ├── hangar-art.py              # makes the hangar intro's game-sized art from art/hangar
 │   └── lint/determinism-plugin.js # Oxlint JS plugin for core
@@ -1264,7 +1265,7 @@ Two query parameters help in development:
 | Parameter | Effect |
 |---|---|
 | `autopilot=1` | `autopilotInputs(level)` flies the ship; the keyboard doesn't move it. |
-| `perf=1` | Records the cost of each frame. `window.__pbPerf()` in the console returns the mean, p50, p95, p99 and maximum in ms. |
+| `perf=1` | Records the cost of each frame and shows a readout in the top right corner: frames a second, then the mean and 95th percentile of the frames' work over the last half second ("60 fps  1.2 ms  p95 2.8"). `window.__pbPerf()` in the console returns the mean, p50, p95, p99 and maximum in ms since the run started; `window.__pbPerfReset()` starts it again. |
 | `song=<id>` | Puts that song on the Levels row (ids as in capture mode). `song=pb-fixture-01` adds the test song to Levels and the jukebox. |
 
 #### Hangar intro art
@@ -1745,6 +1746,44 @@ Headless Chromium renders WebGL with SwiftShader on the CPU, and that GPU-side t
 in the number, so the headless frame rate says nothing about real hardware. M1's 60 fps check
 is done by hand in desktop Chrome. `PLAN.md` sets a target of 2 ms or less per frame of sim
 and render work on desktop.
+
+**The throttled check** (`tools/perf-check.ts`, M6). After `pnpm build`, it serves the client,
+plays each bundled song's level on Hard in headless Chromium with the autopilot and infinite
+lives (the Konami code), turns on Chrome's CPU throttling once play starts
+(`Emulation.setCPUThrottlingRate`), starts the meter again (`window.__pbPerfReset()`), and
+reads it after `--seconds`. It prints a row per song and exits 1 if the worst 95th percentile
+is `--limit` ms (default 8) or over. `--dist` serves another build, for before and after
+comparisons. A CPU profile of the same run (CDP `Profiler`, on a `vite build --minify false`)
+shows where the time goes.
+
+**What Pixi does with visibility** (Pixi 8.22 source, `Container.visible` and
+`collectRenderablesMixin`). Setting `visible` to a new value marks the render group's
+structure changed, and Pixi then rebuilds that group's whole draw list
+(`_buildInstructions`). `alpha` only marks a colour update, and `collectRenderables` skips
+by display status, not alpha, so a sprite at alpha 0 stays in the list. The `tint` setter
+parses its colour on every call, even an unchanged one. So:
+
+- **The terrain** is a render group. Each column of LED sprites sits at its bar's world x
+  (column = bar mod `MAX_VISIBLE_BARS`), scrolling moves the group, and a column is set
+  again only when it takes a new bar. A segment that isn't drawn has alpha 0. Before this,
+  every segment's `visible`, `x` and `tint` were set every frame and the scene's draw list
+  was rebuilt every frame.
+- **Combat sprites, the sparks and the HUD** are render groups of their own, so their
+  sprites coming and going rebuild only their own small lists.
+
+Measured on 2026-11-11 on the Unraid host (Xeon E5-2640, 12 threads, load average 15 to 24
+from its other containers, so the numbers run high and vary by a ms or two):
+
+| Neon Techno, Hard, 4x throttling | mean | p95 |
+| --- | --- | --- |
+| Before (two runs) | 13.6, 14.5 ms | 23.8, 25.6 ms |
+| Terrain as a render group | 7.2, 7.3 ms | 14.1, 15.0 ms |
+| Plus combat, sparks and HUD as groups | 6.6, 7.0 ms | 12.7, 13.7 ms |
+
+Over all 16 bundled songs at 4x (30 s each, with every change above), the 95th percentile
+ran from 12.8 ms (Neon Techno) to 17.8 ms (Girl From Mars). The songs differ little, so most
+of the cost is the same every frame. Without throttling, Keygen 9000 took 1.6 ms on average
+and 3.7 ms at p95. The 8 ms target under 4x throttling is not met on this host.
 
 ## Leaderboard server
 
