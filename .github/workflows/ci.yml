@@ -22,6 +22,20 @@ jobs:
       - run: pnpm check:music
       - run: pnpm build
 
+  # M6's difficulty guardrails: every bundled and test song's level, flown by the autopilot
+  # on every difficulty. A few minutes, so it runs beside the other jobs.
+  difficulty:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:difficulty
+
   # The golden LevelData hashes must come out the same in every browser engine as in Node.
   browsers:
     runs-on: ubuntu-latest

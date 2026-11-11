@@ -1,0 +1,52 @@
+[
+  {
+    "file": "dream_candy.xm",
+    "title": "Dream Candy",
+    "author": "Drozerix",
+    "authorUrl": "https://modarchive.org/member.php?84702",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=178565",
+    "license": "Public Domain",
+    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
+    "sha256": "0b2e7af7150d08b1c3a83af2c70962c9b2b168b7b7f7e68291110ac23866be04"
+  },
+  {
+    "file": "air_ride.mod",
+    "title": "Air Ride",
+    "author": "Drozerix",
+    "authorUrl": "https://modarchive.org/member.php?84702",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=213325",
+    "license": "Public Domain",
+    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
+    "sha256": "3f32cc282dd6352b24cd1910d96eaf3de7ef5a4a448566792d566c863039082f"
+  },
+  {
+    "file": "stardust_jam.mod",
+    "title": "Stardust Jam",
+    "author": "Drozerix",
+    "authorUrl": "https://modarchive.org/member.php?84702",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=201039",
+    "license": "Public Domain",
+    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
+    "sha256": "e7266c3e78f8abeb7de93557abb0a3953afcb2787f8803b1b4287380e4cd6190"
+  },
+  {
+    "file": "alone.xm",
+    "title": "Alone",
+    "author": "Drozerix",
+    "authorUrl": "https://modarchive.org/member.php?84702",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=199968",
+    "license": "Public Domain",
+    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
+    "sha256": "41c7f0ed7796f8a31c7f60efb044cd4927afb1d9e152971e2ad115039cb81ea3"
+  },
+  {
+    "file": "october_chip.xm",
+    "title": "October_Chip",
+    "author": "Drozerix",
+    "authorUrl": "https://modarchive.org/member.php?84702",
+    "sourceUrl": "https://modarchive.org/index.php?request=view_by_moduleid&query=173084",
+    "license": "Public Domain",
+    "licenseUrl": "https://creativecommons.org/licenses/publicdomain/",
+    "sha256": "5db331b42ee84a936f51cbd69c6b74ca9d52817158bf82e7960a929e89de792b"
+  }
+]

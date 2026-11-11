@@ -2,8 +2,8 @@
 // that generated levels are passable and to pin sim results, and the attract demo flies
 // it. It holds x, steers y through the cave (turrets and tank tracks count as wall), holds
 // fire, bombs tanks and floor turrets ahead, dodges the enemy bullets and ships it can see
-// coming, and nukes when it can't. It steers for capsules it can reach (each unlocks a
-// power-up) and fires missiles at ships ahead.
+// coming without flying into the walls ahead, and nukes when it can't. It steers for
+// capsules it can reach (each unlocks a power-up) and fires missiles at ships ahead.
 
 import { solidWalls } from '../levelgen/path-check.ts';
 import { EnemyKind, EnemyTuning, type Level } from '../levelgen/types.ts';
@@ -23,9 +23,13 @@ import { BULLET_SLOTS, EnemyStatus, createSimState, tick, type SimState } from '
 const HALF_W = (SHIP_HITBOX_WIDTH * Q8) / 2;
 const HALF_H = (SHIP_HITBOX_HEIGHT * Q8) / 2;
 
-/** How many ticks ahead the bot looks for the cave, and for bullets. */
+/** How many ticks ahead the bot looks for the middle of the cave. */
 const LOOKAHEAD = 24;
-const DODGE_TICKS = 16;
+/**
+ * How many ticks ahead each plan is checked against bullets, ships and walls. 16 let it dodge
+ * into a floor that rose beyond the window: it died on two Hard levels (2026-11-11).
+ */
+const DODGE_TICKS = 32;
 /** Bullets closer than this to the hitbox, in Q8, count as a hit. */
 const DODGE_MARGIN = 3 * Q8;
 /** The autopilot nukes when the best move is hit this soon. */
@@ -92,12 +96,20 @@ function floorTargetAhead(level: Level, state: SimState): boolean {
   return false;
 }
 
+/** How many ticks a plan keeps moving before the ship holds still; holding has one plan. */
+const PLAN_MOVE_TICKS = [1, 4, 8, 16, DODGE_TICKS];
+const HOLD = [0];
+/** Set by firstHit(): its hit is a wall, not an enemy bullet or ship (a nuke won't help). */
+let hitIsWall = false;
+
 /**
- * The first tick within DODGE_TICKS at which an enemy bullet or ship would hit the ship if
- * it held vertical direction `dy` from (x, y), or DODGE_TICKS + 1 if none would. Bullets
- * fly straight; ships are taken to keep their height.
+ * The first tick within DODGE_TICKS at which the ship, moving in vertical direction `dy`
+ * from (x, y) for `move` ticks and then holding still, would meet an enemy bullet or ship,
+ * or leave `room` (the clear range of each tick ahead, lo and hi at 2k and 2k + 1); or
+ * DODGE_TICKS + 1 if neither happens. Sets hitIsWall. Bullets fly straight; ships are taken
+ * to keep their height.
  */
-function firstHit(level: Level, state: SimState, x: number, y: number, dy: number, lo: number, hi: number): number {
+function firstHit(level: Level, state: SimState, x: number, y: number, dy: number, move: number, room: Int32Array): number {
   const e = level.enemies;
   const shipSpeed = EnemyTuning[level.difficulty].shipSpeedQ8;
   const shipReachX = HALF_W + (ENEMY_SHIP_WIDTH * Q8) / 2 + DODGE_MARGIN;
@@ -105,9 +117,12 @@ function firstHit(level: Level, state: SimState, x: number, y: number, dy: numbe
   const reachX = HALF_W + BULLET_HALF + DODGE_MARGIN;
   const reachY = HALF_H + BULLET_HALF + DODGE_MARGIN;
   for (let k = 1; k <= DODGE_TICKS; k++) {
-    let sy = y + dy * SHIP_SPEED_Q8 * k;
-    if (sy < lo) sy = lo;
-    if (sy > hi) sy = hi;
+    let sy = y + dy * SHIP_SPEED_Q8 * (k < move ? k : move);
+    if (sy < HALF_H) sy = HALF_H;
+    if (sy > PLAYFIELD_HEIGHT * Q8 - HALF_H) sy = PLAYFIELD_HEIGHT * Q8 - HALF_H;
+    hitIsWall = true;
+    if (sy < room[2 * k]! || sy > room[2 * k + 1]!) return k;
+    hitIsWall = false;
     for (let b = 0; b < BULLET_SLOTS; b++) {
       if (!state.bulletActive[b]) continue;
       const bx = state.bulletX[b]! + state.bulletVX[b]! * k - x;
@@ -154,6 +169,9 @@ export function autopilotInputs(level: Level): Uint16Array {
   const walls = solidWalls(level);
   const next = [0, 0];
   const ahead = [0, 0];
+  const range = [0, 0];
+  const order = [0, 0, 0];
+  const room = new Int32Array(2 * DODGE_TICKS + 2);
   for (let t = 0; t < level.tickCount && !state.dead; t++) {
     next[0] = HALF_H;
     next[1] = PLAYFIELD_HEIGHT * Q8 - HALF_H;
@@ -170,19 +188,34 @@ export function autopilotInputs(level: Level): Uint16Array {
       hi = ahead[1]!;
     }
     const target = capsuleTarget(state, lo, hi) ?? Math.floor((lo + hi) / 2);
-    // Prefer the move that no bullet reaches soonest, then the one nearest the target.
+    for (let k = 1; k <= DODGE_TICKS; k++) {
+      range[0] = HALF_H;
+      range[1] = PLAYFIELD_HEIGHT * Q8 - HALF_H;
+      if (t + k <= level.tickCount) clearRange(level, walls, t + k, state.shipX, range);
+      room[2 * k] = range[0]!;
+      room[2 * k + 1] = range[1]!;
+    }
+    // Of the plans (a direction held for a few ticks, then still), take the one that meets
+    // nothing for longest, then the one whose first move ends nearest the target; the first
+    // move of that plan is this tick's.
     let best = 0;
     let bestHit = -1;
-    let bestDistance = Number.MAX_SAFE_INTEGER;
-    for (const dy of [0, -1, 1]) {
-      const y = state.shipY + dy * SHIP_SPEED_Q8;
-      if (y < next[0]! || y > next[1]!) continue;
-      const hit = firstHit(level, state, state.shipX, state.shipY, dy, next[0]!, next[1]!);
-      const distance = Math.abs(target - y);
-      if (hit > bestHit || (hit === bestHit && distance < bestDistance)) {
-        bestHit = hit;
-        bestDistance = distance;
-        best = dy;
+    let bestWall = false;
+    // Nearest the target first, so the first plan that meets nothing wins outright.
+    const toward = target <= state.shipY ? -1 : 1;
+    const nearer = Math.abs(target - (state.shipY + toward * SHIP_SPEED_Q8)) < Math.abs(target - state.shipY);
+    order[0] = nearer ? toward : 0;
+    order[1] = nearer ? 0 : toward;
+    order[2] = -toward;
+    plans: for (const dy of order) {
+      for (const move of dy === 0 ? HOLD : PLAN_MOVE_TICKS) {
+        const hit = firstHit(level, state, state.shipX, state.shipY, dy, move, room);
+        if (hit > bestHit) {
+          bestHit = hit;
+          bestWall = hitIsWall;
+          best = dy;
+          if (hit > DODGE_TICKS) break plans;
+        }
       }
     }
     // Fire all the time, bomb a floor target ahead, and nuke when every move is hit within
@@ -191,7 +224,7 @@ export function autopilotInputs(level: Level): Uint16Array {
     if (!state.bombActive && t + 1 >= state.bombReadyTick && (state.prevInput & InputBit.bomb) === 0 && floorTargetAhead(level, state)) {
       input |= InputBit.bomb;
     }
-    if (bestHit <= NUKE_TICKS && state.nukes > 0) input |= InputBit.nuke;
+    if (bestHit <= NUKE_TICKS && !bestWall && state.nukes > 0) input |= InputBit.nuke;
     if (
       state.missile &&
       !state.missileActive[0] &&

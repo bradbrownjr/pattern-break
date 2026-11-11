@@ -35,7 +35,8 @@ pnpm install
 | `pnpm --filter @game/analysis bench:sim:max [file] [difficulty]` | The sim at its busiest, and what a server-side replay check costs (see "Simulation", "Speed"). |
 | `pnpm record:replay` | Records the replay fixture in headless Chromium (see "Replays"). `--no-build` reuses `packages/client/dist`. |
 | `pnpm check:docs` | The writing-rules check (`tools/check-docs.ts`). |
-| `pnpm check:music` | Checks `music/manifest.json` against the files in `music/` (`tools/validate-manifest.ts`; see "Bundled songs"). |
+| `pnpm check:music` | Checks `music/manifest.json` against the files in `music/`, and the test songs' manifest in `packages/analysis/fixtures/test-songs` the same way (`tools/validate-manifest.ts`; see "Bundled songs"). |
+| `pnpm check:difficulty` | Flies every bundled and test song's level with the autopilot on every difficulty, prints what it measured, and fails unless the difficulty guardrails hold (`tools/difficulty-report.ts`; see "Difficulty guardrails"). A few minutes; CI runs it as its own job. |
 | `pnpm check:offline` | M4's acceptance check in headless Chromium: install, lose the network, import a song and play it (see "Install and offline"). Run `pnpm build` first. |
 | `node tools/make-icons.ts` | Redraws the app icons in `packages/client/public/icons/`. |
 | `pnpm gen:tables` | Regenerates `packages/core/src/spectrum/tables.generated.ts`. |
@@ -556,8 +557,8 @@ formation count and that many u8 sizes.
   fired the wrong shots: the first replay played back in the game showed it (1900 points
   against 34 800), and `sim.test.ts` now checks that a reset state plays like a fresh one.
 - **Autopilot:** `autopilotInputs(level)` in `sim/autopilot.ts` flies a level by looking
-  24 ticks ahead through the walls from `solidWalls()`, so it steers clear of turrets and
-  tank tracks, holds fire, and presses bomb when it can drop one and a tank or floor
+  24 ticks ahead through the walls from `solidWalls()` for the middle of the cave, so it
+  steers clear of turrets and tank tracks, holds fire, and presses bomb when it can drop one and a tank or floor
   turret is 60 to 140 px ahead. It steers for the nearest capsule up to 160 px ahead,
   held inside the clear range, while no enemy bullet is within 64 px (near the floor,
   where capsules rest, it has little room to dodge: chasing every capsule cost the title
@@ -566,9 +567,18 @@ formation count and that many u8 sizes.
   before the shield) it picks up 16
   capsules on The_Epic_Chip, 30 on Numen in Da Chip (level 1 until 2026-11-10) and 5 to 13 on the next three levels;
   in the demo's 30 s it picks up two, fires missiles from 13.8 s and bombs at 17.3 s
-  (Brad's play-test: the demo used to show none of these). Of its three moves (up, down, none) it takes the one
-  no bullet or ship would hit soonest within 16 ticks, then the one nearest its target; if
-  even that one is hit within 2 ticks and it holds a nuke, it nukes. It
+  (Brad's play-test: the demo used to show none of these). Each tick it weighs plans: hold still, or move up or down
+  for 1, 4, 8, 16 or 32 ticks and then hold. It takes the plan that meets no bullet, ship or
+  wall for longest within 32 ticks, then the one whose first move is nearest its target,
+  and makes that plan's first move; it tries the moves nearest the target first and stops
+  at the first plan that meets nothing, which keeps it as fast as before. If even the best
+  plan meets a bullet or ship within 2 ticks and it holds a nuke, it nukes. Until
+  2026-11-11 it checked its three moves against bullets and ships alone, 16 ticks ahead,
+  and dodged into a floor that rose beyond them: it died on The Dim Dungeon 2 and
+  October_Chip on hard. Across the 16 bundled and 5 test songs on easy, normal and hard,
+  the change took lives lost from 18 to 9 and failed levels from 2 to none. It flies the
+  title song's level (27 360 ticks on normal) in 0.3 to 0.5 s on the Unraid server, as
+  before; the demo computes it on the main thread. It
   never moves horizontally. On the terrain alone (`withoutEnemies(level)`) it always
   reaches the end; tests use that to show the path exists.
 - **Speed:** `pnpm --filter @game/analysis bench:sim` on the fixture ran 12.5 to 13.7
@@ -636,7 +646,9 @@ the autopilot with the enemies, which pins their placement, movement, aim and co
 and a fixed zigzag log (which loses its lives, the last at the recorded
 `zigzagDeathTick`). The test also checks that the autopilot reaches the end of the terrain
 alone. The same test checks them in Node and in the browsers. A Level hash
-changes only with a `GEN_VERSION` bump, a sim hash only with a `SIM_VERSION` bump.
+changes only with a `GEN_VERSION` bump, a sim hash only with a `SIM_VERSION` bump. A
+change to the autopilot changes the autopilot hash with no version bump, since replays and
+the boards don't depend on it; update that hash in the same commit.
 
 **Recorded replay.** `packages/analysis/fixtures/replay-neon_techno-normal.pbreplay` is a
 run of level 1 (Neon Techno on normal) recorded by the game in Chromium.
@@ -649,6 +661,17 @@ recorded score (93 200) on the recorded last tick, in Node and in every browser.
 that the path check passes with them, and that the autopilot reaches the end of the
 terrain alone. It runs in Node only and takes about a minute and a half
 for the bundled songs on four difficulties, so a levelgen change that makes a real song unplayable fails `pnpm test`.
+
+**Difficulty guardrails.** `pnpm check:difficulty` (`tools/difficulty-report.ts`) builds
+each bundled and test song's level on easy, normal and hard (and Crush on impossible),
+flies it with the autopilot and the enemies, and prints per level: enemies a minute, and
+ships, turrets and tanks; enemy bullets on screen, the 95th percentile and the most; the
+narrowest gap and the 5th percentile gap, with turrets and tank tracks as wall; how far
+the autopilot got and the lives it lost. It fails unless the guardrails in `docs/PLAN.md`,
+"Difficulty guardrails", hold. `--json <file>` saves the rows, and song files named on the
+command line are measured in place of the bundled and test songs. It takes a few
+minutes, too long for `pnpm test`, so CI runs it as its own job. The test songs are in
+`packages/analysis/fixtures/test-songs` (licenses in that folder's README).
 
 **Sound effects.** `packages/chipfx/test/chipfx.test.ts` checks the generator (lengths,
 levels, determinism, pitch, slides, jumps, the cutoff, punch, filtering, mixing, and the
@@ -1786,6 +1809,13 @@ Over all 16 bundled songs at 4x (30 s each, with every change above), the 95th p
 ran from 12.8 ms (Neon Techno) to 17.8 ms (Girl From Mars). The songs differ little, so most
 of the cost is the same every frame. Without throttling, Keygen 9000 took 1.6 ms on average
 and 3.7 ms at p95. The 8 ms target under 4x throttling is not met on this host.
+
+The "Perf check" workflow's first run (2026-11-11, commit `3c11c14`, 4x, 30 s a song) on a
+GitHub runner with nothing else on it came close: the 95th percentile ran from 5.9 ms
+(Chica-pop!) to 9.6 ms (The_Epic_Chip), and the mean from 1.8 to 3.8 ms. Three songs were
+over 8 ms: The_Epic_Chip (9.6), Neon Techno (8.7) and RNDD_Keygen#1.0 (8.6). These are
+the first three levels the check plays, so part of it may be the browser warming up; not
+yet checked.
 
 ## Leaderboard server
 

@@ -1,6 +1,6 @@
 # Roadmap
 
-*Last updated: 2026-11-10*
+*Last updated: 2026-11-11*
 
 ## At a glance
 
@@ -11,7 +11,7 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 
 | Item | What it delivers | Stage |
 |---|---|---|
-| [M6: mobile and polish](#m6-mobile-and-polish) | Phone performance and difficulty targets. | Next |
+| [M6: mobile and polish](#m6-mobile-and-polish) | Phone performance. | Next |
 | [Boss patterns](#later) | A mini boss at the end of level 4 and the final boss at the end of level 8, from the song's patterns. | Later |
 | [Per-song enemy overrides](#later) | A sidecar file that changes which instrument spawns which enemy for one song. | Later |
 | [Amiga PAL mode](#later) | An optional 320x256 display mode. | Later |
@@ -32,27 +32,20 @@ start the next until the current one is done.
 **Goal:** as good on a phone as on a computer.
 
 Decided 2026-11-10: desktop and phone count equally; a change is done when it is right on
-both. Difficulty is tuned to measured targets, on the bundled songs plus a few varied
-public-domain or CC0 test songs kept in test fixtures, never bundled.
+both.
 
 - [ ] **Performance:** an on-screen frame-time readout; a measured pass under Chrome's 4x
       and 6x CPU throttling, fixing what stands out; then Brad's phone, a Samsung Galaxy
       S25 (Snapdragon 8 Elite for Galaxy, 6.2 inch 1080 x 2340 display, 1 to 120 Hz
       adaptive refresh, per the launch spec tables; Brad, 2026-11-10). At 120 Hz a frame
       has 8.3 ms, so the game has to hold that, not only 60 fps.
-- [ ] **Difficulty targets:** per difficulty, set and test enemies a minute, bullets on
-      screen, the narrowest gap, and how far a scripted bot gets, on the 16 bundled songs
-      and 4 to 6 varied test songs (licenses checked as for bundled songs, kept in
-      `packages/analysis/fixtures`). Brad confirms the targets by play-test.
 
 **Acceptance:**
 
 - Under 4x CPU throttling in headless Chromium, the sim and renderer work of a frame
   stays under 8 ms at the 95th percentile on the busiest bundled level.
-- Every bundled and test song meets its difficulty's targets on every difficulty.
 
-**Docs:** `PLAN.md` "Level generation"; `DEVELOPMENT.md` "Performance"; `SONG-DIGEST.md`
-for the test songs.
+**Docs:** `DEVELOPMENT.md` "Performance".
 
 ---
 

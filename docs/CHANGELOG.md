@@ -9,6 +9,34 @@ Fixes**, in that order.
 
 ---
 
+# November 11, 2026
+
+## Milestones
+
+* **M6: difficulty guardrails, in place of fixed targets.** No published standard sets
+  enemies a minute or bullets on screen for an arcade shooter, and rhythm games, the
+  nearest match to levels built from music, step their difficulties against each other.
+  So `pnpm check:difficulty` checks what a player relies on, on the 16 bundled songs and 5
+  test songs: the autopilot finishes every level on every difficulty, each step up has more
+  enemies a minute on every song, and no song is as busy as the median song one difficulty
+  up. All 64 levels pass, and CI runs the check as its own job. The test songs are unbundled
+  Drozerix songs, Public Domain, chosen for range (the most notes a second, the fewest,
+  the longest, the shortest, and one that used to kill the autopilot), and kept in the test
+  fixtures with their own manifest, which `pnpm check:music` now checks too.
+* **The autopilot dodges without flying into walls.** It used to weigh its moves against
+  bullets and ships alone, 16 ticks ahead, so on The Dim Dungeon 2 and October_Chip on
+  Hard it dodged into a floor that rose beyond those 16 ticks and lost every life. It now weighs
+  plans that move for 1 to 32 ticks and then hold, against bullets, ships and the walls,
+  32 ticks ahead. Over the 63 levels on easy, normal and hard, lives lost fell from 18 to
+  9 and failed levels from 2 to none, and it runs as fast as before. The title demo flies
+  differently from here on; the golden autopilot hashes were updated, and replays don't
+  depend on it.
+* **The Perf check's first clean run.** On a GitHub runner with nothing else on it, under
+  4x CPU throttling, the 95th percentile of frame work ran from 5.9 to 9.6 ms; 13 of the 16
+  levels were under the 8 ms goal.
+
+---
+
 # November 10, 2026
 
 ## Milestones

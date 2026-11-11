@@ -73,6 +73,9 @@ This file is the project's memory for agents. When Brad says to always or never 
 something, add it here as a clear, testable rule. A rule that isn't written here may be
 forgotten next session.
 
+- Rely on published knowledge, not assumed knowledge: before setting a design target, a
+  standard, or a technical fact, find and cite a published source, and say so when none
+  exists (Brad, 2026-11-11).
 - On-screen text is arcade terse: labels and key prompts ("R Replay"), never sentences
   (Brad, 2026-11-09; see `docs/DOC-STYLE.md`, "On-screen text is arcade terse").
 - Completed roadmap items move to the changelog without waiting for Brad's play-test, and

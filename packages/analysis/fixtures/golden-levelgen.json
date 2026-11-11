@@ -5,25 +5,25 @@
     "pb-fixture-01.mod": {
       "easy": {
         "level": "7d3559bce6400288088a2709b4e02cf0322ced8c194e602ad217dbd1eab66deb",
-        "autopilot": "b883e85fdb92dbdb10c00849b5a2c328c3f51543dae0705a8afa188aea3b4c96",
+        "autopilot": "99756e9b8610a6e897c94bdfb4ad69a8a9712c2bb9effef949568f7d84fe7303",
         "zigzag": "e308fc3e76e03bf3b57f93259c93bdc0b238748dbe40b8c6079c67b519330059",
         "zigzagDeathTick": 915
       },
       "normal": {
         "level": "eddb19e63695873bd69277b87fd00f210c7ff11e3620522111fbb6eab77aeaaa",
-        "autopilot": "c903dff6d66d7d7de81ba25b3d543b3e298c6e03adb8c326da4328bd446148e3",
+        "autopilot": "6aa15cce7b3becd1613dc7b628b4151f1a9dbb5ae957cb656ab91292471c6fcd",
         "zigzag": "d62f4cbd5cf8c595c6628b90e7ffbfd5c29884e4cdda4dd9ae2c692c9ce54714",
         "zigzagDeathTick": 672
       },
       "hard": {
         "level": "c985d49ac1d841f185820d3ba10abe66e86ab2a3f51dbd404997bde49d58874a",
-        "autopilot": "68113bcce4388177b5aaff2622150b72905117f0bc5ae79c5c00af75a3929390",
+        "autopilot": "9dd3a488ae409d90c7aaa9b60e52148c68076fccec876a2b17d91861129823d7",
         "zigzag": "42157cfdfbea5e4e6fad9155138c8b9aaab003c3049ba5472c9542be426244ad",
         "zigzagDeathTick": 655
       },
       "impossible": {
         "level": "4775a912ee6de5ab4da2b9b2c7eb9a68d1af23b32f14dfdda9e725b73736bbeb",
-        "autopilot": "91023f8b423fa1c1d467bd82ce39b39c2a5346c3ccd2047dafff35c94cf9f90f",
+        "autopilot": "aa8ef2673bd2505d709bf6b14fe87bc9b8135b08056938accdb7a4f05348eb54",
         "zigzag": "a39223bd920ace85b52b901f31a56d066ef40df68b639cd12179cb0837797924",
         "zigzagDeathTick": 595
       }

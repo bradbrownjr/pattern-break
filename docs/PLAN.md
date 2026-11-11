@@ -195,6 +195,28 @@ every bar of every generated level.
     segment above the highest of the bars around. A turret or tank that would break the
     path isn't placed. Ships and bullets are dodged or shot.
   - Per-song overrides of which instrument makes which enemy come later (roadmap).
+- **Difficulty guardrails (2026-11-11).** Levels are built from songs, so nobody tunes one by
+  hand; the guardrails let a player trust the difficulty they pick on any song.
+  `pnpm check:difficulty` flies every bundled and test song's level with the autopilot and
+  fails unless:
+  1. the autopilot finishes every level on every difficulty, with the normal lives, so no
+     generated level is impossible;
+  2. on every song, each step up (easy, normal, hard) has more enemies a minute;
+  3. no level has as many enemies a minute as the median level one difficulty up, so no
+     song is an outlier for its difficulty.
+
+  They are relative on purpose. No published standard sets enemies a minute or bullets on
+  screen for an arcade shooter; write-ups on the genre describe difficulty in kind (rank
+  systems, Gradius strengthening enemies with each power-up, maze-like terrain). Rhythm
+  games, the nearest match to levels built from music, step their difficulties against each
+  other: Beat Saber's community mapping guide cuts note density by about 20% a step down
+  ([BSMG wiki, "Downmapping"](https://bsmg.wiki/mapping/downmapping.html)). Bullets on
+  screen and the narrowest gap need no check of their own: `EnemyTuning` caps the one and the
+  path check holds the other at the difficulty's minimum. How each difficulty feels is Brad's
+  play-test's call. The test songs are five unbundled Drozerix songs in
+  `packages/analysis/fixtures/test-songs`, chosen for range among the unbundled ones: the most
+  notes a second, the fewest, the longest, the shortest, and one whose Hard level killed the
+  autopilot before 2026-11-11.
 - **Boss (after M6; see the roadmap):** the last pattern, or the most-repeated one, becomes a boss
   whose weak points pulse on the lead channel. In the arcade run, a mini boss ends level 4
   and the final boss ends level 8.

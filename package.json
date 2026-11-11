@@ -21,7 +21,8 @@
     "record:replay": "node tools/record-replay.ts",
     "test:browser": "pnpm --filter @game/analysis --filter @game/client test:browser",
     "check:music": "node tools/validate-manifest.ts",
-    "check:offline": "node tools/offline-check.ts"
+    "check:offline": "node tools/offline-check.ts",
+    "check:difficulty": "node tools/difficulty-report.ts --check"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
