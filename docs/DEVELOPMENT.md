@@ -1564,12 +1564,14 @@ boards.
   again, and the board keeps the best) or after its last level, the run goes on the arcade
   board too, if every level went under the same name; a level skipped or posted under
   another name keeps it off (Brad, 2026-11-11). Each run goes into the library's `pending`
-  store first, with its name, and is sent from there, oldest first, so a run finished
+  store first, with its name, and is sent from there, oldest first except the run just
+  posted, which goes ahead of the rest so its answer comes back at once. A run finished
   offline is sent at the next start or `online` event. A run the server answers, accepted
   or rejected, leaves the queue; only being offline stops the sending. A run queued before
   2026-11-11 has no name: it waits and goes under the next name posted.
-- **The end screen's line,** above the prompt once the name is posted: "Sending", then
-  "Rank 3/12", "Queued" or "Not posted: score mismatch".
+- **The end screen's line,** above the prompt once the name is posted: "Sent" as soon as
+  the run is in the queue, since from there it's sent whatever the player does next, then
+  "Rank 3/12", "Queued" or "Not posted: score mismatch" when the server answers.
 - **Scores,** on the title menu: rows for the board (Arcade, then each song with a hash)
   and the difficulty (Impossible once found), then the board's top 10, and "You 23" under
   the list when the place of the last name used on this device is lower. Each row is in

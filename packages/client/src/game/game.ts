@@ -1076,7 +1076,14 @@ export class Game {
     saveLastName(browserStorage(), name);
     const request = ++this.#postRequest;
     this.#boardLine = 'Sending';
-    void boards.post(kind, name, replays).then((outcome) => {
+    // "Sent" once the run is in the queue: from there it's sent whatever the player does
+    // next, so they needn't wait for the rank.
+    const queued = () => {
+      if (request !== this.#postRequest) return;
+      this.#boardLine = 'Sent';
+      this.#refreshEndScreen();
+    };
+    void boards.post(kind, name, replays, queued).then((outcome) => {
       if (request !== this.#postRequest) return;
       this.#showOutcome(outcome);
     });
@@ -2486,14 +2493,24 @@ export class Game {
       this.#toTitle();
       return;
     }
-    // The replay reproduced the run, so the sim state is the run's final state again,
-    // except when it was stopped early: rerun the log to the end to be sure.
+    // The run is replayed again to its end, since a replay stopped early leaves the sim
+    // state and the picture where it stopped: its ship flying on over a level with no walls.
+    // It's drawn as play drew it: the tick before the end, with the enemies and the HUD
+    // (which aren't drawn once the ship is dead), then the last tick, the crash for a game
+    // over.
+    const level = this.#level;
+    const s = this.#state;
+    this.#showLevel(level);
     const replay = this.#lastReplay;
     if (replay) {
-      resetSimState(this.#state);
-      runInputLog(this.#level, replay.inputs, this.#state);
+      const inputs = replay.inputs;
+      resetSimState(s);
+      runInputLog(level, inputs.subarray(0, Math.max(0, inputs.length - 1)), s);
+      drawPlay(this.#r, level, s, s.tick * SAMPLES_PER_TICK);
+      runInputLog(level, inputs.subarray(inputs.length - 1), s);
     }
-    this.#showLevel(this.#level);
+    this.#displaySamples = (s.dead ? s.deathTick : s.tick) * SAMPLES_PER_TICK;
+    drawPlay(this.#r, level, s, this.#displaySamples);
     if (from === 'gameover') {
       this.#showGameOver(false);
     } else {

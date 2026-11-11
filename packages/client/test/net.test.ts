@@ -138,6 +138,26 @@ describe('Leaderboards', () => {
     expect(store.runs.size).toBe(0);
   });
 
+  it('says when a run is queued, and sends it ahead of older runs', async () => {
+    await store.addPending({ kind: 'song', replays: [encodeReplay({ ...run, score: run.score + 4 }).buffer], at: 1 });
+    const order: number[] = [];
+    let queued = false;
+    const flush = boards.flush.bind(boards);
+    boards.flush = (onSent, name, first) =>
+      flush((id, outcome) => {
+        order.push(id);
+        onSent?.(id, outcome);
+      }, name, first);
+    const outcome = await boards.post('song', 'AMY', [{ ...run, score: run.score + 5 }], () => (queued = true));
+    boards.flush = flush;
+    expect(queued).toBe(true);
+    expect(outcome).toEqual({ status: 'rejected', reason: 'score mismatch' });
+    // The run just posted went first, then the older nameless one under its name.
+    expect(order).toHaveLength(2);
+    expect(order[0]).toBeGreaterThan(order[1]!);
+    expect(store.runs.size).toBe(0);
+  });
+
   it('gives the server\'s answer to a refused name', async () => {
     expect(await boards.post('song', 'A55', [run])).toEqual({ status: 'rejected', reason: 'name refused' });
   });

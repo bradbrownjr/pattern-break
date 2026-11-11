@@ -194,38 +194,51 @@ export class Leaderboards {
     return this.#ready;
   }
 
-  /** Queues a finished run under `name` and sends the queue; resolves to what became of this run. */
-  async post(kind: 'song' | 'arcade', name: string, replays: readonly Replay[]): Promise<Outcome> {
+  /**
+   * Queues a finished run under `name` and sends the queue, this run first, so its answer
+   * doesn't wait on older runs; resolves to what became of it. `onQueued` hears when it's in
+   * the queue, after which it's sent even if the page moves on.
+   */
+  async post(kind: 'song' | 'arcade', name: string, replays: readonly Replay[], onQueued?: () => void): Promise<Outcome> {
     const client = await this.client();
     if (!client) return { status: 'unavailable' };
     const run: PendingRun = { kind, name, replays: replays.map((r) => encodeReplay(r).buffer), at: Date.now() };
     const id = await this.#store.addPending(run);
+    onQueued?.();
     let outcome: Outcome = { status: 'queued' };
-    await this.flush((sent, result) => {
-      if (sent === id) outcome = result;
-    }, name);
+    await this.flush(
+      (sent, result) => {
+        if (sent === id) outcome = result;
+      },
+      name,
+      id,
+    );
     return outcome;
   }
 
   /**
-   * Sends the queued runs, oldest first; `onSent` hears each answer. Stops at the first that
-   * can't be sent (offline). A run queued before names went with runs (2026-11-11) has none:
-   * it goes under `name`, the name just posted under, and waits until there is one.
+   * Sends the queued runs, oldest first, or the run with id `first` and then the rest;
+   * `onSent` hears each answer. Stops at the first that can't be sent (offline). A run
+   * queued before names went with runs (2026-11-11) has none: it goes under `name`, the
+   * name just posted under, and waits until there is one.
    */
-  flush(onSent?: (id: number, outcome: Outcome) => void, name?: string): Promise<void> {
+  flush(onSent?: (id: number, outcome: Outcome) => void, name?: string, first?: number): Promise<void> {
     // One flush at a time; a second caller waits for it, then runs its own.
     const previous = this.#flushing ?? Promise.resolve();
-    const next = previous.then(() => this.#flush(onSent, name));
+    const next = previous.then(() => this.#flush(onSent, name, first));
     this.#flushing = next.finally(() => {
       if (this.#flushing === next) this.#flushing = null;
     });
     return next;
   }
 
-  async #flush(onSent?: (id: number, outcome: Outcome) => void, fallbackName?: string): Promise<void> {
+  async #flush(onSent?: (id: number, outcome: Outcome) => void, fallbackName?: string, first?: number): Promise<void> {
     const client = await this.client();
     if (!client) return;
-    for (const run of await this.#store.pendingRuns()) {
+    // Oldest first, except `first`, the run just posted, ahead of the rest.
+    const runs = await this.#store.pendingRuns();
+    runs.sort((a, b) => Number(b.id === first) - Number(a.id === first));
+    for (const run of runs) {
       const name = run.name ?? fallbackName;
       if (!name) continue;
       let outcome: Outcome;
