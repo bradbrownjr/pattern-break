@@ -29,14 +29,15 @@ const TITLE_LABELS: Record<TitleItem, string> = {
   play: 'Play',
   practice: 'Practice',
   difficulty: 'Difficulty',
+  scores: 'Scores',
   jukebox: 'Jukebox',
   controls: 'Controls',
   help: 'Help',
   settings: 'Settings',
   credits: 'Credits',
 };
-const MENU_TOP = 78;
-const MENU_ROW = 13;
+const MENU_TOP = 74;
+const MENU_ROW = 12;
 const LABEL_X = 112;
 const VALUE_X = 188;
 

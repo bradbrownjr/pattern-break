@@ -34,7 +34,9 @@ level, which floods into colour with the music. A gamepad works next to the keyb
 can be remapped, and a phone or tablet gets on-screen controls. Every
 run can be watched again or saved as a replay file. Level data and replays come out
 byte-for-byte the same in Node, Chromium, Firefox, and WebKit, which is what lets one song
-have one leaderboard.
+have one leaderboard: each song and difficulty has a global board, and the arcade run has
+one for its total. The server checks every run by playing it again before it goes on a
+board.
 
 - [Roadmap](docs/ROADMAP.md): what comes next
 - [Changelog](docs/CHANGELOG.md): what is finished

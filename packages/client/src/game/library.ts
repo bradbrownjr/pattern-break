@@ -1,11 +1,14 @@
 // The player's song library and level cache, in this browser's IndexedDB (docs/PLAN.md,
-// "Client UI"; docs/DEVELOPMENT.md, "Library"). Two stores:
+// "Client UI"; docs/DEVELOPMENT.md, "Library"). Four stores:
 //
 // - `songs`: imported song files (songs made in a music tracker), keyed by the SHA-256 of
 //   their bytes, the hash replays already name a song by.
 // - `levels`: serialized LevelData, keyed by song hash, tempo and GEN_VERSION, so a song is
 //   analyzed once per difficulty tempo. Entries from another GEN_VERSION are useless and
 //   are deleted when the library opens.
+// - `identity`: the leaderboard device key (net.ts), one entry. The private key is a
+//   non-extractable CryptoKey: it signs, but no script can read it out.
+// - `pending`: finished runs waiting to be sent to the leaderboard (net.ts).
 //
 // IndexedDB can be missing or blocked (a private window, cleared or blocked site data), so
 // openLibrary() resolves to null there and the game runs without a cache.
@@ -36,13 +39,31 @@ export interface CachedLevel {
   levelData: ArrayBuffer;
 }
 
+/** The leaderboard key pair: `publicKey` is the raw 32-byte key as base64url. */
+export interface StoredIdentity {
+  id: 'device';
+  publicKey: string;
+  privateKey: CryptoKey;
+}
+
+/** A finished run waiting to be sent: a song run's replay, or an arcade run's level replays. */
+export interface PendingRun {
+  id?: number;
+  kind: 'song' | 'arcade';
+  replays: ArrayBuffer[];
+  /** When it finished, in ms since the epoch. */
+  at: number;
+}
+
 interface LibrarySchema extends DBSchema {
   songs: { key: string; value: StoredSong };
   levels: { key: string; value: CachedLevel; indexes: { sha256: string } };
+  identity: { key: string; value: StoredIdentity };
+  pending: { key: number; value: PendingRun };
 }
 
 export const DB_NAME = 'pattern-break';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 /**
  * SHA-256 of `bytes` as lower-case hex, or null where the page can't hash: WebCrypto's
@@ -143,6 +164,28 @@ export class Library {
     await Promise.all([tx.objectStore('songs').delete(sha256), ...keys.map((k) => levels.delete(k)), tx.done]);
   }
 
+  async identity(): Promise<StoredIdentity | null> {
+    return (await this.#db.get('identity', 'device')) ?? null;
+  }
+
+  async putIdentity(identity: StoredIdentity): Promise<void> {
+    await this.#db.put('identity', identity);
+  }
+
+  /** Runs waiting to be sent, oldest first. */
+  async pendingRuns(): Promise<PendingRun[]> {
+    return this.#db.getAll('pending');
+  }
+
+  /** Queues a run; resolves to its id in the queue. */
+  async addPending(run: PendingRun): Promise<number> {
+    return this.#db.add('pending', run);
+  }
+
+  async deletePending(id: number): Promise<void> {
+    await this.#db.delete('pending', id);
+  }
+
   close(): void {
     this.#db.close();
   }
@@ -157,9 +200,15 @@ export async function openLibrary(name: string = DB_NAME): Promise<Library | nul
     if (typeof indexedDB === 'undefined') return null;
     let opened: IDBPDatabase<LibrarySchema> | null = null;
     const db = await openDB<LibrarySchema>(name, DB_VERSION, {
-      upgrade(db) {
-        db.createObjectStore('songs', { keyPath: 'sha256' });
-        db.createObjectStore('levels', { keyPath: 'key' }).createIndex('sha256', 'sha256');
+      upgrade(db, oldVersion) {
+        if (oldVersion < 1) {
+          db.createObjectStore('songs', { keyPath: 'sha256' });
+          db.createObjectStore('levels', { keyPath: 'key' }).createIndex('sha256', 'sha256');
+        }
+        if (oldVersion < 2) {
+          db.createObjectStore('identity', { keyPath: 'id' });
+          db.createObjectStore('pending', { keyPath: 'id', autoIncrement: true });
+        }
       },
       // A newer build in another tab wants to upgrade the database: let it, rather than
       // leave it waiting. This tab's library stops working until it reloads.

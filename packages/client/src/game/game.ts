@@ -62,7 +62,21 @@ import { SoundCues, type Cue } from './cues.ts';
 import { ColourFlood, HangarIntro, PLAY_AT, WIPE_MS, hangarCues, introTime, loadHangarArt } from './hangar.ts';
 import { CreditsRoll, CreditsScreen, creditRows, endingRows, viewHeight } from './credits.ts';
 import { HelpScreen } from './help.ts';
-import { CONTROL_PAGES, ControlsPages, DIFFICULTY_LABELS, JukeboxMenu, KeysMenu, PauseMenu, SettingsMenu, TitleMenu, type TitleEvent } from './menu.ts';
+import {
+  CONTROL_PAGES,
+  ControlsPages,
+  DIFFICULTY_LABELS,
+  DIFFICULTY_ORDER,
+  JukeboxMenu,
+  KeysMenu,
+  PauseMenu,
+  SettingsMenu,
+  TitleMenu,
+  type TitleEvent,
+} from './menu.ts';
+import { Leaderboards, outcomeLine, type Outcome } from './net.ts';
+import { ProfileForm, ProfileScreen, saveError } from './profile.ts';
+import { ScoresMenu, ScoresScreen, type BoardChoice } from './scores.ts';
 import { KeysScreen } from './keys-screen.ts';
 import type { PerfMeter } from './perf.ts';
 import { drawPlay } from './play-view.ts';
@@ -105,6 +119,8 @@ type Mode =
   | 'keys'
   | 'help'
   | 'credits'
+  | 'scores'
+  | 'profile'
   | 'hangar'
   | 'analyzing'
   | 'intro'
@@ -347,6 +363,23 @@ export class Game {
   #offerReplay = false;
   /** The level-complete view to show again after a replay started from it. */
   #completeAfterReplay: CompleteView | null = null;
+  /** The leaderboards, once the library is open; null without IndexedDB. */
+  #boards: Leaderboards | null = null;
+  readonly #scoresScreen = new ScoresScreen();
+  #scoresMenu: ScoresMenu | null = null;
+  /** Counts board loads, so a slow answer for a board no longer shown is dropped. */
+  #scoresRequest = 0;
+  readonly #profileScreen = new ProfileScreen();
+  #profileForm: ProfileForm | null = null;
+  /** The screen the name entry returns to. */
+  #profileFrom: 'scores' | 'gameover' | 'complete' = 'scores';
+  /** The arcade run's cleared levels' replays, sent with the run when it ends. */
+  #runReplays: Replay[] = [];
+  /** The end screen's leaderboard line: what became of the run, or null for none. */
+  #boardLine: string | null = null;
+  #lastOutcome: Outcome | null = null;
+  /** Counts runs posted, so an answer for an earlier run doesn't change this one's line. */
+  #postRequest = 0;
 
   constructor(r: GameRenderer, options: GameOptions) {
     this.#r = r;
@@ -367,6 +400,8 @@ export class Game {
       this.#keysScreen.container,
       this.#help.container,
       this.#credits.container,
+      this.#scoresScreen.container,
+      this.#profileScreen.container,
       this.#hangarLayer,
       this.#demoBanner.container,
       this.#replayBanner.container,
@@ -426,6 +461,14 @@ export class Game {
       }
     });
     void this.#loadImported();
+    void this.#openBoards();
+    window.addEventListener('online', () => void this.#boards?.flush());
+    // Pasting fills the name entry's field (a link, mostly).
+    window.addEventListener('paste', (e) => {
+      if (this.#mode !== 'profile' || !this.#profileForm) return;
+      const text = e.clipboardData?.getData('text') ?? '';
+      if (this.#profileForm.type(text.trim())) e.preventDefault();
+    });
     // The hangar intro's art: a few KB, ready long before anyone presses Play.
     loadHangarArt().then(
       (art) => {
@@ -453,6 +496,8 @@ export class Game {
     this.#keysScreen.container.visible = mode === 'keys';
     this.#help.container.visible = mode === 'help';
     this.#credits.container.visible = mode === 'credits';
+    this.#scoresScreen.container.visible = mode === 'scores';
+    this.#profileScreen.container.visible = mode === 'profile';
     this.#hangarLayer.visible = mode === 'hangar' || (mode === 'play' && this.#wiping);
     this.#pauseScreen.container.visible = mode === 'paused';
     this.#demoBanner.container.visible = mode === 'demo';
@@ -555,7 +600,11 @@ export class Game {
       case 'settings':
       case 'help':
       case 'credits':
+      case 'scores':
         this.#menuKey(e);
+        return;
+      case 'profile':
+        this.#profileKey(e);
         return;
       default:
         break;
@@ -569,6 +618,13 @@ export class Game {
     if ((e.code === 'KeyR' || e.code === 'KeyS') && this.#onEndScreen()) {
       if (e.code === 'KeyR') this.#watchLastReplay();
       else this.#saveReplay();
+      return;
+    }
+    if (e.code === 'KeyN' && this.#lastOutcome?.status === 'noName' && (this.#mode === 'gameover' || this.#mode === 'complete')) {
+      if (performance.now() - this.#modeSince >= PROMPT_DELAY_MS) {
+        this.#sound('select');
+        this.#openProfile(this.#mode);
+      }
       return;
     }
     this.#onAnyKey();
@@ -638,7 +694,9 @@ export class Game {
       case 'settings':
       case 'keys':
       case 'help':
-      case 'credits': {
+      case 'credits':
+      case 'scores':
+      case 'profile': {
         const action = padMenuAction(bit);
         if (action) this.#onMenu(action);
         return;
@@ -683,7 +741,9 @@ export class Game {
       this.#mode === 'settings' ||
       this.#mode === 'keys' ||
       this.#mode === 'help' ||
-      this.#mode === 'credits'
+      this.#mode === 'credits' ||
+      this.#mode === 'scores' ||
+      this.#mode === 'profile'
     ) {
       this.#onMenu('confirm');
     }
@@ -716,6 +776,14 @@ export class Game {
     }
     if (this.#mode === 'settings') {
       this.#onSettingsMenu(action);
+      return;
+    }
+    if (this.#mode === 'scores') {
+      this.#onScoresMenu(action);
+      return;
+    }
+    if (this.#mode === 'profile') {
+      this.#onProfileMenu(action);
       return;
     }
     if (this.#mode === 'keys') {
@@ -806,6 +874,7 @@ export class Game {
         this.#run = { kind: 'arcade', level: 0, songs };
         this.#runCheats = lives | (god ? Cheat.god : 0);
         this.#runScore = 0;
+        this.#runReplays = [];
         void this.#beginLevel(true);
         break;
       }
@@ -818,6 +887,10 @@ export class Game {
       case 'jukebox':
         this.#sound('select');
         this.#openJukebox();
+        break;
+      case 'scores':
+        this.#sound('select');
+        this.#openScores();
         break;
       case 'controls':
         this.#sound('select');
@@ -865,6 +938,211 @@ export class Game {
       case null:
         break;
     }
+  }
+
+  // Leaderboards --------------------------------------------------------------------------
+
+  /** Opens the leaderboards on the library's key and queue, asks for the name, and sends what's queued. */
+  async #openBoards(): Promise<void> {
+    const library = await this.#library;
+    if (!library) return;
+    this.#boards = new Leaderboards(library, (hash) => this.#songBytesFor(hash));
+    await this.#boards.loadProfile();
+    await this.#boards.flush();
+  }
+
+  /** A song's bytes by its hash, for the server to check a run on a song it lacks. */
+  async #songBytesFor(hash: string): Promise<Uint8Array | null> {
+    const song = this.#songs.find((s) => s.sha256 === hash);
+    if (!song) return null;
+    try {
+      return await this.#cacheFor(song).bytes;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Posts the run that just ended. A practice run goes on its song's board. An arcade run is
+   * posted when it ends: at a game over, with the levels cleared so far and the last try
+   * (a retry and a later end post again; the board keeps the best), or after its last level.
+   * A run with a cheat, or on the test song, isn't posted.
+   */
+  #postRun(): void {
+    this.#boardLine = null;
+    this.#lastOutcome = null;
+    const replay = this.#lastReplay;
+    const run = this.#run;
+    const boards = this.#boards;
+    if (!replay || !run || !boards || replay.cheats !== 0) return;
+    let kind: 'song' | 'arcade' = 'song';
+    let replays = [replay];
+    if (run.kind === 'arcade') {
+      if (this.#state.finished) {
+        this.#runReplays.push(replay);
+        if (run.level < run.songs.length - 1) return;
+        replays = [...this.#runReplays];
+      } else {
+        replays = [...this.#runReplays, replay];
+      }
+      kind = 'arcade';
+    }
+    const request = ++this.#postRequest;
+    this.#boardLine = 'Sending';
+    void boards.post(kind, replays).then((outcome) => {
+      if (request !== this.#postRequest) return;
+      this.#showOutcome(outcome);
+    });
+  }
+
+  /** Puts what became of the run on the end screen, if it's still showing. */
+  #showOutcome(outcome: Outcome): void {
+    this.#lastOutcome = outcome;
+    this.#boardLine = outcomeLine(outcome);
+    if (this.#mode === 'complete') this.#showComplete(this.#offerReplay);
+    else if (this.#mode === 'gameover' && this.#message.container.visible) this.#showGameOverMessage();
+  }
+
+  #openScores(): void {
+    const boards: BoardChoice[] = [{ name: 'arcade', label: 'Arcade' }];
+    for (const song of this.#songs) if (song.sha256) boards.push({ name: song.sha256, label: song.title });
+    const difficulties = this.#menu.impossibleFound ? DIFFICULTY_ORDER : DIFFICULTY_ORDER.filter((d) => d !== 'impossible');
+    this.#scoresMenu = new ScoresMenu(boards, difficulties, this.#menu.difficulty);
+    this.#setMode('scores');
+    this.#loadBoard();
+    if (this.#boards && this.#boards.profile === undefined) void this.#boards.loadProfile();
+  }
+
+  /** Loads the board the Scores screen has chosen. */
+  #loadBoard(): void {
+    const menu = this.#scoresMenu;
+    if (!menu) return;
+    const request = ++this.#scoresRequest;
+    menu.setState({ kind: 'loading' });
+    void (async () => {
+      const client = await this.#boards?.client();
+      if (request !== this.#scoresRequest) return;
+      if (!client) {
+        menu.setState({ kind: 'unavailable' });
+        return;
+      }
+      try {
+        const view = await client.board(menu.choice.name, menu.difficultyName);
+        if (request === this.#scoresRequest) menu.setState({ kind: 'board', view });
+      } catch {
+        if (request === this.#scoresRequest) menu.setState({ kind: 'offline' });
+      }
+    })();
+  }
+
+  #onScoresMenu(action: MenuAction): void {
+    const command = this.#scoresMenu?.apply(action);
+    switch (command?.type) {
+      case 'moved':
+        this.#sound('move');
+        break;
+      case 'changed':
+        this.#sound('change');
+        this.#loadBoard();
+        break;
+      case 'name':
+        this.#sound('select');
+        this.#openProfile('scores');
+        break;
+      case 'open':
+        this.#openLink(command.url);
+        break;
+      case 'back':
+        this.#sound('back');
+        // The title music plays on.
+        this.#lastInput = performance.now();
+        this.#setMode('title');
+        break;
+      default:
+        break;
+    }
+  }
+
+  #openProfile(from: 'scores' | 'gameover' | 'complete'): void {
+    const profile = this.#boards?.profile;
+    this.#profileForm = new ProfileForm(profile?.nickname ?? '', profile?.link ?? '');
+    this.#profileFrom = from;
+    this.#setMode('profile');
+  }
+
+  /** A key on the name entry: printable characters type, Backspace erases, the rest are menu keys. */
+  #profileKey(e: KeyboardEvent): void {
+    const form = this.#profileForm;
+    if (!form) return;
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      form.erase();
+    } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      form.type(e.key);
+    } else {
+      this.#menuKey(e);
+    }
+  }
+
+  #onProfileMenu(action: MenuAction): void {
+    const form = this.#profileForm;
+    if (!form) return;
+    switch (form.apply(action)) {
+      case 'moved':
+        this.#sound('move');
+        break;
+      case 'back':
+        this.#sound('back');
+        this.#leaveProfile(false);
+        break;
+      case 'save': {
+        const boards = this.#boards;
+        if (!boards) {
+          form.error = saveError('unavailable');
+          break;
+        }
+        form.busy = true;
+        const link = form.link.trim();
+        void boards.setProfile({ nickname: form.nickname, link: link === '' ? null : link }).then((error) => {
+          form.busy = false;
+          if (this.#profileForm !== form || this.#mode !== 'profile') return;
+          if (error) {
+            form.error = saveError(error);
+            this.#sound('back');
+          } else {
+            this.#sound('select');
+            this.#leaveProfile(true);
+          }
+        });
+        break;
+      }
+      default:
+        if (form.error) this.#sound('back');
+        break;
+    }
+  }
+
+  /** Back from the name entry; once saved, runs held for a name are sent. */
+  #leaveProfile(saved: boolean): void {
+    const from = this.#profileFrom;
+    this.#profileForm = null;
+    if (from === 'scores') {
+      this.#setMode('scores');
+      if (saved) void this.#boards?.flush().then(() => this.#loadBoard());
+      return;
+    }
+    // Back to the end screen, past its explosion and its key delay.
+    this.#setMode(from);
+    this.#modeSince -= 60_000;
+    if (from === 'complete') this.#showComplete(this.#offerReplay);
+    if (!saved || !this.#boards) return;
+    this.#boardLine = 'Sending';
+    if (from === 'complete') this.#showComplete(this.#offerReplay);
+    const request = this.#postRequest;
+    void this.#boards.flush((_id, outcome) => {
+      if (request === this.#postRequest) this.#showOutcome(outcome);
+    });
   }
 
   #onSettingsMenu(action: MenuAction): void {
@@ -1746,6 +2024,7 @@ export class Game {
 
   #onCrash(): void {
     this.#finishRun();
+    this.#postRun();
     this.#endFlood();
     this.#stopMusic();
     this.#showGameOver();
@@ -1762,6 +2041,23 @@ export class Game {
    * The crash's explosion, then the game-over message (drawn by the frame loop). Back from
    * watching the replay (`fresh` false), it keeps the results it had.
    */
+  /** The game over's message: the results, the replay keys, the leaderboard line, the prompt. */
+  #showGameOverMessage(): void {
+    this.#message.container.visible = true;
+    const results = this.#results;
+    this.#message.show(
+      'Game over',
+      MAGENTA,
+      [
+        ...(results?.rows ?? [`Score ${this.#state.score}`]),
+        ...(this.#offerReplay && this.#lastReplay ? [REPLAY_HINT] : []),
+        ...(this.#boardLine ? [this.#boardLine] : []),
+        'Esc Title  Any key Retry',
+      ],
+      results?.highlight ?? -1,
+    );
+  }
+
   #showGameOver(fresh = true): void {
     this.#offerReplay = true;
     const s = this.#state;
@@ -1773,6 +2069,7 @@ export class Game {
 
   #onComplete(): void {
     this.#finishRun();
+    this.#postRun();
     this.#endFlood();
     const run = this.#run;
     const difficulty = DIFFICULTY_LABELS[this.#difficulty];
@@ -1834,7 +2131,9 @@ export class Game {
     this.#offerReplay = offerReplay;
     this.#setMode('complete');
     this.#message.container.visible = true;
-    this.#message.show(view.heading, LIME, view.lines, view.highlight ?? -1);
+    const lines = [...view.lines];
+    if (this.#boardLine) lines.splice(lines.length - 1, 0, this.#boardLine);
+    this.#message.show(view.heading, LIME, lines, view.highlight ?? -1);
     this.#afterComplete = view.after;
   }
 
@@ -2046,6 +2345,18 @@ export class Game {
         r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
         break;
       }
+      case 'scores': {
+        const profile = this.#boards?.profile;
+        const nickname = profile === undefined ? undefined : (profile?.nickname ?? null);
+        if (this.#scoresMenu) this.#scoresScreen.update(this.#scoresMenu, nickname, blink);
+        r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
+        break;
+      }
+      case 'profile': {
+        if (this.#profileForm) this.#profileScreen.update(this.#profileForm, blink);
+        r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
+        break;
+      }
       case 'keys': {
         this.#updateKeys(now);
         r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
@@ -2115,16 +2426,7 @@ export class Game {
         r.explosion.draw(elapsed);
         r.flash.draw(elapsed);
         r.shake(elapsed, this.#state.hitTick);
-        if (elapsed >= PROMPT_DELAY_MS && !this.#message.container.visible) {
-          this.#message.container.visible = true;
-          const results = this.#results;
-          this.#message.show(
-            'Game over',
-            MAGENTA,
-            [...(results?.rows ?? [`Score ${this.#state.score}`]), ...(this.#offerReplay && this.#lastReplay ? [REPLAY_HINT] : []), 'Esc Title  Any key Retry'],
-            results?.highlight ?? -1,
-          );
-        }
+        if (elapsed >= PROMPT_DELAY_MS && !this.#message.container.visible) this.#showGameOverMessage();
         const player = this.#playerReady;
         if (this.#music === 'gameover' && player && player.songTimeSeconds() >= GAME_OVER_MUSIC.seconds) {
           this.#stopMusic();

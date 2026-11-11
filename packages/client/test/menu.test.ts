@@ -29,7 +29,7 @@ describe('TitleMenu', () => {
     expect(m.difficulty).toBe('easy');
   });
 
-  it('opens play, practice, the jukebox, the controls, the settings, help or the credits on confirm, and steps the difficulty forward', () => {
+  it('opens play, practice, the scores, the jukebox, the controls, the settings, help or the credits on confirm, and steps the difficulty forward', () => {
     const m = new TitleMenu(3, 1, 'easy');
     expect(m.apply('confirm')).toBe('play');
     m.apply('down');
@@ -37,6 +37,8 @@ describe('TitleMenu', () => {
     m.apply('down');
     expect(m.apply('confirm')).toBe('changed');
     expect(m.difficulty).toBe('normal');
+    m.apply('down');
+    expect(m.apply('confirm')).toBe('scores');
     m.apply('down');
     expect(m.apply('confirm')).toBe('jukebox');
     m.apply('down');

@@ -13,14 +13,18 @@ Fixes**, in that order.
 
 ## Milestones
 
-* **M5: the leaderboard server.** The image now runs a Fastify server that serves the game
-  and a leaderboard API, and checks every submitted run by building the song's level and
-  playing the run's inputs again; the score must come out the same. Boards are per song
-  and difficulty, plus an arcade board for a run's total, from Brad's answers: songs
-  players import get boards too, uploaded once so the server can check them. Players sign
-  each submission with a key made in the browser. A test in `pnpm check` sends a real run,
-  finds it on the board, and sees a raised score and edited inputs turned down. The game's
-  side (submitting, nicknames, the boards on screen) is next.
+* **M5: leaderboards.** Global boards per song and difficulty, and an arcade board for a
+  run's total, from Brad's answers: songs players import get boards too. The image now
+  runs a Fastify server that serves the game and the leaderboard API, and checks every
+  run by building the song's level and playing its inputs again; the score must come out
+  the same, so a raised score or edited inputs are turned down. A song the server lacks
+  is uploaded once and checked against its hash. In the game, runs post as they end
+  (arcade runs at a game over and after the last level), the end screen shows the run's
+  rank, runs finished offline wait in a queue, and a Scores screen on the title menu
+  shows each board's top 10, with the player's name and link. The player is a key pair
+  made in the browser that signs each submission. Measured in the Unraid container, a
+  check takes about 3 s the first time a song is seen and 5 to 15 ms after, so every run
+  is checked. The data lives in `/data`, mounted from `/mnt/user/appdata/pattern-break`.
 * **Fixed: a freeze at a level's start.** The hangar intro could stop the game on its
   first frame, the screen left on the title, about one start in two in headless Chromium.
   A frame's timestamp can come a moment before the key press that started the intro, and

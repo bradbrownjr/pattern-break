@@ -6,7 +6,7 @@
 // Fire's first slot), help and help-end (scrolled to the top and to the end), credits and
 // credits-ending (the roll `t` seconds in), hangar (the intro,
 // `t` seconds from its start, for `song` as level 1), play (with `boom`, the ship blowing
-// up), run-start (play from the
+// up), scores (the Scores screen with a sample board), run-start (play from the
 // hangar: the canopy closing and the colour flooding in), paused (play with the pause
 // menu over it), and results (play with the results over it, as if the song ended at `t`,
 // the score a new best).
@@ -25,6 +25,7 @@ import {
 } from '@game/core';
 import type { Container } from 'pixi.js';
 import { markCaptureReady, type CaptureParams } from '../capture.ts';
+import { ScoresMenu, ScoresScreen } from './scores.ts';
 import { songLook } from '../render/copper.ts';
 import { LIME } from '../render/palette.ts';
 import { seededRandom } from '../render/random.ts';
@@ -117,6 +118,23 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
       credits.show(roll, ending ? 'ending' : 'menu');
       credits.update();
       return menuScene(credits.container);
+    }
+    case 'scores': {
+      // A sample arcade board: made-up names, the third player's run ending at level 6.
+      const menu = new ScoresMenu([{ name: 'arcade', label: 'Arcade' }], ['easy', 'normal', 'hard'], 'normal');
+      const names = ['KC1JMH', 'AMY', 'JORDAN', 'W1AW', 'PILOT', 'NEON', 'DJINN', 'MARS'];
+      const top = names.map((nickname, i) => ({
+        rank: i + 1,
+        nickname,
+        link: i === 0 ? 'https://example.org/' : null,
+        score: 48_200 - i * 4_150,
+        levels: i === 2 ? 6 : 8,
+        finished: i !== 2,
+      }));
+      menu.setState({ kind: 'board', view: { top, you: top[0]!, players: names.length } });
+      const scores = new ScoresScreen();
+      scores.update(menu, 'KC1JMH', true);
+      return menuScene(scores.container);
     }
     case 'settings': {
       const settings = new SettingsScreen();

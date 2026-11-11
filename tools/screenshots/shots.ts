@@ -45,7 +45,7 @@ export const shots: Shot[] = [
       'The title screen on a near-black background with faint blue stars. "Pattern Break" in large cyan pixel ' +
       'letters with a magenta shadow, over a row of small LED segments shading from green to red. Below it, a ' +
       'menu in small pixel type: "Play" in amber with an amber ">" before it, then "Practice" with ' +
-      '"The_Epic_Chip", "Difficulty" with "Normal", "Jukebox", "Controls", "Settings", "Help" and "Credits", in grey. Under the menu, ' +
+      '"The_Epic_Chip", "Difficulty" with "Normal", "Scores", "Jukebox", "Controls", "Settings", "Help" and "Credits", in grey. Under the menu, ' +
       '"Music: The_Epic_Chip by Drozerix"',
     caption: 'The title menu. Not used in the README.',
     usedIn: [],
@@ -160,6 +160,19 @@ export const shots: Shot[] = [
       'The end of the ending\'s roll: "The End" in large cyan letters in the middle of the screen, the last ' +
       'credit, "Pattern Break" with "MIT", above it, and "Any key Title" in cyan at the bottom.',
     caption: 'The ending\'s credit roll, finished. Not used in the README.',
+    usedIn: [],
+  },
+  {
+    id: 'scores',
+    query: { scene: 'scores', song: 'the_epic_chip', t: '0' },
+    alt:
+      '"Scores" in large cyan pixel letters with a magenta shadow. Under it, three rows in small pixel type: ' +
+      '"Board" in amber with an amber ">" before it and "< Arcade >" in white, "Difficulty" with "Normal" and ' +
+      '"Name" with "KC1JMH", in grey. Below, a sample board of eight rows, each a rank, a name and a score ' +
+      'right-aligned: 1 KC1JMH with a "*" (the player has a link) and 48200 in cyan, as it is the viewer\'s ' +
+      'own place, then AMY 44050, JORDAN 39900 L6, W1AW, PILOT, NEON, DJINN and MARS in grey, down to 19150. ' +
+      'At the bottom, "Esc Back" in cyan.',
+    caption: 'The Scores screen with a sample arcade board. Not used in the README.',
     usedIn: [],
   },
   {

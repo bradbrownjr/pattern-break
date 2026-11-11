@@ -355,8 +355,10 @@ every bar of every generated level.
   Import (file picker or drag and drop; left and right choose File or Folder, the file
   picker's folder mode, in every current browser), and Del to remove. Imported files are stored in IndexedDB
   (built 2026-11-10).
-- Song select: metadata, difficulty, personal best, the global top 10 when online, and
-  attribution.
+- Song select: Practice's song on the title menu, with its author; the difficulty under it.
+- Scores, from the title menu: the global boards when online, Arcade and each song, top 10
+  and the player's own place, and the player's name and link (built 2026-11-10; see
+  "Server").
 - Hangar intro before level 1 of each run from Play, skippable: in black and white, the
   captain boards the fighter and puts the song's cassette in the deck; pressing Play
   starts the song, the canopy closes, and the level floods into colour with the song
@@ -367,7 +369,7 @@ every bar of every generated level.
   calibration, control remapping, visual options, accessibility. Keyboard, gamepad
   (Gamepad API) and on-screen touch controls are built (touch 2026-11-10).
 - Results screen: score breakdown, personal best in this browser, watch or save the
-  replay (built 2026-11-10); submit to the leaderboard comes with M5.
+  replay, and the run's place on the board once posted (built 2026-11-10).
 
 ## 12. Server (`packages/server`)
 

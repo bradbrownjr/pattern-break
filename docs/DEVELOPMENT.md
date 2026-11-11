@@ -89,6 +89,9 @@ pattern-break/
 │   │   ├── src/game/              # game flow, frame loop, keyboard and gamepad input, analysis worker, capture mode
 │   │   ├── src/sw.ts              # the service worker for install and offline play
 │   │   ├── src/game/credits.ts    # the Credits screen: songs, code and licenses, each a link
+│   │   ├── src/game/net.ts        # the leaderboard client: device key, signed requests, the queue
+│   │   ├── src/game/scores.ts     # the Scores screen
+│   │   ├── src/game/profile.ts    # the name entry
 │   │   ├── public/icons/          # app icons, drawn by tools/make-icons.ts
 │   │   ├── audio-debug.html       # dev-server page that plays the fixture and shows the clock
 │   │   └── vitest.config.ts       # the node and browser test projects
@@ -1079,7 +1082,7 @@ Run `pnpm dev` and open the URL it prints.
     boards like any other; only cheats keep a run off (Brad, 2026-11-10).
 
   A run with a cheat shows "Cheat" in magenta left of the score, and its replay records the
-  flags, so the M5 boards will refuse it. Watching a replay runs with the flags it recorded.
+  flags, so the boards refuse it. Watching a replay runs with the flags it recorded.
 - **Pause menu:** "Paused" over the frozen game, with Resume, Controls, Help and Quit,
   worked like the title menu. Esc (or Backspace) resumes, as does Start on a pad, from any
   item; Q (unless it is bound to an action), or Select on a pad, quits to the title. The cursor starts on Resume each time.
@@ -1468,6 +1471,38 @@ the author only, "by Drozerix": no link and no license (Brad, 2026-11-10: Credit
 one place for both; a canvas line can't be clicked, a URL doesn't fit, and the license on
 every line was redundant).
 
+### Leaderboards in the game
+
+`game/net.ts` talks to the leaderboard server (see "Leaderboard server"). The player is an
+Ed25519 key pair made with Web Crypto the first time the game opens the library, the
+private key non-extractable, both kept in the library's `identity` store (IndexedDB
+version 2). Browsers without Ed25519 in Web Crypto (Chrome before 137, Firefox before 129,
+Safari before 17, per MDN) or without `crypto.subtle` (plain HTTP) play as before, with no
+boards.
+
+- **Posting.** A practice run is posted when it ends. An arcade run is posted when it ends:
+  at a game over, with the levels cleared so far and the last try (a retry and a later
+  end post again; the board keeps the player's best), or after its last level. Runs with a
+  cheat, and runs on the test song, aren't posted. Each run goes into the library's
+  `pending` store first and is sent from there, oldest first, so a run finished offline
+  is sent at the next start or `online` event. A run the server answers, accepted or
+  rejected, leaves the queue.
+- **The end screen's line,** above the prompt: "Sending", then "Rank 3/12", "Queued",
+  "Not posted: score mismatch", or "N Set name" when the player has no name yet; N opens
+  the name entry, and saving it sends the held runs.
+- **Scores,** on the title menu: rows for the board (Arcade, then each song with a hash),
+  the difficulty (Impossible once found) and the name, then the board's top 10 with the
+  player's own place in cyan, and "You 23" under the list when it's lower. A name with a
+  link shows "*"; Enter on it opens the link in a new tab. Enter on Name opens the name
+  entry.
+- **The name entry** has Name, Link and Save. It takes typing and pasting only: a pad or a
+  touch screen can't enter text yet (M6). The form checks the name with the server's rule
+  before sending; the server's answers show as "Name taken", "Bad name", "Bad link",
+  "Offline".
+
+`net.test.ts` runs `Leaderboards` against the real server in Node, through Fastify's
+`inject`: Node's Web Crypto signs with Ed25519 as the browsers do.
+
 ### Renderer
 
 - **Setup:** `createGameRenderer()` in `render/renderer.ts` asks PixiJS for WebGL
@@ -1675,7 +1710,7 @@ repo (see the Dockerfile).
 |---|---|---|
 | `GET /api` | no | `{ genVersion, simVersion }` |
 | `PUT /api/players/me` | yes | Sets `{ nickname, link }`. A nickname is 1 to 12 printable ASCII characters, no space at either end, one player's only (compared without case): 409 when taken. A link is `http` or `https`, at most 200 characters, or null. |
-| `GET /api/players/me` | no | The nickname and link for the `X-PB-Key` header's key, or 404. |
+| `GET /api/players/me` | no | The nickname and link for the `X-PB-Key` header's key; both null for a key with no name yet. |
 | `POST /api/runs` | yes | `{ kind: 'song' \| 'arcade', replays: [base64] }`. Answers `{ status: 'needModule', hashes }`, `{ status: 'accepted', runId, score, rank, players }`, or 422 `{ status: 'rejected', reason, level }`. 403 until the key has a nickname. |
 | `PUT /api/songs/:hash` | yes | The song file as `application/octet-stream`, up to 4 MB. 422 when its SHA-256 isn't `:hash`; 201 when stored, 200 when the server had it. |
 | `GET /api/songs/:hash` | no | `{ hash, title, author, bundled, license, sourceUrl, players }`, or 404. |
@@ -1714,9 +1749,12 @@ An accepted arcade run goes on the arcade board, and each of its levels on that 
 board. The level comes from the song's LevelData, cached in `data/levels/` as
 `<hash>-<tempo>-<GEN_VERSION>.level` and the last 32 Levels in memory.
 
-Measured on the beta box, 2026-11-11: the first check of Neon Techno on normal took 3.9 s,
-nearly all of it the analysis; the next checks took 7 to 14 ms. A song's analysis takes 1
-to 5 s per difficulty here (all sixteen bundled songs, `music.test.ts`).
+Measured in the container on Brad's Unraid server (Xeon E5-2640, 2026-11-10), on autopilot
+runs: the first check of a song took 3.0 to 3.3 s (Neon Techno on normal, Keygen 9000 on
+hard, Crush on Impossible), nearly all of it the analysis; the next checks took 5 to 15
+ms, and 21 to 33 ms with the LevelData read from the disk cache after a restart. So the
+server checks every run; checking only runs that reach a top 10 (the fallback the roadmap
+allowed) isn't needed.
 
 ### Rate limits
 

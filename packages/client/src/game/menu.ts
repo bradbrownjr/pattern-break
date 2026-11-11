@@ -18,7 +18,7 @@ export const DIFFICULTY_ORDER = Object.keys(Difficulty) as DifficultyName[];
 /** Passes through easy, normal and hard that show Impossible after the last hard. */
 export const IMPOSSIBLE_PASSES = 3;
 
-export const TITLE_ITEMS = ['play', 'practice', 'difficulty', 'jukebox', 'controls', 'settings', 'help', 'credits'] as const;
+export const TITLE_ITEMS = ['play', 'practice', 'difficulty', 'scores', 'jukebox', 'controls', 'settings', 'help', 'credits'] as const;
 export type TitleItem = (typeof TITLE_ITEMS)[number];
 
 /**
@@ -31,6 +31,7 @@ export type TitleEvent =
   | 'impossible'
   | 'play'
   | 'practice'
+  | 'scores'
   | 'jukebox'
   | 'controls'
   | 'help'
@@ -44,7 +45,7 @@ function wrap(i: number, step: number, count: number): number {
 }
 
 /**
- * Play, Practice, Difficulty, Jukebox, Controls, Settings, Help, Credits. Up and down move the cursor; left and right change
+ * Play, Practice, Difficulty, Scores, Jukebox, Controls, Settings, Help, Credits. Up and down move the cursor; left and right change
  * Practice's song or the difficulty under it. Confirm on Difficulty steps it forward, so a
  * single button or a click can reach every choice.
  *

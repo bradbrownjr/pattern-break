@@ -111,10 +111,10 @@ try {
   await screen(page, 'start');
   pass('reloaded with no network');
 
-  // The title, then the Jukebox (Play, Practice, Difficulty, Jukebox), then Import.
+  // The title, then the Jukebox (Play, Practice, Difficulty, Scores, Jukebox), then Import.
   await press(page, 'Space');
   await screen(page, 'title');
-  await press(page, 'ArrowDown', 3);
+  await press(page, 'ArrowDown', 4);
   await press(page, 'Enter');
   await screen(page, 'jukebox');
   await press(page, 'ArrowUp', 2);
@@ -132,7 +132,7 @@ try {
   // Back to the title, up to Practice, left to the last song (the imported one), start.
   await press(page, 'Escape');
   await screen(page, 'title');
-  await press(page, 'ArrowUp', 2);
+  await press(page, 'ArrowUp', 3);
   await press(page, 'ArrowLeft');
   await press(page, 'Enter');
   await screen(page, 'play', 'error');

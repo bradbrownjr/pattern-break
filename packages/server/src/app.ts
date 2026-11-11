@@ -129,11 +129,12 @@ export async function buildApp(options: AppOptions): Promise<{ app: FastifyInsta
     },
   );
 
-  app.get('/api/players/me', { config: perIp(120, '1 minute') }, async (request, reply) => {
+  // An unknown key is a player with no name yet: 200 with nulls, since a browser logs any
+  // 404 as an error and the game asks this on every start.
+  app.get('/api/players/me', { config: perIp(120, '1 minute') }, async (request) => {
     const key = request.headers['x-pb-key'];
     const player = typeof key === 'string' ? db.playerByKey(key) : null;
-    if (!player) return reply.code(404).send({ error: 'unknown player' });
-    return { nickname: player.nickname, link: player.link };
+    return { nickname: player?.nickname ?? null, link: player?.link ?? null };
   });
 
   // Songs.
