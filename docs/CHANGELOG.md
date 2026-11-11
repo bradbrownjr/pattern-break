@@ -13,6 +13,16 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **Missiles and bombs break the walls, and a cut ceiling falls.** Brad's idea: a blast
+  breaks every wall segment it reaches, leaving the 2 at each wall's edge. The part of a
+  hanging wall beyond the cut drops as a block that crushes every enemy it falls on,
+  scoring each, so a missile into the ceiling can clear a crowded stretch below. A block
+  costs the ship a wall's 3 shield points; braking and backing up gets out from under it.
+  Broken floor crumbles; a turret on a broken tip falls with it and a tank drives into the
+  hole, both for points. Blocks shatter on the floor, so the way through stays open.
+  Rubble flies where walls break, a new crumble sound plays when a block lands, Help lists
+  both, and the autopilot dodges falling blocks. `SIM_VERSION` 14, so the leaderboards
+  start over again.
 * **Song lengths in the jukebox.** Each song's row shows its length between the title and
   the author, as Brad asked. Bundled songs' lengths are in the music manifest, checked
   against libopenmpt by `pnpm check:music`; an imported song's is measured when it's

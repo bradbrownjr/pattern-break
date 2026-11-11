@@ -4,6 +4,9 @@
 // Node.
 
 import {
+  BLOCK_SLOTS,
+  BAR_LIT_WIDTH,
+  BAR_PITCH,
   EnemyKind,
   EnemyStatus,
   MISSILE_SLOTS,
@@ -38,6 +41,7 @@ export class SoundCues {
   #shots = new Uint8Array(SHOT_SLOTS);
   #missiles = new Uint8Array(MISSILE_SLOTS);
   #missileBlasts = new Int32Array(MISSILE_SLOTS);
+  #blockEnds = new Int32Array(BLOCK_SLOTS);
   #hp = new Uint8Array(0);
   #bombActive = false;
   #blastTick = -1;
@@ -120,6 +124,14 @@ export class SoundCues {
         break;
       }
     }
+    // Falling blocks that shattered: one crumble a look, like the missiles' blasts.
+    for (let b = 0; b < BLOCK_SLOTS; b++) {
+      const end = state.blockEndTick[b]!;
+      if (end !== this.#blockEnds[b] && end > 0) {
+        cue('crumble', state.blockBar[b]! * BAR_PITCH + BAR_LIT_WIDTH / 2 - level.scroll[end]! / Q8);
+        break;
+      }
+    }
     if (state.nukeTick !== this.#nukeTick && state.nukeTick > 0) cue('nuke', shipX);
     if (state.nukes > this.#nukes) cue('nukeReady', shipX);
 
@@ -142,6 +154,7 @@ export class SoundCues {
     this.#shots.set(state.shotActive);
     this.#missiles.set(state.missileActive);
     this.#missileBlasts.set(state.missileBlastTick);
+    this.#blockEnds.set(state.blockEndTick);
     for (let i = state.firstLive; i < state.nextSpawn; i++) {
       if (state.enemyStatus[i] === EnemyStatus.alive) this.#hp[i] = state.enemyHp[i]!;
     }

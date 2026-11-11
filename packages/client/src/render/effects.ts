@@ -43,8 +43,11 @@ export class Explosion {
     }
   }
 
-  /** Starts a burst at screen (x, y) px; `random` gives floats in [0, 1). */
-  start(x: number, y: number, random: () => number): void {
+  /**
+   * Starts a burst at (x, y) px in its container's space; `random` gives floats in [0, 1).
+   * `colors` overrides the style's (rubble takes the colours of the wall it came from).
+   */
+  start(x: number, y: number, random: () => number, colors: readonly number[] = this.#style.colors): void {
     this.#x = x;
     this.#y = y;
     for (let i = 0; i < this.#particles.length; i++) {
@@ -54,7 +57,6 @@ export class Explosion {
       const speed = 20 + random() * (this.#style.speed - 20);
       p.vx = Math.cos(angle) * speed;
       p.vy = Math.sin(angle) * speed;
-      const colors = this.#style.colors;
       p.color = colors[Math.floor(random() * colors.length)]!;
       p.lifeMs = this.#style.ms * (0.45 + random() * 0.55);
       const size = random() < 0.3 ? 2 : 1;

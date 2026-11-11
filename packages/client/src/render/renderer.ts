@@ -74,7 +74,7 @@ export class GameRenderer {
     this.renderer = renderer;
     this.#parent = options.parent;
     this.starfield = new Starfield(options.seed);
-    this.world.addChild(this.terrain.container, this.sparks.container, this.combat.container, this.ship.container, this.explosion.container);
+    this.world.addChild(this.terrain.container, this.terrain.blockLayer, this.terrain.rubbleLayer, this.sparks.container, this.combat.container, this.ship.container, this.explosion.container);
     this.stage.addChild(this.copper.container, this.starfield.container, this.world, this.combat.hud, this.flash.sprite, this.ui);
     const canvas = renderer.canvas as HTMLCanvasElement;
     canvas.style.imageRendering = 'pixelated';

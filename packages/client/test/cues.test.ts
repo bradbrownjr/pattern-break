@@ -74,6 +74,26 @@ describe('sound cues', () => {
     expect(out).toEqual([]);
   });
 
+  it('cues a crumble where a falling block shattered, once', () => {
+    const state = createSimState();
+    const cues = new SoundCues();
+    const out: Cue[] = [];
+    tick(level, state, 0);
+    cues.update(level, state, out);
+    // A block from bar 20 shatters on the next tick, as the sim would end it.
+    tick(level, state, 0);
+    state.blockBar[3] = 20;
+    state.blockEndTick[3] = state.tick;
+    cues.update(level, state, out);
+    const crumbles = out.filter((c) => c.effect === 'crumble');
+    expect(crumbles.length).toBe(1);
+    expect(crumbles[0]!.x).toBe(20 * 10 + 4 - level.scroll[state.tick]! / 256);
+    tick(level, state, 0);
+    out.length = 0;
+    cues.update(level, state, out);
+    expect(out.filter((c) => c.effect === 'crumble')).toEqual([]);
+  });
+
   it('gives a kill on the beat a chime pitched from the enemy instrument', () => {
     const beat = everyTick.cues.filter((c) => c.effect === 'beat');
     for (const b of beat) {

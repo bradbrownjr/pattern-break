@@ -37,6 +37,7 @@ export { barPathViolation, findPathViolation, solidWalls } from './levelgen/path
 export { serializeLevel, LEVEL_FORMAT_VERSION } from './levelgen/serialize.ts';
 export * from './sim/constants.ts';
 export {
+  BLOCK_SLOTS,
   BULLET_SLOTS,
   EnemyStatus,
   MISSILE_SLOTS,

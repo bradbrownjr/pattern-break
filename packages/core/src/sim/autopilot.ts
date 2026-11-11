@@ -6,15 +6,19 @@
 // what it's lined up with. It dodges the enemy bullets and ships it can see coming, up and
 // down and by braking and backing up, without flying into the walls, then drifts back to
 // its home x; when a hit can't be avoided it takes the cheapest, and nukes when it can't
-// take one. It steers for capsules it can reach (each unlocks a power-up).
+// take one. It steers for capsules it can reach (each unlocks a power-up). Walls that
+// blasts break open up for it, and it dodges falling blocks as it dodges bullets, braking
+// and backing up out from under them.
 
 import { solidWalls } from '../levelgen/path-check.ts';
 import { EnemyKind, EnemyTuning, type Level } from '../levelgen/types.ts';
-import { BAR_LIT_WIDTH, BAR_PITCH, PLAYFIELD_HEIGHT, Q8, SEGMENT_PITCH } from '../playfield.ts';
+import { BAR_LIT_WIDTH, BAR_PITCH, PLAYFIELD_HEIGHT, Q8, SEGMENT_LIT_HEIGHT, SEGMENT_PITCH } from '../playfield.ts';
 import {
   ENEMY_BULLET_SIZE,
   ENEMY_SHIP_HEIGHT,
   ENEMY_SHIP_WIDTH,
+  BOMB_GRAVITY_Q8,
+  BOMB_MAX_VY_Q8,
   InputBit,
   SHIELD_BULLET_COST,
   SHIELD_RAM_COST,
@@ -33,7 +37,7 @@ import {
   TURRET_HEIGHT,
 } from './constants.ts';
 import { CAPSULE_SLOTS } from './constants.ts';
-import { BULLET_SLOTS, EnemyStatus, boxHitsTerrain, createSimState, tick, type SimState } from './sim.ts';
+import { BLOCK_SLOTS, BULLET_SLOTS, EnemyStatus, boxHitsTerrain, createSimState, tick, type SimState } from './sim.ts';
 
 const HALF_W = (SHIP_HITBOX_WIDTH * Q8) / 2;
 const HALF_H = (SHIP_HITBOX_HEIGHT * Q8) / 2;
@@ -124,11 +128,14 @@ const AIM_RANK = [1, 2, 0];
  * True if a shot fired now from (x, y) would reach world-screen x `toX` without meeting a
  * wall: each step along its path is checked at the tick the shot would get there.
  */
-function lineOfFire(level: Level, t: number, x: number, y: number, toX: number): boolean {
+function lineOfFire(level: Level, state: SimState, t: number, x: number, y: number, toX: number): boolean {
+  // The walls as they stand (whole before the first tick sets them up).
+  const ceiling = state.ceiling.length > 0 ? state.ceiling : level.ceiling;
+  const floor = state.floor.length > 0 ? state.floor : level.floor;
   for (let px = x + AIM_STEP; px < toX; px += AIM_STEP) {
     const at = t + Math.floor((px - x) / SHOT_SPEED_Q8);
     if (at > level.tickCount) return true;
-    if (boxHitsTerrain(level, at, px, y, SHOT_HW, SHOT_HH)) return false;
+    if (boxHitsTerrain(level, at, px, y, SHOT_HW, SHOT_HH, ceiling, floor)) return false;
   }
   return true;
 }
@@ -160,7 +167,7 @@ function aimTarget(level: Level, state: SimState, t: number, lo: number, hi: num
       const rb = AIM_RANK[e.kind[best]!]!;
       if (r > rb || (r === rb && state.enemyX[i]! >= state.enemyX[best]!)) continue;
     }
-    if (!lineOfFire(level, t, state.shipX + HALF_W, y, state.enemyX[i]!)) continue;
+    if (!lineOfFire(level, state, t, state.shipX + HALF_W, y, state.enemyX[i]!)) continue;
     best = i;
     bestY = y;
   }
@@ -181,6 +188,39 @@ let hitIsWall = false;
 const range2 = [0, 0];
 /** How many ticks of firstHit()'s `room` are filled this tick. */
 let roomFilled = 0;
+/**
+ * The falling blocks this tick: their slots, and each one's top y (Q8) for the ticks ahead
+ * (at j * (DODGE_TICKS + 1) + k), or -1 once it has shattered on the floor.
+ */
+const blockSlots = new Int32Array(BLOCK_SLOTS);
+let blockCount = 0;
+const blockTops = new Int32Array(BLOCK_SLOTS * (DODGE_TICKS + 1));
+const LIT_HW = (BAR_LIT_WIDTH * Q8) / 2;
+const blockReachX = HALF_W + LIT_HW + DODGE_MARGIN;
+
+/** Lists the falling blocks and works out where each will be for DODGE_TICKS ticks. */
+function predictBlocks(state: SimState): void {
+  blockCount = 0;
+  for (let b = 0; b < BLOCK_SLOTS; b++) {
+    if (!state.blockActive[b]) continue;
+    const j = blockCount++;
+    blockSlots[j] = b;
+    const height = state.blockSegments[b]! * SEGMENT_PITCH * Q8 - (SEGMENT_PITCH - SEGMENT_LIT_HEIGHT) * Q8;
+    const f = state.floor[state.blockBar[b]!]!;
+    const floorTop = f === 0 ? PLAYFIELD_HEIGHT * Q8 : (PLAYFIELD_HEIGHT - SEGMENT_PITCH * (f - 1) - SEGMENT_LIT_HEIGHT) * Q8;
+    let vy = state.blockVY[b]!;
+    let top = state.blockY[b]!;
+    for (let k = 1; k <= DODGE_TICKS; k++) {
+      if (top >= 0) {
+        vy += BOMB_GRAVITY_Q8;
+        if (vy > BOMB_MAX_VY_Q8) vy = BOMB_MAX_VY_Q8;
+        top += vy;
+        if (top + height >= floorTop) top = -1;
+      }
+      blockTops[j * (DODGE_TICKS + 1) + k] = top;
+    }
+  }
+}
 
 /**
  * The first tick within DODGE_TICKS at which the ship, moving in direction (dx, dy) from
@@ -243,6 +283,19 @@ function firstHit(
         return k;
       }
     }
+    for (let j = 0; j < blockCount; j++) {
+      const top = blockTops[j * (DODGE_TICKS + 1) + k]!;
+      if (top < 0) continue;
+      const b = blockSlots[j]!;
+      const bx = state.blockBar[b]! * BAR_PITCH * Q8 + LIT_HW - level.scroll[t + k > level.tickCount ? level.tickCount : t + k]! - sx;
+      const height = state.blockSegments[b]! * SEGMENT_PITCH * Q8 - (SEGMENT_PITCH - SEGMENT_LIT_HEIGHT) * Q8;
+      if (bx < blockReachX && -bx < blockReachX && sy + HALF_H + DODGE_MARGIN > top && sy - HALF_H - DODGE_MARGIN < top + height) {
+        // A block can't be nuked away.
+        hitIsWall = true;
+        hitCost = SHIELD_WALL_COST;
+        return k;
+      }
+    }
     for (let j = 0; j < liveCount; j++) {
       const b = live[j]!;
       if (b >= 0) {
@@ -294,6 +347,7 @@ export function autopilotInputs(level: Level): Uint16Array {
   const inputs = new Uint16Array(level.tickCount);
   const state = createSimState();
   const walls = solidWalls(level);
+  let seenBreaks = 0;
   const next = [0, 0];
   const ahead = [0, 0];
   const order = [0, 0, 0];
@@ -318,6 +372,7 @@ export function autopilotInputs(level: Level): Uint16Array {
     }
     const target = capsuleTarget(state, lo, hi) ?? aimTarget(level, state, t, lo, hi) ?? Math.floor((lo + hi) / 2);
     roomFilled = 0;
+    predictBlocks(state);
     let liveCount = 0;
     for (let b = 0; b < BULLET_SLOTS; b++) if (state.bulletActive[b]) live[liveCount++] = b;
     for (let i = state.firstLive; i < state.nextSpawn; i++) {
@@ -377,6 +432,14 @@ export function autopilotInputs(level: Level): Uint16Array {
     }
     inputs[t] = input;
     tick(level, state, input);
+    // Walls a blast broke are open now (turrets and tank tracks on them are gone too).
+    if (state.terrainBreaks !== seenBreaks) {
+      seenBreaks = state.terrainBreaks;
+      for (let i = 0; i < level.barCount; i++) {
+        if (state.ceiling[i]! < level.ceiling[i]!) walls.ceiling[i] = state.ceiling[i]!;
+        if (state.floor[i]! < level.floor[i]!) walls.floor[i] = state.floor[i]!;
+      }
+    }
   }
   return inputs;
 }

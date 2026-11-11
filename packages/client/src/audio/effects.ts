@@ -19,6 +19,7 @@ export type Effect =
   | 'bomb'
   | 'missile'
   | 'missileBlast'
+  | 'crumble'
   | 'nuke'
   | 'lifeLost'
   | 'shield'
@@ -157,6 +158,20 @@ export const EFFECTS: Record<Effect, EffectSpec> = {
     echo: 0.15,
     reverb: 0.25,
     priority: 6,
+  },
+  // A falling block of wall shatters on the floor (Brad, 2026-11-11): the explosion recipe
+  // with a slow, low noise clock for rubble, a short-mode crack for the LEDs, and a light
+  // sine thud, quieter than a kill so a curtain of blocks doesn't drown the song.
+  crumble: {
+    layers: [
+      { wave: 'noise', freq: 900, slide: -2, sustain: 0.03, decay: 0.32, punch: 0.6, decayCurve: 1.8, lowpass: 2600, lowpassSlide: -2, volume: 0.26 },
+      { wave: 'metal', freq: 5200, slide: -5, decay: 0.04, highpass: 900, volume: 0.1 },
+      { wave: 'sine', freq: 120, slide: -2, sustain: 0.01, decay: 0.16, volume: 0.24 },
+    ],
+    variants: 3,
+    jitter: 0.07,
+    reverb: 0.15,
+    priority: 3,
   },
   // The biggest boom: longer, lower, with a metallic sweep, and the most reverb.
   nuke: {

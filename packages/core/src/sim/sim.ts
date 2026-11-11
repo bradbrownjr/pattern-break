@@ -85,6 +85,7 @@ import {
   TANK_HEIGHT,
   TANK_SPEED_Q8,
   TANK_WIDTH,
+  TERRAIN_KEEP_SEGMENTS,
   TURRET_HEIGHT,
   TURRET_WIDTH,
   WEAVE_AMPLITUDE,
@@ -127,6 +128,12 @@ export const BULLET_SLOTS = 16;
 export const SHOT_SLOTS = MAX_SHOTS * 2 * (1 + MAX_DRONES);
 /** Missile slots: the ship's, then one per drone. */
 export const MISSILE_SLOTS = 1 + MAX_DRONES;
+/**
+ * Falling blocks of ceiling in flight at once. A blast spans at most 5 bars and up to four
+ * can burst close together (the ship's and two drones' missiles and a bomb); with no slot
+ * free, the cut part crumbles instead of falling.
+ */
+export const BLOCK_SLOTS = 24;
 
 /** Where each enemy is in its life. */
 export const EnemyStatus = { waiting: 0, alive: 1, destroyed: 2, gone: 3 } as const;
@@ -261,6 +268,27 @@ export interface SimState {
   /** Per formation: ships shot down, and 1 once one got away or was rammed (no capsule then). */
   formationShot: Uint8Array;
   formationSpoiled: Uint8Array;
+  /**
+   * The walls as they stand, per bar: lit segments of the ceiling and the floor, from the
+   * level's and lowered by blasts (TERRAIN_KEEP_SEGMENTS). Set up with the enemies.
+   */
+  ceiling: Uint8Array;
+  floor: Uint8Array;
+  /** Blasts that broke terrain so far; a change means `ceiling` or `floor` did. */
+  terrainBreaks: number;
+  /**
+   * Falling blocks of ceiling: the bar each fell from, its first segment (k from the
+   * ceiling, for its colour) and how many, the screen y of its top and its fall speed, Q8.
+   * A block that shattered keeps its last place, and the tick it ended (blockEndTick, 0
+   * before the first).
+   */
+  blockActive: Uint8Array;
+  blockBar: Int32Array;
+  blockFirst: Uint8Array;
+  blockSegments: Uint8Array;
+  blockY: Int32Array;
+  blockVY: Int32Array;
+  blockEndTick: Int32Array;
 }
 
 /** A state at the start of the song, with `cheats` (Cheat flags) for the whole run. */
@@ -353,6 +381,16 @@ export function createSimState(cheats = 0): SimState {
     capsuleVY: new Int32Array(CAPSULE_SLOTS),
     formationShot: new Uint8Array(0),
     formationSpoiled: new Uint8Array(0),
+    ceiling: new Uint8Array(0),
+    floor: new Uint8Array(0),
+    terrainBreaks: 0,
+    blockActive: new Uint8Array(BLOCK_SLOTS),
+    blockBar: new Int32Array(BLOCK_SLOTS),
+    blockFirst: new Uint8Array(BLOCK_SLOTS),
+    blockSegments: new Uint8Array(BLOCK_SLOTS),
+    blockY: new Int32Array(BLOCK_SLOTS),
+    blockVY: new Int32Array(BLOCK_SLOTS),
+    blockEndTick: new Int32Array(BLOCK_SLOTS),
   };
   resetSimState(state);
   return state;
@@ -408,6 +446,10 @@ export function resetSimState(state: SimState): void {
   state.missileReadyTick = 0;
   state.missileBlastTick.fill(-1);
   state.capsuleActive.fill(0);
+  // The walls are set up from the level with the enemies, on the next tick.
+  state.terrainBreaks = 0;
+  state.blockActive.fill(0);
+  state.blockEndTick.fill(0);
 }
 
 /**
@@ -443,10 +485,17 @@ function resetTrail(state: SimState, x: number, y: number): void {
 }
 
 /**
- * Sets the per-enemy and per-formation arrays up for `level`: sized to it (allocating only
- * when the size changed), cleared, and each enemy's next fire index at its first fire tick.
+ * Sets the per-enemy, per-formation and per-bar arrays up for `level`: sized to it
+ * (allocating only when the size changed), cleared, each enemy's next fire index at its
+ * first fire tick, and the walls as the level has them.
  */
 function setUpEnemies(state: SimState, level: Level): void {
+  if (state.ceiling.length !== level.barCount) {
+    state.ceiling = new Uint8Array(level.barCount);
+    state.floor = new Uint8Array(level.barCount);
+  }
+  state.ceiling.set(level.ceiling);
+  state.floor.set(level.floor);
   const n = level.enemies.count;
   const f = level.enemies.formationSize.length;
   if (state.enemyStatus.length !== n) {
@@ -497,8 +546,19 @@ function sideHits(top: number, bottom: number, level: number): boolean {
  * True if the box with its centre at screen (x, y) and half sizes (hw, hh), all Q8, at sim
  * tick `t` overlaps a solid part of the terrain: a lit segment of any bar it overlaps
  * horizontally (bars are solid for BAR_LIT_WIDTH px from their left edge). The box is half-open: [x - hw, x + hw) x [y - hh, y + hh).
+ * `ceiling` and `floor` are the walls' lit segments per bar: the level's, or a run's
+ * (SimState) once blasts have broken them.
  */
-export function boxHitsTerrain(level: Level, t: number, x: number, y: number, hw: number, hh: number): boolean {
+export function boxHitsTerrain(
+  level: Level,
+  t: number,
+  x: number,
+  y: number,
+  hw: number,
+  hh: number,
+  ceiling: Uint8Array = level.ceiling,
+  floor: Uint8Array = level.floor,
+): boolean {
   const wx0 = level.scroll[t]! + x - hw;
   const wx1 = wx0 + 2 * hw;
   const top = y - hh;
@@ -510,18 +570,26 @@ export function boxHitsTerrain(level: Level, t: number, x: number, y: number, hw
   for (let i = first; i <= last; i++) {
     const barX = i * BAR_PITCH_Q8;
     if (!(wx0 < barX + BAR_LIT_Q8 && wx1 > barX)) continue;
-    if (sideHits(top, bottom, level.ceiling[i]!)) return true;
+    if (sideHits(top, bottom, ceiling[i]!)) return true;
     // The floor is the ceiling mirrored: y measured up from the bottom edge.
-    if (sideHits(HEIGHT_Q8 - bottom, HEIGHT_Q8 - top, level.floor[i]!)) {
+    if (sideHits(HEIGHT_Q8 - bottom, HEIGHT_Q8 - top, floor[i]!)) {
       return true;
     }
   }
   return false;
 }
 
-/** True if the ship's hitbox, centred at screen (x, y) Q8 at tick `t`, overlaps the terrain. */
-export function shipCollides(level: Level, t: number, x: number, y: number): boolean {
-  return boxHitsTerrain(level, t, x, y, HALF_W, HALF_H);
+/**
+ * True if the ship's hitbox, centred at screen (x, y) Q8 at tick `t`, overlaps the terrain:
+ * the level's, or `state`'s walls as a run has broken them.
+ */
+export function shipCollides(level: Level, t: number, x: number, y: number, state?: SimState): boolean {
+  return boxHitsTerrain(level, t, x, y, HALF_W, HALF_H, state ? state.ceiling : level.ceiling, state ? state.floor : level.floor);
+}
+
+/** True if `state`'s walls at tick t overlap the box at (x, y), half sizes (hw, hh), Q8. */
+function hitsWalls(level: Level, state: SimState, t: number, x: number, y: number, hw: number, hh: number): boolean {
+  return boxHitsTerrain(level, t, x, y, hw, hh, state.ceiling, state.floor);
 }
 
 /** True if two boxes, given by centre and half size (Q8), overlap. */
@@ -537,9 +605,9 @@ function barAt(level: Level, wx: number): number {
   return i < 0 ? 0 : i >= level.barCount ? level.barCount - 1 : i;
 }
 
-/** The y of the middle of bar i's open gap, Q8. */
-function caveCentre(level: Level, i: number): number {
-  return Math.floor(((SEGMENT_PITCH * level.ceiling[i]! + PLAYFIELD_HEIGHT - SEGMENT_PITCH * level.floor[i]!) * Q8) / 2);
+/** The y of the middle of bar i's open gap as `state`'s walls stand, Q8. */
+function caveCentre(state: SimState, i: number): number {
+  return Math.floor(((SEGMENT_PITCH * state.ceiling[i]! + PLAYFIELD_HEIGHT - SEGMENT_PITCH * state.floor[i]!) * Q8) / 2);
 }
 
 /** A ship's offset from its line at `age` ticks, Q8, for its ShipMotion. */
@@ -578,13 +646,13 @@ function placeEnemy(level: Level, state: SimState, i: number, t: number): void {
     case EnemyKind.tank: {
       const wx = e.x[i]! - TANK_SPEED_Q8 * age;
       state.enemyX[i] = wx - level.scroll[t]!;
-      state.enemyY[i] = HEIGHT_Q8 - SEG_PITCH_Q8 * level.floor[barAt(level, wx)]! - (TANK_HEIGHT * Q8) / 2;
+      state.enemyY[i] = HEIGHT_Q8 - SEG_PITCH_Q8 * state.floor[barAt(level, wx)]! - (TANK_HEIGHT * Q8) / 2;
       return;
     }
     default: {
       const sx = ENEMY_ENTRY_X * Q8 - EnemyTuning[level.difficulty].shipSpeedQ8 * age;
       state.enemyX[i] = sx;
-      const target = caveCentre(level, barAt(level, level.scroll[t]! + sx)) + e.y[i]! + motionOffset(e.motion[i]!, age);
+      const target = caveCentre(state, barAt(level, level.scroll[t]! + sx)) + e.y[i]! + motionOffset(e.motion[i]!, age);
       let y = target;
       if (age > 0) {
         y = state.enemyY[i]!;
@@ -663,9 +731,9 @@ function spawnCapsule(level: Level, state: SimState, x: number, y: number, t: nu
 }
 
 /** The y (Q8) of a capsule's centre resting on the highest floor under world x `wx`. */
-function capsuleRestY(level: Level, wx: number): number {
-  const a = level.floor[barAt(level, wx - CAPSULE_H)]!;
-  const b = level.floor[barAt(level, wx + CAPSULE_H - 1)]!;
+function capsuleRestY(level: Level, state: SimState, wx: number): number {
+  const a = state.floor[barAt(level, wx - CAPSULE_H)]!;
+  const b = state.floor[barAt(level, wx + CAPSULE_H - 1)]!;
   return HEIGHT_Q8 - SEG_PITCH_Q8 * (a > b ? a : b) - CAPSULE_H;
 }
 
@@ -686,7 +754,7 @@ function moveCapsules(level: Level, state: SimState, t: number): void {
     let vy = state.capsuleVY[c]! + BOMB_GRAVITY_Q8;
     if (vy > BOMB_MAX_VY_Q8) vy = BOMB_MAX_VY_Q8;
     let y = state.capsuleY[c]! + vy;
-    const rest = capsuleRestY(level, wx);
+    const rest = capsuleRestY(level, state, wx);
     if (y >= rest) {
       y = rest;
       vy = 0;
@@ -808,6 +876,7 @@ function burstMissile(level: Level, state: SimState, m: number, t: number): void
       scoreKill(level, state, i, t);
     }
   }
+  breakTerrain(level, state, x, y, MISSILE_BLAST_H, t);
 }
 
 /** The bomb bursts at (x, y) at tick t, destroying every live enemy its blast overlaps. */
@@ -825,6 +894,138 @@ function burstBomb(level: Level, state: SimState, x: number, y: number, t: numbe
       scoreKill(level, state, i, t);
     }
   }
+  breakTerrain(level, state, x, y, BLAST_H, t);
+}
+
+/**
+ * The first and last segment (k from the side's edge) of a side with `lit` segments that
+ * the span [top, bottom) overlaps, Q8 measured from that edge, into `span`; false if none.
+ */
+function segmentsHit(top: number, bottom: number, lit: number, span: Int32Array): boolean {
+  let first = -1;
+  let last = -1;
+  for (let k = 0; k < lit; k++) {
+    const segTop = k * SEG_PITCH_Q8;
+    if (segTop >= bottom) break;
+    if (segTop + SEG_LIT_Q8 <= top) continue;
+    if (first < 0) first = k;
+    last = k;
+  }
+  span[0] = first;
+  span[1] = last;
+  return first >= 0;
+}
+const span = new Int32Array(2);
+
+/**
+ * A blast with its centre at screen (x, y) and half size `half`, Q8, breaks the walls at
+ * tick t (Brad, 2026-11-11): every lit segment it overlaps goes, down to the
+ * TERRAIN_KEEP_SEGMENTS at each wall's edge. On the ceiling, the part beyond a cut falls as
+ * a block; on the floor it crumbles. A turret on a wall that lost its tip falls with it and
+ * scores as a kill.
+ */
+function breakTerrain(level: Level, state: SimState, x: number, y: number, half: number, t: number): void {
+  const wx0 = level.scroll[t]! + x - half;
+  const wx1 = wx0 + 2 * half;
+  let first = Math.floor(wx0 / BAR_PITCH_Q8);
+  if (first < 0) first = 0;
+  let last = Math.floor((wx1 - 1) / BAR_PITCH_Q8);
+  if (last > level.barCount - 1) last = level.barCount - 1;
+  let broke = false;
+  for (let i = first; i <= last; i++) {
+    const barX = i * BAR_PITCH_Q8;
+    if (!(wx0 < barX + BAR_LIT_Q8 && wx1 > barX)) continue;
+    const c = state.ceiling[i]!;
+    if (segmentsHit(y - half, y + half, c, span) && span[1]! >= TERRAIN_KEEP_SEGMENTS) {
+      const cut = span[0]! > TERRAIN_KEEP_SEGMENTS ? span[0]! : TERRAIN_KEEP_SEGMENTS;
+      const below = span[1]! + 1;
+      if (below < c) dropBlock(state, i, below, c - below);
+      state.ceiling[i] = cut;
+      broke = true;
+      wallLost(level, state, i, 1, t);
+    }
+    const f = state.floor[i]!;
+    // The floor is the ceiling mirrored: y measured up from the bottom edge.
+    if (segmentsHit(HEIGHT_Q8 - y - half, HEIGHT_Q8 - y + half, f, span) && span[1]! >= TERRAIN_KEEP_SEGMENTS) {
+      state.floor[i] = span[0]! > TERRAIN_KEEP_SEGMENTS ? span[0]! : TERRAIN_KEEP_SEGMENTS;
+      broke = true;
+      wallLost(level, state, i, 0, t);
+    }
+  }
+  if (broke) state.terrainBreaks++;
+}
+
+/** Bar i's ceiling from segment k on, `count` segments, starts to fall, if a slot is free. */
+function dropBlock(state: SimState, i: number, k: number, count: number): void {
+  for (let b = 0; b < BLOCK_SLOTS; b++) {
+    if (state.blockActive[b]) continue;
+    state.blockActive[b] = 1;
+    state.blockBar[b] = i;
+    state.blockFirst[b] = k;
+    state.blockSegments[b] = count;
+    state.blockY[b] = k * SEG_PITCH_Q8;
+    state.blockVY[b] = 0;
+    return;
+  }
+}
+
+/** The turrets on bar i's ceiling (side 1) or floor (0), which just lost its tip, fall and score. */
+function wallLost(level: Level, state: SimState, i: number, side: number, t: number): void {
+  const e = level.enemies;
+  for (let j = state.firstLive; j < state.nextSpawn; j++) {
+    if (state.enemyStatus[j] !== EnemyStatus.alive || e.kind[j] !== EnemyKind.turret || e.side[j] !== side) continue;
+    if (Math.floor(e.x[j]! / BAR_PITCH_Q8) === i) scoreKill(level, state, j, t);
+  }
+}
+
+/** A block's height, Q8: its segments and the gaps between them. */
+function blockHeight(state: SimState, b: number): number {
+  return state.blockSegments[b]! * SEG_PITCH_Q8 - (SEG_PITCH_Q8 - SEG_LIT_Q8);
+}
+
+/** The screen x of block b's centre at tick t, Q8. */
+function blockX(level: Level, state: SimState, b: number, t: number): number {
+  return state.blockBar[b]! * BAR_PITCH_Q8 + BAR_LIT_Q8 / 2 - level.scroll[t]!;
+}
+
+/** Block b shatters at tick t. */
+function endBlock(state: SimState, b: number, t: number): void {
+  state.blockActive[b] = 0;
+  state.blockEndTick[b] = t;
+}
+
+/**
+ * Moves the falling blocks one tick under the bomb's gravity. A block destroys every live
+ * enemy it overlaps, scoring each as a kill, and shatters on reaching its bar's floor or
+ * once off the left edge.
+ */
+function moveBlocks(level: Level, state: SimState, t: number): void {
+  const e = level.enemies;
+  for (let b = 0; b < BLOCK_SLOTS; b++) {
+    if (!state.blockActive[b]) continue;
+    let vy = state.blockVY[b]! + BOMB_GRAVITY_Q8;
+    if (vy > BOMB_MAX_VY_Q8) vy = BOMB_MAX_VY_Q8;
+    state.blockVY[b] = vy;
+    const top = state.blockY[b]! + vy;
+    state.blockY[b] = top;
+    const hh = blockHeight(state, b) / 2;
+    const cx = blockX(level, state, b, t);
+    if (cx < -BAR_LIT_Q8) {
+      endBlock(state, b, t);
+      continue;
+    }
+    for (let i = state.firstLive; i < state.nextSpawn; i++) {
+      if (state.enemyStatus[i] !== EnemyStatus.alive) continue;
+      const k = e.kind[i]!;
+      if (overlaps(cx, top + hh, BAR_LIT_Q8 / 2, hh, state.enemyX[i]!, state.enemyY[i]!, ENEMY_HW[k]!, ENEMY_HH[k]!)) {
+        scoreKill(level, state, i, t);
+      }
+    }
+    // The floor's top lit pixel is at 216 - 7f + 1 px.
+    const f = state.floor[state.blockBar[b]!]!;
+    const floorTop = f === 0 ? HEIGHT_Q8 : HEIGHT_Q8 - SEG_PITCH_Q8 * (f - 1) - SEG_LIT_Q8;
+    if (top + 2 * hh >= floorTop) endBlock(state, b, t);
+  }
 }
 
 /** Moves the bomb one tick and bursts it if it reaches the terrain, an enemy, or the screen's edge. */
@@ -837,7 +1038,7 @@ function moveBomb(level: Level, state: SimState, t: number): void {
   const y = state.bombY + vy;
   state.bombX = x;
   state.bombY = y;
-  let burst = x + BOMB_H >= WIDTH_Q8 || y + BOMB_H >= HEIGHT_Q8 || boxHitsTerrain(level, t, x, y, BOMB_H, BOMB_H);
+  let burst = x + BOMB_H >= WIDTH_Q8 || y + BOMB_H >= HEIGHT_Q8 || hitsWalls(level, state, t, x, y, BOMB_H, BOMB_H);
   for (let i = state.firstLive; i < state.nextSpawn && !burst; i++) {
     if (state.enemyStatus[i] !== EnemyStatus.alive) continue;
     const k = e.kind[i]!;
@@ -909,7 +1110,7 @@ function loseLife(level: Level, state: SimState, t: number): void {
     return;
   }
   state.shipX = RESPAWN_FROM_X * Q8;
-  state.shipY = caveCentre(level, barAt(level, level.scroll[t]! + state.shipX));
+  state.shipY = caveCentre(state, barAt(level, level.scroll[t]! + state.shipX));
   state.flyInUntil = t + RESPAWN_FLY_TICKS;
   state.safeUntil = t + RESPAWN_SAFE_TICKS;
   state.bulletActive.fill(0);
@@ -936,19 +1137,22 @@ function shieldTakes(state: SimState, t: number, cost: number): boolean {
  *    advance the tick and move the drones along the ship's trail. While the ship flies in
  *    after losing a life the input counts as none, and the ship moves along its line in.
  * 2. Spawn enemies whose time has come, move every live one, and drop those off screen.
- * 3. A new press of the nuke button with a nuke held destroys every enemy on screen and clears the bullets. Fire if the fire
+ *    A turret spawning on a broken wall is gone; a tank on broken floor falls, a kill.
+ * 3. Move the falling blocks, which destroy the enemies they meet and shatter on the
+ *    floor. A new press of the nuke button with a nuke held destroys every enemy on screen and clears the bullets. Fire if the fire
  *    bit is held and the gun is ready, from the ship and each drone; move shots, which
  *    stop on the first enemy they hit (a laser goes on, taking a hit off each enemy it
  *    overlaps), then on the LED walls (Brad, 2026-11-11). Move the bomb, or drop one on a
  *    new press once it has reloaded; it bursts on the terrain or an enemy, destroying all
  *    within its blast. Move missiles, or launch them on a new press once reloaded; they
- *    burst on the first enemy they touch or on the terrain.
+ *    burst on the first enemy they touch or on the terrain. A bomb's or missile's blast
+ *    breaks the walls it overlaps (breakTerrain), dropping the ceiling beyond a cut.
  * 4. Enemies fire on their scheduled ticks; move enemy bullets, which stop on the terrain.
  * 5. Move capsules, which scroll with the cave and fall to its floor; the ship picks up
  *    those it touches, each unlocking the next power-up. A score past the next multiple of
  *    EXTRA_LIFE_POINTS gives a life. Unless the ship is flying in or bouncing, test it
  *    against the terrain; unless it is in its safe time after a respawn, against live
- *    enemies (which are destroyed too) and enemy bullets. While the shield has points it
+ *    enemies (which are destroyed too), enemy bullets and falling blocks (which shatter). While the shield has points it
  *    takes each hit for its SHIELD_* cost (none with the god cheat), and a wall knocks the
  *    ship towards the cave's middle; with none, a hit costs a life, the streak, and every
  *    power-up.
@@ -964,7 +1168,12 @@ export function tick(level: Level, state: SimState, rawInput: number): void {
   const flying = state.tick < state.flyInUntil;
   const input = flying ? 0 : rawInput;
   const e = level.enemies;
-  if (!state.enemiesReady || state.enemyStatus.length !== e.count || state.formationShot.length !== e.formationSize.length) {
+  if (
+    !state.enemiesReady ||
+    state.enemyStatus.length !== e.count ||
+    state.formationShot.length !== e.formationSize.length ||
+    state.ceiling.length !== level.barCount
+  ) {
     setUpEnemies(state, level);
   }
   const pressed = input & ~state.prevInput;
@@ -985,11 +1194,11 @@ export function tick(level: Level, state: SimState, rawInput: number): void {
     // In a straight line from RESPAWN_FROM_X to SHIP_START_X, on the cave's centre.
     const k = state.tick + 1 - (state.flyInUntil - RESPAWN_FLY_TICKS);
     x = RESPAWN_FROM_X * Q8 + Math.floor(((SHIP_START_X - RESPAWN_FROM_X) * Q8 * k) / RESPAWN_FLY_TICKS);
-    y = caveCentre(level, barAt(level, level.scroll[state.tick + 1]! + x));
+    y = caveCentre(state, barAt(level, level.scroll[state.tick + 1]! + x));
   } else {
     if (state.tick < state.bounceUntil) {
       // Knocked off a wall: towards the cave's middle, not past it, whatever the stick says.
-      const mid = caveCentre(level, barAt(level, level.scroll[state.tick + 1]! + x));
+      const mid = caveCentre(state, barAt(level, level.scroll[state.tick + 1]! + x));
       const gap = state.bounceDir * (mid - state.shipY);
       y = state.shipY + state.bounceDir * (gap <= 0 ? 0 : gap < BOUNCE_SPEED_Q8 ? gap : BOUNCE_SPEED_Q8);
     }
@@ -1015,6 +1224,12 @@ export function tick(level: Level, state: SimState, rawInput: number): void {
     const i = state.nextSpawn++;
     state.enemyStatus[i] = EnemyStatus.alive;
     state.enemyHp[i] = ENEMY_HP[e.kind[i]!]!;
+    // A turret whose wall a blast already broke has nothing to stand on.
+    if (e.kind[i] === EnemyKind.turret) {
+      const bar = Math.floor(e.x[i]! / BAR_PITCH_Q8);
+      const broken = e.side[i] === 1 ? state.ceiling[bar]! < level.ceiling[bar]! : state.floor[bar]! < level.floor[bar]!;
+      if (broken) endEnemy(state, i, t, EnemyStatus.gone);
+    }
   }
   for (let i = state.firstLive; i < state.nextSpawn; i++) {
     if (state.enemyStatus[i] !== EnemyStatus.alive) continue;
@@ -1022,13 +1237,18 @@ export function tick(level: Level, state: SimState, rawInput: number): void {
     if (state.enemyX[i]! < ENEMY_EXIT_X * Q8) {
       endEnemy(state, i, t, EnemyStatus.gone);
       spoilFormation(level, state, i);
+    } else if (e.kind[i] === EnemyKind.tank) {
+      // A tank that drives onto broken floor falls in, and scores as a kill.
+      const bar = barAt(level, level.scroll[t]! + state.enemyX[i]!);
+      if (state.floor[bar]! < level.floor[bar]!) scoreKill(level, state, i, t);
     }
   }
   while (state.firstLive < state.nextSpawn && state.enemyStatus[state.firstLive]! >= EnemyStatus.destroyed) {
     state.firstLive++;
   }
 
-  // 3. The nuke, shots, the bomb and missiles.
+  // 3. Falling blocks, the nuke, shots, the bomb and missiles.
+  moveBlocks(level, state, t);
   if ((pressed & InputBit.nuke) !== 0 && state.nukes > 0) nuke(level, state, t);
   if (state.shotCooldown > 0) state.shotCooldown--;
   if ((input & InputBit.fire) !== 0 && state.shotCooldown === 0) {
@@ -1060,7 +1280,7 @@ export function tick(level: Level, state: SimState, rawInput: number): void {
       }
     }
     // Enemies first, so a turret on a bar's tip takes the shot that reaches it.
-    if (state.shotActive[s] && boxHitsTerrain(level, t, sx, sy, hw, SHOT_HH)) state.shotActive[s] = 0;
+    if (state.shotActive[s] && hitsWalls(level, state, t, sx, sy, hw, SHOT_HH)) state.shotActive[s] = 0;
   }
   if (state.bombActive) {
     moveBomb(level, state, t);
@@ -1097,7 +1317,7 @@ export function tick(level: Level, state: SimState, rawInput: number): void {
       }
     }
     // A wall bursts it too, its blast catching what's near (a turret on the bar's tip).
-    if (state.missileActive[m] && boxHitsTerrain(level, t, mx, my, MISSILE_HW, MISSILE_HH)) burstMissile(level, state, m, t);
+    if (state.missileActive[m] && hitsWalls(level, state, t, mx, my, MISSILE_HW, MISSILE_HH)) burstMissile(level, state, m, t);
   }
 
   // 4. Enemy fire and bullets.
@@ -1119,7 +1339,7 @@ export function tick(level: Level, state: SimState, rawInput: number): void {
     state.bulletX[b] = bx;
     state.bulletY[b] = by;
     const off = bx < -BULLET_H || bx >= WIDTH_Q8 + BULLET_H || by < -BULLET_H || by >= HEIGHT_Q8 + BULLET_H;
-    if (off || boxHitsTerrain(level, t, bx, by, BULLET_H, BULLET_H)) removeBullet(state, b);
+    if (off || hitsWalls(level, state, t, bx, by, BULLET_H, BULLET_H)) removeBullet(state, b);
   }
 
   // 5. Capsules, then the ship.
@@ -1137,10 +1357,10 @@ export function tick(level: Level, state: SimState, rawInput: number): void {
     state.extraLifeTick = t;
   }
   let hit = false;
-  if (t >= state.flyInUntil && t >= state.bounceUntil && shipCollides(level, t, x, y)) {
+  if (t >= state.flyInUntil && t >= state.bounceUntil && shipCollides(level, t, x, y, state)) {
     if (shieldTakes(state, t, SHIELD_WALL_COST)) {
       state.bounceUntil = t + BOUNCE_TICKS;
-      state.bounceDir = caveCentre(level, barAt(level, level.scroll[t]! + x)) < y ? -1 : 1;
+      state.bounceDir = caveCentre(state, barAt(level, level.scroll[t]! + x)) < y ? -1 : 1;
     } else hit = true;
   }
   if (t >= state.safeUntil) {
@@ -1159,6 +1379,15 @@ export function tick(level: Level, state: SimState, rawInput: number): void {
       if (overlaps(x, y, HALF_W, HALF_H, state.bulletX[b]!, state.bulletY[b]!, BULLET_H, BULLET_H)) {
         removeBullet(state, b);
         if (!shieldTakes(state, t, SHIELD_BULLET_COST[state.bulletKind[b]!]!)) hit = true;
+      }
+    }
+    // A falling block shatters on the ship, costing what a wall does.
+    for (let b = 0; b < BLOCK_SLOTS && !hit; b++) {
+      if (!state.blockActive[b]) continue;
+      const hh = blockHeight(state, b) / 2;
+      if (overlaps(x, y, HALF_W, HALF_H, blockX(level, state, b, t), state.blockY[b]! + hh, BAR_LIT_Q8 / 2, hh)) {
+        endBlock(state, b, t);
+        if (!shieldTakes(state, t, SHIELD_WALL_COST)) hit = true;
       }
     }
   }
@@ -1181,14 +1410,18 @@ export function runInputLog(level: Level, inputs: Uint16Array, state: SimState =
 }
 
 /**
- * A deterministic byte form of the state, for golden hashes: 33 little-endian i32s (tick,
+ * A deterministic byte form of the state, for golden hashes: 34 little-endian i32s (tick,
  * shipX, shipY, dead, deathTick, lives, nextExtraLife, extraLifeTick, finished, safeUntil,
  * flyInUntil, cheats, hitTick, kills, score, streak, onBeatKills, survivalBonus, nukes,
  * nukeCharge, blastTick, meter, capsules, boostLevel, boostFuel, double, laser, missile,
- * drones, shield, shieldHitTick, bounceUntil, bounceDir), then each enemy's status byte.
+ * drones, shield, shieldHitTick, bounceUntil, bounceDir, terrainBreaks), then each enemy's
+ * status byte, then the walls as they stand: each bar's ceiling, then each bar's floor.
  */
 export function serializeSimState(state: SimState): Uint8Array {
-  const out = new Uint8Array(132 + state.enemyStatus.length);
+  const head = 136;
+  const n = state.enemyStatus.length;
+  const bars = state.ceiling.length;
+  const out = new Uint8Array(head + n + 2 * bars);
   const view = new DataView(out.buffer);
   const fields = [
     state.tick,
@@ -1224,8 +1457,11 @@ export function serializeSimState(state: SimState): Uint8Array {
     state.shieldHitTick,
     state.bounceUntil,
     state.bounceDir,
+    state.terrainBreaks,
   ];
   for (let i = 0; i < fields.length; i++) view.setInt32(i * 4, fields[i]!, true);
-  out.set(state.enemyStatus, 132);
+  out.set(state.enemyStatus, head);
+  out.set(state.ceiling, head + n);
+  out.set(state.floor, head + n + bars);
   return out;
 }

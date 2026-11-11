@@ -234,7 +234,8 @@ every bar of every generated level.
   checked against enemies before walls, so a turret on a bar's tip still takes it. A shot
   stops on the first enemy it hits. Turrets and ships take one hit, tanks three. Until
   2026-11-11 shots passed through the walls.
-- Collision: ship against lit LED segments, enemies, and enemy bullets. Integer AABB
+- Collision: ship against lit LED segments, enemies, enemy bullets, and falling blocks of
+  wall. Integer AABB
   (axis-aligned bounding box) or small hitboxes. Enemy bullets stop on the walls. Bullets
   are aimed with `Math.sqrt`, which IEEE 754 rounds the same in every engine.
 - **Shield (2026-11-10):** every life starts with a 6-point shield. A ship's bullet costs
@@ -259,6 +260,20 @@ every bar of every generated level.
   Never more than one tank is on screen at once (measured on all 27 levels). It falls in
   an arc and bursts on the terrain or an enemy, destroying every enemy
   within 24 px, tanks included. Its kills score like shots.
+- **Breaking terrain (Brad, 2026-11-11):** a bomb's or missile's blast breaks every lit
+  wall segment it overlaps, down to the 2 at each wall's edge, so the walls never vanish.
+  Breaking only opens the cave, so the guaranteed path still holds.
+  - **The ceiling falls.** The part of a hanging wall beyond a cut drops as a block, under
+    the bomb's gravity. It destroys every enemy it meets, scoring each as a kill, so a
+    missile into a hanging wall can clear a crowded stretch below it. It costs the ship a
+    wall's 3 shield points and shatters on the ship or the floor, leaving nothing, so it
+    can never close the path. The ship can brake and back up out from under it.
+  - **The floor crumbles.** The part beyond a cut in the floor breaks where it stands and
+    does no harm.
+  - **What stands on it goes.** A turret on a wall that lost its tip falls with it, and a
+    tank that drives onto broken floor falls in; both score as kills. A turret yet to come
+    on screen over a broken wall never appears.
+  - Shots and the laser don't break walls. Brad approved this design on 2026-11-11.
 - **Nuke (2026-11-09):** a last resort. A press destroys every enemy on screen and clears
   the enemy bullets. One charges per 10 kills on the beat, up to 3 held, kept when a life
   is lost; a level starts with none. Its kills score their points times the multiplier,

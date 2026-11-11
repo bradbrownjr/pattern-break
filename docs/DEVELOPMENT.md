@@ -432,7 +432,9 @@ formation count and that many u8 sizes.
   (384 / sqrt 2, rounded), about 1.503 px per tick in total. The centre stays within
   x 16 to 160 and y 3 to 213, so the hitbox never leaves the screen. It starts at (64, 108).
 - **Collision:** `boxHitsTerrain()` tests a box against the solid part of every bar it
-  overlaps horizontally: its lit segments. Boxes against
+  overlaps horizontally: its lit segments. It takes the walls to test against, the
+  level's by default; the sim passes the run's (`state.ceiling`, `state.floor`), which
+  blasts lower. Boxes against
   each other are half-open overlaps of centre and half size. Integer comparisons only.
 - **Shots:** holding fire shoots a volley every 8 ticks from the ship's nose, and from
   each drone, 1024 Q8 (4 px) per tick to the right. Each source has at most 6 straight
@@ -495,9 +497,10 @@ formation count and that many u8 sizes.
   enemies, taking a hit off each it overlaps every tick, so a tank in its path takes 3.
 - **Missile:** a new press of the missile bit, once unlocked, launches one from the ship's
   nose and one from each drone, if the ship's (slot 0) is not in flight and
-  `state.missileReadyTick` has come. A missile (8x4 px) flies right 768 Q8 per tick
-  through the walls and bursts on the first live enemy it overlaps, destroying every live
-  enemy whose hitbox overlaps the 40x40 px square around it, scored as shot kills. The
+  `state.missileReadyTick` has come. A missile (8x4 px) flies right 768 Q8 per tick and
+  bursts on the first live enemy it overlaps, or on a wall (since `SIM_VERSION` 13),
+  destroying every live enemy whose hitbox overlaps the 40x40 px square around it, scored
+  as shot kills. The
   ship's missile bursting or leaving the right edge starts the 120-tick reload
   (`MISSILE_RELOAD_TICKS`). `state.missileBlastTick`, `missileBlastX` and `missileBlastY`
   record each slot's last burst for the client.
@@ -520,6 +523,31 @@ formation count and that many u8 sizes.
   (-1 up, 1 down). Until then the ship moves 2 px a tick that way (`BOUNCE_SPEED_Q8`),
   stopping at the middle, whatever the vertical input; the horizontal input still works,
   and the walls don't count. A life lost ends a bounce.
+- **Breaking terrain** (`SIM_VERSION` 14, Brad, 2026-11-11): the run's walls are
+  `state.ceiling` and `state.floor`, a copy of the level's set up with the enemies on the
+  first tick and after a reset. `breakTerrain()` runs after a bomb's or missile's blast has
+  hit the enemies. For each bar whose lit part the blast's square overlaps, on each side,
+  it finds the first and last segment the square overlaps; if the last is at or beyond
+  `TERRAIN_KEEP_SEGMENTS` (2), the side drops to the first, or to 2. On the ceiling, the
+  segments past the last one hit fall as a block (`dropBlock`); on the floor they crumble.
+  Alive turrets on that bar and side score as kills (`wallLost`). `state.terrainBreaks`
+  counts the blasts that broke anything.
+  - **Blocks:** 24 slots (`BLOCK_SLOTS`; a blast spans at most 5 bars, and up to four
+    blasts can come close together). Each keeps its bar, its first segment and count (for
+    the colours), the y of its top and its fall speed, Q8. They move first in step 3,
+    under `BOMB_GRAVITY_Q8` up to `BOMB_MAX_VY_Q8` (450 px/s/s, up to 360 px/s: a full
+    216 px drop takes 1 s), as the bar's lit 8 px and the block's height. A block destroys
+    every live enemy it overlaps (`scoreKill`), shatters when its bottom reaches the top of
+    its bar's floor (216 - 7f + 1 px) or once off the left edge, and, outside the ship's
+    safe time, shatters on the ship for `SHIELD_WALL_COST` with no bounce. With no slot
+    free, the part beyond the cut crumbles. `state.blockEndTick` records when each slot's
+    last block shattered, for the rubble and the sound.
+  - **Enemies:** a spawning turret whose bar and side are below the level's is gone at
+    once; a tank over a bar whose floor is below the level's scores as a kill. Tanks ride,
+    capsules rest on, ships follow the middle of, and the bounce and the fly-in use the
+    run's walls.
+  - Breaking only lowers walls, so `findPathViolation()` still holds for every run.
+    `serializeSimState()` adds `terrainBreaks` and both walls to the golden hashes.
 - **Nuke:** a new press (`input & ~prevInput`) with `state.nukes` above 0 destroys every
   live enemy whose centre is on screen (x 0 to 384) and clears the bullets, before shots
   move that tick. Its kills score base points times the multiplier, never on the beat.
@@ -561,7 +589,14 @@ formation count and that many u8 sizes.
     lined up from the nearest clear height that still hits it. It keeps fire held down.
   - **Weapons:** it presses bomb when it can drop one and a tank or floor turret is 60 to
     140 px ahead, and launches a missile at any enemy up to 240 px ahead and within 12 px
-    of its height.
+    of its height. It doesn't aim at walls to break them: on the title song's level and
+    two others, normal and hard, walls broke 81 to 194 times a level, mostly floors under
+    bombs, and 0 to 4 blocks fell (2026-11-11).
+  - **Broken walls and blocks:** its copy of the walls (from `solidWalls()`) takes the
+    run's broken walls whenever `state.terrainBreaks` changes. Falling blocks are worked
+    out ahead with the sim's gravity until they reach the floor (`predictBlocks`) and
+    checked in each plan like bullets, costing a wall's points; a block can't be nuked
+    away.
   - **Capsules:** it steers for the nearest capsule up to 160 px ahead, held inside the
     clear range, while no enemy bullet is within 64 px (near the floor, where capsules rest,
     it has little room to dodge: chasing every capsule cost the title song's demo all three
@@ -662,7 +697,7 @@ the boards don't depend on it; update that hash in the same commit.
 run of level 1 (Neon Techno on normal) recorded by the game in Chromium.
 `test/replay.test.ts` checks that it names this `GEN_VERSION` and `SIM_VERSION` and the song
 file's SHA-256, builds the level from `music/neon_techno.mod`, runs the inputs, and gets the
-recorded score (77 000) on the recorded last tick, in Node and in every browser.
+recorded score (100 900) on the recorded last tick, in Node and in every browser.
 
 **Bundled songs.** `packages/analysis/test/music.test.ts` analyzes every song in
 `music/manifest.json`, builds its level on each difficulty, and checks that it has enemies,
@@ -1627,7 +1662,17 @@ boards.
   `visibleBars()` lists and tints each sprite: lit segment k is
   `LED_LIT[segmentColorIndex(k)]` (green at the screen edge, through amber, to red 12
   segments in, and red beyond).
-  Unlit segments are hidden, so the passage is plain background. The scroll is rounded to a
+  The walls drawn are the run's (`state.ceiling`, `state.floor`): each column keeps the
+  segments it shows and repaints when they change, with rubble (an `Explosion` of 14
+  particles in the wall's colour) where segments went. Falling blocks are a render group
+  of their own (`blockLayer`): a container of 23 sprites per slot, shown and coloured once
+  when its block starts falling and moved to its sim position each frame. Kept in the bars'
+  group, the hidden ones would stay in its draw list at alpha 0 (see "Performance"). A
+  block that shattered leaves rubble at its foot. Rubble is a third render group
+  (`rubbleLayer`), so its particles don't rebuild the bars' draw list. The throttled perf
+  check (4x, Hard, 30 s of The_Epic_Chip and Neon Techno) put this build within the noise of
+  the one before, run twice in turn on the Unraid server: 95th percentiles 13.0 to 16.8 ms
+  before against 14.3 to 15.3 ms after, the box being busy (2026-11-11). Unlit segments are hidden, so the passage is plain background. The scroll is rounded to a
   whole pixel once per frame, so bars never shift against each other. On Impossible the
   colours are `LED_RED`; with the LEDs setting on Colour-blind they are `LED_CIVIDIS` on
   every difficulty (`TerrainView.setColourBlind`): cividis (Nunez, Anderton and Renslow,

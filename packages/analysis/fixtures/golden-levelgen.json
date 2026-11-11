@@ -1,30 +1,30 @@
 {
   "genVersion": 9,
-  "simVersion": 13,
+  "simVersion": 14,
   "fixtures": {
     "pb-fixture-01.mod": {
       "easy": {
         "level": "fbaaf8d395c6f574ea78c307386247bd31591136152fcecc74dd99f615ab6c59",
-        "autopilot": "28107ecd939da9b6c54c2533fb183d49e80838a6dfb08e49b9dd761c01a9ae64",
-        "zigzag": "e308fc3e76e03bf3b57f93259c93bdc0b238748dbe40b8c6079c67b519330059",
+        "autopilot": "0cca7eee27996b48a1b26b0ce5f92fb25ce0e665f25c4e7e3f0be99f835e72f4",
+        "zigzag": "871463fa176d1995eef185d53b8b54999955799e90e6d17e5b5517db79e6b5e0",
         "zigzagDeathTick": 915
       },
       "normal": {
         "level": "9c6450d6ee6222f9b9a6701d3f07c5c3f3b01b96c9642d989884223c5e3199e1",
-        "autopilot": "7dc453ca875c22f42cc9ca7fc8fb0fe523cfa78944107cc488621f8c7fa6a480",
-        "zigzag": "d62f4cbd5cf8c595c6628b90e7ffbfd5c29884e4cdda4dd9ae2c692c9ce54714",
+        "autopilot": "a369d95915ba3fdfa36b1c47a77d1fdb534b1b9bdc0c47667c733da7bddaabd5",
+        "zigzag": "d88046678c3bdfb710aaa2e28b72d2a15f26ca628ee644dee0a6e9546be4cd91",
         "zigzagDeathTick": 672
       },
       "hard": {
         "level": "a006e6e22cd63b1bf70be13bde89d216ac80ed287a76ef9f08ecfed7bf0ac034",
-        "autopilot": "3f1752e8f59f592a4939afb8fe09a4c3ab00784eeff6c5e2b60a7e2f49bb47b3",
-        "zigzag": "42157cfdfbea5e4e6fad9155138c8b9aaab003c3049ba5472c9542be426244ad",
+        "autopilot": "44417154ae02eaec9cf758e23c8e2660eae68a175f16c6fd177648e195e330ad",
+        "zigzag": "b302c3e652f2ac7d46a624c7932e55cb85700d7b198deb07fb7c94d0a00676a4",
         "zigzagDeathTick": 655
       },
       "impossible": {
         "level": "40b016ca65db53a7bdb48d546e86accafd8211e1704afa9138ee0b80fe74430b",
-        "autopilot": "dfa360bffb6d192f9e4e77a1b5009ec04bd01867b44596a27b87c440c44821fa",
-        "zigzag": "a39223bd920ace85b52b901f31a56d066ef40df68b639cd12179cb0837797924",
+        "autopilot": "b82080a131de55196eee4f49342bfb2a19c6793231790f0b7da4b81f5fc31f1a",
+        "zigzag": "2e9226f843ea3a50d2cde45d880876009b97b9845f85d336fc8adec08a421bd8",
         "zigzagDeathTick": 595
       }
     }

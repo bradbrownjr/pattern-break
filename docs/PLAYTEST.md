@@ -80,3 +80,16 @@ Leave the title screen alone until the demo starts, and watch it once.
 
 **Looking for:** anything that looks wrong: flying into a wall, odd jitter, shots wasted on
 walls, or a crash it should have dodged. Does it look like someone playing?
+
+### 6. Breaking walls
+
+**Why:** missiles and bombs break the walls, and a cut ceiling falls (2026-11-11). Tests
+check the rules; only playing shows whether it feels good and reads clearly.
+
+Unlock the missile, then fire it into a wall hanging from the ceiling, below the
+ceiling's edge, with enemies under it. Bomb the floor too. Then stand under a falling
+block once, and brake out from under the next.
+
+**Looking for:** whether the broken walls, the falling block and the rubble are easy to
+read, whether crushing enemies feels worth setting up, the crumble sound, and whether
+braking out from under a block feels fair.

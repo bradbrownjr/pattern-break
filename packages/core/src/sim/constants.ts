@@ -193,8 +193,9 @@ export const LASER_WIDTH = 16;
 export const LASER_SPEED_Q8 = 1536;
 
 /**
- * Missile: its own button, one per press. It flies straight ahead at 3 px per tick through
- * the walls and bursts on the first enemy it touches, destroying every enemy within 20 px.
+ * Missile: its own button, one per press. It flies straight ahead at 3 px per tick and
+ * bursts on the first enemy or wall it touches (walls since SIM_VERSION 13), destroying
+ * every enemy within 20 px.
  * The next can't launch until 1 s after the last one bursts or leaves the screen.
  */
 export const MISSILE_WIDTH = 8;
@@ -202,6 +203,17 @@ export const MISSILE_HEIGHT = 4;
 export const MISSILE_SPEED_Q8 = 768;
 export const MISSILE_BLAST_PX = 20;
 export const MISSILE_RELOAD_TICKS = 120;
+
+/**
+ * Breaking terrain (Brad, 2026-11-11): a missile's or bomb's blast breaks every lit wall
+ * segment it overlaps, but leaves the TERRAIN_KEEP_SEGMENTS at each wall's edge, so the
+ * walls never vanish (the same 2 that levels keep; docs/PLAN.md, "Level generation"). A
+ * ceiling cut in the middle drops the part beyond the cut as a falling block, under the
+ * bomb's gravity (BOMB_GRAVITY_Q8, up to BOMB_MAX_VY_Q8): it destroys the enemies it meets,
+ * costs the ship SHIELD_WALL_COST, and shatters on the floor or the ship. The floor beyond
+ * a cut crumbles where it stands.
+ */
+export const TERRAIN_KEEP_SEGMENTS = 2;
 
 /**
  * Drone: follows the ship's path 16 ticks behind (the second 32), can't be

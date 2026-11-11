@@ -26,10 +26,11 @@
  * god cheats (2026-11-10). 12 = a 6-point shield on every life, costs by what hits it, a
  * bounce off the walls, and an extra life every 20 000 points (2026-11-10). 13 = the
  * player's shots and laser stop on the walls, and missiles burst on them (Brad,
- * 2026-11-11).
+ * 2026-11-11). 14 = missiles and bombs break the walls, and the ceiling beyond a cut falls,
+ * crushing what it meets (Brad, 2026-11-11).
  */
 export const GEN_VERSION = 9;
-export const SIM_VERSION = 13;
+export const SIM_VERSION = 14;
 
 /** Fixed simulation tick rate (docs/PLAN.md, "Simulation"). */
 export const TICK_HZ = 120;

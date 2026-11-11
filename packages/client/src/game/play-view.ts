@@ -21,7 +21,7 @@ export function drawPlay(r: GameRenderer, level: Level, state: SimState, display
   r.shake(sinceHit, state.hitTick);
   r.copper.draw(displaySamples);
   r.starfield.draw(scrollPx);
-  r.terrain.draw(scrollPx);
+  r.terrain.draw(scrollPx, state, displaySamples);
   r.sparks.draw(displaySamples, scrollPx, r.terrain.lit);
   const visible = !state.dead && r.combat.draw(level, state, scrollPx, displaySamples);
   r.ship.visible = visible;

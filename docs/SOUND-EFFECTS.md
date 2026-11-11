@@ -213,6 +213,7 @@ heard time.
 | `bomb` | the bomb bursts | noise and a diving sine, echo and reverb | the boom recipe |
 | `missile` | a missile launches | noise with a rising clock | |
 | `missileBlast` | a missile bursts | a smaller boom | the boom recipe |
+| `crumble` | a falling block of wall shatters | slow, low-clocked noise with punch and a closing low-pass, a short-mode crack and a light sine thud, quieter than a kill | `explosion` |
 | `nuke` | the nuke | the longest boom, with a short-mode sweep and the most reverb | the boom recipe |
 | `lifeLost` | a life lost | a boom over a falling, wavering square | |
 | `shield` | the shield takes a hit or bounces off a wall | a falling sine thump and a muffled noise knock, with a short wavering triangle | |
