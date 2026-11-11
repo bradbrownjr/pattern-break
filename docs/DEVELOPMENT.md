@@ -285,8 +285,8 @@ and "Simulation"; this section has the exact rules.
   (`[10i, 10i + 8)`); the other 2 px are open.
 - **Segments:** ceiling segment k (from 0) is solid for y in `[7k, 7k + 6)`. Floor segment
   k is the mirror image: `[216 - 7k - 6, 216 - 7k)`. A side with level n has segments
-  0 to n - 1 lit. A peak p above the level makes segment p - 1 a peak dot, which is drawn
-  and solid only on a difficulty with `solidPeaks`. No difficulty sets it (2026-11-08).
+  0 to n - 1 lit. Peak dots, a held peak one segment above the level, were removed in
+  `GEN_VERSION` 9 (2026-11-11).
 - **Scroll table:** `level.scroll[t]`, for t from 0 to `level.tickCount`, is the world x in
   Q8 of the screen's left edge at sim tick t (song sample `400 t`). It is
   `playheadAtSample(400 t) - 64 * 256`. The playhead's world x is
@@ -340,17 +340,12 @@ bar's final values:
    fifth of a row. Gaps `i - 2`, `i - 1` and `i` must share 10 px; while they don't, bar
    i's side that blocks it loses a segment, down to 2. A bar with 2 on both sides contains
    the two previous gaps, which already share 10 px.
-7. **Peak hold:** a level at or above the peak sets the peak and a 6-bar hold
-   (`PEAK_HOLD_BARS`). Otherwise the hold counts down, and once it is 0 the peak drops one
-   segment per bar. Peaks are never below their levels.
-8. **Peak gap:** if the two peaks together exceed `maxCombinedSegments`, the ceiling peak
-   is lowered first (down to its level), then the floor peak.
-9. **Solid peaks only** (no difficulty, for now): step 5 runs again on the peaks. Step 6
-   would need to apply to them too before solid peaks return.
+Until `GEN_VERSION` 9 three more steps kept a peak per side, held for 6 bars, for the peak
+dots; no difficulty drew them after 2026-11-08, and they were removed on 2026-11-11. The
+level format dropped them in version 5.
 
 `findPathViolation(level)` in `levelgen/path-check.ts` checks the guarantee on the walls
-from `solidWalls(level)`: each side's peak where peaks are solid and its level otherwise,
-plus turrets and tank tracks (next section). Every bar's gap is at least the difficulty's
+from `solidWalls(level)`: each side's level plus turrets and tank tracks (next section). Every bar's gap is at least the difficulty's
 minimum, bar 0's gap is centred on the ship's start height, every later centre move is
 within the limit unless the new gap contains the old one, and every three consecutive gaps
 share 10 px. `barPathViolation()` checks one bar against the two before it; enemy placement
@@ -437,7 +432,7 @@ formation count and that many u8 sizes.
   (384 / sqrt 2, rounded), about 1.503 px per tick in total. The centre stays within
   x 16 to 160 and y 3 to 213, so the hitbox never leaves the screen. It starts at (64, 108).
 - **Collision:** `boxHitsTerrain()` tests a box against the solid part of every bar it
-  overlaps horizontally: lit segments, plus peak dots where they are solid. Boxes against
+  overlaps horizontally: its lit segments. Boxes against
   each other are half-open overlaps of centre and half size. Integer comparisons only.
 - **Shots:** holding fire shoots a volley every 8 ticks from the ship's nose, and from
   each drone, 1024 Q8 (4 px) per tick to the right. Each source has at most 6 straight
@@ -556,31 +551,41 @@ formation count and that many u8 sizes.
   `SIM_VERSION` 10 a reset zeroed the fire indexes instead, so a retry on the same level
   fired the wrong shots: the first replay played back in the game showed it (1900 points
   against 34 800), and `sim.test.ts` now checks that a reset state plays like a fresh one.
-- **Autopilot:** `autopilotInputs(level)` in `sim/autopilot.ts` flies a level by looking
-  24 ticks ahead through the walls from `solidWalls()` for the middle of the cave, so it
-  steers clear of turrets and tank tracks, holds fire, and presses bomb when it can drop one and a tank or floor
-  turret is 60 to 140 px ahead. It steers for the nearest capsule up to 160 px ahead,
-  held inside the clear range, while no enemy bullet is within 64 px (near the floor,
-  where capsules rest, it has little room to dodge: chasing every capsule cost the title
-  song's demo all three lives in 23 s), and launches a missile at an enemy ship up to
-  240 px ahead and within 12 px of its height. On normal (2026-11-10, `SIM_VERSION` 11,
-  before the shield) it picks up 16
-  capsules on The_Epic_Chip, 30 on Numen in Da Chip (level 1 until 2026-11-10) and 5 to 13 on the next three levels;
-  in the demo's 30 s it picks up two, fires missiles from 13.8 s and bombs at 17.3 s
-  (Brad's play-test: the demo used to show none of these). Each tick it weighs plans: hold still, or move up or down
-  for 1, 4, 8, 16 or 32 ticks and then hold. It takes the plan that meets no bullet, ship or
-  wall for longest within 32 ticks, then the one whose first move is nearest its target,
-  and makes that plan's first move; it tries the moves nearest the target first and stops
-  at the first plan that meets nothing, which keeps it as fast as before. If even the best
-  plan meets a bullet or ship within 2 ticks and it holds a nuke, it nukes. Until
-  2026-11-11 it checked its three moves against bullets and ships alone, 16 ticks ahead,
-  and dodged into a floor that rose beyond them: it died on The Dim Dungeon 2 and
-  October_Chip on hard. Across the 16 bundled and 5 test songs on easy, normal and hard,
-  the change took lives lost from 18 to 9 and failed levels from 2 to none. It flies the
-  title song's level (27 360 ticks on normal) in 0.3 to 0.5 s on the Unraid server, as
-  before; the demo computes it on the main thread. It
-  never moves horizontally. On the terrain alone (`withoutEnemies(level)`) it always
-  reaches the end; tests use that to show the path exists.
+- **Autopilot:** `autopilotInputs(level)` in `sim/autopilot.ts` flies a level as a person
+  would (Brad, 2026-11-11). It finds the middle of the cave by looking 24 ticks ahead
+  through the walls from `solidWalls()`, so it steers clear of turrets and tank tracks.
+  - **Aim:** it lines up on an enemy up to 200 px ahead that a shot fired now would reach
+    without meeting a wall (checked every 8 px along the shot's path, at the tick the shot
+    gets there): ships first, since they fly at it, then turrets, whose shell costs the
+    whole shield, then tanks; the nearest of a kind first. A turret or tank on a wall is
+    lined up from the nearest clear height that still hits it. It keeps fire held down.
+  - **Weapons:** it presses bomb when it can drop one and a tank or floor turret is 60 to
+    140 px ahead, and launches a missile at any enemy up to 240 px ahead and within 12 px
+    of its height.
+  - **Capsules:** it steers for the nearest capsule up to 160 px ahead, held inside the
+    clear range, while no enemy bullet is within 64 px (near the floor, where capsules rest,
+    it has little room to dodge: chasing every capsule cost the title song's demo all three
+    lives in 23 s).
+  - **Dodging:** each tick it weighs plans: a direction (up, down or neither, and left,
+    right or neither) held for 1, 4, 8, 16 or 32 ticks, then holding still. Each is checked
+    32 ticks ahead against bullets (which fly straight), ships (taken to keep their height)
+    and walls. It tries the plans nearest its aim first, and across, towards its home x
+    (64 px, where it starts) before holding x, and stops at the first plan that meets
+    nothing. With every plan hit, it takes the latest hit, then the cheapest in shield
+    points. It nukes when even that plan is hit within 2 ticks by something other than a
+    wall. So it brakes and backs up as well as climbing and diving, then drifts home.
+  - **Before 2026-11-11** it never moved across and never aimed: it held the cave's middle
+    and took the latest hit, wall or not. Once shots stopped on walls (`SIM_VERSION` 13) it
+    got 56.4% of the way through October_Chip's Hard level and failed the guardrails. Across the
+    16 bundled and 5 test songs on easy, normal and hard it now loses 10 lives and finishes
+    every level (`pnpm check:difficulty`). Earlier the same day it looked 16 ticks ahead at
+    bullets and ships alone, and dodged into a floor that rose beyond them.
+  - **Speed:** it flies the title song's level on normal in about 0.5 s on the Unraid
+    server, 0.4 to 0.8 s for the bundled levels on normal and hard (the old bot took 0.4 to
+    0.6 s); the demo computes it on the main thread. Plans that hold x share one table of
+    the walls ahead, and the bullets and ships are listed once a tick.
+  - On the terrain alone (`withoutEnemies(level)`) it always reaches the end; tests use
+    that to show the path exists.
 - **Speed:** `pnpm --filter @game/analysis bench:sim` on the fixture ran 12.5 to 13.7
   million ticks per second in Node 26 in the cloud development container (checked
   2026-11-08, before enemies). With enemies and power-ups it runs 0.5 to 0.6 million, 4000
@@ -657,7 +662,7 @@ the boards don't depend on it; update that hash in the same commit.
 run of level 1 (Neon Techno on normal) recorded by the game in Chromium.
 `test/replay.test.ts` checks that it names this `GEN_VERSION` and `SIM_VERSION` and the song
 file's SHA-256, builds the level from `music/neon_techno.mod`, runs the inputs, and gets the
-recorded score (93 200) on the recorded last tick, in Node and in every browser.
+recorded score (77 000) on the recorded last tick, in Node and in every browser.
 
 **Bundled songs.** `packages/analysis/test/music.test.ts` analyzes every song in
 `music/manifest.json`, builds its level on each difficulty, and checks that it has enemies,
@@ -1615,7 +1620,7 @@ boards.
   50 px minimum gap allows), made once. Each frame moves the columns to the bars
   `visibleBars()` lists and tints each sprite: lit segment k is
   `LED_LIT[segmentColorIndex(k)]` (green at the screen edge, through amber, to red 12
-  segments in, and red beyond), and a peak dot, drawn only where peaks are solid, is white.
+  segments in, and red beyond).
   Unlit segments are hidden, so the passage is plain background. The scroll is rounded to a
   whole pixel once per frame, so bars never shift against each other. On Impossible the
   colours are `LED_RED`; with the LEDs setting on Colour-blind they are `LED_CIVIDIS` on

@@ -197,7 +197,7 @@ const Q = 256;
  */
 export function handLevel(
   difficulty: DifficultyName,
-  bars: Array<[ceiling: number, floor: number, ceilingPeak?: number, floorPeak?: number]>,
+  bars: Array<[ceiling: number, floor: number]>,
   scrollPx: number | ((t: number) => number) = 0,
   tickCount = 100,
   enemies: EnemyList = emptyEnemyList(),
@@ -212,8 +212,6 @@ export function handLevel(
     barStartSample: Uint32Array.from(bars, (_, i) => i * 400),
     ceiling: Uint8Array.from(bars, (b) => b[0]),
     floor: Uint8Array.from(bars, (b) => b[1]),
-    ceilingPeak: Uint8Array.from(bars, (b) => b[2] ?? b[0]),
-    floorPeak: Uint8Array.from(bars, (b) => b[3] ?? b[1]),
     tickCount,
     scroll: Int32Array.from({ length: tickCount + 1 }, (_, t) => (typeof scrollPx === 'number' ? scrollPx : scrollPx(t)) * Q),
     enemies,

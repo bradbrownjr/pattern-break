@@ -15,7 +15,7 @@ export type {
 export { serializeLevelData, deserializeLevelData } from './level-data/serialize.ts';
 export * from './playfield.ts';
 export { NAME_CHARS, NAME_MAX, cleanName, isVulgar, nameProblem, nameReadings } from './name.ts';
-export { Difficulty, EnemyKind, EnemyTuning, PEAK_HOLD_BARS, ShipMotion, Terrain } from './levelgen/types.ts';
+export { Difficulty, EnemyKind, EnemyTuning, ShipMotion, Terrain } from './levelgen/types.ts';
 export type { DifficultyName, EnemyList, Level } from './levelgen/types.ts';
 export {
   ENEMY_GRACE_TICKS,

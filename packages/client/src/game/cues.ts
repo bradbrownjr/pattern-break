@@ -108,7 +108,11 @@ export class SoundCues {
 
     if (state.bombActive && !this.#bombActive) cue('bombDrop', shipX);
     if (state.blastTick !== this.#blastTick && state.blastTick > 0) cue('bomb', state.blastX / Q8);
-    if (state.missileActive[0] === 1 && this.#missiles[0] === 0) cue('missile', shipX);
+    // A missile fired into a wall can launch and burst between two looks: its blast is new
+    // and it wasn't in flight at the last look.
+    const launched =
+      this.#missiles[0] === 0 && (state.missileActive[0] === 1 || (state.missileBlastTick[0] !== this.#missileBlasts[0] && state.missileBlastTick[0]! > 0));
+    if (launched) cue('missile', shipX);
     for (let m = 0; m < MISSILE_SLOTS; m++) {
       const b = state.missileBlastTick[m]!;
       if (b !== this.#missileBlasts[m] && b > 0) {

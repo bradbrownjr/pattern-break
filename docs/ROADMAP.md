@@ -11,6 +11,8 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 
 | Item | What it delivers | Stage |
 |---|---|---|
+| [Destructible terrain](#next) | Missiles and bombs break the walls; loose blocks fall and crush whatever they land on, enemies included. | Next |
+| [Song lengths in the jukebox](#next) | Each song's length beside its title. | Next |
 | [Boss patterns](#later) | A mini boss at the end of level 4 and the final boss at the end of level 8, from the song's patterns. | Later |
 | [Per-song enemy overrides](#later) | A sidecar file that changes which instrument spawns which enemy for one song. | Later |
 | [Amiga PAL mode](#later) | An optional 320x256 display mode. | Later |
@@ -25,6 +27,17 @@ Each milestone is finished only when its acceptance checks pass. Work them in or
 start the next until the current one is done.
 
 ---
+
+## Next
+
+Asked for by Brad on 2026-11-11, both before the bosses. Neither is planned yet.
+
+- **Destructible terrain:** a missile or bomb breaks the wall segments it bursts on. A
+  block cut off from its wall falls under gravity and damages whatever it hits on the way
+  down, enemies included, so a player can clear a crowded stretch with it. The ship can
+  brake and back up out of the way, and so must the autopilot. It changes the sim, the path
+  guarantee, the renderer and the server's replay check, so a plan goes to Brad first.
+- **Song lengths in the jukebox:** each song's length beside its title.
 
 ## Later
 
@@ -44,8 +57,5 @@ Ideas that come after M6. Each gets its own section here, with tasks, once it's 
 
 These need Brad's answer before the work that depends on them. Don't guess.
 
-1. **Peak dots:** they are off on every difficulty (2026-11-08). They could come back as a
-   display option, as solid obstacles on hard, or not at all.
-2. **Shots through walls:** the player's shots pass through the LED walls, so turrets on
-   the bar tips can be hit; enemy bullets stop on them (2026-11-09, for Brad's play-test).
-   The other way, turrets are hard to reach behind taller bars.
+None open. Peak dots and shots through walls were settled on 2026-11-11: the dots are gone,
+and every weapon stops on the walls.

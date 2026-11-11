@@ -6,14 +6,13 @@
 // visible false: a visibility change makes Pixi rebuild the group's draw list
 // (docs/DEVELOPMENT.md, "Performance").
 
-import { BAR_LIT_WIDTH, BAR_PITCH, Difficulty, SEGMENT_LIT_HEIGHT, type Level } from '@game/core';
+import { BAR_LIT_WIDTH, BAR_PITCH, SEGMENT_LIT_HEIGHT, type Level } from '@game/core';
 import { Container, Sprite, Texture } from 'pixi.js';
-import { LED_CIVIDIS, LED_LIT, LED_PEAK, LED_RED } from './palette.ts';
+import { LED_CIVIDIS, LED_LIT, LED_RED } from './palette.ts';
 import {
   MAX_VISIBLE_BARS,
   SEGMENTS_PER_SIDE,
   SEGMENT_HIDDEN,
-  SEGMENT_LIT,
   ceilingSegmentY,
   floorSegmentY,
   segmentColorIndex,
@@ -62,14 +61,13 @@ function place(s: Sprite, x: number, state: number, k: number, lit: readonly num
     return;
   }
   s.alpha = 1;
-  s.tint = state === SEGMENT_LIT ? lit[segmentColorIndex(k)]! : LED_PEAK;
+  s.tint = lit[segmentColorIndex(k)]!;
 }
 
 export class TerrainView {
   readonly container = new Container({ isRenderGroup: true });
   #columns: BarColumn[] = [];
   #level: Level | null = null;
-  #showPeaks = false;
   /**
    * The lit colours: the neon green to red, on Impossible all red (LED_RED), and with the
    * LED colours setting on Colour-blind, cividis (LED_CIVIDIS) everywhere.
@@ -101,9 +99,6 @@ export class TerrainView {
 
   setLevel(level: Level | null): void {
     this.#level = level;
-    // Peak dots are drawn only where they are solid: a dot the ship could fly through
-    // would look like terrain.
-    this.#showPeaks = level !== null && Difficulty[level.difficulty].solidPeaks;
     this.#pickLit();
     this.container.visible = level !== null;
   }
@@ -124,12 +119,9 @@ export class TerrainView {
       const x = i * BAR_PITCH;
       const c = level.ceiling[i]!;
       const f = level.floor[i]!;
-      // A peak equal to the level draws no dot.
-      const cp = this.#showPeaks ? level.ceilingPeak[i]! : c;
-      const fp = this.#showPeaks ? level.floorPeak[i]! : f;
       for (let k = 0; k < SEGMENTS_PER_SIDE; k++) {
-        place(column.ceiling[k]!, x, segmentState(c, cp, k), k, this.#lit);
-        place(column.floor[k]!, x, segmentState(f, fp, k), k, this.#lit);
+        place(column.ceiling[k]!, x, segmentState(c, k), k, this.#lit);
+        place(column.floor[k]!, x, segmentState(f, k), k, this.#lit);
       }
     }
   }

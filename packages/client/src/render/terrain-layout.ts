@@ -61,17 +61,13 @@ export function visibleBars(level: Level, scrollPx: number, out: BarRange = { fi
 
 export const SEGMENT_HIDDEN = 0;
 export const SEGMENT_LIT = 1;
-export const SEGMENT_PEAK = 2;
 
 /**
- * Whether segment k (0 at the screen edge) of a side with `level` lit and `peak` is lit, a
- * peak dot, or not drawn. Unlit segments are not drawn, so the open passage is plain
- * background (2026-11-09).
+ * Whether segment k (0 at the screen edge) of a side with `level` lit is lit or not drawn.
+ * Unlit segments are not drawn, so the open passage is plain background (2026-11-09).
  */
-export function segmentState(level: number, peak: number, k: number): number {
-  if (k < level) return SEGMENT_LIT;
-  if (peak > level && k === peak - 1) return SEGMENT_PEAK;
-  return SEGMENT_HIDDEN;
+export function segmentState(level: number, k: number): number {
+  return k < level ? SEGMENT_LIT : SEGMENT_HIDDEN;
 }
 
 /** The lit colour index of segment k: green at the screen edge to red 12 segments in, then red. */

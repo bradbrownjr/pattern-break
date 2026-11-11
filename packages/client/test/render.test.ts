@@ -14,7 +14,6 @@ import {
   SEGMENTS_PER_SIDE,
   SEGMENT_HIDDEN,
   SEGMENT_LIT,
-  SEGMENT_PEAK,
   ceilingSegmentY,
   floorSegmentY,
   scrollPxAt,
@@ -75,13 +74,11 @@ describe('terrain layout', () => {
     }
   });
 
-  it('marks lit segments and the peak dot, and hides unlit segments', () => {
-    expect(segmentState(3, 3, 0)).toBe(SEGMENT_LIT);
-    expect(segmentState(3, 3, 2)).toBe(SEGMENT_LIT);
-    expect(segmentState(3, 3, 3)).toBe(SEGMENT_HIDDEN);
-    expect(segmentState(3, 7, 6)).toBe(SEGMENT_PEAK);
-    expect(segmentState(3, 7, 5)).toBe(SEGMENT_HIDDEN);
-    expect(segmentState(0, 1, 0)).toBe(SEGMENT_PEAK);
+  it('marks lit segments, and hides unlit ones', () => {
+    expect(segmentState(3, 0)).toBe(SEGMENT_LIT);
+    expect(segmentState(3, 2)).toBe(SEGMENT_LIT);
+    expect(segmentState(3, 3)).toBe(SEGMENT_HIDDEN);
+    expect(segmentState(0, 0)).toBe(SEGMENT_HIDDEN);
   });
 
   it('colours segments green at the edge to red 12 in, and red beyond', () => {

@@ -43,9 +43,6 @@ export const PLAYER_COLOURS: readonly number[] = [
   0xc070ff, // purple
 ];
 
-/** Peak-hold dots are white. */
-export const LED_PEAK = WHITE;
-
 /** Mixes `color` towards `base` (0 gives base, 256 gives color), per channel, in integers. */
 export function mix(base: number, color: number, amount256: number): number {
   let out = 0;

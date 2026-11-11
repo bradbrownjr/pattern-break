@@ -155,10 +155,9 @@ every bar of every generated level.
     therefore share at least 10 px.
   - The first bar reaches the ship on the first tick, so its gap is centred on the ship's
     start height.
-- **Peak hold:** each side keeps a peak level that holds for 6 bars and then falls one
-  segment per bar. Peak dots are off on every difficulty (2026-11-08): the peaks are
-  computed but not drawn or solid. A difficulty can turn them on with `solidPeaks`, which
-  makes them solid and visible and applies the path rules to them too.
+- **No peak hold (2026-11-11).** Each side used to keep a peak level that held for 6 bars,
+  drawn as a white dot. The dots were off from 2026-11-08 and were taken out on
+  2026-11-11: Brad didn't like them.
 - **Difficulty sets the song's speed and the cave's width (2026-11-09).** The song plays at
   0.9 times its tempo on easy, as written on normal, and 1.15 times on hard, without
   changing its pitch (libopenmpt's tempo factor), so the cave scrolls faster as well. The
@@ -229,9 +228,12 @@ every bar of every generated level.
   ticks to catch up. Never skip ticks.
 - Player ship: 8-way movement, a fire button (hold for auto-fire: 15 shots a second, up to 6
   in flight; the gun sprays freely, and the bomb and missile have reloads), a bomb button,
-  a nuke button, and boost and missile buttons that work once those are unlocked. Shots pass through the LED walls, so turrets on
-  the bar tips can be hit, and stop on the first enemy they hit. Turrets and ships take one
-  hit, tanks three.
+  a nuke button, and boost and missile buttons that work once those are unlocked. Every
+  weapon stops on the LED walls (Brad, 2026-11-11): shots, double shots, drone shots and
+  the laser stop, and a missile bursts on them, its blast catching what's near. A shot is
+  checked against enemies before walls, so a turret on a bar's tip still takes it. A shot
+  stops on the first enemy it hits. Turrets and ships take one hit, tanks three. Until
+  2026-11-11 shots passed through the walls.
 - Collision: ship against lit LED segments, enemies, and enemy bullets. Integer AABB
   (axis-aligned bounding box) or small hitboxes. Enemy bullets stop on the walls. Bullets
   are aimed with `Math.sqrt`, which IEEE 754 rounds the same in every engine.
@@ -330,7 +332,6 @@ every bar of every generated level.
 - Palette: near-black background with neon cyan, magenta, lime, and amber accents. LED
   segments go green at the screen edge to amber to red 12 segments in, and stay red beyond.
   Unlit segments are not drawn, so the passage is plain background (2026-11-09).
-  White peak-hold dots are drawn only on a difficulty with solid peaks (none, for now).
 - Backgrounds: animated copper-bar gradients (horizontal colour bands) and a parallax
   starfield. The bars pulse with the bass (the low spectrum bands; built 2026-11-10).
 - Effects: pooled particle emitters on note hits and kills, screen shake, a flash on

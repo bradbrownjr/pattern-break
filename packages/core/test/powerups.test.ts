@@ -18,7 +18,7 @@ import {
   SHIP_SPEED_Q8,
 } from '../src/sim/constants.ts';
 import { EnemyStatus, createSimState, tick, type SimState } from '../src/sim/sim.ts';
-import { enemyLevel, handLevel } from './level-fixtures.ts';
+import { enemyLevel, enemyList, handLevel } from './level-fixtures.ts';
 
 const Q = 256;
 const open = enemyLevel([], 2000);
@@ -196,6 +196,20 @@ describe('double and laser', () => {
 });
 
 describe('missile', () => {
+  it('bursts on a wall, its blast taking a turret just behind it (Brad, 2026-11-11)', () => {
+    // A closed wall at world x 150 to 158; one turret 7 px behind it, one far behind.
+    const bars = Array.from({ length: 40 }, (_, i): [number, number] => (i === 15 ? [16, 16] : [0, 0]));
+    const turrets = [165, 300].map((x) => ({ kind: EnemyKind.turret, spawnTick: 0, x: x * Q, y: 108 * Q }));
+    const level = handLevel('easy', bars, 0, 400, enemyList(turrets));
+    const s = createSimState();
+    s.missile = true;
+    tick(level, s, InputBit.missile);
+    for (let k = 0; k < 150 && s.missileActive[0]; k++) tick(level, s, 0);
+    expect(s.missileActive[0]).toBe(0);
+    expect(s.missileBlastX[0]).toBeLessThan(150 * Q);
+    expect(Array.from(s.enemyStatus)).toEqual([EnemyStatus.destroyed, EnemyStatus.alive]);
+  });
+
   const targets = [
     { kind: EnemyKind.turret, spawnTick: 0, x: 200 * Q, y: 108 * Q },
     // 15 px right and 12 px down: within the 20 px blast.

@@ -41,16 +41,21 @@ try {
   await page.waitForTimeout(1500);
   await page.keyboard.press('Enter'); // Play: level 1 on normal
   const start = Date.now();
-  // S saves the replay only once the run has ended, so press it until a download comes.
-  let download = null;
-  while (!download && Date.now() - start < RUN_LIMIT_MS) {
-    await page.waitForTimeout(5000);
-    download = await Promise.all([page.waitForEvent('download', { timeout: 1500 }), page.keyboard.press('KeyS')]).then(
-      ([d]) => d,
-      () => null,
-    );
-  }
-  if (!download) throw new Error(`no replay after ${RUN_LIMIT_MS / 1000} s`);
+  // The run's end shows the clear or game over screen (Game.#setMode writes the mode to
+  // <html data-mode>), which asks for a name first: Esc skips posting, once its key delay
+  // has passed, and then S saves the replay.
+  await page.waitForSelector('html[data-mode="complete"], html[data-mode="gameover"]', {
+    state: 'attached',
+    timeout: RUN_LIMIT_MS,
+  });
+  await page.waitForTimeout(2000);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+  const download = await Promise.all([page.waitForEvent('download', { timeout: 5000 }), page.keyboard.press('KeyS')]).then(
+    ([d]) => d,
+    () => null,
+  );
+  if (!download) throw new Error('the end screen gave no replay for S');
   await download.saveAs(OUT);
   console.log(`run ended after ${((Date.now() - start) / 1000).toFixed(0)} s: ${download.suggestedFilename()}`);
   console.log(`wrote ${OUT}`);

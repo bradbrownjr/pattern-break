@@ -117,18 +117,6 @@ describe('collision', () => {
     expect(shipCollides(scrolled, 0, 104 * Q, 10 * Q)).toBe(true);
     expect(shipCollides(scrolled, 0, 4 * Q, 10 * Q)).toBe(false);
   });
-
-  it('peak dots are not solid on any difficulty', () => {
-    // Ceiling level 1, peak 5: the dot would be segment 4, lit y 28..34.
-    for (const d of ['easy', 'normal', 'hard'] as const) {
-      const l = handLevel(d, [[1, 0, 5, 0]]);
-      expect(shipCollides(l, 0, 4 * Q, 31 * Q), d).toBe(false);
-      expect(shipCollides(l, 0, 4 * Q, 17 * Q), d).toBe(false);
-      // The level itself is still solid.
-      expect(shipCollides(l, 0, 4 * Q, 6 * Q), d).toBe(true);
-      expect(Difficulty[d].solidPeaks).toBe(false);
-    }
-  });
 });
 
 /** One tick with the shield emptied first, for tests of what a hit does without it. */
@@ -216,8 +204,27 @@ describe('shots', () => {
     expect(MAX_SHOTS).toBe(6);
   });
 
-  it('pass through the walls, and destroy a turret with one hit', () => {
-    // A wall of bars from world x 100 to 200, and a turret behind it at the ship's height.
+  it('stop on the walls (Brad, 2026-11-11), the laser too', () => {
+    // A closed wall of bars at world x 100 to 200, and a turret behind it at the ship's height.
+    const bars = Array.from({ length: 30 }, (_, i): [number, number] => (i >= 10 && i < 20 ? [16, 16] : [0, 0]));
+    const level = handLevel('easy', bars, 0, 400, enemyList([{ kind: EnemyKind.turret, spawnTick: 0, x: 250 * Q, y: 108 * Q }]));
+    for (const laser of [false, true]) {
+      const s = createSimState();
+      s.laser = laser;
+      let furthest = 0;
+      for (let i = 0; i < 200; i++) {
+        tick(level, s, InputBit.fire);
+        for (let k = 0; k < s.shotActive.length; k++) if (s.shotActive[k]) furthest = Math.max(furthest, s.shotX[k]!);
+      }
+      expect(s.enemyStatus[0], laser ? 'laser' : 'shot').toBe(EnemyStatus.alive);
+      // No shot gets past the wall's first bar, which starts at x 100.
+      expect(furthest).toBeLessThan(100 * Q + 16 * Q);
+    }
+  });
+
+  it('reach a turret through a gap in the walls, and destroy it with one hit', () => {
+    // A wall of bars from world x 100 to 200 with a 20 px gap at the ship's height, and a
+    // turret behind it.
     const bars = Array.from({ length: 30 }, (_, i): [number, number] => (i >= 10 && i < 20 ? [14, 14] : [0, 0]));
     const level = handLevel('easy', bars, 0, 400, enemyList([{ kind: EnemyKind.turret, spawnTick: 0, x: 250 * Q, y: 108 * Q }]));
     const s = createSimState();

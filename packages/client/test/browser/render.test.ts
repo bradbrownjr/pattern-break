@@ -53,12 +53,10 @@ describe.skipIf(!hasWebGl)('renderer', () => {
     expect(r.renderer.height).toBe(PLAYFIELD_HEIGHT);
   });
 
-  it('draws lit segments by depth, no unlit segments or peak dot, the ship, and the background', () => {
-    // Ceiling 14 lit with a peak at 16; floor 5 lit. No difficulty has solid peaks, so the
-    // peak segment is not drawn, and unlit segments are not drawn either.
+  it('draws lit segments by depth, no unlit segments, the ship, and the background', () => {
+    // Ceiling 14 lit, floor 5 lit; unlit segments are not drawn.
     const level = makeLevel({
       ceiling: Array.from({ length: 100 }, () => 14),
-      ceilingPeak: Array.from({ length: 100 }, () => 16),
       floor: Array.from({ length: 100 }, () => 5),
     });
     const state = createSimState();
@@ -98,7 +96,6 @@ describe.skipIf(!hasWebGl)('renderer', () => {
     const bars = 400;
     const level = makeLevel({
       ceiling: Array.from({ length: bars }, (_, i) => 1 + (i % 5)),
-      ceilingPeak: Array.from({ length: bars }, (_, i) => 1 + (i % 5)),
       floor: Array.from({ length: bars }, () => 1),
     });
     r.terrain.setLevel(level);

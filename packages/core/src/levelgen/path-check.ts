@@ -10,15 +10,13 @@ import { Difficulty, EnemyKind, type Level } from './types.ts';
 export type PathRules = Pick<Level, 'difficulty' | 'barStartSample'>;
 
 /**
- * Solid segments per bar on each side: the wall (its peak on difficulties with solid
- * peaks, its level otherwise), plus one segment where a turret sits on the tip, and under
+ * Solid segments per bar on each side: the wall, plus one segment where a turret sits on the tip, and under
  * a tank's whole track the floor from floorUnderTank(). Turrets and tanks can be shot, but
  * the path never depends on it.
  */
 export function solidWalls(level: Level): { ceiling: Uint8Array; floor: Uint8Array } {
-  const { solidPeaks } = Difficulty[level.difficulty];
-  const ceiling = (solidPeaks ? level.ceilingPeak : level.ceiling).slice();
-  const base = (solidPeaks ? level.floorPeak : level.floor).slice();
+  const ceiling = level.ceiling.slice();
+  const base = level.floor.slice();
   const floor = base.slice();
   const e = level.enemies;
   for (let k = 0; k < e.count; k++) {
@@ -80,15 +78,10 @@ export function barPathViolation(
 
 /**
  * Returns a description of the first bar that breaks the guarantee, or '' if none does:
- * peaks are never below their levels, and every bar passes barPathViolation() with the
- * walls from solidWalls(), turrets and tank tracks included.
+ * every bar passes barPathViolation() with the walls from solidWalls(), turrets and tank
+ * tracks included.
  */
 export function findPathViolation(level: Level): string {
-  for (let i = 0; i < level.barCount; i++) {
-    if (level.ceilingPeak[i]! < level.ceiling[i]! || level.floorPeak[i]! < level.floor[i]!) {
-      return `bar ${i}: a peak is below its level`;
-    }
-  }
   const walls = solidWalls(level);
   for (let i = 0; i < level.barCount; i++) {
     const v = barPathViolation(level, walls.ceiling, walls.floor, i);

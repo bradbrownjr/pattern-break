@@ -8,7 +8,7 @@ import {
 } from '../src/levelgen/generate.ts';
 import { findPathViolation } from '../src/levelgen/path-check.ts';
 import { serializeLevel } from '../src/levelgen/serialize.ts';
-import { Difficulty, PEAK_HOLD_BARS, Terrain, type DifficultyName, type Level } from '../src/levelgen/types.ts';
+import { Difficulty, Terrain, type DifficultyName, type Level } from '../src/levelgen/types.ts';
 import { PLAYFIELD_HEIGHT, PLAYHEAD_X, SAMPLES_PER_TICK, SEGMENT_PITCH } from '../src/playfield.ts';
 import { lcg, randomSong, syntheticLevelData, type SyntheticNote } from './level-fixtures.ts';
 
@@ -96,7 +96,6 @@ describe('generateLevel', () => {
     expect(level.ceiling[0]).toBe(level.floor[0]);
     expectAlwaysAPath(level);
     const offCentre = { ...level, floor: Uint8Array.from([level.floor[0]! + 2, level.floor[1]!]) };
-    offCentre.floorPeak = offCentre.floor.slice();
     expect(findPathViolation(offCentre)).toMatch(/bar 0: gap centre moves -7 px, limit 0 px/);
   });
 
@@ -110,16 +109,6 @@ describe('generateLevel', () => {
     for (let i = 0; i < level.barCount; i++) {
       expect(Math.min(level.ceiling[i]!, level.floor[i]!)).toBeGreaterThanOrEqual(Terrain.minSideSegments);
     }
-  });
-
-  it('holds peaks for PEAK_HOLD_BARS bars, then drops them one segment per bar', () => {
-    // The hit of the first test, in row 1: the ceiling goes 8, 11, 11, 10, 8, ...
-    const vu = (f: number): number => (rowOfFrame(f) === 1 ? 255 : 0);
-    const level = generateLevel(syntheticLevelData({ rowLengths: repeat(16, ROW), vu }), 'normal');
-    expect(Array.from(level.ceiling.subarray(0, 6))).toEqual([8, 11, 11, 10, 8, 8]);
-    // Bar 2 equals the peak, which restarts the hold; it then falls from bar 9.
-    expect(PEAK_HOLD_BARS).toBe(6);
-    expect(Array.from(level.ceilingPeak.subarray(0, 13))).toEqual([8, 11, 11, 11, 11, 11, 11, 11, 11, 10, 9, 8, 8]);
   });
 
   it('builds the scroll table from row times', () => {
@@ -157,11 +146,9 @@ describe('generateLevel', () => {
     expect(findPathViolation(base)).toBe('');
     expect(Array.from(base.ceiling)).toEqual([8, 8, 8]);
     // 13 + 13 segments leave 216 - 182 = 34 px.
-    const closed = { ...base, ceiling: Uint8Array.from([13, 8, 8]), ceilingPeak: Uint8Array.from([13, 13, 13]) };
-    closed.floor = Uint8Array.from([13, 8, 8]);
-    closed.floorPeak = Uint8Array.from([13, 13, 13]);
+    const closed = { ...base, ceiling: Uint8Array.from([13, 8, 8]), floor: Uint8Array.from([13, 8, 8]) };
     expect(findPathViolation(closed)).toMatch(/bar 0: gap 34 px is under 58 px/);
-    const jump = { ...base, ceiling: Uint8Array.from([8, 12, 8]), ceilingPeak: Uint8Array.from([8, 12, 12]) };
+    const jump = { ...base, ceiling: Uint8Array.from([8, 12, 8]) };
     expect(findPathViolation(jump)).toMatch(/bar 1: gap centre moves 14 px, limit 1 px/);
   });
 
@@ -172,14 +159,10 @@ describe('generateLevel', () => {
     // touching two bars at once, would have to jump from [70, 111] to [112, 132].
     const base = generateLevel(syntheticLevelData({ rowLengths: repeat(4, ROW) }), 'normal');
     const steps = { ...base, ceiling: Uint8Array.from([8, 6, 10, 16]), floor: Uint8Array.from([8, 15, 12, 6]) };
-    steps.ceilingPeak = steps.ceiling.slice();
-    steps.floorPeak = steps.floor.slice();
     expect(findPathViolation(steps)).toBe('bar 3: bars 1 to 3 share -1 px, under 10 px');
     steps.ceiling[3] = 15;
-    steps.ceilingPeak[3] = 15;
     expect(findPathViolation(steps)).toBe('bar 3: bars 1 to 3 share 6 px, under 10 px');
     steps.ceiling[3] = 14;
-    steps.ceilingPeak[3] = 14;
     expect(findPathViolation(steps)).toBe('');
   });
 

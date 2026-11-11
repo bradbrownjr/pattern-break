@@ -12,7 +12,7 @@ import {
 } from '../playfield.ts';
 import { SHIP_START_Y } from '../sim/constants.ts';
 import { GEN_VERSION } from '../version.ts';
-import { Difficulty, PEAK_HOLD_BARS, Terrain, type DifficultyName, type Level } from './types.ts';
+import { Difficulty, Terrain, type DifficultyName, type Level } from './types.ts';
 
 import { instrumentNotes, placeEnemies } from './enemies.ts';
 import { MIN_GAP_OVERLAP_PX, gapShiftLimitPx, maxCombinedSegments } from './rules.ts';
@@ -148,8 +148,6 @@ export function generateLevel(levelData: LevelData, difficulty: DifficultyName):
 
   const ceiling = new Uint8Array(barCount);
   const floor = new Uint8Array(barCount);
-  const ceilingPeak = new Uint8Array(barCount);
-  const floorPeak = new Uint8Array(barCount);
 
   const maxSum = maxCombinedSegments(difficulty);
   const minSide = Terrain.minSideSegments;
@@ -166,10 +164,6 @@ export function generateLevel(levelData: LevelData, difficulty: DifficultyName):
   let bottom1 = PLAYFIELD_HEIGHT;
   let top2 = 0;
   let bottom2 = PLAYFIELD_HEIGHT;
-  let peakC = 0;
-  let holdC = 0;
-  let peakF = 0;
-  let holdF = 0;
 
   for (let i = 0; i < barCount; i++) {
     const start = barStartSample[i]!;
@@ -246,59 +240,9 @@ export function generateLevel(levelData: LevelData, difficulty: DifficultyName):
       }
     }
 
-    // 7. Peak hold: a new high resets the hold; after PEAK_HOLD_BARS bars it falls one
-    //    segment per bar until the level catches it.
-    if (c >= peakC) {
-      peakC = c;
-      holdC = PEAK_HOLD_BARS;
-    } else if (holdC > 0) {
-      holdC--;
-    } else {
-      peakC--;
-    }
-    if (f >= peakF) {
-      peakF = f;
-      holdF = PEAK_HOLD_BARS;
-    } else if (holdF > 0) {
-      holdF--;
-    } else {
-      peakF--;
-    }
-
-    // 8. Peak dots never close the minimum gap either: lower the ceiling peak first, then
-    //    the floor peak. Levels already fit, so this always succeeds.
-    let excess = peakC + peakF - maxSum;
-    if (excess > 0) {
-      const dc = Math.min(excess, peakC - c);
-      peakC -= dc;
-      excess -= dc;
-      peakF -= excess;
-    }
-
-    // 9. With solid peaks the solid extent of a side is its peak, so step 5 is applied
-    //    again to the peaks (steps 6 and 9 would need to agree before solid peaks return). A peak is lowered first; once it is down to its level, both
-    //    go down together.
-    if (settings.solidPeaks) {
-      let peakShift2 = SEGMENT_PITCH * (peakC - peakF) + PLAYFIELD_HEIGHT - prevCentre2;
-      while (peakShift2 > limit2 && peakC > minSide) {
-        if (c === peakC) c--;
-        peakC--;
-        peakShift2 -= SEGMENT_PITCH;
-      }
-      while (peakShift2 < -limit2 && peakF > minSide) {
-        if (f === peakF) f--;
-        peakF--;
-        peakShift2 += SEGMENT_PITCH;
-      }
-    }
-
     ceiling[i] = c;
     floor[i] = f;
-    ceilingPeak[i] = peakC;
-    floorPeak[i] = peakF;
-    prevCentre2 = settings.solidPeaks
-      ? SEGMENT_PITCH * (peakC - peakF) + PLAYFIELD_HEIGHT
-      : SEGMENT_PITCH * (c - f) + PLAYFIELD_HEIGHT;
+    prevCentre2 = SEGMENT_PITCH * (c - f) + PLAYFIELD_HEIGHT;
     prevLength = end - start;
     top2 = top1;
     bottom2 = bottom1;
@@ -323,8 +267,6 @@ export function generateLevel(levelData: LevelData, difficulty: DifficultyName):
     barStartSample,
     ceiling,
     floor,
-    ceilingPeak,
-    floorPeak,
     tickCount,
     scroll,
   };

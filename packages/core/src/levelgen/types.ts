@@ -10,19 +10,16 @@
  *   has its own LevelData.
  * - `baseGapPx`: the gap with no hits. `minGapPx`: the gap never closes below this. Both
  *   grew 14 px, one segment a side, after level 1 played too tight (Brad, 2026-11-10).
- * - `solidPeaks` makes peak dots solid and visible; it is off on every difficulty
- *   (2026-11-08). Peaks are still computed, so a display option or solid peaks on hard can
- *   return (docs/ROADMAP.md, "Open decisions").
  */
 export const Difficulty = {
-  easy: { id: 0, tempoPermille: 900, baseGapPx: 118, minGapPx: 66, solidPeaks: false },
-  normal: { id: 1, tempoPermille: 1000, baseGapPx: 104, minGapPx: 58, solidPeaks: false },
-  hard: { id: 2, tempoPermille: 1150, baseGapPx: 90, minGapPx: 50, solidPeaks: false },
+  easy: { id: 0, tempoPermille: 900, baseGapPx: 118, minGapPx: 66 },
+  normal: { id: 1, tempoPermille: 1000, baseGapPx: 104, minGapPx: 58 },
+  hard: { id: 2, tempoPermille: 1150, baseGapPx: 90, minGapPx: 50 },
   /**
    * The secret difficulty (Brad, 2026-11-10): hard's cave and enemies at the song's own
    * tempo. Its song, Crush, is fast enough as written.
    */
-  impossible: { id: 3, tempoPermille: 1000, baseGapPx: 90, minGapPx: 50, solidPeaks: false },
+  impossible: { id: 3, tempoPermille: 1000, baseGapPx: 90, minGapPx: 50 },
 } as const;
 export type DifficultyName = keyof typeof Difficulty;
 
@@ -139,9 +136,6 @@ export interface EnemyList {
   formationSize: Uint8Array;
 }
 
-/** Bars a peak stays at its level before it starts to fall one segment per bar. */
-export const PEAK_HOLD_BARS = 6;
-
 export interface Level {
   genVersion: number;
   difficulty: DifficultyName;
@@ -158,13 +152,6 @@ export interface Level {
   ceiling: Uint8Array;
   /** Lit floor segments per bar, rising from y = 216. Fairness-clamped. */
   floor: Uint8Array;
-  /**
-   * Peak-hold level per bar, in the same segments. When it is above the bar's level, segment
-   * (peak - 1) is a peak dot, drawn and solid only where `solidPeaks` is set. Never below
-   * the bar's level.
-   */
-  ceilingPeak: Uint8Array;
-  floorPeak: Uint8Array;
   /** Sim ticks in the song: ceil(totalSamples / SAMPLES_PER_TICK). */
   tickCount: number;
   /**

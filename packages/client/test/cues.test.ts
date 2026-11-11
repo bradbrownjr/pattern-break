@@ -44,9 +44,10 @@ describe('sound cues', () => {
     for (const every of [2, 3, 7]) {
       const c = counts(run(level, every).cues);
       const want = counts(everyTick.cues);
-      // Volleys (shots and laser beams) from the same group can merge across a long frame;
-      // everything else matches.
-      for (const volley of ['shot', 'laser']) {
+      // Volleys (shots and laser beams) from the same group can merge across a long frame,
+      // and so can the blasts of the ship's and drones' missiles, cued once a look; everything
+      // else matches.
+      for (const volley of ['shot', 'laser', 'missileBlast']) {
         delete c[volley];
         delete want[volley];
       }

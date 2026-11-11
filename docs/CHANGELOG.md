@@ -13,6 +13,20 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **Every weapon stops on the walls, peak dots are gone, and the autopilot plays like a
+  person.** Brad didn't like the peak dots and wanted shots to hit walls. Shots, double
+  shots, drone shots and the laser now stop on the LED walls, and a missile bursts on them,
+  its blast catching what's near; a turret on a bar's tip still takes a shot that reaches
+  it. The peak dots, off since 2026-11-08, are removed from the levels. With shots
+  stopping on walls the old autopilot failed October_Chip's Hard level, so it was
+  rewritten: it lines up its shots on the enemy most worth shooting that it has a clear
+  line of fire to (ships, then turrets, then tanks), fires missiles at any enemy lined up,
+  and dodges across as well as up and down, braking and backing up, without flying into
+  walls. Across every bundled and test song on easy, normal and hard it loses 10 lives
+  and finishes every level. The demo shows it.
+  A missile fired point blank into a wall now gets its launch sound even when it bursts
+  before the next frame. `GEN_VERSION` 9 and `SIM_VERSION` 13, so the leaderboards start
+  over.
 * **Two fixes from Brad's play-test of the name entry.** The end screen's line reads
   "Sent" as soon as the run is safe in the queue, so the player knows they can move on;
   the rank follows when the server answers, and the run just posted now goes ahead of any

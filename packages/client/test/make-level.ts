@@ -14,11 +14,9 @@ import {
 } from '@game/core';
 
 export interface LevelSpec {
-  /** Lit ceiling and floor segments per bar; peaks default to the levels. */
+  /** Lit ceiling and floor segments per bar. */
   ceiling: number[];
   floor: number[];
-  ceilingPeak?: number[];
-  floorPeak?: number[];
   /** Samples per row. Default 4800 (0.1 s). */
   rowSamples?: number;
   difficulty?: DifficultyName;
@@ -45,8 +43,6 @@ export function makeLevel(spec: LevelSpec): Level {
     barStartSample,
     ceiling: Uint8Array.from(spec.ceiling),
     floor: Uint8Array.from(spec.floor),
-    ceilingPeak: Uint8Array.from(spec.ceilingPeak ?? spec.ceiling),
-    floorPeak: Uint8Array.from(spec.floorPeak ?? spec.floor),
     tickCount,
     scroll,
     enemies: spec.enemies ?? emptyEnemyList(),

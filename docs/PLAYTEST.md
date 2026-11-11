@@ -73,9 +73,10 @@ different places.
 
 ### 5. The title demo
 
-**Why:** the autopilot that flies the demo changed on 2026-11-11.
+**Why:** the autopilot that flies the demo was rewritten on 2026-11-11 to play more like a
+person: it lines up shots, and brakes and backs up to dodge.
 
 Leave the title screen alone until the demo starts, and watch it once.
 
-**Looking for:** anything that looks wrong: flying into a wall, odd jitter, or a crash it
-should have dodged.
+**Looking for:** anything that looks wrong: flying into a wall, odd jitter, shots wasted on
+walls, or a crash it should have dodged. Does it look like someone playing?

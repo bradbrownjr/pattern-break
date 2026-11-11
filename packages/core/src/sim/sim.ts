@@ -2,7 +2,7 @@
 // for aiming; tick() writes into a preallocated state. The enemy arrays are sized to the
 // level on its first tick, the only time tick() allocates.
 
-import { Difficulty, EnemyKind, EnemyTuning, ShipMotion, type Level } from '../levelgen/types.ts';
+import { EnemyKind, EnemyTuning, ShipMotion, type Level } from '../levelgen/types.ts';
 import {
   BAR_LIT_WIDTH,
   BAR_PITCH,
@@ -480,15 +480,13 @@ function setUpEnemies(state: SimState, level: Level): void {
 
 /**
  * True if any lit segment overlaps the column of segments [top, bottom) (Q8, measured
- * from the side's edge), for a side with `level` lit segments and a peak at `peak`.
+ * from the side's edge), for a side with `level` lit segments.
  */
-function sideHits(top: number, bottom: number, level: number, peak: number, solidPeaks: boolean): boolean {
+function sideHits(top: number, bottom: number, level: number): boolean {
   if (bottom <= 0) return false;
   const first = top <= 0 ? 0 : Math.floor(top / SEG_PITCH_Q8);
   const last = Math.floor((bottom - 1) / SEG_PITCH_Q8);
-  for (let k = first; k <= last; k++) {
-    const solid = k < level || (solidPeaks && k === peak - 1 && peak > level);
-    if (!solid) continue;
+  for (let k = first; k <= last && k < level; k++) {
     const segTop = k * SEG_PITCH_Q8;
     if (top < segTop + SEG_LIT_Q8 && bottom > segTop) return true;
   }
@@ -498,15 +496,13 @@ function sideHits(top: number, bottom: number, level: number, peak: number, soli
 /**
  * True if the box with its centre at screen (x, y) and half sizes (hw, hh), all Q8, at sim
  * tick `t` overlaps a solid part of the terrain: a lit segment of any bar it overlaps
- * horizontally (bars are solid for BAR_LIT_WIDTH px from their left edge), or a peak dot on
- * difficulties with solid peaks. The box is half-open: [x - hw, x + hw) x [y - hh, y + hh).
+ * horizontally (bars are solid for BAR_LIT_WIDTH px from their left edge). The box is half-open: [x - hw, x + hw) x [y - hh, y + hh).
  */
 export function boxHitsTerrain(level: Level, t: number, x: number, y: number, hw: number, hh: number): boolean {
   const wx0 = level.scroll[t]! + x - hw;
   const wx1 = wx0 + 2 * hw;
   const top = y - hh;
   const bottom = y + hh;
-  const solidPeaks = Difficulty[level.difficulty].solidPeaks;
   let first = Math.floor(wx0 / BAR_PITCH_Q8);
   if (first < 0) first = 0;
   let last = Math.floor((wx1 - 1) / BAR_PITCH_Q8);
@@ -514,9 +510,9 @@ export function boxHitsTerrain(level: Level, t: number, x: number, y: number, hw
   for (let i = first; i <= last; i++) {
     const barX = i * BAR_PITCH_Q8;
     if (!(wx0 < barX + BAR_LIT_Q8 && wx1 > barX)) continue;
-    if (sideHits(top, bottom, level.ceiling[i]!, level.ceilingPeak[i]!, solidPeaks)) return true;
+    if (sideHits(top, bottom, level.ceiling[i]!)) return true;
     // The floor is the ceiling mirrored: y measured up from the bottom edge.
-    if (sideHits(HEIGHT_Q8 - bottom, HEIGHT_Q8 - top, level.floor[i]!, level.floorPeak[i]!, solidPeaks)) {
+    if (sideHits(HEIGHT_Q8 - bottom, HEIGHT_Q8 - top, level.floor[i]!)) {
       return true;
     }
   }
@@ -942,11 +938,11 @@ function shieldTakes(state: SimState, t: number, cost: number): boolean {
  * 2. Spawn enemies whose time has come, move every live one, and drop those off screen.
  * 3. A new press of the nuke button with a nuke held destroys every enemy on screen and clears the bullets. Fire if the fire
  *    bit is held and the gun is ready, from the ship and each drone; move shots, which
- *    pass through the LED walls (so turrets on the bar tips can be hit) and stop on the
- *    first enemy they hit (a laser goes on, taking a hit off each enemy it overlaps). Move
- *    the bomb, or drop one on a new press once it has reloaded; it bursts on the terrain
- *    or an enemy, destroying all within its blast. Move missiles, or launch them on a new
- *    press once reloaded; they burst on the first enemy they touch.
+ *    stop on the first enemy they hit (a laser goes on, taking a hit off each enemy it
+ *    overlaps), then on the LED walls (Brad, 2026-11-11). Move the bomb, or drop one on a
+ *    new press once it has reloaded; it bursts on the terrain or an enemy, destroying all
+ *    within its blast. Move missiles, or launch them on a new press once reloaded; they
+ *    burst on the first enemy they touch or on the terrain.
  * 4. Enemies fire on their scheduled ticks; move enemy bullets, which stop on the terrain.
  * 5. Move capsules, which scroll with the cave and fall to its floor; the ship picks up
  *    those it touches, each unlocking the next power-up. A score past the next multiple of
@@ -1063,6 +1059,8 @@ export function tick(level: Level, state: SimState, rawInput: number): void {
         break;
       }
     }
+    // Enemies first, so a turret on a bar's tip takes the shot that reaches it.
+    if (state.shotActive[s] && boxHitsTerrain(level, t, sx, sy, hw, SHOT_HH)) state.shotActive[s] = 0;
   }
   if (state.bombActive) {
     moveBomb(level, state, t);
@@ -1098,6 +1096,8 @@ export function tick(level: Level, state: SimState, rawInput: number): void {
         break;
       }
     }
+    // A wall bursts it too, its blast catching what's near (a turret on the bar's tip).
+    if (state.missileActive[m] && boxHitsTerrain(level, t, mx, my, MISSILE_HW, MISSILE_HH)) burstMissile(level, state, m, t);
   }
 
   // 4. Enemy fire and bullets.

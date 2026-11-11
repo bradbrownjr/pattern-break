@@ -13,7 +13,7 @@ import {
 } from '../sim/constants.ts';
 import { barPathViolation } from './path-check.ts';
 import { floorUnderTank, tankBars, tankExitTick } from './rules.ts';
-import { Difficulty, EnemyKind, EnemyTuning, ShipMotion, type EnemyList, type Level } from './types.ts';
+import { EnemyKind, EnemyTuning, ShipMotion, type EnemyList, type Level } from './types.ts';
 
 /** No enemy appears, and none fires, in the first 2 s of a song. */
 export const ENEMY_GRACE_TICKS = 240;
@@ -125,7 +125,6 @@ export function placeEnemies(
   notes: { noteStart: Uint32Array; noteTick: Uint32Array },
 ): EnemyList {
   const tune = EnemyTuning[terrain.difficulty];
-  const { solidPeaks } = Difficulty[terrain.difficulty];
   const { barCount, tickCount, scroll, barStartSample } = terrain;
   const { timeSamples, resolvedInstrument, note, effect, effectParam } = levelData.notes;
   const n = timeSamples.length;
@@ -168,8 +167,8 @@ export function placeEnemies(
     return out;
   };
 
-  const solidC = (solidPeaks ? terrain.ceilingPeak : terrain.ceiling).slice();
-  const solidF = (solidPeaks ? terrain.floorPeak : terrain.floor).slice();
+  const solidC = terrain.ceiling.slice();
+  const solidF = terrain.floor.slice();
   const baseF = solidF.slice();
   const usedC = new Uint8Array(barCount);
   const usedF = new Uint8Array(barCount);

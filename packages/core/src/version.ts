@@ -10,7 +10,8 @@
  * (2026-11-09). 5 = each ship's formation, for power-up capsules (2026-11-09). 6 = every
  * gap 14 px wider, one segment a side (2026-11-10). 7 = the impossible difficulty
  * (2026-11-10). 8 = Amiga resampler emulation off, which changes MODs' analysis
- * (2026-11-10). Pre-release: no scores are kept yet.
+ * (2026-11-10). 9 = no peak hold: peak dots are gone (Brad, 2026-11-11).
+ * Pre-release: no scores are kept yet.
  *
  * SIM_VERSION 1 = the ship and terrain (M1). 2 = enemies, shots, enemy bullets and three
  * lives (2026-11-09). 3 = score: kill points, the on-beat bonus, the streak multiplier and
@@ -23,10 +24,12 @@
  * fresh start (2026-11-09). 11 = the ship flies in after losing a life; capsules unlock
  * power-ups in order (no buy button), and double and laser stack; the infinite-lives and
  * god cheats (2026-11-10). 12 = a 6-point shield on every life, costs by what hits it, a
- * bounce off the walls, and an extra life every 20 000 points (2026-11-10).
+ * bounce off the walls, and an extra life every 20 000 points (2026-11-10). 13 = the
+ * player's shots and laser stop on the walls, and missiles burst on them (Brad,
+ * 2026-11-11).
  */
-export const GEN_VERSION = 8;
-export const SIM_VERSION = 12;
+export const GEN_VERSION = 9;
+export const SIM_VERSION = 13;
 
 /** Fixed simulation tick rate (docs/PLAN.md, "Simulation"). */
 export const TICK_HZ = 120;
