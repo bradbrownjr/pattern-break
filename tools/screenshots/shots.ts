@@ -44,7 +44,7 @@ export const shots: Shot[] = [
     alt:
       'The title screen on a near-black background with faint blue stars. "Pattern Break" in large cyan pixel ' +
       'letters with a magenta shadow, over a row of small LED segments shading from green to red. Below it, a ' +
-      'menu in small pixel type: "Play" in amber with an amber ">" before it, then "Practice" with ' +
+      'menu in small pixel type: "Play" in amber with an amber ">" before it, then "Levels" with ' +
       '"The_Epic_Chip", "Difficulty" with "Normal", "Scores", "Jukebox", "Controls", "Settings", "Help" and "Credits", in grey. Under the menu, ' +
       '"Music: The_Epic_Chip by Drozerix"',
     caption: 'The title menu. Not used in the README.',

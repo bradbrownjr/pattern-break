@@ -80,12 +80,12 @@ two are kept for an end scene before the credits. Checked again on 2026-11-10 be
 bundling: Public Domain on its page, the MD5 matches (d1e1acef4a54af310ade1160cd733890),
 its only text is "Drozerix 2022", and its two comments call it "very pretty and calming"
 and say it "reminds me of the game 'Baba is You'", a likeness of feel with no song named.
-It passes the playability test on every difficulty, so it is in Practice and the Jukebox
+It passes the playability test on every difficulty, so it is in Levels and the Jukebox
 too.
 
 ### Music pack
 
-Five more songs, in Practice and the Jukebox but not the run (M4; Brad, 2026-11-10). Each
+Five more songs, in Levels and the Jukebox but not the run (M4; Brad, 2026-11-10). Each
 was checked again on 2026-11-10 before bundling: Public Domain on its page, the MD5
 matching, and the comments and the file's text read for a cover or a sample source. All
 five pass the playability test on every difficulty.

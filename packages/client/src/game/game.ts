@@ -1,5 +1,5 @@
 // The game flow: the start screen, the title menu with its music and attract demo, the
-// jukebox, and runs (the arcade levels in order, or one song in practice) with their intro
+// jukebox, and runs (the arcade levels in order, or one song from Levels) with their intro
 // cards, pause, game over, and level complete, and replays of finished runs. The song
 // clock drives the sim (docs/DEVELOPMENT.md, "Renderer and game loop").
 
@@ -134,9 +134,9 @@ type Mode =
 /** What the player is playing, which decides what happens when a song ends. */
 type Music = 'title' | 'jukebox' | 'run' | 'gameover' | 'credits' | null;
 
-/** A run: the arcade levels in order from `level` (0-based), or one song in practice. */
+/** A run: the arcade levels in order from `level` (0-based), or one song from Levels. */
 /** An arcade run plays `songs` in order: the eight levels, or Impossible's one. */
-type Run = { kind: 'arcade'; level: number; songs: readonly BundledSong[] } | { kind: 'practice'; song: BundledSong };
+type Run = { kind: 'arcade'; level: number; songs: readonly BundledSong[] } | { kind: 'single'; song: BundledSong };
 
 /**
  * A song's bytes, its LevelData per tempo once analyzed (each difficulty plays the song at
@@ -214,9 +214,9 @@ const JUKEBOX_NOTE_MS = 3000;
 const REMOVE_ARM_MS = 3000;
 
 export interface GameOptions {
-  /** The songs Practice and the jukebox offer, in menu order. */
+  /** The songs Levels and the jukebox offer, in menu order. */
   songs: readonly BundledSong[];
-  /** The song Practice starts on. */
+  /** The song Levels starts on. */
   song: BundledSong;
   /** Fly the ship with the autopilot instead of the keyboard (a development aid). */
   autopilot: boolean;
@@ -227,7 +227,7 @@ export class Game {
   readonly #r: GameRenderer;
   /** The on-screen controls, made in start(). */
   #touch: TouchControls | null = null;
-  /** The songs Practice and the jukebox offer: the bundled ones, then the imported ones. */
+  /** The songs Levels and the jukebox offer: the bundled ones, then the imported ones. */
   readonly #songs: BundledSong[];
   /** The jukebox's note line: an import's progress or result, or a removal, until `until`. */
   #jukeboxNote: { text: string; warn: boolean; until: number } | null = null;
@@ -878,9 +878,9 @@ export class Game {
         void this.#beginLevel(true);
         break;
       }
-      case 'practice':
+      case 'levels':
         this.#sound('start');
-        this.#run = { kind: 'practice', song: this.#songs[this.#menu.song]! };
+        this.#run = { kind: 'single', song: this.#songs[this.#menu.song]! };
         this.#runCheats = lives;
         void this.#beginLevel();
         break;
@@ -963,7 +963,7 @@ export class Game {
   }
 
   /**
-   * Posts the run that just ended. A practice run goes on its song's board. An arcade run is
+   * Posts the run that just ended. A run from Levels goes on its song's board. An arcade run is
    * posted when it ends: at a game over, with the levels cleared so far and the last try
    * (a retry and a later end post again; the board keeps the best), or after its last level.
    * A run with a cheat, or on the test song, isn't posted.
@@ -1683,7 +1683,7 @@ export class Game {
     }
   }
 
-  /** Adds songs to Practice and the jukebox; with `focus`, the jukebox's cursor goes to the first. */
+  /** Adds songs to Levels and the jukebox; with `focus`, the jukebox's cursor goes to the first. */
   #addSongs(songs: readonly BundledSong[], focus: boolean): void {
     if (songs.length === 0) return;
     this.#songs.push(...songs);
@@ -1929,7 +1929,8 @@ export class Game {
   }
 
   #levelHeading(run: Run): string {
-    if (run.kind === 'practice') return 'Practice';
+    // A song from Levels has no place in a run: its card just says Ready.
+    if (run.kind === 'single') return 'Ready';
     if (run.songs === this.#impossibleSongs) return 'Impossible';
     return run.level === run.songs.length - 1 ? 'Final level' : `Level ${run.level + 1}`;
   }
@@ -2312,7 +2313,7 @@ export class Game {
       case 'title': {
         const view = {
           cursor: this.#menu.cursor,
-          practice: this.#songs[this.#menu.song]!,
+          levelSong: this.#songs[this.#menu.song]!,
           difficulty: this.#menu.difficulty,
           music: this.#titleSong,
           secret: [this.#infiniteLives ? 'Infinite lives' : '', this.#godHeld() ? 'God mode' : ''].filter(Boolean).join('  '),

@@ -41,7 +41,7 @@ if (capture) {
 } else {
   const perf = query.get('perf') === '1' ? new PerfMeter() : null;
   if (perf) window.__pbPerf = () => perf.summary();
-  // `?song=<id>` starts Practice on that song; the test song is offered only when named.
+  // `?song=<id>` puts that song on the Levels row; the test song is offered only when named.
   const named = query.get('song');
   const song = (named === null ? null : findSong(named)) ?? songById(TITLE_SONG_ID);
   const songs = SONGS.includes(song) ? SONGS : [song, ...SONGS];

@@ -346,7 +346,7 @@ every bar of every generated level.
   left, right, confirm and back (the same actions on keyboard and gamepad), and an attract
   mode: on the song's change, the title song's level flown by the autopilot.
 - Arcade run: levels in a fixed order, eight planned (Neon Techno first, the full
-  Keygen 9000 last), each opening with a card that credits its song. Practice plays any one
+  Keygen 9000 last), each opening with a card that credits its song. Levels plays any one
   song. A mini boss ends level 4 and the final boss ends level 8 (see "Level generation").
 - Game over plays the sparse opening of Keygen 9000 and fades out.
 - Jukebox: plays the bundled songs, with an LED spectrum and each song's title, author and
@@ -355,7 +355,8 @@ every bar of every generated level.
   Import (file picker or drag and drop; left and right choose File or Folder, the file
   picker's folder mode, in every current browser), and Del to remove. Imported files are stored in IndexedDB
   (built 2026-11-10).
-- Song select: Practice's song on the title menu, with its author; the difficulty under it.
+- Song select: the Levels row on the title menu (called Practice until its scores counted;
+  Brad, 2026-11-10), with its author; the difficulty under it.
 - Scores, from the title menu: the global boards when online, Arcade and each song, top 10
   and the player's own place, and the player's name and link (built 2026-11-10; see
   "Server").

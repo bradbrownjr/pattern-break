@@ -81,7 +81,7 @@ export function emptyEnemyList(): EnemyList {
   };
 }
 
-/** `level` with no enemies: for tests of the terrain alone, and practice without enemies. */
+/** `level` with no enemies: for tests of the terrain alone, and play without enemies. */
 export function withoutEnemies(level: Level): Level {
   return { ...level, enemies: emptyEnemyList() };
 }

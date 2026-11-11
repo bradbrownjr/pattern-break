@@ -13,6 +13,8 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **Practice is now Levels, from Brad's review.** Its runs go on the song boards, so it
+  isn't practice any more. A song played from it opens with a "Ready" card.
 * **M5: leaderboards.** Global boards per song and difficulty, and an arcade board for a
   run's total, from Brad's answers: songs players import get boards too. The image now
   runs a Fastify server that serves the game and the leaderboard API, and checks every

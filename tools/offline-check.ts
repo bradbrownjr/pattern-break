@@ -6,7 +6,7 @@
 // 3. The server stops, so there is no network at all, and the page reloads from the cache.
 // 4. A song file is imported in the Jukebox, which analyzes it in the worker (libopenmpt's
 //    WASM from the cache) and stores it.
-// 5. Practice starts a run on the imported song.
+// 5. Levels starts a run on the imported song.
 //
 // It follows the game's screens through <html data-mode>, which Game.#setMode keeps.
 //
@@ -111,7 +111,7 @@ try {
   await screen(page, 'start');
   pass('reloaded with no network');
 
-  // The title, then the Jukebox (Play, Practice, Difficulty, Scores, Jukebox), then Import.
+  // The title, then the Jukebox (Play, Levels, Difficulty, Scores, Jukebox), then Import.
   await press(page, 'Space');
   await screen(page, 'title');
   await press(page, 'ArrowDown', 4);
@@ -129,7 +129,7 @@ try {
   }
   pass('imported a song offline');
 
-  // Back to the title, up to Practice, left to the last song (the imported one), start.
+  // Back to the title, up to Levels, left to the last song (the imported one), start.
   await press(page, 'Escape');
   await screen(page, 'title');
   await press(page, 'ArrowUp', 3);

@@ -16,8 +16,8 @@ const CENTER = PLAYFIELD_WIDTH / 2;
 /** What the title screen shows: the menu cursor and the current choices. */
 export interface TitleView {
   cursor: number;
-  /** Practice's song. */
-  practice: BundledSong;
+  /** The song on the Levels row: one song played on its own, its score on that song's board. */
+  levelSong: BundledSong;
   difficulty: DifficultyName;
   /** The song playing on the title screen, credited under the menu. */
   music: BundledSong;
@@ -27,7 +27,7 @@ export interface TitleView {
 
 const TITLE_LABELS: Record<TitleItem, string> = {
   play: 'Play',
-  practice: 'Practice',
+  levels: 'Levels',
   difficulty: 'Difficulty',
   scores: 'Scores',
   jukebox: 'Jukebox',
@@ -75,9 +75,9 @@ export class TitleScreen {
   #credit = new PixelText('', GREY);
   #secret = new PixelText('', MAGENTA);
   /** What the last update() drew, so an unchanged frame does no work. */
-  #drawn: { cursor: number; practice: BundledSong | null; difficulty: DifficultyName | null; secret: string } = {
+  #drawn: { cursor: number; levelSong: BundledSong | null; difficulty: DifficultyName | null; secret: string } = {
     cursor: -1,
-    practice: null,
+    levelSong: null,
     difficulty: null,
     secret: '',
   };
@@ -119,23 +119,23 @@ export class TitleScreen {
       this.#secret.text = view.secret;
       this.#secret.place(CENTER, MENU_TOP + TITLE_ITEMS.length * MENU_ROW + 20, 'center');
     }
-    if (d.cursor === view.cursor && d.practice === view.practice && d.difficulty === view.difficulty) return;
+    if (d.cursor === view.cursor && d.levelSong === view.levelSong && d.difficulty === view.difficulty) return;
     d.cursor = view.cursor;
-    d.practice = view.practice;
+    d.levelSong = view.levelSong;
     d.difficulty = view.difficulty;
     for (let i = 0; i < TITLE_ITEMS.length; i++) {
       const item = TITLE_ITEMS[i]!;
       const selected = i === view.cursor;
       this.#labels[i]!.color = selected ? AMBER : GREY;
       const value =
-        item === 'practice' ? view.practice.title : item === 'difficulty' ? DIFFICULTY_LABELS[view.difficulty] : '';
+        item === 'levels' ? view.levelSong.title : item === 'difficulty' ? DIFFICULTY_LABELS[view.difficulty] : '';
       // "< Normal >" on the selected row: left and right change it.
       const v = this.#values[i]!;
       v.text = value === '' ? '' : selected ? `< ${value} >` : `  ${value}`;
       v.color = selected ? WHITE : GREY;
     }
     this.#marker.place(LABEL_X - 10, MENU_TOP + view.cursor * MENU_ROW);
-    const credited = TITLE_ITEMS[view.cursor] === 'practice' ? view.practice : view.music;
+    const credited = TITLE_ITEMS[view.cursor] === 'levels' ? view.levelSong : view.music;
     this.#credit.text = `${credited === view.music ? 'Music: ' : ''}${credited.title} ${credited.credit}`;
     this.#credit.place(CENTER, MENU_TOP + TITLE_ITEMS.length * MENU_ROW + 8, 'center');
   }

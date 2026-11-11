@@ -10,10 +10,10 @@ describe('TitleMenu', () => {
     expect(m.item).toBe('credits');
     m.apply('down');
     m.apply('down');
-    expect(m.item).toBe('practice');
+    expect(m.item).toBe('levels');
   });
 
-  it("changes Practice's song and the difficulty with left and right", () => {
+  it("changes Levels' song and the difficulty with left and right", () => {
     const m = new TitleMenu(3, 0, 'normal');
     expect(m.apply('left')).toBeNull();
     expect(m.song).toBe(0);
@@ -29,11 +29,11 @@ describe('TitleMenu', () => {
     expect(m.difficulty).toBe('easy');
   });
 
-  it('opens play, practice, the scores, the jukebox, the controls, the settings, help or the credits on confirm, and steps the difficulty forward', () => {
+  it('opens play, levels, the scores, the jukebox, the controls, the settings, help or the credits on confirm, and steps the difficulty forward', () => {
     const m = new TitleMenu(3, 1, 'easy');
     expect(m.apply('confirm')).toBe('play');
     m.apply('down');
-    expect(m.apply('confirm')).toBe('practice');
+    expect(m.apply('confirm')).toBe('levels');
     m.apply('down');
     expect(m.apply('confirm')).toBe('changed');
     expect(m.difficulty).toBe('normal');
@@ -135,13 +135,13 @@ describe('JukeboxMenu', () => {
 });
 
 describe('TitleMenu song list', () => {
-  it("keeps Practice's song as songs are added and removed", () => {
+  it("keeps Levels' song as songs are added and removed", () => {
     const m = new TitleMenu(3, 2);
     m.addSongs(2);
     m.removeSong(0);
     expect(m.song).toBe(1);
     m.removeSong(1);
-    // Its own song went: Practice takes the next one.
+    // Its own song went: Levels takes the next one.
     expect(m.song).toBe(1);
     m.song = 2;
     m.removeSong(2);

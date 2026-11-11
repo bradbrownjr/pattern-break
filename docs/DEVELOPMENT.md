@@ -1014,17 +1014,19 @@ Run `pnpm dev` and open the URL it prints.
 
 - **Start screen:** the logo and "Press any key". Browsers let a page play sound only after
   a key press or click, so the first press starts the title music and opens the menu.
-- **Title menu:** Play, Practice, Difficulty, Jukebox, Controls, Settings, Help, over the title song. Up and down
-  (arrows or W and S) move the cursor, left and right change Practice's song or the
+- **Title menu:** Play, Levels, Difficulty, Scores, Jukebox, Controls, Settings, Help, Credits, over the title song. Up and down
+  (arrows or W and S) move the cursor, left and right change Levels' song or the
   difficulty, and Enter or Space selects. A click selects too, and Enter on Difficulty steps
   it forward, so one button reaches every choice.
 - **Demo:** left alone, the menu fades into the title song's level flown by the autopilot,
   joined where the music is, so the music carries on. Any key or click returns to the menu
   and does nothing else. The demo fades back to the menu after 30 s.
 - **Play** starts the arcade run at level 1; finishing a level offers the next, and the
-  last ends the run. **Practice** plays one song. Each level opens with a 2 s card: the
-  level number ("Final level" for the last), the song's title and credit, and the
-  difficulty. Level 1 from Play opens with the hangar intro instead.
+  last ends the run. **Levels** plays one song, its score on that song's board (named
+  Practice until the boards counted it; Brad, 2026-11-10). Each level opens with a 2 s
+  card: the level number ("Final level" for the last), the song's title and credit, and
+  the difficulty; a song from Levels says "Ready" in place of the level number. Level 1
+  from Play opens with the hangar intro instead.
 - **Hangar intro** (`hangar.ts`, Brad, 2026-11-10): before level 1 of each run started with
   Play, in black and white (see "Hangar intro art" below). The captain walks across the
   hangar, climbs the ladder into the fighter, and the camera closes in (0 to 5.2 s). In the
@@ -1046,7 +1048,7 @@ Run `pnpm dev` and open the URL it prints.
   per row of the song over 32 rows (`ColourFlood`, a `ColorMatrixFilter` on the stage,
   removed at full colour). Any key, click or pad button skips it after 0.3 s: the run
   starts at once, or shows Loading until the level is ready, and floods into colour
-  without the canopy. Practice, retries and later levels don't show it. Its sounds
+  without the canopy. Levels, retries and later levels don't show it. Its sounds
   (footsteps, ladder, seat, cassette, Play key, tape hiss, then the canopy) are a timed
   list, `HANGAR_CUES`, that `Game.#drawHangar` plays as the intro's clock passes each one.
   Everything on screen is a function of the time, so capture mode can show any moment.
@@ -1064,7 +1066,7 @@ Run `pnpm dev` and open the URL it prints.
     screen (the arrow keys and the B and A keys, or a pad's D-pad and B and A buttons;
     `secrets.ts`) turns infinite lives on, or off again, with a trill (`secret` in
     `MENU_SOUNDS`). "Infinite lives" shows in magenta under the title's credit, and Play
-    and Practice start with `Cheat.infiniteLives`.
+    and Levels start with `Cheat.infiniteLives`.
   - **God mode:** holding Esc, or Start on a pad, while choosing Play with another key or
     button (Start alone choosing Play doesn't count) starts the run with `Cheat.god`.
     "God mode" shows under the credit while Esc or Start is held.
@@ -1072,7 +1074,7 @@ Run `pnpm dev` and open the URL it prints.
     times shows Impossible after the third hard (`TitleMenu`, `IMPOSSIBLE_PASSES`); a step
     back starts the count again. From then on, until the page reloads, it is one of the
     choices. Play on Impossible is one level, Crush (`IMPOSSIBLE_SONG_IDS`), headed
-    "Impossible"; Practice on it plays any song with hard's cave at its own tempo. Its
+    "Impossible"; Levels on it plays any song with hard's cave at its own tempo. Its
     walls are red (`LED_RED`, from `0x3a0006` at the screen edge to `0xff2a2a` at the tip,
     which `TerrainView.setLevel` picks for the difficulty), and its hangar intro is on
     alert (`HangarIntro.setAlarm`): a red flash added over the picture twice a second
@@ -1219,7 +1221,7 @@ Run `pnpm dev` and open the URL it prints.
   localhost: elsewhere the note reads "Import needs HTTPS"), skipped if it's already in the
   list, then analyzed at normal's tempo in the worker: a file libopenmpt can't open counts
   as "not a song". The song, titled from its own title or else its file name, goes in the
-  library with its level, and joins Practice and the jukebox (not the arcade run); the
+  library with its level, and joins Levels and the jukebox (not the arcade run); the
   cursor moves to the first new song. The note line counts what happened ("2 added, 1
   already here, 1 not songs"; also "too big" past 32 MB and "not saved" where storage
   fails). An imported song's id is `imported-` and the first 12 hex digits of its hash, so
@@ -1235,7 +1237,7 @@ Two query parameters help in development:
 |---|---|
 | `autopilot=1` | `autopilotInputs(level)` flies the ship; the keyboard doesn't move it. |
 | `perf=1` | Records the cost of each frame. `window.__pbPerf()` in the console returns the mean, p50, p95, p99 and maximum in ms. |
-| `song=<id>` | Starts Practice on that song (ids as in capture mode). `song=pb-fixture-01` adds the test song to Practice and the jukebox. |
+| `song=<id>` | Puts that song on the Levels row (ids as in capture mode). `song=pb-fixture-01` adds the test song to Levels and the jukebox. |
 
 #### Hangar intro art
 
@@ -1272,7 +1274,7 @@ adding the file and its entry. The generated test song (`pb-fixture-01.mod`) sta
 
 The part each song plays is set in `songs.ts`, not the manifest:
 
-- `TITLE_SONG_ID`: the title and demo music, and Practice's first song (The_Epic_Chip).
+- `TITLE_SONG_ID`: the title and demo music, and Levels' first song (The_Epic_Chip).
 - `LEVEL_SONG_IDS`: the eight arcade levels in order, by scroll speed, from Neon Techno to
   Keygen 9000.
 - `IMPOSSIBLE_SONG_IDS`: the secret Impossible difficulty's run, one level: Crush, the
@@ -1315,7 +1317,7 @@ is added.
 | Peachy Chip | `peachy_chip.xm` | Drozerix | Pack |
 | Sleepy Snow | `sleepy_snow.xm` | Drozerix | Ending's credits |
 
-The pack songs (M4) and Sleepy Snow have no level in the run: they are in Practice and the
+The pack songs (M4) and Sleepy Snow have no level in the run: they are in Levels and the
 Jukebox, like an imported song.
 
 ### Library
@@ -1383,7 +1385,7 @@ vite-plugin-pwa 2.0.0 and Workbox 7.4.1:
 acceptance check, in headless Chromium against `packages/client/dist`: Chromium's
 `Page.getInstallabilityErrors` finds nothing, the service worker takes control, the
 server stops and the browser goes offline, the page reloads from the cache, a song is
-imported in the Jukebox, and Practice starts a run on it. It follows the game's screens
+imported in the Jukebox, and Levels starts a run on it. It follows the game's screens
 through `<html data-mode>`, which `Game.#setMode` keeps, rather than fixed waits.
 Chromium's file chooser for a folder (`webkitdirectory`) doesn't reach Playwright, so
 the check imports a file. Playwright turns on file chooser interception asynchronously when
@@ -1466,7 +1468,7 @@ one container, moved each frame and clipped by a mask, so a frame does no text w
   libopenmpt's license is BSD-3-Clause, which asks that binary copies carry its notice.
 - **Game** opens the source code on GitHub.
 
-The song lines elsewhere (the title's Practice line, the Jukebox, the level intro) name
+The song lines elsewhere (the title's Levels line, the Jukebox, the level intro) name
 the author only, "by Drozerix": no link and no license (Brad, 2026-11-10: Credits is the
 one place for both; a canvas line can't be clicked, a URL doesn't fit, and the license on
 every line was redundant).
@@ -1480,7 +1482,7 @@ version 2). Browsers without Ed25519 in Web Crypto (Chrome before 137, Firefox b
 Safari before 17, per MDN) or without `crypto.subtle` (plain HTTP) play as before, with no
 boards.
 
-- **Posting.** A practice run is posted when it ends. An arcade run is posted when it ends:
+- **Posting.** A run from Levels is posted when it ends. An arcade run is posted when it ends:
   at a game over, with the levels cleared so far and the last try (a retry and a later
   end post again; the board keeps the player's best), or after its last level. Runs with a
   cheat, and runs on the test song, aren't posted. Each run goes into the library's

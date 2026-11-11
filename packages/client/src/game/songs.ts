@@ -50,7 +50,7 @@ export const SONGS: readonly BundledSong[] = manifest.map((entry) => {
   };
 });
 
-/** The song on the title screen and in the demo, and the one Practice starts on. */
+/** The song on the title screen and in the demo, and the one Levels starts on. */
 export const TITLE_SONG_ID = 'the_epic_chip';
 
 /**

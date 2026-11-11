@@ -18,7 +18,7 @@ export const DIFFICULTY_ORDER = Object.keys(Difficulty) as DifficultyName[];
 /** Passes through easy, normal and hard that show Impossible after the last hard. */
 export const IMPOSSIBLE_PASSES = 3;
 
-export const TITLE_ITEMS = ['play', 'practice', 'difficulty', 'scores', 'jukebox', 'controls', 'settings', 'help', 'credits'] as const;
+export const TITLE_ITEMS = ['play', 'levels', 'difficulty', 'scores', 'jukebox', 'controls', 'settings', 'help', 'credits'] as const;
 export type TitleItem = (typeof TITLE_ITEMS)[number];
 
 /**
@@ -30,7 +30,7 @@ export type TitleEvent =
   | 'changed'
   | 'impossible'
   | 'play'
-  | 'practice'
+  | 'levels'
   | 'scores'
   | 'jukebox'
   | 'controls'
@@ -45,8 +45,8 @@ function wrap(i: number, step: number, count: number): number {
 }
 
 /**
- * Play, Practice, Difficulty, Scores, Jukebox, Controls, Settings, Help, Credits. Up and down move the cursor; left and right change
- * Practice's song or the difficulty under it. Confirm on Difficulty steps it forward, so a
+ * Play, Levels, Difficulty, Scores, Jukebox, Controls, Settings, Help, Credits. Up and down move the cursor; left and right change
+ * Levels' song or the difficulty under it. Confirm on Difficulty steps it forward, so a
  * single button or a click can reach every choice.
  *
  * The secret (Brad and his son, 2026-11-10): stepping the difficulty forward through easy,
@@ -55,7 +55,7 @@ function wrap(i: number, step: number, count: number): number {
  */
 export class TitleMenu {
   cursor = 0;
-  /** Practice's song, an index into the song list. */
+  /** Levels' song, an index into the song list. */
   song: number;
   #songCount: number;
   #difficulty: number;
@@ -71,12 +71,12 @@ export class TitleMenu {
     this.#impossible = difficulty === 'impossible';
   }
 
-  /** `count` songs were added at the end of the list; Practice's song stays as it was. */
+  /** `count` songs were added at the end of the list; Levels' song stays as it was. */
   addSongs(count: number): void {
     this.#songCount += Math.max(0, count);
   }
 
-  /** Song `song` was removed: Practice keeps its song, or takes the next (the first after the last). */
+  /** Song `song` was removed: Levels keeps its song, or takes the next (the first after the last). */
   removeSong(song: number): void {
     if (song < 0 || song >= this.#songCount) return;
     this.#songCount--;
@@ -115,7 +115,7 @@ export class TitleMenu {
   }
 
   #change(step: number): TitleEvent {
-    if (this.item === 'practice') {
+    if (this.item === 'levels') {
       if (this.#songCount < 2) return null;
       this.song = wrap(this.song, step, this.#songCount);
       return 'changed';
