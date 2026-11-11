@@ -1,2 +1,7 @@
-// Placeholder. Fastify API + replay validation arrive in M5 (docs/ROADMAP.md).
-export { GEN_VERSION, SIM_VERSION } from '@game/core';
+export { buildApp, type AppOptions } from './app.ts';
+export { Checker, type CheckJob, type CheckResult } from './checker.ts';
+export { CheckQueue } from './check-queue.ts';
+export { Database } from './db.ts';
+export { checkSignature, signedMessage } from './signature.ts';
+export { openSongStore, type SongStore } from './song-store.ts';
+export { createStaticHandler, createStaticServer } from './static.ts';

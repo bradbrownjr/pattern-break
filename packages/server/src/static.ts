@@ -1,5 +1,5 @@
-// Static file server for the built client. M5 adds the leaderboard API to this package
-// (Fastify); until then this is the whole server. Only node:http and node:fs are used.
+// Static file server for the built client. app.ts hands it every request that isn't for
+// the API. Only node:http and node:fs are used.
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { createReadStream } from 'node:fs';
@@ -66,7 +66,8 @@ function decodePath(url: string | undefined): string | null {
   return pathname;
 }
 
-export function createStaticServer({ root }: StaticServerOptions): Server {
+/** A request handler that serves the folder; it answers every request itself. */
+export function createStaticHandler({ root }: StaticServerOptions): (req: IncomingMessage, res: ServerResponse) => void {
   const absRoot = resolve(root);
   // Resolved at the first file request, so the folder can appear after the server is made.
   let realRoot: string | undefined;
@@ -133,7 +134,7 @@ export function createStaticServer({ root }: StaticServerOptions): Server {
     await pipeline(createReadStream(file), res);
   }
 
-  return createServer((req, res) => {
+  return (req, res) => {
     handle(req, res).catch((error: unknown) => {
       if (res.headersSent) {
         res.destroy();
@@ -142,5 +143,9 @@ export function createStaticServer({ root }: StaticServerOptions): Server {
       console.error('request failed:', error);
       send(res, 500, 'Internal server error\n');
     });
-  });
+  };
+}
+
+export function createStaticServer(options: StaticServerOptions): Server {
+  return createServer(createStaticHandler(options));
 }

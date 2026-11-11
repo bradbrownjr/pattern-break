@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Static file server for the built client today; leaderboard API and replay validator in milestone M5.",
+  "description": "The leaderboard API, the replay checker, and the static server for the built client.",
   "exports": {
     ".": "./src/index.ts"
   },
@@ -13,6 +13,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@game/core": "workspace:*"
+    "@fastify/rate-limit": "11.2.2",
+    "@game/analysis": "workspace:*",
+    "@game/core": "workspace:*",
+    "fastify": "5.12.8"
   }
 }

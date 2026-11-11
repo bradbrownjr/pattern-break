@@ -371,18 +371,35 @@ every bar of every generated level.
 
 ## 12. Server (`packages/server`)
 
-- `POST /runs`: `{ replay, claimedScore, playerId }`. The server needs the module file to
-  re-run the level:
-  1. If the hash is a bundled song or already known, load the module from server storage.
-  2. If it's unknown, respond `needModule`, and the client uploads the module bytes (size
-     cap about 4 MB; the server checks the hash on receipt).
-  3. Run `@game/core` levelgen and sim on the replay in a worker thread. Accept the run only
-     if the computed score equals the claimed score.
-- `GET /leaderboards/:hash?difficulty=` returns the top N plus the caller's rank.
-- `GET /songs/:hash` returns metadata, author and source links, and the player count.
-- **Players:** v1 uses an anonymous device keypair plus a chosen nickname. A player can add
-  one profile link (their music page: Mod Archive, Bandcamp, SoundCloud, and so on), shown
-  on their leaderboard entries. Accounts and magic-link login come later.
+One Fastify process serves the API under `/api` and the built client. SQLite through
+`node:sqlite` holds players, songs and runs; replays and uploaded songs are files beside it
+in the data folder (`/data` in the image).
+
+- `POST /api/runs`: a song run (one replay) or an arcade run (its level replays in order),
+  the player's public key, and an Ed25519 signature over the body. The server needs each
+  song file to rebuild its level:
+  1. If the hash is a bundled song or already stored, it loads the file from storage.
+  2. If it's unknown, it answers `needModule`, and the client uploads the bytes with
+     `PUT /api/songs/:hash` (4 MB cap; the server checks the hash on receipt), then submits
+     again. Imported songs get boards from day one (Brad, 2026-11-11).
+  3. A worker thread runs `@game/core` levelgen and sim on the replay. Level data is cached
+     per song, difficulty and `GEN_VERSION`, so a check after the first re-runs only the
+     sim. The run is accepted only if its versions are the server's, it has no cheat flags,
+     and the computed score equals the claimed score.
+- **Arcade board (Brad, 2026-11-11):** beside the per-song boards, one board per difficulty
+  for an arcade run's total. Each level starts from a fresh sim state, so the total is the
+  sum of the level scores, and the server checks each level as above. The levels must be
+  the arcade's songs for that difficulty, in order. A run that ends in a game over counts,
+  with the levels it reached.
+- `GET /api/leaderboards/:hash?difficulty=` and `GET /api/leaderboards/arcade?difficulty=`
+  return the top N plus the caller's rank.
+- `GET /api/songs/:hash` returns metadata, author and source links, and the player count.
+- `GET /api/replays/:sha` returns a listed run's replay, so top runs can be watched.
+- **Players:** v1 uses an anonymous device keypair (Ed25519 through Web Crypto: Chrome 137,
+  Firefox 129, Safari 17, per MDN's compatibility data) plus a chosen nickname, set with
+  `PUT /api/players/me`. A player can add one profile link (their music page: Mod Archive,
+  Bandcamp, SoundCloud, and so on), shown on their leaderboard entries. Accounts and
+  magic-link login come later.
 - Rate limiting per IP and per player (`@fastify/rate-limit`). Replays are stored so top
   runs can be watched.
 - Module storage: uploaded modules are stored only for hash lookup and validation. They

@@ -13,6 +13,14 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **M5: the leaderboard server.** The image now runs a Fastify server that serves the game
+  and a leaderboard API, and checks every submitted run by building the song's level and
+  playing the run's inputs again; the score must come out the same. Boards are per song
+  and difficulty, plus an arcade board for a run's total, from Brad's answers: songs
+  players import get boards too, uploaded once so the server can check them. Players sign
+  each submission with a key made in the browser. A test in `pnpm check` sends a real run,
+  finds it on the board, and sees a raised score and edited inputs turned down. The game's
+  side (submitting, nicknames, the boards on screen) is next.
 * **Fixed: a freeze at a level's start.** The hangar intro could stop the game on its
   first frame, the screen left on the title, about one start in two in headless Chromium.
   A frame's timestamp can come a moment before the key press that started the intro, and

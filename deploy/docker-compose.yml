@@ -1,4 +1,4 @@
-# Pattern Break play-test image. See docs/SELF-HOSTING.md.
+# Pattern Break: the game and its leaderboard server. See docs/SELF-HOSTING.md.
 #   docker compose -f deploy/docker-compose.yml up -d
 #   docker compose -f deploy/docker-compose.yml pull && docker compose -f deploy/docker-compose.yml up -d   (update)
 services:
@@ -9,9 +9,17 @@ services:
     ports:
       # host:container. Change the left number to use another port on the host.
       - "8080:8080"
+    volumes:
+      # The leaderboards: database, replays, uploaded songs (docs/SELF-HOSTING.md).
+      - pattern-break-data:/data
+    # environment:
+    #   TRUST_PROXY: "192.168.1.1"   # the reverse proxy's address, if there is one
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
       interval: 30s
       timeout: 3s
       retries: 3
       start_period: 5s
+
+volumes:
+  pattern-break-data:

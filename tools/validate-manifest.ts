@@ -55,6 +55,15 @@ for (const file of readdirSync(MUSIC)) {
   if (SONG_FILE.test(file) && !listed.has(file)) errors.push(`${file}: in music/ but not in manifest.json`);
 }
 
+// music/arcade.json names the arcade run's songs by file name without the extension.
+const arcade: unknown = JSON.parse(readFileSync(new URL('arcade.json', MUSIC), 'utf8'));
+const ids = new Set([...listed].map((file) => file.replace(/\.[^.]+$/, '')));
+for (const list of ['levels', 'impossible'] as const) {
+  const value = (arcade as Record<string, unknown>)[list];
+  if (!Array.isArray(value) || value.length === 0) errors.push(`arcade.json: "${list}" must be a list of song ids`);
+  else for (const id of value) if (!ids.has(String(id))) errors.push(`arcade.json: "${list}" names ${String(id)}, which isn't in the manifest`);
+}
+
 if (errors.length > 0) {
   for (const e of errors) console.error(`music/manifest.json: ${e}`);
   process.exit(1);

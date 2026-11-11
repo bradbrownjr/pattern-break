@@ -1,13 +1,15 @@
 # Self-hosting
 
-How to run the Pattern Break play-test image on your own machine or on Unraid. The image
-holds the game only: the built client and a small static web server. A song here is a module,
-a song file made in a music tracker; the game ships with one test song. There are no
-leaderboards until milestone M5, which adds the API to this same image (see
-[`ROADMAP.md`](ROADMAP.md)). Development setup is in [`DEVELOPMENT.md`](DEVELOPMENT.md).
+How to run the Pattern Break image on your own machine or on Unraid. A song here is a
+module, a song file made in a music tracker. The image holds the built client, the bundled
+songs, and the server: it serves the game and the leaderboard API from one port, and checks
+every submitted run by playing it again. Development setup is in
+[`DEVELOPMENT.md`](DEVELOPMENT.md).
 
-The image is `ghcr.io/bradbrownjr/pattern-break`. It listens on port 8080, runs as a
-non-root user, needs no volumes, and answers `GET /healthz` with 200 for health checks.
+The image is `ghcr.io/bradbrownjr/pattern-break`. It listens on port 8080, runs as the
+non-root `node` user (uid 1000), and answers `GET /healthz` with 200 for health checks.
+The leaderboards live in `/data`: mount a volume or a host folder there, or they are lost
+when the container is replaced.
 
 ## Tags
 
@@ -49,20 +51,35 @@ use it only on a machine you trust, only for this address, and turn it off after
 
 ```sh
 docker run -d --name pattern-break --restart unless-stopped -p 8080:8080 \
-  ghcr.io/bradbrownjr/pattern-break:edge
+  -v pattern-break-data:/data ghcr.io/bradbrownjr/pattern-break:edge
 ```
 
-The first line of the log says the port and the folder being served. Settings, all optional:
+The first line of the log says the port, the folder being served, and the data folder.
+Settings, all optional:
 
 | Variable | Default | Meaning |
 |---|---|---|
 | `PORT` | `8080` | Port the server listens on inside the container. |
 | `CLIENT_DIST` | `/app/packages/client/dist` | Folder of built client files. |
+| `DATA_DIR` | `/data` | The database, stored replays, uploaded songs and the level cache. |
+| `MUSIC_DIR` | `/app/music` | The bundled songs and their `manifest.json`. |
+| `TRUST_PROXY` | unset | The reverse proxy's address, or `true`. Set it when a proxy is in front, so rate limits count each player's IP, not the proxy's. |
+
+### The data folder
+
+`/data` holds `pattern-break.sqlite` (players, songs and runs), `replays/` (each accepted
+level's replay, named by its SHA-256), `songs/` (songs players uploaded so their runs could
+be checked; never served) and `levels/` (a cache of analysed levels, safe to delete). A
+named volume needs nothing more. A host folder must be writable by uid 1000:
+`mkdir -p /srv/pattern-break && chown 1000:1000 /srv/pattern-break`.
+
+Back it up by stopping the container and copying the folder; SQLite's `-wal` and `-shm`
+files belong with the database.
 
 ## Docker Compose
 
-[`deploy/docker-compose.yml`](../deploy/docker-compose.yml) has the port mapping, a restart
-policy, and the health check:
+[`deploy/docker-compose.yml`](../deploy/docker-compose.yml) has the port mapping, the data
+volume, a restart policy, and the health check:
 
 ```sh
 docker compose -f deploy/docker-compose.yml up -d
@@ -75,7 +92,11 @@ docker compose -f deploy/docker-compose.yml up -d
    Container, paste its raw URL into Template. The template points at the `edge` tag. The
    template URL it declares uses the repository's `HEAD`, so it follows the default branch.
 2. In Docker, Add Container, pick `pattern-break` from the template list.
-3. Leave the web UI port at 8080, or change it if 8080 is taken. Apply.
+3. Leave the web UI port at 8080, or change it if 8080 is taken. The data path defaults to
+   `/mnt/user/appdata/pattern-break`. Create it first and give it to uid 1000, or the
+   server can't write there: `mkdir -p /mnt/user/appdata/pattern-break && chown 1000:1000
+   /mnt/user/appdata/pattern-break`. Set Trust proxy to the reverse proxy's address if
+   there is one. Apply.
 4. Add a reverse proxy host for it with HTTPS (see above). The template's WebUI link opens
    the plain HTTP address, which only reaches the title screen.
 

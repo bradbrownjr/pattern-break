@@ -13,3 +13,6 @@ __lint_probe__/
 # Agent worktrees (temporary, managed by Claude Code)
 .claude/worktrees/
 .vitest/
+
+# The server's data folder when it runs from the repo (database, replays, uploaded songs).
+packages/server/data/

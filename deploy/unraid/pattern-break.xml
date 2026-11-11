@@ -8,10 +8,12 @@
   <Privileged>false</Privileged>
   <Support>https://github.com/bradbrownjr/pattern-break/issues</Support>
   <Project>https://github.com/bradbrownjr/pattern-break</Project>
-  <Overview>Pattern Break is a tunnel shooter whose levels are built from songs. A song here is a module: a song file made in a music tracker, a program that arranges short samples into patterns of notes and beats. The terrain follows the song's spectrum, so you fly the beat. This image is the game only, with one bundled test song and no leaderboards. Browsers only allow the game's audio and hashing on HTTPS or localhost, so put the web UI behind a reverse proxy with HTTPS. See docs/SELF-HOSTING.md in the repository.</Overview>
+  <Overview>Pattern Break is a tunnel shooter whose levels are built from songs. A song here is a module: a song file made in a music tracker, a program that arranges short samples into patterns of notes and beats. The terrain follows the song's spectrum, so you fly the beat. This image serves the game, its bundled songs, and the leaderboards, which it keeps in the data path; create that folder and give it to uid 1000 first (chown 1000:1000). Browsers only allow the game's audio and hashing on HTTPS or localhost, so put the web UI behind a reverse proxy with HTTPS. See docs/SELF-HOSTING.md in the repository.</Overview>
   <Category>Games:</Category>
   <WebUI>http://[IP]:[PORT:8080]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/bradbrownjr/pattern-break/HEAD/deploy/unraid/pattern-break.xml</TemplateURL>
   <ExtraParams>--health-cmd="wget -q -O /dev/null http://127.0.0.1:8080/healthz" --health-interval=30s --health-timeout=3s --health-retries=3</ExtraParams>
   <Config Name="Web UI port" Target="8080" Default="8080" Mode="tcp" Description="Port for the game's web page." Type="Port" Display="always" Required="true" Mask="false">8080</Config>
+  <Config Name="Data" Target="/data" Default="/mnt/user/appdata/pattern-break" Mode="rw" Description="The leaderboards: database, replays and uploaded songs. Must be writable by uid 1000." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/pattern-break</Config>
+  <Config Name="Trust proxy" Target="TRUST_PROXY" Default="" Mode="" Description="The reverse proxy's address, so rate limits count each player's IP. Leave empty without a proxy." Type="Variable" Display="always" Required="false" Mask="false"></Config>
 </Container>

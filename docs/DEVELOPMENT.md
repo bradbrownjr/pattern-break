@@ -50,7 +50,7 @@ One package: `pnpm --filter @game/core test`. One test file:
 pattern-break/
 ├── .github/workflows/ci.yml       # checks, build, and the golden test in three browser engines
 ├── .github/workflows/docker.yml   # builds the image, pushes it to ghcr.io (see SELF-HOSTING.md)
-├── Dockerfile                     # the play-test image: built client plus the static server
+├── Dockerfile                     # the image: the server, the bundled songs and the built client
 ├── deploy/                        # docker-compose.yml and the Unraid template
 ├── .oxlintrc.json                 # lint config; the core determinism rules are its override
 ├── docs/
@@ -62,7 +62,7 @@ pattern-break/
 │   ├── SOUND-EFFECTS.md           # sound effects: the research, the design, measurements
 │   └── DOC-STYLE.md               # writing and voice
 ├── art/hangar/                    # the hangar intro's generated art as it came back, and how it was made (README.md)
-├── music/                         # the bundled songs, and manifest.json with their credits and licenses
+├── music/                         # the bundled songs, manifest.json (credits, licenses), arcade.json (the run's order)
 ├── packages/
 │   ├── core/                      # @game/core: deterministic levelgen, sim, PRNG, replays
 │   │   ├── src/version.ts         # GEN_VERSION, SIM_VERSION, TICK_HZ, ANALYSIS_SAMPLE_RATE
@@ -92,10 +92,17 @@ pattern-break/
 │   │   ├── public/icons/          # app icons, drawn by tools/make-icons.ts
 │   │   ├── audio-debug.html       # dev-server page that plays the fixture and shows the clock
 │   │   └── vitest.config.ts       # the node and browser test projects
-│   └── server/                    # @game/server: static file server now; leaderboard API and replay validator (M5)
+│   └── server/                    # @game/server: the leaderboard API, the run checker, the static server
+│       ├── src/app.ts             # Fastify: the /api routes, rate limits, the static fallback
+│       ├── src/checker.ts         # rebuilds a level, replays a run, says why it's rejected
+│       ├── src/check-worker.ts    # the worker thread the checks run in
+│       ├── src/check-queue.ts     # hands checks to the worker
+│       ├── src/db.ts              # SQLite: players, songs, runs, boards
+│       ├── src/signature.ts       # Ed25519 request signatures
+│       ├── src/song-store.ts      # song files by hash: bundled and uploaded
 │       ├── src/static.ts          # serves the built client: MIME types, cache headers, /healthz
-│       ├── src/main.ts            # entry point (PORT, CLIENT_DIST)
-│       └── test/static.test.ts
+│       ├── src/main.ts            # entry point (PORT, CLIENT_DIST, DATA_DIR, MUSIC_DIR, TRUST_PROXY)
+│       └── test/                  # api.test.ts (M5's acceptance check), static.test.ts
 ├── tools/
 │   ├── check-docs.ts              # writing-rules check
 │   ├── validate-manifest.ts       # music check: files listed, hashes, licenses, credits
@@ -604,9 +611,10 @@ which.
 - **`GEN_VERSION`**: bump when level generation output changes for any input.
 - **`SIM_VERSION`**: bump when simulation output changes for any input.
 
-Leaderboards are keyed on `GEN_VERSION`, so a bump starts fresh boards. Update the golden
-snapshots and re-record the replay fixture (`pnpm record:replay`) in the same commit as the
-bump. Both are 0 until the first release.
+Leaderboards are keyed on both, so a bump of either starts fresh boards: the server lists
+only runs from its own versions and turns down runs from others (see "Leaderboard server").
+Update the golden snapshots and re-record the replay fixture (`pnpm record:replay`) in the
+same commit as the bump.
 
 ## Tests
 
@@ -1652,6 +1660,77 @@ Headless Chromium renders WebGL with SwiftShader on the CPU, and that GPU-side t
 in the number, so the headless frame rate says nothing about real hardware. M1's 60 fps check
 is done by hand in desktop Chrome. `PLAN.md` sets a target of 2 ms or less per frame of sim
 and render work on desktop.
+
+## Leaderboard server
+
+`packages/server` (docs/PLAN.md, "Server"). One Fastify process answers `/api` and hands
+every other path to `static.ts`, which serves the built client as before. Node runs the
+TypeScript directly, but not from inside `node_modules`, so the image keeps the workspace
+layout, with `packages/core` and `packages/analysis` linked from `node_modules` as in the
+repo (see the Dockerfile).
+
+### The API
+
+| Request | Signed | Answer |
+|---|---|---|
+| `GET /api` | no | `{ genVersion, simVersion }` |
+| `PUT /api/players/me` | yes | Sets `{ nickname, link }`. A nickname is 1 to 12 printable ASCII characters, no space at either end, one player's only (compared without case): 409 when taken. A link is `http` or `https`, at most 200 characters, or null. |
+| `GET /api/players/me` | no | The nickname and link for the `X-PB-Key` header's key, or 404. |
+| `POST /api/runs` | yes | `{ kind: 'song' \| 'arcade', replays: [base64] }`. Answers `{ status: 'needModule', hashes }`, `{ status: 'accepted', runId, score, rank, players }`, or 422 `{ status: 'rejected', reason, level }`. 403 until the key has a nickname. |
+| `PUT /api/songs/:hash` | yes | The song file as `application/octet-stream`, up to 4 MB. 422 when its SHA-256 isn't `:hash`; 201 when stored, 200 when the server had it. |
+| `GET /api/songs/:hash` | no | `{ hash, title, author, bundled, license, sourceUrl, players }`, or 404. |
+| `GET /api/leaderboards/:hash?difficulty=&limit=` | no | A song's board: `{ genVersion, simVersion, top, you, players }`. `limit` is 1 to 100, default 10. `you` is the caller's place when the request has an `X-PB-Key` header. |
+| `GET /api/leaderboards/arcade?difficulty=&limit=` | no | The arcade board, the same shape. Entries have `levels`, the levels the run reached. |
+| `GET /api/replays/:sha` | no | A listed run's replay file, by the SHA-256 a board entry names. |
+
+A board lists each player's best run: the highest score, the earlier run first on a tie.
+
+### Signing
+
+A player is an Ed25519 key pair; the public key names them. A signed request carries
+`X-PB-Key` (the 32-byte public key, base64url), `X-PB-At` (milliseconds since 1970) and
+`X-PB-Signature` (64 bytes, base64url) over the UTF-8 of `"<METHOD> <url>\n<at>\n"`
+followed by the body's bytes, where `<url>` is the path and query as sent. The server turns
+down a time more than 10 minutes from its clock. A run sent twice is kept once.
+
+### Checking a run
+
+`checker.ts`, in the worker thread from `check-worker.ts`, one check at a time. For each
+replay, in order, it turns the run down with one of these reasons:
+
+| Reason | When |
+|---|---|
+| `bad replay` | The bytes don't decode, or a song run has more than one replay. |
+| `wrong songs` | An arcade run's songs aren't the arcade's (`music/arcade.json`) for its difficulty, in order. |
+| `mixed difficulty` | An arcade run's levels aren't all one difficulty. |
+| `old version` | The replay's `GEN_VERSION` or `SIM_VERSION` isn't the server's. |
+| `cheat` | The replay has cheat flags. Impossible counts like any difficulty (Brad, 2026-11-10). |
+| `song unreadable` | libopenmpt can't analyse the song. |
+| `not ended` | The inputs stop before a game over or the song's end. |
+| `score mismatch` | The replayed score isn't the replay's score. |
+| `level not cleared` | An arcade level before the last ended in a game over. |
+
+An accepted arcade run goes on the arcade board, and each of its levels on that song's
+board. The level comes from the song's LevelData, cached in `data/levels/` as
+`<hash>-<tempo>-<GEN_VERSION>.level` and the last 32 Levels in memory.
+
+Measured on the beta box, 2026-11-11: the first check of Neon Techno on normal took 3.9 s,
+nearly all of it the analysis; the next checks took 7 to 14 ms. A song's analysis takes 1
+to 5 s per difficulty here (all sixteen bundled songs, `music.test.ts`).
+
+### Rate limits
+
+Per IP (`@fastify/rate-limit`), and for signed requests a second limit per key:
+
+| Route | Per IP | Per key |
+|---|---|---|
+| `POST /api/runs` | 30 a minute | 20 a minute |
+| `PUT /api/songs/:hash` | 20 an hour | 10 an hour |
+| `PUT /api/players/me` | 20 a minute | 10 a minute |
+| Each `GET` | 120 a minute | |
+
+Behind a reverse proxy, set `TRUST_PROXY` to its address, or every player shares the
+proxy's IP.
 
 ## Reusable parts
 

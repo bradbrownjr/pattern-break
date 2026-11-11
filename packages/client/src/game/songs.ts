@@ -4,6 +4,7 @@
 // players; capture mode and the screenshots can still name it.
 
 import testSongUrl from '@game/analysis/fixtures/pb-fixture-01.mod?url';
+import arcade from '../../../../music/arcade.json';
 import manifest from '../../../../music/manifest.json';
 import type { StoredSong } from './library.ts';
 
@@ -53,26 +54,18 @@ export const SONGS: readonly BundledSong[] = manifest.map((entry) => {
 export const TITLE_SONG_ID = 'the_epic_chip';
 
 /**
- * The arcade run's levels, first to last, ordered by scroll speed. The mini boss ends
- * level 4 and the final boss level 8. Why each song was picked, and the ones that weren't,
- * are in docs/SONG-DIGEST.md.
+ * The arcade run's levels, first to last, ordered by scroll speed. The mini boss ends level 4
+ * and the final boss level 8. The list is in music/arcade.json, which the server reads too,
+ * to check arcade runs. Why each song was picked, and the ones that weren't, are in
+ * docs/SONG-DIGEST.md.
  */
-export const LEVEL_SONG_IDS: readonly string[] = [
-  'neon_techno',
-  'rndd_keygen_1',
-  'chip_overture',
-  'the_dim_dungeon',
-  '4_rndd',
-  'girl_from_mars',
-  'wrath_of_the_djinn',
-  'keygen_9000',
-];
+export const LEVEL_SONG_IDS: readonly string[] = arcade.levels;
 
 /**
  * The secret Impossible difficulty's run: one level, the fastest song measured (24 rows a
  * second, 1.5 times level 8's speed; docs/SONG-DIGEST.md).
  */
-export const IMPOSSIBLE_SONG_IDS: readonly string[] = ['crush'];
+export const IMPOSSIBLE_SONG_IDS: readonly string[] = arcade.impossible;
 
 /**
  * The ending's credit roll plays this song, after the last level of a run (Brad,

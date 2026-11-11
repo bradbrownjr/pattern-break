@@ -13,3 +13,4 @@ docs/img
 deploy
 .env
 .env.*
+packages/server/data
