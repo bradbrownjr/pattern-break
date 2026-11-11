@@ -21,7 +21,9 @@ Fixes**, in that order.
   is uploaded once and checked against its hash. In the game, runs post as they end
   (arcade runs at a game over and after the last level), the end screen shows the run's
   rank, runs finished offline wait in a queue, and a Scores screen on the title menu
-  shows each board's top 10, with the player's name and link. The player is a key pair
+  shows each board's top 10, with the player's name and link. From Brad's review, each
+  player's rows take a bright colour of their own, picked from a hash of their key, and
+  how far an unfinished arcade run got sits in its own column so the scores line up. The player is a key pair
   made in the browser that signs each submission. Measured in the Unraid container, a
   check takes about 3 s the first time a song is seen and 5 to 15 ms after, so every run
   is checked. The data lives in `/data`, mounted from `/mnt/user/appdata/pattern-break`.

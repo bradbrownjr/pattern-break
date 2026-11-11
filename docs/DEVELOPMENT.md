@@ -1491,10 +1491,14 @@ boards.
   "Not posted: score mismatch", or "N Set name" when the player has no name yet; N opens
   the name entry, and saving it sends the held runs.
 - **Scores,** on the title menu: rows for the board (Arcade, then each song with a hash),
-  the difficulty (Impossible once found) and the name, then the board's top 10 with the
-  player's own place in cyan, and "You 23" under the list when it's lower. A name with a
-  link shows "*"; Enter on it opens the link in a new tab. Enter on Name opens the name
-  entry.
+  the difficulty (Impossible once found) and the name, then the board's top 10, and "You
+  23" under the list when the player's place is lower. Each row is in the player's colour,
+  `PLAYER_COLOURS[mark % 12]` (render/palette.ts: the theme's neons and LED colours, each at
+  least 4.5:1 against the background, none amber, which marks the selected row; Brad,
+  2026-11-10). The player's own row has a cyan "<" after the score. Columns: rank, name,
+  the levels an arcade run reached when it ended in a game over ("L6", empty otherwise, so
+  the scores stay aligned), score. A name with a link shows "*"; Enter on it opens the
+  link in a new tab. Enter on Name opens the name entry.
 - **The name entry** has Name, Link and Save. It takes typing and pasting only: a pad or a
   touch screen can't enter text yet (M6). The form checks the name with the server's rule
   before sending; the server's answers show as "Name taken", "Bad name", "Bad link",
@@ -1719,6 +1723,8 @@ repo (see the Dockerfile).
 | `GET /api/replays/:sha` | no | A listed run's replay file, by the SHA-256 a board entry names. |
 
 A board lists each player's best run: the highest score, the earlier run first on a tie.
+Each entry has `mark`, the first 32 bits of the SHA-256 of the player's public key, so the
+game can colour a player's rows the same everywhere without the key being sent.
 
 ### Signing
 

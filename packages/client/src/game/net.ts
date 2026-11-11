@@ -25,6 +25,8 @@ export interface BoardEntry {
   score: number;
   levels: number;
   finished: boolean;
+  /** A number from the player's key, the same on every board: picks the row's colour. */
+  mark: number;
 }
 
 export interface BoardView {

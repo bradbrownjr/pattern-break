@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ProfileForm, fieldText, saveError } from '../src/game/profile.ts';
-import { ScoresMenu, entryText } from '../src/game/scores.ts';
+import { PLAYER_COLOURS } from '../src/render/palette.ts';
+import { ScoresMenu, entryText, playerColour } from '../src/game/scores.ts';
 import type { BoardView } from '../src/game/net.ts';
 
 const BOARDS = [
@@ -10,8 +11,8 @@ const BOARDS = [
 
 const VIEW: BoardView = {
   top: [
-    { rank: 1, nickname: 'KC1', link: 'https://modarchive.org/', score: 900, levels: 8, finished: true },
-    { rank: 2, nickname: 'AMY', link: null, score: 500, levels: 3, finished: false },
+    { rank: 1, nickname: 'KC1', link: 'https://modarchive.org/', score: 900, levels: 8, finished: true, mark: 7 },
+    { rank: 2, nickname: 'AMY', link: null, score: 500, levels: 3, finished: false, mark: 0xffffffff },
   ],
   you: null,
   players: 2,
@@ -53,10 +54,16 @@ describe('ScoresMenu', () => {
     expect(m.row).toEqual({ kind: 'name' });
   });
 
-  it('shows the levels an arcade run reached when it ended in a game over', () => {
-    expect(entryText(VIEW.top[1]!, true)).toEqual({ rank: '2', name: 'AMY', score: '500 L3' });
-    expect(entryText(VIEW.top[0]!, true).score).toBe('900');
-    expect(entryText(VIEW.top[1]!, false).score).toBe('500');
+  it('shows the levels an arcade run reached in their own column, so scores stay aligned', () => {
+    expect(entryText(VIEW.top[1]!, true)).toEqual({ rank: '2', name: 'AMY', levels: 'L3', score: '500' });
+    expect(entryText(VIEW.top[0]!, true).levels).toBe('');
+    expect(entryText(VIEW.top[1]!, false).levels).toBe('');
+  });
+
+  it("colours a row by the player's mark, any 32-bit mark", () => {
+    expect(playerColour(7)).toBe(PLAYER_COLOURS[7]);
+    expect(playerColour(0xffffffff)).toBe(PLAYER_COLOURS[0xffffffff % 12]);
+    expect(PLAYER_COLOURS).toContain(playerColour(123456789));
   });
 });
 

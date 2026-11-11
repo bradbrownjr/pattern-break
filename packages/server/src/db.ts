@@ -6,6 +6,7 @@
 // the server's own GEN_VERSION and SIM_VERSION are listed: a version bump starts the
 // boards over, and the old runs stay in the table.
 
+import { createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 
 export type Board = { kind: 'song'; song: string; difficulty: string } | { kind: 'arcade'; difficulty: string };
@@ -41,6 +42,16 @@ export interface BoardEntry {
   replays: string[];
   /** Milliseconds since 1970, UTC. */
   at: number;
+  /**
+   * The first 32 bits of the SHA-256 of the player's public key: the same number for a
+   * player everywhere, for the game to pick the row's colour from, without sending the key.
+   */
+  mark: number;
+}
+
+/** A player's mark (BoardEntry.mark) from their public key. */
+export function playerMark(key: string): number {
+  return createHash('sha256').update(key).digest().readUInt32BE(0);
 }
 
 export interface SongRow {
@@ -179,7 +190,7 @@ export class Database {
         FROM best b WHERE b.n = 1
       )
       SELECT ranked.rank, ranked.id AS runId, p.nickname, p.link, ranked.score, ranked.levels,
-        ranked.finished, ranked.replays, ranked.created AS at, ranked.player
+        ranked.finished, ranked.replays, ranked.created AS at, ranked.player, p.key
       FROM ranked JOIN players p ON p.id = ranked.player`;
     const args = [boardKey(board), board.difficulty, gen, sim] as const;
     const toEntry = (row: Record<string, unknown>): BoardEntry => ({
@@ -192,6 +203,7 @@ export class Database {
       finished: row['finished'] === 1,
       replays: String(row['replays']).split(','),
       at: Number(row['at']),
+      mark: playerMark(String(row['key'])),
     });
     const top = this.#db.prepare(`${best} ORDER BY ranked.rank LIMIT ?`).all(...args, limit).map(toEntry);
     const mine =

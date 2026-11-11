@@ -21,6 +21,28 @@ export const LED_LIT: readonly number[] = [
   0xff2030,
 ];
 
+/**
+ * Leaderboard rows: each player's row takes one of these, picked by a number from their
+ * key (game/scores.ts), so a player keeps one colour on every board. The theme's neons and
+ * the LED colours, with a few more in the same vein. Amber is left out, as it marks the
+ * selected row, and so is grey. Each is at least 4.5:1 against BACKGROUND (WCAG's level
+ * for text; test/palette.test.ts).
+ */
+export const PLAYER_COLOURS: readonly number[] = [
+  0x2de2e6, // cyan
+  0xff3bd4, // magenta
+  0x9dff3a, // lime
+  0x8a6cff, // violet
+  0x20e050, // LED green
+  0xe0e828, // LED yellow
+  0xff7c18, // LED orange
+  0xff4c20, // LED red
+  0x48a0ff, // sky blue
+  0xff6f91, // pink
+  0x40ffc0, // mint
+  0xc070ff, // purple
+];
+
 /** Peak-hold dots are white. */
 export const LED_PEAK = WHITE;
 

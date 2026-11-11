@@ -53,18 +53,51 @@ describe('level cache', () => {
     await library.putLevel(HASH_A, 1000, new Uint8Array([1]));
     library.close();
     // A level left by an older build, written as that build would have.
-    const raw = await openDB(name, 1);
+    const raw = await openDB(name);
     const stale = levelKey(HASH_A, 900, GEN_VERSION - 1);
     await raw.put('levels', { key: stale, sha256: HASH_A, tempoPermille: 900, genVersion: GEN_VERSION - 1, levelData: new ArrayBuffer(1) });
     raw.close();
 
     const reopened = await openLibrary(name);
     opened.push({ name, library: reopened });
-    const check = await openDB(name, 1);
+    const check = await openDB(name);
     const keys = await check.getAllKeys('levels');
     check.close();
     expect(keys).toEqual([levelKey(HASH_A, 1000)]);
     expect(await reopened!.level(HASH_A, 1000)).toEqual(new Uint8Array([1]));
+  });
+});
+
+describe('upgrade to version 2', () => {
+  it('keeps the songs of a version 1 database and adds the key and the queue', async () => {
+    const name = `pattern-break-test-${Date.now()}-${counter++}`;
+    // A database as the build before the leaderboards left it.
+    const v1 = await openDB(name, 1, {
+      upgrade(db) {
+        db.createObjectStore('songs', { keyPath: 'sha256' });
+        db.createObjectStore('levels', { keyPath: 'key' }).createIndex('sha256', 'sha256');
+      },
+    });
+    await v1.put('songs', song(HASH_A, 10, 'Kept'));
+    v1.close();
+
+    const library = await openLibrary(name);
+    opened.push({ name, library });
+    expect((await library!.songs()).map((s) => s.title)).toEqual(['Kept']);
+
+    // A non-extractable key pair goes into IndexedDB and comes back able to sign.
+    const pair = (await crypto.subtle.generateKey({ name: 'Ed25519' }, false, ['sign', 'verify'])) as CryptoKeyPair;
+    await library!.putIdentity({ id: 'device', publicKey: 'k', privateKey: pair.privateKey });
+    const back = await library!.identity();
+    const data = new Uint8Array([1, 2, 3]);
+    const signature = await crypto.subtle.sign({ name: 'Ed25519' }, back!.privateKey, data);
+    expect(await crypto.subtle.verify({ name: 'Ed25519' }, pair.publicKey, signature, data)).toBe(true);
+
+    const id = await library!.addPending({ kind: 'song', replays: [new Uint8Array([9]).buffer], at: 1 });
+    const pending = await library!.pendingRuns();
+    expect(pending.map((r) => [r.id, r.kind, new Uint8Array(r.replays[0]!)[0]])).toEqual([[id, 'song', 9]]);
+    await library!.deletePending(id);
+    expect(await library!.pendingRuns()).toEqual([]);
   });
 });
 

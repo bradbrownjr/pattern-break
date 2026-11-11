@@ -27,6 +27,7 @@ import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.ts';
 import { CheckQueue } from '../src/check-queue.ts';
+import { playerMark } from '../src/db.ts';
 import { signedMessage } from '../src/signature.ts';
 import { openSongStore, type SongStore } from '../src/song-store.ts';
 
@@ -196,7 +197,8 @@ describe('a song run', () => {
       url: `/api/leaderboards/${fixtureHash}?difficulty=normal`,
       headers: { 'x-pb-key': alice.key },
     });
-    expect(board.json().you).toMatchObject({ rank: 1, nickname: 'ALICE' });
+    expect(board.json().you).toMatchObject({ rank: 1, nickname: 'ALICE', mark: playerMark(alice.key) });
+    expect(JSON.stringify(board.json())).not.toContain(alice.key);
   });
 });
 

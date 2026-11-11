@@ -169,9 +169,11 @@ export const shots: Shot[] = [
       '"Scores" in large cyan pixel letters with a magenta shadow. Under it, three rows in small pixel type: ' +
       '"Board" in amber with an amber ">" before it and "< Arcade >" in white, "Difficulty" with "Normal" and ' +
       '"Name" with "KC1JMH", in grey. Below, a sample board of eight rows, each a rank, a name and a score ' +
-      'right-aligned: 1 KC1JMH with a "*" (the player has a link) and 48200 in cyan, as it is the viewer\'s ' +
-      'own place, then AMY 44050, JORDAN 39900 L6, W1AW, PILOT, NEON, DJINN and MARS in grey, down to 19150. ' +
-      'At the bottom, "Esc Back" in cyan.',
+      'right-aligned, each row in its own bright colour: 1 KC1JMH with a "*" (the player has a link) and 48200 ' +
+      'in magenta, with a cyan "<" after it marking the viewer\'s own place; 2 AMY in orange; 3 JORDAN in ' +
+      'purple, with "L6" in a column between name and score (the run ended on level 6); then W1AW in green, ' +
+      'PILOT in pink, NEON in lime, DJINN in red-orange and MARS in cyan, down to 19150. At the bottom, ' +
+      '"Esc Back" in cyan.',
     caption: 'The Scores screen with a sample arcade board. Not used in the README.',
     usedIn: [],
   },

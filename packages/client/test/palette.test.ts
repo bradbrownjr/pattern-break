@@ -1,10 +1,11 @@
 // The colour-blind LED colours (render/palette.ts, LED_CIVIDIS): every segment brighter than
 // the one before it, edge to tip, so the walls' depth reads from brightness alone, which
 // every kind of colour vision sees. The neon green to red doesn't: its greens are brighter
-// than its reds.
+// than its reds. And the leaderboard rows' colours (PLAYER_COLOURS): readable on the
+// background, and none the selected row's amber.
 
 import { describe, expect, it } from 'vitest';
-import { BACKGROUND, LED_CIVIDIS, LED_LIT } from '../src/render/palette.ts';
+import { AMBER, BACKGROUND, GREY, LED_CIVIDIS, LED_LIT, PLAYER_COLOURS } from '../src/render/palette.ts';
 
 /** WCAG 2.2 relative luminance of a 0xRRGGBB colour. */
 function luminance(c: number): number {
@@ -26,5 +27,19 @@ describe('LED colours', () => {
 
   it('do not on Neon, which is why the setting exists', () => {
     expect(luminance(LED_LIT[LED_LIT.length - 1]!)).toBeLessThan(luminance(LED_LIT[0]!));
+  });
+});
+
+describe('player colours', () => {
+  const contrast = (c: number) => (luminance(c) + 0.05) / (luminance(BACKGROUND) + 0.05);
+
+  it('are each at least 4.5:1 against the background', () => {
+    for (const c of PLAYER_COLOURS) expect(contrast(c), c.toString(16)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('are twelve different colours, none amber or grey', () => {
+    expect(new Set(PLAYER_COLOURS).size).toBe(12);
+    expect(PLAYER_COLOURS).not.toContain(AMBER);
+    expect(PLAYER_COLOURS).not.toContain(GREY);
   });
 });

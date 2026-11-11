@@ -6,7 +6,7 @@
 
 import { PLAYFIELD_WIDTH, type DifficultyName } from '@game/core';
 import { Container } from 'pixi.js';
-import { AMBER, CYAN, GREY, MAGENTA, WHITE } from '../render/palette.ts';
+import { AMBER, CYAN, GREY, MAGENTA, PLAYER_COLOURS, WHITE } from '../render/palette.ts';
 import { PixelText } from '../render/text.ts';
 import type { MenuAction } from './input.ts';
 import { DIFFICULTY_LABELS } from './menu.ts';
@@ -123,14 +123,30 @@ const ROW = 11;
 const LABEL_X = 96;
 const VALUE_X = 168;
 const LIST_TOP = TOP + 3 * ROW + 6;
+// The list's columns: rank (right-aligned), name, the arcade levels reached, score
+// (right-aligned), and the "<" on the player's own row, mirroring the ">" cursor.
 const RANK_X = 84;
 const NAME_X = 108;
+const LEVELS_X = 228;
 const SCORE_RIGHT = 300;
+const YOU_X = SCORE_RIGHT + 8;
 
-/** One board row: "3  KC1  12345" with the arcade's levels when the run didn't clear. */
-export function entryText(entry: BoardEntry, arcade: boolean): { rank: string; name: string; score: string } {
-  const levels = arcade && !entry.finished ? ` L${entry.levels}` : '';
-  return { rank: String(entry.rank), name: entry.nickname, score: `${entry.score}${levels}` };
+/**
+ * One board row: "3", "KC1", "L6", "12345". The levels column shows how far an arcade run
+ * got when it ended in a game over, and is empty otherwise, so the scores stay aligned.
+ */
+export function entryText(entry: BoardEntry, arcade: boolean): { rank: string; name: string; levels: string; score: string } {
+  return {
+    rank: String(entry.rank),
+    name: entry.nickname,
+    levels: arcade && !entry.finished ? `L${entry.levels}` : '',
+    score: String(entry.score),
+  };
+}
+
+/** The player's row colour: one of PLAYER_COLOURS, picked by the mark from their key. */
+export function playerColour(mark: number): number {
+  return PLAYER_COLOURS[(mark >>> 0) % PLAYER_COLOURS.length]!;
 }
 
 export class ScoresScreen {
@@ -140,7 +156,9 @@ export class ScoresScreen {
   #values = [0, 1, 2].map(() => new PixelText('', GREY));
   #rank: PixelText[] = [];
   #name: PixelText[] = [];
+  #levels: PixelText[] = [];
   #score: PixelText[] = [];
+  #mine = new PixelText('<', CYAN);
   #you = new PixelText('', CYAN);
   #note = new PixelText('', GREY);
   #hint = new PixelText('', CYAN);
@@ -148,7 +166,7 @@ export class ScoresScreen {
   constructor() {
     const shadow = new PixelText('Scores', MAGENTA, 2).place(CENTER + 1, 8 + 1, 'center');
     const heading = new PixelText('Scores', CYAN, 2).place(CENTER, 8, 'center');
-    this.container.addChild(shadow, heading, this.#marker, this.#you, this.#note, this.#hint);
+    this.container.addChild(shadow, heading, this.#marker, this.#mine, this.#you, this.#note, this.#hint);
     this.#labels.forEach((label, i) => {
       label.place(LABEL_X, TOP + i * ROW);
       this.container.addChild(label, this.#values[i]!);
@@ -156,11 +174,13 @@ export class ScoresScreen {
     for (let i = 0; i < BOARD_ROWS; i++) {
       const rank = new PixelText('', GREY);
       const name = new PixelText('', GREY);
+      const levels = new PixelText('', GREY);
       const score = new PixelText('', GREY);
       this.#rank.push(rank);
       this.#name.push(name);
+      this.#levels.push(levels);
       this.#score.push(score);
-      this.container.addChild(rank, name, score);
+      this.container.addChild(rank, name, levels, score);
     }
   }
 
@@ -179,25 +199,31 @@ export class ScoresScreen {
 
     const arcade = menu.choice.name === 'arcade';
     const entries = menu.entries;
+    const mine = menu.state.kind === 'board' ? menu.state.view.you : null;
+    this.#mine.visible = false;
     for (let i = 0; i < BOARD_ROWS; i++) {
       const entry = entries[i];
       const y = LIST_TOP + i * ROW;
-      const rank = this.#rank[i]!;
-      const name = this.#name[i]!;
-      const score = this.#score[i]!;
-      rank.visible = name.visible = score.visible = entry !== undefined;
+      const cells = [this.#rank[i]!, this.#name[i]!, this.#levels[i]!, this.#score[i]!] as const;
+      for (const cell of cells) cell.visible = entry !== undefined;
       if (!entry) continue;
+      const [rank, name, levels, score] = cells;
       const text = entryText(entry, arcade);
       const selected = row.kind === 'entry' && row.index === i;
-      const you = menu.state.kind === 'board' && menu.state.view.you?.rank === entry.rank;
-      const color = selected ? AMBER : you ? CYAN : GREY;
+      const color = selected ? AMBER : playerColour(entry.mark);
       rank.text = text.rank;
       name.text = entry.link ? `${text.name} *` : text.name;
+      levels.text = text.levels;
       score.text = text.score;
-      rank.color = name.color = score.color = color;
+      for (const cell of cells) cell.color = color;
       rank.place(RANK_X, y, 'right');
       name.place(NAME_X, y);
+      levels.place(LEVELS_X, y);
       score.place(SCORE_RIGHT, y, 'right');
+      if (mine?.rank === entry.rank) {
+        this.#mine.visible = true;
+        this.#mine.place(YOU_X, y);
+      }
     }
 
     // The player's own place, when it's below the top 10.
@@ -205,7 +231,7 @@ export class ScoresScreen {
     this.#you.visible = you !== null && you.rank > entries.length;
     if (you && this.#you.visible) {
       const text = entryText(you, arcade);
-      this.#you.text = `You ${text.rank}  ${text.score}`;
+      this.#you.text = `You ${text.rank}  ${text.levels ? `${text.levels}  ` : ''}${text.score}`;
       this.#you.place(CENTER, LIST_TOP + BOARD_ROWS * ROW + 2, 'center');
     }
 
