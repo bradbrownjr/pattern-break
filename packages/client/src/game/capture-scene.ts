@@ -126,7 +126,6 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
       const top = names.map((nickname, i) => ({
         rank: i + 1,
         nickname,
-        link: i === 0 ? 'https://example.org/' : null,
         score: 48_200 - i * 4_150,
         levels: i === 2 ? 6 : 8,
         finished: i !== 2,
@@ -135,7 +134,7 @@ export async function runCapture(r: GameRenderer, params: CaptureParams): Promis
       }));
       menu.setState({ kind: 'board', view: { top, you: top[0]!, players: names.length } });
       const scores = new ScoresScreen();
-      scores.update(menu, 'KC1JMH', true);
+      scores.update(menu, true);
       return menuScene(scores.container);
     }
     case 'settings': {

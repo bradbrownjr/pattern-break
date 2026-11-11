@@ -16,6 +16,7 @@ import {
   generateLevel,
   runInputLog,
   withoutEnemies,
+  encodeReplay,
   type Replay,
 } from '@game/core';
 import { analyze, loadOpenMpt, sha256Hex } from '@game/analysis';
@@ -98,29 +99,22 @@ describe('Leaderboards', () => {
   it('makes one device key and keeps it', async () => {
     const client = await boards.client();
     expect(client).not.toBeNull();
+    expect(boards.available).toBe(true);
     expect(store.key?.publicKey).toMatch(/^[A-Za-z0-9_-]{43}$/);
-    expect(await boards.loadProfile()).toBeNull();
   });
 
-  it('holds a run until the player has a name', async () => {
-    expect(await boards.post('song', [run])).toEqual({ status: 'noName' });
-    expect(store.runs.size).toBe(1);
-  });
-
-  it('sets the name, then sends the queue, uploading the song the server lacks', async () => {
-    expect(await boards.setProfile({ nickname: 'KC1', link: null })).toBeNull();
-    const outcomes: unknown[] = [];
-    await boards.flush((_id, outcome) => outcomes.push(outcome));
-    expect(outcomes).toEqual([{ status: 'accepted', rank: 1, players: 1, score: run.score }]);
+  it('posts a run under its name, uploading the song the server lacks', async () => {
+    expect(await boards.post('song', 'KC1', [run])).toEqual({ status: 'accepted', rank: 1, players: 1, score: run.score });
     expect(store.runs.size).toBe(0);
     const client = (await boards.client())!;
-    const board = await client.board(hash, 'normal');
+    const board = await client.board(hash, 'normal', 10, 'KC1');
     expect(board.top[0]).toMatchObject({ nickname: 'KC1', score: run.score });
+    expect(board.you).toMatchObject({ rank: 1, nickname: 'KC1' });
   }, 60_000);
 
   it('keeps a run finished offline and sends it later', async () => {
     online = false;
-    expect(await boards.post('song', [{ ...run, score: run.score + 1 }])).toEqual({ status: 'queued' });
+    expect(await boards.post('song', 'KC1', [{ ...run, score: run.score + 1 }])).toEqual({ status: 'queued' });
     expect(store.runs.size).toBe(1);
     online = true;
     const outcomes: unknown[] = [];
@@ -129,9 +123,23 @@ describe('Leaderboards', () => {
     expect(store.runs.size).toBe(0);
   });
 
-  it('says a taken name', async () => {
-    const other = new Leaderboards(new MemoryStore(), async () => null, { fetch: serverFetch });
-    expect(await other.setProfile({ nickname: 'kc1', link: null })).toBe('nickname taken');
+  it('sends a run queued with no name under the next name posted, and sends what follows it', async () => {
+    // A run queued before names went with runs, then a newer one with a name.
+    await store.addPending({ kind: 'song', replays: [encodeReplay({ ...run, score: run.score + 2 }).buffer], at: 1 });
+    await store.addPending({ kind: 'song', name: 'KC1', replays: [encodeReplay({ ...run, score: run.score + 3 }).buffer], at: 2 });
+    // With no name to give it, the nameless run waits and the one after it is still sent.
+    const first: unknown[] = [];
+    await boards.flush((_id, outcome) => first.push(outcome));
+    expect(first).toEqual([{ status: 'rejected', reason: 'score mismatch' }]);
+    expect([...store.runs.values()].map((r) => r.name)).toEqual([undefined]);
+    const later: unknown[] = [];
+    await boards.flush((_id, outcome) => later.push(outcome), 'AMY');
+    expect(later).toEqual([{ status: 'rejected', reason: 'score mismatch' }]);
+    expect(store.runs.size).toBe(0);
+  });
+
+  it('gives the server\'s answer to a refused name', async () => {
+    expect(await boards.post('song', 'A55', [run])).toEqual({ status: 'rejected', reason: 'name refused' });
   });
 });
 
@@ -140,7 +148,6 @@ describe('outcomeLine', () => {
     expect(outcomeLine({ status: 'accepted', rank: 3, players: 12, score: 100 })).toBe('Rank 3/12');
     expect(outcomeLine({ status: 'rejected', reason: 'score mismatch' })).toBe('Not posted: score mismatch');
     expect(outcomeLine({ status: 'queued' })).toBe('Queued');
-    expect(outcomeLine({ status: 'noName' })).toBe('N Set name');
     expect(outcomeLine({ status: 'unavailable' })).toBeNull();
     expect(outcomeLine(null)).toBeNull();
   });

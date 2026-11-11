@@ -97,20 +97,20 @@ afterAll(async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
-describe('players', () => {
+describe('signatures and names', () => {
   it('needs a signature', async () => {
-    const res = await app.inject({ method: 'PUT', url: '/api/players/me', payload: { nickname: 'ALICE' } });
+    const res = await app.inject({ method: 'POST', url: '/api/runs', payload: { kind: 'song', name: 'ALICE', replays: [] } });
     expect(res.statusCode).toBe(401);
   });
 
   it('turns down a signature for another path or an old time', async () => {
-    const body = Buffer.from(JSON.stringify({ nickname: 'ALICE' }));
-    const wrongPath = signedHeaders(alice, 'PUT', '/api/songs/x', body);
-    const stale = signedHeaders(alice, 'PUT', '/api/players/me', body, clock - 11 * 60 * 1000);
+    const body = Buffer.from(JSON.stringify({ kind: 'song', name: 'ALICE', replays: [b64(fixtureRun)] }));
+    const wrongPath = signedHeaders(alice, 'POST', '/api/songs/x', body);
+    const stale = signedHeaders(alice, 'POST', '/api/runs', body, clock - 11 * 60 * 1000);
     for (const headers of [wrongPath, stale]) {
       const res = await app.inject({
-        method: 'PUT',
-        url: '/api/players/me',
+        method: 'POST',
+        url: '/api/runs',
         payload: body,
         headers: { 'content-type': 'application/json', ...headers },
       });
@@ -118,28 +118,28 @@ describe('players', () => {
     }
   });
 
-  it('checks the nickname and link', async () => {
-    expect((await send(alice, 'PUT', '/api/players/me', { nickname: '' })).statusCode).toBe(422);
-    expect((await send(alice, 'PUT', '/api/players/me', { nickname: 'thirteen char' })).statusCode).toBe(422);
-    expect((await send(alice, 'PUT', '/api/players/me', { nickname: 'ALICE', link: 'javascript:1' })).statusCode).toBe(422);
+  it('turns down a run with no name, a bad one or a vulgar one', async () => {
+    const run = (name: unknown) => send(alice, 'POST', '/api/runs', { kind: 'song', name, replays: [b64(fixtureRun)] });
+    for (const name of [undefined, '', 'NINECHARS', 'alice', ' ALICE']) {
+      const res = await run(name);
+      expect(res.statusCode, String(name)).toBe(422);
+      expect(res.json()).toEqual({ status: 'rejected', reason: 'bad name' });
+    }
+    expect((await run('A55')).json()).toEqual({ status: 'rejected', reason: 'name refused' });
   });
 
-  it('keeps a nickname to one player', async () => {
-    const res = await send(alice, 'PUT', '/api/players/me', { nickname: 'ALICE', link: 'https://modarchive.org/' });
-    expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ nickname: 'ALICE', link: 'https://modarchive.org/' });
-    expect((await send(newPlayer(), 'PUT', '/api/players/me', { nickname: 'alice' })).statusCode).toBe(409);
+  it('takes no song from a key that has sent no run', async () => {
+    expect((await send(newPlayer(), 'PUT', `/api/songs/${fixtureHash}`, fixtureBytes)).statusCode).toBe(403);
   });
 
-  it('turns down runs from a key with no nickname', async () => {
-    const res = await send(newPlayer(), 'POST', '/api/runs', { kind: 'song', replays: [b64(fixtureRun)] });
-    expect(res.statusCode).toBe(403);
+  it('has no profile routes', async () => {
+    expect((await app.inject({ url: '/api/players/me' })).statusCode).toBe(404);
   });
 });
 
 describe('a song run', () => {
   it('asks for a song the server lacks, and takes it only under its own hash', async () => {
-    const first = await send(alice, 'POST', '/api/runs', { kind: 'song', replays: [b64(fixtureRun)] });
+    const first = await send(alice, 'POST', '/api/runs', { kind: 'song', name: 'ALICE', replays: [b64(fixtureRun)] });
     expect(first.json()).toEqual({ status: 'needModule', hashes: [fixtureHash] });
     const wrong = await send(alice, 'PUT', `/api/songs/${'0'.repeat(64)}`, fixtureBytes);
     expect(wrong.statusCode).toBe(422);
@@ -148,12 +148,12 @@ describe('a song run', () => {
   });
 
   it('accepts a real run and lists it on the board', async () => {
-    const res = await send(alice, 'POST', '/api/runs', { kind: 'song', replays: [b64(fixtureRun)] });
+    const res = await send(alice, 'POST', '/api/runs', { kind: 'song', name: 'ALICE', replays: [b64(fixtureRun)] });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ status: 'accepted', score: fixtureRun.score, rank: 1, players: 1 });
     const board = await app.inject({ url: `/api/leaderboards/${fixtureHash}?difficulty=normal` });
     expect(board.json().top).toEqual([
-      expect.objectContaining({ rank: 1, nickname: 'ALICE', score: fixtureRun.score, link: 'https://modarchive.org/' }),
+      expect.objectContaining({ rank: 1, nickname: 'ALICE', score: fixtureRun.score }),
     ]);
     expect(fixtureRun.score).toBeGreaterThan(0);
   }, 60_000);
@@ -161,6 +161,7 @@ describe('a song run', () => {
   it('rejects a raised score', async () => {
     const res = await send(alice, 'POST', '/api/runs', {
       kind: 'song',
+      name: 'ALICE',
       replays: [b64({ ...fixtureRun, score: fixtureRun.score + 100 })],
     });
     expect(res.statusCode).toBe(422);
@@ -169,22 +170,23 @@ describe('a song run', () => {
 
   it('rejects edited inputs that keep the score', async () => {
     const inputs = new Uint16Array(fixtureRun.inputs.length);
-    const res = await send(alice, 'POST', '/api/runs', { kind: 'song', replays: [b64({ ...fixtureRun, inputs })] });
+    const res = await send(alice, 'POST', '/api/runs', { kind: 'song', name: 'ALICE', replays: [b64({ ...fixtureRun, inputs })] });
     expect(res.json()).toMatchObject({ status: 'rejected', reason: 'score mismatch' });
   });
 
   it('rejects a cheat or another version', async () => {
-    const cheat = await send(alice, 'POST', '/api/runs', { kind: 'song', replays: [b64({ ...fixtureRun, cheats: 1 })] });
+    const cheat = await send(alice, 'POST', '/api/runs', { kind: 'song', name: 'ALICE', replays: [b64({ ...fixtureRun, cheats: 1 })] });
     expect(cheat.json()).toMatchObject({ status: 'rejected', reason: 'cheat' });
     const old = await send(alice, 'POST', '/api/runs', {
       kind: 'song',
+      name: 'ALICE',
       replays: [b64({ ...fixtureRun, simVersion: SIM_VERSION - 1 })],
     });
     expect(old.json()).toMatchObject({ status: 'rejected', reason: 'old version' });
   });
 
   it('keeps a run sent twice once, and serves its replay', async () => {
-    const again = await send(alice, 'POST', '/api/runs', { kind: 'song', replays: [b64(fixtureRun)] });
+    const again = await send(alice, 'POST', '/api/runs', { kind: 'song', name: 'ALICE', replays: [b64(fixtureRun)] });
     const board = (await app.inject({ url: `/api/leaderboards/${fixtureHash}?difficulty=normal` })).json();
     expect(again.json().runId).toBe(board.top[0].runId);
     expect(board.players).toBe(1);
@@ -200,6 +202,24 @@ describe('a song run', () => {
     expect(board.json().you).toMatchObject({ rank: 1, nickname: 'ALICE', mark: playerMark(alice.key) });
     expect(JSON.stringify(board.json())).not.toContain(alice.key);
   });
+
+  it('gives a name on another key its own place and colour', async () => {
+    const bob = newPlayer();
+    // The same replay under another name on the same key keeps its first name.
+    const resent = await send(alice, 'POST', '/api/runs', { kind: 'song', name: 'JORDAN', replays: [b64(fixtureRun)] });
+    expect(resent.json()).toMatchObject({ status: 'accepted', rank: null });
+    const twin = await send(bob, 'POST', '/api/runs', { kind: 'song', name: 'ALICE', replays: [b64(fixtureRun)] });
+    expect(twin.json()).toMatchObject({ status: 'accepted', rank: 2, players: 2 });
+    const board = (await app.inject({ url: `/api/leaderboards/${fixtureHash}?difficulty=normal` })).json();
+    expect(board.top.map((e: { nickname: string }) => e.nickname)).toEqual(['ALICE', 'ALICE']);
+    expect(board.top[0].mark).toBe(playerMark(alice.key));
+    expect(board.top[1].mark).toBe(playerMark(bob.key));
+    const mine = await app.inject({
+      url: `/api/leaderboards/${fixtureHash}?difficulty=normal&name=ALICE`,
+      headers: { 'x-pb-key': bob.key },
+    });
+    expect(mine.json().you).toMatchObject({ rank: 2, nickname: 'ALICE' });
+  });
 });
 
 describe('an arcade run', () => {
@@ -213,13 +233,14 @@ describe('an arcade run', () => {
   it('rejects levels out of the arcade order', async () => {
     const res = await send(alice, 'POST', '/api/runs', {
       kind: 'arcade',
+      name: 'ALICE',
       replays: [b64({ ...level1, moduleHash: store.arcade.levels[1]! })],
     });
     expect(res.json()).toMatchObject({ status: 'rejected', reason: 'wrong songs', level: 0 });
   });
 
   it('accepts a run that ends in a game over, on the arcade board and the song board', async () => {
-    const res = await send(alice, 'POST', '/api/runs', { kind: 'arcade', replays: [b64(level1)] });
+    const res = await send(alice, 'POST', '/api/runs', { kind: 'arcade', name: 'ALICE', replays: [b64(level1)] });
     expect(res.json()).toMatchObject({ status: 'accepted', score: level1.score, rank: 1 });
     const arcade = (await app.inject({ url: '/api/leaderboards/arcade?difficulty=normal' })).json();
     expect(arcade.top).toEqual([expect.objectContaining({ nickname: 'ALICE', score: level1.score, levels: 1 })]);

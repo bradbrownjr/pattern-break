@@ -7,6 +7,7 @@ import {
   Cheat,
   Difficulty,
   GEN_VERSION,
+  NAME_MAX,
   SIM_VERSION,
   SAMPLES_PER_TICK,
   SAMPLE_RATE,
@@ -77,7 +78,7 @@ import {
   type TitleEvent,
 } from './menu.ts';
 import { Leaderboards, outcomeLine, type Outcome } from './net.ts';
-import { FIELD_MAX, ProfileForm, ProfileScreen, saveError, type PadEdit } from './profile.ts';
+import { NameEntry, loadLastName, nameHint, saveLastName, type NameEdit, type NameEvent } from './name-entry.ts';
 import { TouchTextEntry } from './touch-text.ts';
 import { ScoresMenu, ScoresScreen, type BoardChoice } from './scores.ts';
 import { KeysScreen } from './keys-screen.ts';
@@ -125,7 +126,6 @@ type Mode =
   | 'help'
   | 'credits'
   | 'scores'
-  | 'profile'
   | 'hangar'
   | 'analyzing'
   | 'intro'
@@ -380,8 +380,10 @@ export class Game {
   #scoresMenu: ScoresMenu | null = null;
   /** Counts board loads, so a slow answer for a board no longer shown is dropped. */
   #scoresRequest = 0;
-  readonly #profileScreen = new ProfileScreen();
-  #profileForm: ProfileForm | null = null;
+  /** The end screen's name entry while it waits for a name; null once posted or skipped, and with nothing to post. */
+  #nameEntry: NameEntry | null = null;
+  /** The blink state the name entry was last drawn in. */
+  #nameBlink = false;
   /** With the Perf setting or `?perf=1`: frames a second and the frames' work, over each half second. */
   readonly #perfReadout = new PixelText('', LIME);
   /** A dark panel behind the readout, as behind the score, so the walls don't hide it. */
@@ -394,13 +396,12 @@ export class Game {
   #perfLines: string[] | null = null;
   /** The hidden input that opens a phone's keyboard on the name entry. */
   #touchText: TouchTextEntry | null = null;
-  /** The screen the name entry returns to. */
-  #profileFrom: 'scores' | 'gameover' | 'complete' = 'scores';
   /** The arcade run's cleared levels' replays, sent with the run when it ends. */
   #runReplays: Replay[] = [];
+  /** The name each cleared level was posted under, null for one not posted: the arcade board takes the run only under one name. */
+  #runNames: (string | null)[] = [];
   /** The end screen's leaderboard line: what became of the run, or null for none. */
   #boardLine: string | null = null;
-  #lastOutcome: Outcome | null = null;
   /** Counts runs posted, so an answer for an earlier run doesn't change this one's line. */
   #postRequest = 0;
 
@@ -426,7 +427,6 @@ export class Game {
       this.#help.container,
       this.#credits.container,
       this.#scoresScreen.container,
-      this.#profileScreen.container,
       this.#hangarLayer,
       this.#demoBanner.container,
       this.#replayBanner.container,
@@ -468,7 +468,7 @@ export class Game {
     this.#touch = new TouchControls(document.body, this.#r.renderer.canvas as HTMLCanvasElement, () => this.#onPointer(true));
     this.#touchText = new TouchTextEntry(document.body);
     this.#touchText.onChange = (text) => {
-      if (this.#mode === 'profile') this.#profileForm?.replace(text);
+      if (this.#nameEntry?.replace(text)) this.#refreshEndScreen();
     };
     this.#touch.setStartScreen(this.#mode === 'start');
     window.addEventListener('blur', () => {
@@ -505,11 +505,14 @@ export class Game {
     void this.#loadImported();
     void this.#openBoards();
     window.addEventListener('online', () => void this.#boards?.flush());
-    // Pasting fills the name entry's field (a link, mostly).
+    // Pasting types into the name entry.
     window.addEventListener('paste', (e) => {
-      if (this.#mode !== 'profile' || !this.#profileForm) return;
+      if (!this.#nameEntryUp()) return;
       const text = e.clipboardData?.getData('text') ?? '';
-      if (this.#profileForm.type(text.trim())) e.preventDefault();
+      if (this.#nameEntry!.type(text.trim())) {
+        e.preventDefault();
+        this.#refreshEndScreen();
+      }
     });
     // The hangar intro's art: a few KB, ready long before anyone presses Play.
     loadHangarArt().then(
@@ -540,7 +543,6 @@ export class Game {
     this.#help.container.visible = mode === 'help';
     this.#credits.container.visible = mode === 'credits';
     this.#scoresScreen.container.visible = mode === 'scores';
-    this.#profileScreen.container.visible = mode === 'profile';
     this.#hangarLayer.visible = mode === 'hangar' || (mode === 'play' && this.#wiping);
     this.#pauseScreen.container.visible = mode === 'paused';
     this.#demoBanner.container.visible = mode === 'demo';
@@ -657,15 +659,13 @@ export class Game {
       case 'scores':
         this.#menuKey(e);
         return;
-      case 'profile':
-        this.#profileKey(e);
-        return;
       case 'sync':
         if (!e.repeat) this.#syncKey(e.code);
         return;
       default:
         break;
     }
+    if (this.#nameKey(e)) return;
     if (e.repeat) return;
     if (keys.action(e.code) === 'pause') {
       if (this.#mode === 'play') void this.#pause();
@@ -675,13 +675,6 @@ export class Game {
     if ((e.code === 'KeyR' || e.code === 'KeyS') && this.#onEndScreen()) {
       if (e.code === 'KeyR') this.#watchLastReplay();
       else this.#saveReplay();
-      return;
-    }
-    if (e.code === 'KeyN' && this.#lastOutcome?.status === 'noName' && (this.#mode === 'gameover' || this.#mode === 'complete')) {
-      if (performance.now() - this.#modeSince >= PROMPT_DELAY_MS) {
-        this.#sound('select');
-        this.#openProfile(this.#mode);
-      }
       return;
     }
     this.#onAnyKey();
@@ -760,12 +753,6 @@ export class Game {
         if (action) this.#onMenu(action);
         return;
       }
-      case 'profile': {
-        const edit: PadEdit | null = bit === PadBit.y ? 'erase' : padMenuAction(bit);
-        const form = this.#profileForm;
-        if (edit && form) this.#onProfileEvent(form.applyPad(edit));
-        return;
-      }
       case 'play':
         if (bit === PadBit.start) void this.#pause();
         return;
@@ -781,6 +768,12 @@ export class Game {
       }
       case 'gameover':
       case 'complete':
+        // On the name entry, Y erases and the rest are as on a menu: A posts, B skips.
+        if (this.#nameEntry) {
+          const edit: NameEdit | null = bit === PadBit.y ? 'erase' : padMenuAction(bit);
+          if (edit && this.#nameEntryUp()) this.#onNameEvent(this.#nameEntry.apply(edit));
+          return;
+        }
         // B or Select is Esc; any other button is any key. Directions don't count, so a
         // stick still leaning from play doesn't skip the screen.
         if (bit === PadBit.b || bit === PadBit.select) this.#toTitle();
@@ -795,7 +788,10 @@ export class Game {
   /** A click, or a touch (`touch`) on its lift. */
   #onPointer(touch: boolean): void {
     if (this.#capture) this.#endCapture();
-    else if (this.#mode === 'profile' && touch && this.#profileForm?.field) this.#openTouchText();
+    // On the name entry a touch opens the phone's keyboard, and a click does nothing.
+    else if (this.#nameEntry && (this.#mode === 'gameover' || this.#mode === 'complete')) {
+      if (touch && this.#nameEntryUp()) this.#touchText?.open(this.#nameEntry.name, NAME_MAX, true);
+    }
     // A click or touch while the clicks play counted on its pointerdown (start()).
     else if (this.#mode === 'sync') {
       if (this.#sync?.result !== undefined) this.#syncKey('Enter');
@@ -813,8 +809,7 @@ export class Game {
       this.#mode === 'keys' ||
       this.#mode === 'help' ||
       this.#mode === 'credits' ||
-      this.#mode === 'scores' ||
-      this.#mode === 'profile'
+      this.#mode === 'scores'
     ) {
       this.#onMenu('confirm');
     }
@@ -853,8 +848,9 @@ export class Game {
       this.#onScoresMenu(action);
       return;
     }
-    if (this.#mode === 'profile') {
-      this.#onProfileMenu(action);
+    // The phone keyboard's Enter (and Esc) arrive here (#onKeyDown).
+    if (this.#mode === 'gameover' || this.#mode === 'complete') {
+      if (this.#nameEntryUp()) this.#onNameEvent(this.#nameEntry!.apply(action));
       return;
     }
     if (this.#mode === 'keys') {
@@ -946,6 +942,7 @@ export class Game {
         this.#runCheats = lives | (god ? Cheat.god : 0);
         this.#runScore = 0;
         this.#runReplays = [];
+        this.#runNames = [];
         void this.#beginLevel(true);
         break;
       }
@@ -1013,12 +1010,11 @@ export class Game {
 
   // Leaderboards --------------------------------------------------------------------------
 
-  /** Opens the leaderboards on the library's key and queue, asks for the name, and sends what's queued. */
+  /** Opens the leaderboards on the library's key and queue, and sends what's queued. */
   async #openBoards(): Promise<void> {
     const library = await this.#library;
     if (!library) return;
     this.#boards = new Leaderboards(library, (hash) => this.#songBytesFor(hash));
-    await this.#boards.loadProfile();
     await this.#boards.flush();
   }
 
@@ -1034,44 +1030,137 @@ export class Game {
   }
 
   /**
-   * Posts the run that just ended. A run from Levels goes on its song's board. An arcade run is
-   * posted when it ends: at a game over, with the levels cleared so far and the last try
-   * (a retry and a later end post again; the board keeps the best), or after its last level.
-   * A run with a cheat, or on the test song, isn't posted.
+   * At a run's end: keeps an arcade level's replay for the run, and puts up the name entry
+   * when the run can be posted. A run with a cheat isn't posted, nor one where the browser
+   * can't sign.
    */
-  #postRun(): void {
+  #endRun(): void {
     this.#boardLine = null;
-    this.#lastOutcome = null;
+    this.#nameEntry = null;
+    const replay = this.#lastReplay;
+    const run = this.#run;
+    if (replay && run?.kind === 'arcade' && this.#state.finished) this.#runReplays.push(replay);
+    const boards = this.#boards;
+    if (!replay || !run || !boards || boards.available === false || replay.cheats !== 0) return;
+    this.#nameEntry = new NameEntry(loadLastName(browserStorage()));
+  }
+
+  /**
+   * Posts the run that just ended under `name`, or doesn't (null, skipped). A run from Levels
+   * goes on its song's board. An arcade level goes on its song's board when it's cleared;
+   * when the run ends, at a game over (with the last try: a retry and a later end post again,
+   * and the board keeps the best) or after its last level, it goes on the arcade board too,
+   * if every level went under the same name.
+   */
+  #postRun(name: string | null): void {
+    this.#nameEntry = null;
+    this.#touchText?.close();
     const replay = this.#lastReplay;
     const run = this.#run;
     const boards = this.#boards;
-    if (!replay || !run || !boards || replay.cheats !== 0) return;
+    if (!replay || !run || !boards) return;
     let kind: 'song' | 'arcade' = 'song';
     let replays = [replay];
     if (run.kind === 'arcade') {
-      if (this.#state.finished) {
-        this.#runReplays.push(replay);
-        if (run.level < run.songs.length - 1) return;
-        replays = [...this.#runReplays];
-      } else {
-        replays = [...this.#runReplays, replay];
+      const finished = this.#state.finished;
+      const last = run.level === run.songs.length - 1;
+      if (finished) this.#runNames.push(name);
+      if (name === null) return;
+      const names = finished ? this.#runNames : [...this.#runNames, name];
+      if ((!finished || last) && names.every((n) => n === name)) {
+        kind = 'arcade';
+        replays = finished ? [...this.#runReplays] : [...this.#runReplays, replay];
       }
-      kind = 'arcade';
     }
+    if (name === null) return;
+    saveLastName(browserStorage(), name);
     const request = ++this.#postRequest;
     this.#boardLine = 'Sending';
-    void boards.post(kind, replays).then((outcome) => {
+    void boards.post(kind, name, replays).then((outcome) => {
       if (request !== this.#postRequest) return;
       this.#showOutcome(outcome);
     });
   }
 
-  /** Puts what became of the run on the end screen, if it's still showing. */
-  #showOutcome(outcome: Outcome): void {
-    this.#lastOutcome = outcome;
-    this.#boardLine = outcomeLine(outcome);
+  /** True on game over or a clear screen while the name entry waits and keys count. */
+  #nameEntryUp(): boolean {
+    return (
+      this.#nameEntry !== null &&
+      (this.#mode === 'gameover' || this.#mode === 'complete') &&
+      performance.now() - this.#modeSince >= PROMPT_DELAY_MS
+    );
+  }
+
+  /**
+   * A key on the end screen while the name entry is up: printable characters type,
+   * Backspace erases, arrows edit, Enter posts, Esc skips. False when the entry isn't up.
+   */
+  #nameKey(e: KeyboardEvent): boolean {
+    const entry = this.#nameEntry;
+    if (!entry || (this.#mode !== 'gameover' && this.#mode !== 'complete')) return false;
+    e.preventDefault();
+    // Before the prompt shows, keys from play don't type.
+    if (!this.#nameEntryUp()) return true;
+    let event: NameEvent = null;
+    if (e.key === 'Backspace') event = entry.erase() ? 'changed' : null;
+    else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) event = entry.type(e.key) ? 'changed' : null;
+    else {
+      const action = this.#input.keys.menuAction(e.code);
+      const arrow = action === 'up' || action === 'down' || action === 'left' || action === 'right';
+      if (action && (!e.repeat || arrow)) event = entry.apply(action);
+    }
+    this.#onNameEvent(event);
+    return true;
+  }
+
+  /** What an edit did on the name entry. */
+  #onNameEvent(event: NameEvent): void {
+    const entry = this.#nameEntry;
+    if (!entry) return;
+    switch (event) {
+      case 'moved':
+        this.#sound('move');
+        break;
+      case 'changed':
+        this.#sound('change');
+        break;
+      case 'post':
+        this.#sound('select');
+        this.#postRun(entry.name);
+        break;
+      case 'skip':
+        this.#sound('back');
+        this.#postRun(null);
+        break;
+      case null:
+        if (entry.error) this.#sound('back');
+        break;
+    }
+    this.#refreshEndScreen();
+  }
+
+  /** Draws the end screen on show again, after its name entry or leaderboard line changed. */
+  #refreshEndScreen(blink = this.#blinkBright()): void {
+    this.#nameBlink = blink;
     if (this.#mode === 'complete') this.#showComplete(this.#offerReplay);
     else if (this.#mode === 'gameover' && this.#message.container.visible) this.#showGameOverMessage();
+  }
+
+  #blinkBright(): boolean {
+    return Math.floor(performance.now() / PROMPT_BLINK_MS) % 2 === 0;
+  }
+
+  /** The name entry's lines, its line and any error, for the end screens; none once it's done. */
+  #nameLines(): string[] {
+    const entry = this.#nameEntry;
+    if (!entry) return [];
+    return entry.error ? [entry.line(this.#nameBlink), entry.error] : [entry.line(this.#nameBlink)];
+  }
+
+  /** Puts what became of the run on the end screen, if it's still showing. */
+  #showOutcome(outcome: Outcome): void {
+    this.#boardLine = outcomeLine(outcome);
+    this.#refreshEndScreen();
   }
 
   #openScores(): void {
@@ -1081,7 +1170,6 @@ export class Game {
     this.#scoresMenu = new ScoresMenu(boards, difficulties, this.#menu.difficulty);
     this.#setMode('scores');
     this.#loadBoard();
-    if (this.#boards && this.#boards.profile === undefined) void this.#boards.loadProfile();
   }
 
   /** Loads the board the Scores screen has chosen. */
@@ -1098,7 +1186,7 @@ export class Game {
         return;
       }
       try {
-        const view = await client.board(menu.choice.name, menu.difficultyName);
+        const view = await client.board(menu.choice.name, menu.difficultyName, 10, loadLastName(browserStorage()));
         if (request === this.#scoresRequest) menu.setState({ kind: 'board', view });
       } catch {
         if (request === this.#scoresRequest) menu.setState({ kind: 'offline' });
@@ -1116,13 +1204,6 @@ export class Game {
         this.#sound('change');
         this.#loadBoard();
         break;
-      case 'name':
-        this.#sound('select');
-        this.#openProfile('scores');
-        break;
-      case 'open':
-        this.#openLink(command.url);
-        break;
       case 'back':
         this.#sound('back');
         // The title music plays on.
@@ -1132,117 +1213,6 @@ export class Game {
       default:
         break;
     }
-  }
-
-  #openProfile(from: 'scores' | 'gameover' | 'complete'): void {
-    const profile = this.#boards?.profile;
-    this.#profileForm = new ProfileForm(profile?.nickname ?? '', profile?.link ?? '');
-    this.#profileFrom = from;
-    this.#setMode('profile');
-  }
-
-  /** A key on the name entry: printable characters type, Backspace erases, the rest are menu keys. */
-  #profileKey(e: KeyboardEvent): void {
-    const form = this.#profileForm;
-    if (!form) return;
-    if (e.key === 'Backspace') {
-      e.preventDefault();
-      form.erase();
-    } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      e.preventDefault();
-      form.type(e.key);
-    } else {
-      this.#menuKey(e);
-    }
-  }
-
-  #onProfileMenu(action: MenuAction): void {
-    const form = this.#profileForm;
-    if (form) this.#onProfileEvent(form.apply(action));
-  }
-
-  /** What a key, a click or a pad did on the name entry. */
-  #onProfileEvent(event: ReturnType<ProfileForm['applyPad']>): void {
-    const form = this.#profileForm;
-    if (!form) return;
-    switch (event) {
-      case 'moved':
-        this.#sound('move');
-        this.#followTouchText();
-        break;
-      case 'changed':
-        this.#sound('change');
-        break;
-      case 'back':
-        this.#sound('back');
-        this.#leaveProfile(false);
-        break;
-      case 'save': {
-        const boards = this.#boards;
-        if (!boards) {
-          form.error = saveError('unavailable');
-          break;
-        }
-        form.busy = true;
-        const link = form.link.trim();
-        void boards.setProfile({ nickname: form.nickname, link: link === '' ? null : link }).then((error) => {
-          form.busy = false;
-          if (this.#profileForm !== form || this.#mode !== 'profile') return;
-          if (error) {
-            form.error = saveError(error);
-            this.#sound('back');
-          } else {
-            this.#sound('select');
-            this.#leaveProfile(true);
-          }
-        });
-        break;
-      }
-      default:
-        if (form.error) this.#sound('back');
-        break;
-    }
-  }
-
-  /** Back from the name entry; once saved, runs held for a name are sent. */
-  /** Opens the phone's keyboard on the field under the cursor. Call it from a touch's handler. */
-  #openTouchText(): void {
-    const form = this.#profileForm;
-    const field = form?.field;
-    if (!form || !field) return;
-    this.#touchText?.open(form[field], FIELD_MAX[field], field === 'link');
-  }
-
-  /** The keyboard follows the cursor to the next field, and goes away on Save. */
-  #followTouchText(): void {
-    const text = this.#touchText;
-    const form = this.#profileForm;
-    if (!text?.isOpen || !form) return;
-    const field = form.field;
-    if (field) text.set(form[field], FIELD_MAX[field], field === 'link');
-    else text.close();
-  }
-
-  #leaveProfile(saved: boolean): void {
-    const from = this.#profileFrom;
-    this.#profileForm = null;
-    this.#touchText?.close();
-    if (from === 'scores') {
-      this.#setMode('scores');
-      if (saved) void this.#boards?.flush().then(() => this.#loadBoard());
-      return;
-    }
-    // Back to the end screen, past its explosion and its key delay.
-    this.#setMode(from);
-    this.#modeSince -= 60_000;
-    if (from === 'complete') this.#showComplete(this.#offerReplay);
-    if (!saved || !this.#boards) return;
-    this.#boardLine = 'Sending';
-    if (from === 'complete') this.#showComplete(this.#offerReplay);
-    const request = this.#postRequest;
-    void this.#boards.flush((_id, outcome) => {
-      if (request === this.#postRequest) this.#showOutcome(outcome);
-    });
   }
 
   #onSettingsMenu(action: MenuAction): void {
@@ -1828,6 +1798,8 @@ export class Game {
   }
 
   #toTitle(): void {
+    this.#nameEntry = null;
+    this.#touchText?.close();
     this.#clearPlay();
     this.#lastInput = performance.now();
     this.#setMode('title');
@@ -2257,7 +2229,7 @@ export class Game {
   #onCrash(): void {
     this.#perfLines = this.#perfReport();
     this.#finishRun();
-    this.#postRun();
+    this.#endRun();
     this.#endFlood();
     this.#stopMusic();
     this.#showGameOver();
@@ -2274,19 +2246,24 @@ export class Game {
    * The crash's explosion, then the game-over message (drawn by the frame loop). Back from
    * watching the replay (`fresh` false), it keeps the results it had.
    */
-  /** The game over's message: the results, the replay keys, the leaderboard line, the prompt. */
+  /**
+   * The game over's message: the results, the replay keys, the leaderboard line or the name
+   * entry, the prompt. The replay keys wait until the name is done, since R and S type.
+   */
   #showGameOverMessage(): void {
     this.#message.container.visible = true;
     const results = this.#results;
+    const naming = this.#nameEntry !== null;
     this.#message.show(
       'Game over',
       MAGENTA,
       [
         ...(results?.rows ?? [`Score ${this.#state.score}`]),
-        ...(this.#offerReplay && this.#lastReplay ? [REPLAY_HINT] : []),
+        ...(!naming && this.#offerReplay && this.#lastReplay ? [REPLAY_HINT] : []),
         ...(this.#boardLine ? [this.#boardLine] : []),
+        ...this.#nameLines(),
         ...(this.#perfLines ?? []),
-        'Esc Title  Any key Retry',
+        naming ? nameHint(this.#lastPressPad) : 'Esc Title  Any key Retry',
       ],
       results?.highlight ?? -1,
     );
@@ -2304,7 +2281,7 @@ export class Game {
   #onComplete(): void {
     this.#perfLines = this.#perfReport();
     this.#finishRun();
-    this.#postRun();
+    this.#endRun();
     this.#endFlood();
     const run = this.#run;
     const difficulty = DIFFICULTY_LABELS[this.#difficulty];
@@ -2364,10 +2341,14 @@ export class Game {
     const view = this.#completeView;
     if (!view) return;
     this.#offerReplay = offerReplay;
-    this.#setMode('complete');
+    // Drawn again on the screen it's on (a new line, the cursor's blink), the key delay runs on.
+    if (this.#mode !== 'complete') this.#setMode('complete');
     this.#message.container.visible = true;
-    const lines = [...view.lines];
+    // While the name entry is up, R and S type, so the replay keys wait, and its hint is the prompt.
+    const naming = this.#nameEntry !== null;
+    const lines = naming ? [...view.lines.slice(0, -1).filter((l) => l !== REPLAY_HINT), nameHint(this.#lastPressPad)] : [...view.lines];
     if (this.#boardLine) lines.splice(lines.length - 1, 0, this.#boardLine);
+    lines.splice(lines.length - 1, 0, ...this.#nameLines());
     if (this.#perfLines) lines.splice(lines.length - 1, 0, ...this.#perfLines);
     this.#message.show(view.heading, LIME, lines, view.highlight ?? -1);
     this.#afterComplete = view.after;
@@ -2379,6 +2360,7 @@ export class Game {
   #onEndScreen(): boolean {
     return (
       (this.#mode === 'gameover' || this.#mode === 'complete') &&
+      this.#nameEntry === null &&
       this.#offerReplay &&
       this.#lastReplay !== null &&
       performance.now() - this.#modeSince >= PROMPT_DELAY_MS
@@ -2588,14 +2570,7 @@ export class Game {
         break;
       }
       case 'scores': {
-        const profile = this.#boards?.profile;
-        const nickname = profile === undefined ? undefined : (profile?.nickname ?? null);
-        if (this.#scoresMenu) this.#scoresScreen.update(this.#scoresMenu, nickname, blink);
-        r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
-        break;
-      }
-      case 'profile': {
-        if (this.#profileForm) this.#profileScreen.update(this.#profileForm, blink, this.#lastPressPad);
+        if (this.#scoresMenu) this.#scoresScreen.update(this.#scoresMenu, blink);
         r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
         break;
       }
@@ -2678,6 +2653,8 @@ export class Game {
       default:
         break;
     }
+    // The name entry's cursor blinks.
+    if (this.#nameEntry && blink !== this.#nameBlink) this.#refreshEndScreen(blink);
     this.#drawFade(now);
     r.render();
     if (this.#perfOn) {

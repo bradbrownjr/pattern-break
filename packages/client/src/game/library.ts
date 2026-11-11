@@ -50,6 +50,8 @@ export interface StoredIdentity {
 export interface PendingRun {
   id?: number;
   kind: 'song' | 'arcade';
+  /** The name it's posted under; none on a run queued before names went with runs. */
+  name?: string;
   replays: ArrayBuffer[];
   /** When it finished, in ms since the epoch. */
   at: number;

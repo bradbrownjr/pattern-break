@@ -60,14 +60,16 @@ shots feel in time with the music after.
 
 ### 4. Name entry on the phone and with a gamepad
 
-**Why:** the name entry by touch was tested in headless browsers and by gamepad in Node
-alone, not on real devices.
+**Why:** the end screens' name entry by touch was tested in headless browsers and by
+gamepad in Node alone, not on real devices.
 
-Open **Scores**, choose the **Name** row, and set a name: once on the phone with its
-keyboard, once with a gamepad on the PC.
+Finish or lose a run and enter a name on the game over or clear screen: once on the phone
+(touch the screen for its keyboard), once with a gamepad on the PC. Then let the other
+player take a turn and post under their own name.
 
-**Looking for:** the keyboard opens and stays open, the name saves, and the gamepad's up,
-down, Y and A do what the hint says.
+**Looking for:** the keyboard opens in capitals and stays open, the keyboard's Enter and
+the gamepad's A post, B skips, up and down change letters, and both names show on Scores in
+different places.
 
 ### 5. The title demo
 

@@ -92,7 +92,7 @@ pattern-break/
 │   │   ├── src/game/credits.ts    # the Credits screen: songs, code and licenses, each a link
 │   │   ├── src/game/net.ts        # the leaderboard client: device key, signed requests, the queue
 │   │   ├── src/game/scores.ts     # the Scores screen
-│   │   ├── src/game/profile.ts    # the name entry
+│   │   ├── src/game/name-entry.ts # the end screens' name entry
 │   │   ├── src/game/touch-text.ts # the hidden input that opens a phone's keyboard there
 │   │   ├── public/icons/          # app icons, drawn by tools/make-icons.ts
 │   │   ├── audio-debug.html       # dev-server page that plays the fixture and shows the clock
@@ -1537,45 +1537,52 @@ version 2). Browsers without Ed25519 in Web Crypto (Chrome before 137, Firefox b
 Safari before 17, per MDN) or without `crypto.subtle` (plain HTTP) play as before, with no
 boards.
 
-- **Posting.** A run from Levels is posted when it ends. An arcade run is posted when it ends:
-  at a game over, with the levels cleared so far and the last try (a retry and a later
-  end post again; the board keeps the player's best), or after its last level. Runs with a
-  cheat, and runs on the test song, aren't posted. Each run goes into the library's
-  `pending` store first and is sent from there, oldest first, so a run finished offline
-  is sent at the next start or `online` event. A run the server answers, accepted or
-  rejected, leaves the queue.
-- **The end screen's line,** above the prompt: "Sending", then "Rank 3/12", "Queued",
-  "Not posted: score mismatch", or "N Set name" when the player has no name yet; N opens
-  the name entry, and saving it sends the held runs.
-- **Scores,** on the title menu: rows for the board (Arcade, then each song with a hash),
-  the difficulty (Impossible once found) and the name, then the board's top 10, and "You
-  23" under the list when the player's place is lower. Each row is in the player's colour,
-  `PLAYER_COLOURS[mark % 12]` (render/palette.ts: the theme's neons and LED colours, each at
-  least 4.5:1 against the background, none amber, which marks the selected row; Brad,
-  2026-11-10). The player's own row has a cyan "<" after the score. Columns: rank, name,
-  the levels an arcade run reached when it ended in a game over ("L6", empty otherwise, so
-  the scores stay aligned), score. A name with a link shows "*"; Enter on it opens the
-  link in a new tab. Enter on Name opens the name entry.
-- **The name entry** has Name, Link and Save. The form checks the name with the server's
-  rule before sending, after trimming spaces from its ends; the server's answers show as
-  "Name taken", "Bad name", "Bad link", "Offline". Three ways to fill it:
-  - **Keyboard:** typing and pasting add to the field's end, Backspace erases, up and down
-    move between rows.
-  - **Gamepad** (`ProfileForm.applyPad`): in a field, up and down cycle the character
-    under the cursor through `PAD_CHARS` (A to Z first, then a to z, digits, a space and
-    the rest of printable ASCII), left and right move the cursor, and Y erases. One past
-    the end, up adds an A. A moves to the next row; on Save, up and down move between rows.
-    The hint under the form shows the pad's buttons when the last press was a pad's.
-  - **Touch** (`TouchTextEntry`): a page can only open a phone's keyboard by focusing a text
-    field inside a touch's own event handler, so the touch's pointerup focuses a hidden
-    input on the field under the cursor. The form takes the input's whole text on every
-    `input` event (`ProfileForm.replace`), since a phone keyboard's key events often carry
-    no key. Enter on the keyboard moves to the next field and the input follows; on Save
-    it closes, and a touch saves. The touch's compatibility `mousedown` would move focus
-    off the input straight away, so a capture listener cancels it while the input is open.
+- **The name entry.** Game over and the clear screens ask for a name for any run that can
+  be posted: one with no cheat, in a browser that can sign. `NameEntry` (name-entry.ts)
+  shows "Name BRAD____", every place shown, the empty ones as underscores, the place under
+  the cursor blinking. It starts with the last name posted under in this browser
+  (localStorage `pattern-break.name`), the cursor on its first letter.
+  - **Keyboard:** typing replaces the filled-in name, then types over the letter under the
+    cursor and moves on; Backspace erases the filled-in name at once, then a letter at a
+    time; left and right move the cursor; up and down cycle the letter under it through
+    `NAME_CHARS` (A to Z, digits, a space, `. - ! ?`). Enter posts; Esc skips posting.
+    R and S type letters while the entry is up, so the replay keys wait until it's done.
+  - **Gamepad:** up and down cycle, left and right move, Y erases, A or Start posts, B or
+    Select skips. The prompt shows the pad's buttons when the last press was a pad's.
+  - **Touch** (`TouchTextEntry`): a page can only open a phone's keyboard by focusing a
+    text field inside a touch's own event handler, so a touch on the end screen focuses a
+    hidden input holding the name. The entry takes the input's whole text on every `input`
+    event (`NameEntry.replace`), since a phone keyboard's key events often carry no key;
+    the keyboard's Enter posts. The touch's compatibility `mousedown` would move focus off
+    the input straight away, so a capture listener cancels it while the input is open.
     `#onKeyDown` lets keys from the input through untouched, except Enter and Esc.
-  - Tests: `scores.test.ts` sets a name with pad edits alone; `browser/touch-text.test.ts`
-    focuses the input from a touch's pointerup and types into it in all three engines.
+  - Enter checks the name with the shared rules (`packages/core/src/name.ts`) first:
+    "Name needed", "Bad name", "Name refused" (the vulgarity filter).
+- **Posting.** A run from Levels goes on its song's board under the name entered. An arcade
+  level goes on its song's board when it's cleared. When the arcade run ends, at a game
+  over (with the levels cleared so far and the last try: a retry and a later end post
+  again, and the board keeps the best) or after its last level, the run goes on the arcade
+  board too, if every level went under the same name; a level skipped or posted under
+  another name keeps it off (Brad, 2026-11-11). Each run goes into the library's `pending`
+  store first, with its name, and is sent from there, oldest first, so a run finished
+  offline is sent at the next start or `online` event. A run the server answers, accepted
+  or rejected, leaves the queue; only being offline stops the sending. A run queued before
+  2026-11-11 has no name: it waits and goes under the next name posted.
+- **The end screen's line,** above the prompt once the name is posted: "Sending", then
+  "Rank 3/12", "Queued" or "Not posted: score mismatch".
+- **Scores,** on the title menu: rows for the board (Arcade, then each song with a hash)
+  and the difficulty (Impossible once found), then the board's top 10, and "You 23" under
+  the list when the place of the last name used on this device is lower. Each row is in
+  its device's colour, `PLAYER_COLOURS[mark % 12]` (render/palette.ts: the theme's neons
+  and LED colours, each at least 4.5:1 against the background, none amber, which marks the
+  selected row; Brad, 2026-11-10), so two players with one name on different devices show
+  apart. That place's row has a cyan "<" after the score. Columns: rank, name, the levels
+  an arcade run reached when it ended in a game over ("L6", empty otherwise, so the scores
+  stay aligned), score.
+- Tests: `name-entry.test.ts` edits a name with keys and pad edits alone;
+  `browser/touch-text.test.ts` focuses the input from a touch's pointerup and types into it
+  in all three engines; `packages/core/test/name.test.ts` checks the filter against
+  vulgarities and against innocent names that contain one.
 
 `net.test.ts` runs `Leaderboards` against the real server in Node, through Fastify's
 `inject`: Node's Web Crypto signs with Ed25519 as the browsers do.
@@ -1851,18 +1858,24 @@ repo (see the Dockerfile).
 | Request | Signed | Answer |
 |---|---|---|
 | `GET /api` | no | `{ genVersion, simVersion }` |
-| `PUT /api/players/me` | yes | Sets `{ nickname, link }`. A nickname is 1 to 12 printable ASCII characters, no space at either end, one player's only (compared without case): 409 when taken. A link is `http` or `https`, at most 200 characters, or null. |
-| `GET /api/players/me` | no | The nickname and link for the `X-PB-Key` header's key; both null for a key with no name yet. |
-| `POST /api/runs` | yes | `{ kind: 'song' \| 'arcade', replays: [base64] }`. Answers `{ status: 'needModule', hashes }`, `{ status: 'accepted', runId, score, rank, players }`, or 422 `{ status: 'rejected', reason, level }`. 403 until the key has a nickname. |
-| `PUT /api/songs/:hash` | yes | The song file as `application/octet-stream`, up to 4 MB. 422 when its SHA-256 isn't `:hash`; 201 when stored, 200 when the server had it. |
+| `POST /api/runs` | yes | `{ kind: 'song' \| 'arcade', name, replays: [base64] }`. `name` follows `packages/core/src/name.ts`: 422 `{ status: 'rejected', reason: 'bad name' }`, or `'name refused'` from the vulgarity filter. Answers `{ status: 'needModule', hashes }`, `{ status: 'accepted', runId, score, rank, players }`, or 422 `{ status: 'rejected', reason, level }`. A key's first run makes its player. |
+| `PUT /api/songs/:hash` | yes | The song file as `application/octet-stream`, up to 4 MB. 403 from a key that has sent no run; 422 when its SHA-256 isn't `:hash`; 201 when stored, 200 when the server had it. |
 | `GET /api/songs/:hash` | no | `{ hash, title, author, bundled, license, sourceUrl, players }`, or 404. |
-| `GET /api/leaderboards/:hash?difficulty=&limit=` | no | A song's board: `{ genVersion, simVersion, top, you, players }`. `limit` is 1 to 100, default 10. `you` is the caller's place when the request has an `X-PB-Key` header. |
+| `GET /api/leaderboards/:hash?difficulty=&limit=&name=` | no | A song's board: `{ genVersion, simVersion, top, you, players }`. `limit` is 1 to 100, default 10. `you` is the place of the `X-PB-Key` header's key under `name`, or its best place under any name. `players` counts each key and name once. |
 | `GET /api/leaderboards/arcade?difficulty=&limit=` | no | The arcade board, the same shape. Entries have `levels`, the levels the run reached. |
 | `GET /api/replays/:sha` | no | A listed run's replay file, by the SHA-256 a board entry names. |
 
-A board lists each player's best run: the highest score, the earlier run first on a tie.
-Each entry has `mark`, the first 32 bits of the SHA-256 of the player's public key, so the
-game can colour a player's rows the same everywhere without the key being sent.
+A board lists the best run of each key and name: the highest score, the earlier run first
+on a tie. Each entry has `mark`, the first 32 bits of the SHA-256 of the key, so the game
+can colour a device's rows the same everywhere without the key being sent. A replay sent
+again under another name keeps the name it was first sent under.
+
+The name is a column of `runs`. A database from before 2026-11-11, when the name and a link
+lived on `players`, is brought up to date on open (`Database.#migrate`): each run takes its
+player's name, and `players` is rebuilt without the name and link by the copy-and-rename
+steps in the SQLite docs ("Making Other Kinds Of Table Schema Changes"), since SQLite can't
+drop a UNIQUE column. `node:sqlite` opens with foreign keys on (Node docs,
+`enableForeignKeyConstraints`, default true), so they're off until the migration is done.
 
 ### Signing
 
@@ -1908,7 +1921,6 @@ Per IP (`@fastify/rate-limit`), and for signed requests a second limit per key:
 |---|---|---|
 | `POST /api/runs` | 30 a minute | 20 a minute |
 | `PUT /api/songs/:hash` | 20 an hour | 10 an hour |
-| `PUT /api/players/me` | 20 a minute | 10 a minute |
 | Each `GET` | 120 a minute | |
 
 Behind a reverse proxy, set `TRUST_PROXY` to its address, or every player shares the

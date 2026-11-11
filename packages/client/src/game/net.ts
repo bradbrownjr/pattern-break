@@ -1,8 +1,8 @@
 // The leaderboard client (docs/PLAN.md, "Server"; the API is in docs/DEVELOPMENT.md,
 // "Leaderboard server"). The player is an Ed25519 key pair made in this browser and kept in
-// IndexedDB; the private key can't be read out, only used to sign. Finished runs go into a
-// queue first and are sent from it, so a run finished offline is sent once the game is back
-// online.
+// IndexedDB; the private key can't be read out, only used to sign. Each run is sent with the
+// name entered for it on the end screen (name-entry.ts). Finished runs go into a queue first
+// and are sent from it, so a run finished offline is sent once the game is back online.
 
 import { encodeReplay, type Replay } from '@game/core';
 import type { PendingRun, StoredIdentity } from './library.ts';
@@ -13,19 +13,19 @@ export type Outcome =
   | { status: 'rejected'; reason: string }
   /** Not sent yet: offline, or the server didn't answer. It stays queued. */
   | { status: 'queued' }
-  /** The player has no name yet. It stays queued until they set one. */
-  | { status: 'noName' }
   /** This browser can't sign (no Ed25519 in Web Crypto, no IndexedDB, or not HTTPS). */
   | { status: 'unavailable' };
 
 export interface BoardEntry {
   rank: number;
   nickname: string;
-  link: string | null;
   score: number;
   levels: number;
   finished: boolean;
-  /** A number from the player's key, the same on every board: picks the row's colour. */
+  /**
+   * A number from the device's key, the same on every board: picks the row's colour, so two
+   * players with one name on different devices show apart.
+   */
   mark: number;
 }
 
@@ -33,11 +33,6 @@ export interface BoardView {
   top: BoardEntry[];
   you: BoardEntry | null;
   players: number;
-}
-
-export interface Profile {
-  nickname: string;
-  link: string | null;
 }
 
 /** Where the key and the queue are kept: the Library, or a stand-in in tests. */
@@ -129,29 +124,11 @@ export class LeaderboardClient {
     return this.#request(method, path, new TextEncoder().encode(JSON.stringify(value)));
   }
 
-  /** The player's nickname and link, or null before they set one. */
-  async profile(): Promise<Profile | null> {
-    const res = await this.#request('GET', '/api/players/me');
-    if (!res.ok) throw new Offline(`players/me: ${res.status}`);
-    const profile = (await res.json()) as { nickname: string | null; link: string | null };
-    return profile.nickname === null ? null : { nickname: profile.nickname, link: profile.link };
-  }
-
-  /** Sets the nickname and link; resolves to null, or what was wrong ('nickname taken'). */
-  async setProfile(profile: Profile): Promise<string | null> {
-    const res = await this.#json('PUT', '/api/players/me', profile);
-    if (res.ok) return null;
-    if (res.status >= 500) throw new Offline(`players/me: ${res.status}`);
-    const body = (await res.json().catch(() => ({}))) as { error?: string };
-    return body.error ?? `error ${res.status}`;
-  }
-
-  /** Sends a run, uploading any song the server asks for once, then sending it again. */
-  async submit(run: { kind: 'song' | 'arcade'; replays: Uint8Array[] }, songBytes: SongBytes): Promise<Outcome> {
-    const body = { kind: run.kind, replays: run.replays.map(base64) };
+  /** Sends a run under a name, uploading any song the server asks for once, then sending it again. */
+  async submit(run: { kind: 'song' | 'arcade'; name: string; replays: Uint8Array[] }, songBytes: SongBytes): Promise<Outcome> {
+    const body = { kind: run.kind, name: run.name, replays: run.replays.map(base64) };
     for (let attempt = 0; attempt < 2; attempt++) {
       const res = await this.#json('POST', '/api/runs', body);
-      if (res.status === 403) return { status: 'noName' };
       if (res.status >= 500 || res.status === 429) throw new Offline(`runs: ${res.status}`);
       const answer = (await res.json().catch(() => ({}))) as {
         status?: string;
@@ -179,18 +156,19 @@ export class LeaderboardClient {
     return { status: 'rejected', reason: 'song missing' };
   }
 
-  /** A board: 'arcade', or a song's hash. */
-  async board(name: string, difficulty: string, limit = 10): Promise<BoardView> {
-    const res = await this.#request('GET', `/api/leaderboards/${name}?difficulty=${difficulty}&limit=${limit}`);
+  /** A board: 'arcade', or a song's hash. `you` is the name whose place the board gives too. */
+  async board(name: string, difficulty: string, limit = 10, you = ''): Promise<BoardView> {
+    const query = `difficulty=${difficulty}&limit=${limit}${you ? `&name=${encodeURIComponent(you)}` : ''}`;
+    const res = await this.#request('GET', `/api/leaderboards/${name}?${query}`);
     if (!res.ok) throw new Offline(`leaderboards: ${res.status}`);
     return (await res.json()) as BoardView;
   }
 }
 
 /**
- * The game's side of the leaderboards: the key, the name, the queue. Every finished run is
- * queued, then the queue is sent, oldest first; a run the server answers (accepted or
- * rejected) leaves the queue, and one it doesn't stays for next time.
+ * The game's side of the leaderboards: the key and the queue. Every posted run is queued,
+ * then the queue is sent, oldest first; a run the server answers (accepted or rejected)
+ * leaves the queue, and one it doesn't, offline, stays for next time.
  */
 export class Leaderboards {
   readonly #store: NetStore;
@@ -198,8 +176,8 @@ export class Leaderboards {
   readonly #options: { base?: string; fetch?: Fetch; now?: () => number };
   #ready: Promise<LeaderboardClient | null> | null = null;
   #flushing: Promise<void> | null = null;
-  /** The name and link, once known: null before one is set, undefined before asking. */
-  profile: Profile | null | undefined = undefined;
+  /** Whether this browser can sign runs; undefined until the key is first asked for. */
+  available: boolean | undefined = undefined;
 
   constructor(store: NetStore, songBytes: SongBytes, options: { base?: string; fetch?: Fetch; now?: () => number } = {}) {
     this.#store = store;
@@ -209,73 +187,55 @@ export class Leaderboards {
 
   /** The client, with the device key made on first use; null where the browser can't sign. */
   client(): Promise<LeaderboardClient | null> {
-    this.#ready ??= deviceKey(this.#store).then((key) => (key ? new LeaderboardClient(key, this.#options) : null));
+    this.#ready ??= deviceKey(this.#store).then((key) => {
+      this.available = key !== null;
+      return key ? new LeaderboardClient(key, this.#options) : null;
+    });
     return this.#ready;
   }
 
-  /** Asks the server for the player's name; leaves it unknown when offline. */
-  async loadProfile(): Promise<Profile | null | undefined> {
-    const client = await this.client();
-    if (!client) return undefined;
-    try {
-      this.profile = await client.profile();
-    } catch {
-      // Offline: still unknown.
-    }
-    return this.profile;
-  }
-
-  /** Sets the name and link; resolves to null, or what was wrong. */
-  async setProfile(profile: Profile): Promise<string | null> {
-    const client = await this.client();
-    if (!client) return 'unavailable';
-    try {
-      const error = await client.setProfile(profile);
-      if (error === null) this.profile = profile;
-      return error;
-    } catch {
-      return 'offline';
-    }
-  }
-
-  /** Queues a finished run and sends the queue; resolves to what became of this run. */
-  async post(kind: 'song' | 'arcade', replays: readonly Replay[]): Promise<Outcome> {
+  /** Queues a finished run under `name` and sends the queue; resolves to what became of this run. */
+  async post(kind: 'song' | 'arcade', name: string, replays: readonly Replay[]): Promise<Outcome> {
     const client = await this.client();
     if (!client) return { status: 'unavailable' };
-    const run: PendingRun = { kind, replays: replays.map((r) => encodeReplay(r).buffer), at: Date.now() };
+    const run: PendingRun = { kind, name, replays: replays.map((r) => encodeReplay(r).buffer), at: Date.now() };
     const id = await this.#store.addPending(run);
     let outcome: Outcome = { status: 'queued' };
     await this.flush((sent, result) => {
       if (sent === id) outcome = result;
-    });
+    }, name);
     return outcome;
   }
 
-  /** Sends the queued runs, oldest first; `onSent` hears each answer. Stops at the first that can't be sent. */
-  flush(onSent?: (id: number, outcome: Outcome) => void): Promise<void> {
+  /**
+   * Sends the queued runs, oldest first; `onSent` hears each answer. Stops at the first that
+   * can't be sent (offline). A run queued before names went with runs (2026-11-11) has none:
+   * it goes under `name`, the name just posted under, and waits until there is one.
+   */
+  flush(onSent?: (id: number, outcome: Outcome) => void, name?: string): Promise<void> {
     // One flush at a time; a second caller waits for it, then runs its own.
     const previous = this.#flushing ?? Promise.resolve();
-    const next = previous.then(() => this.#flush(onSent));
+    const next = previous.then(() => this.#flush(onSent, name));
     this.#flushing = next.finally(() => {
       if (this.#flushing === next) this.#flushing = null;
     });
     return next;
   }
 
-  async #flush(onSent?: (id: number, outcome: Outcome) => void): Promise<void> {
+  async #flush(onSent?: (id: number, outcome: Outcome) => void, fallbackName?: string): Promise<void> {
     const client = await this.client();
     if (!client) return;
     for (const run of await this.#store.pendingRuns()) {
+      const name = run.name ?? fallbackName;
+      if (!name) continue;
       let outcome: Outcome;
       try {
-        outcome = await client.submit({ kind: run.kind, replays: run.replays.map((b) => new Uint8Array(b)) }, this.#songBytes);
+        outcome = await client.submit(
+          { kind: run.kind, name, replays: run.replays.map((b) => new Uint8Array(b)) },
+          this.#songBytes,
+        );
       } catch {
         onSent?.(run.id!, { status: 'queued' });
-        return;
-      }
-      if (outcome.status === 'noName') {
-        this.profile = null;
-        onSent?.(run.id!, outcome);
         return;
       }
       await this.#store.deletePending(run.id!);
@@ -294,8 +254,6 @@ export function outcomeLine(outcome: Outcome | null): string | null {
       return `Not posted: ${outcome.reason}`;
     case 'queued':
       return 'Queued';
-    case 'noName':
-      return 'N Set name';
     case 'unavailable':
       return null;
   }

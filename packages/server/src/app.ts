@@ -6,7 +6,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
-import { Difficulty, GEN_VERSION, SIM_VERSION, decodeReplay, type DifficultyName } from '@game/core';
+import { Difficulty, GEN_VERSION, SIM_VERSION, decodeReplay, nameProblem, type DifficultyName } from '@game/core';
 import type { CheckJob, CheckResult } from './checker.ts';
 import { Database, type Board } from './db.ts';
 import { checkSignature } from './signature.ts';
@@ -18,8 +18,6 @@ export const MAX_SONG_BYTES = 4 * 1024 * 1024;
 /** Largest replay: a 15-minute song is about 108 000 ticks, a few kilobytes as runs. */
 export const MAX_REPLAY_BYTES = 256 * 1024;
 export const MAX_BOARD_LIMIT = 100;
-export const NICKNAME = /^[\x21-\x7e](?:[\x20-\x7e]{0,10}[\x21-\x7e])?$/;
-export const MAX_LINK_LENGTH = 200;
 
 export interface Checks {
   check(job: CheckJob): Promise<CheckResult>;
@@ -54,17 +52,6 @@ function sha256(bytes: Uint8Array): string {
 
 function difficultyParam(value: unknown): DifficultyName | null {
   return typeof value === 'string' && value in Difficulty ? (value as DifficultyName) : null;
-}
-
-function playerLink(value: unknown): string | null | undefined {
-  if (value === null || value === undefined || value === '') return null;
-  if (typeof value !== 'string' || value.length > MAX_LINK_LENGTH) return undefined;
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 export async function buildApp(options: AppOptions): Promise<{ app: FastifyInstance; db: Database }> {
@@ -113,30 +100,6 @@ export async function buildApp(options: AppOptions): Promise<{ app: FastifyInsta
     request.playerKey = check.key;
   }
 
-  // Players.
-  app.put(
-    '/api/players/me',
-    { bodyLimit: 4096, config: perIp(20, '1 minute'), preValidation: signed, preHandler: perPlayer(10, '1 minute') },
-    async (request, reply) => {
-      const body = request.body as { nickname?: unknown; link?: unknown } | null;
-      const nickname = typeof body?.nickname === 'string' ? body.nickname : '';
-      if (!NICKNAME.test(nickname)) return reply.code(422).send({ error: 'bad nickname' });
-      const link = playerLink(body?.link);
-      if (link === undefined) return reply.code(422).send({ error: 'bad link' });
-      const player = db.setPlayer(request.playerKey!, nickname, link, now());
-      if (!player) return reply.code(409).send({ error: 'nickname taken' });
-      return { nickname: player.nickname, link: player.link };
-    },
-  );
-
-  // An unknown key is a player with no name yet: 200 with nulls, since a browser logs any
-  // 404 as an error and the game asks this on every start.
-  app.get('/api/players/me', { config: perIp(120, '1 minute') }, async (request) => {
-    const key = request.headers['x-pb-key'];
-    const player = typeof key === 'string' ? db.playerByKey(key) : null;
-    return { nickname: player?.nickname ?? null, link: player?.link ?? null };
-  });
-
   // Songs.
   app.put(
     '/api/songs/:hash',
@@ -173,7 +136,8 @@ export async function buildApp(options: AppOptions): Promise<{ app: FastifyInsta
     };
   });
 
-  // Runs.
+  // Runs. Each is sent with the name it's posted under; the first run from a key makes its
+  // player, so a song upload (which needs one) can follow a needModule answer.
   app.post(
     '/api/runs',
     {
@@ -183,14 +147,16 @@ export async function buildApp(options: AppOptions): Promise<{ app: FastifyInsta
       preHandler: perPlayer(20, '1 minute'),
     },
     async (request, reply) => {
-      const player = db.playerByKey(request.playerKey!);
-      if (!player) return reply.code(403).send({ error: 'unknown player' });
-      const body = request.body as { kind?: unknown; replays?: unknown } | null;
+      const body = request.body as { kind?: unknown; name?: unknown; replays?: unknown } | null;
       const kind = body?.kind;
       const encoded = body?.replays;
       if ((kind !== 'song' && kind !== 'arcade') || !Array.isArray(encoded) || encoded.length === 0) {
-        return reply.code(400).send({ error: 'send kind and replays' });
+        return reply.code(400).send({ error: 'send kind, name and replays' });
       }
+      const nickname = typeof body?.name === 'string' ? body.name : '';
+      const problem = nameProblem(nickname);
+      if (problem) return reply.code(422).send({ status: 'rejected', reason: problem === 'vulgar' ? 'name refused' : 'bad name' });
+      const player = db.ensurePlayer(request.playerKey!, now());
       const maxLevels = Math.max(options.store.arcade.levels.length, options.store.arcade.impossible.length);
       if (encoded.length > (kind === 'song' ? 1 : maxLevels)) return reply.code(400).send({ error: 'too many replays' });
       const replays: Uint8Array[] = [];
@@ -239,6 +205,7 @@ export async function buildApp(options: AppOptions): Promise<{ app: FastifyInsta
         db.addRun(
           {
             player: player.id,
+            nickname,
             board: { kind: 'song', song: hashes[i]!, difficulty: result.difficulty },
             gen: GEN_VERSION,
             sim: SIM_VERSION,
@@ -259,6 +226,7 @@ export async function buildApp(options: AppOptions): Promise<{ app: FastifyInsta
           ? db.addRun(
               {
                 player: player.id,
+                nickname,
                 board,
                 gen: GEN_VERSION,
                 sim: SIM_VERSION,
@@ -270,7 +238,7 @@ export async function buildApp(options: AppOptions): Promise<{ app: FastifyInsta
               at,
             )
           : levelRuns[0]!;
-      const placed = db.board(board, GEN_VERSION, SIM_VERSION, 0, player.id);
+      const placed = db.board(board, GEN_VERSION, SIM_VERSION, 0, { player: player.id, nickname });
       return { status: 'accepted', runId, score: result.total, rank: placed.you?.rank ?? null, players: placed.players };
     },
   );
@@ -278,7 +246,7 @@ export async function buildApp(options: AppOptions): Promise<{ app: FastifyInsta
   // Boards. 'arcade' is the arcade run's board; any other name is a song's hash.
   app.get('/api/leaderboards/:board', { config: perIp(120, '1 minute') }, async (request, reply) => {
     const { board: name } = request.params as { board: string };
-    const query = request.query as { difficulty?: string; limit?: string };
+    const query = request.query as { difficulty?: string; limit?: string; name?: string };
     const difficulty = difficultyParam(query.difficulty);
     if (!difficulty) return reply.code(400).send({ error: 'difficulty must be one of ' + Object.keys(Difficulty).join(', ') });
     if (name !== 'arcade' && !HASH.test(name)) return reply.code(400).send({ error: 'bad board' });
@@ -286,7 +254,8 @@ export async function buildApp(options: AppOptions): Promise<{ app: FastifyInsta
     const key = request.headers['x-pb-key'];
     const player = typeof key === 'string' ? db.playerByKey(key) : null;
     const board: Board = name === 'arcade' ? { kind: 'arcade', difficulty } : { kind: 'song', song: name, difficulty };
-    return { genVersion: GEN_VERSION, simVersion: SIM_VERSION, ...db.board(board, GEN_VERSION, SIM_VERSION, limit, player?.id ?? null) };
+    const you = player ? { player: player.id, nickname: typeof query.name === 'string' && query.name ? query.name : null } : null;
+    return { genVersion: GEN_VERSION, simVersion: SIM_VERSION, ...db.board(board, GEN_VERSION, SIM_VERSION, limit, you) };
   });
 
   // Replays of listed runs, by the SHA-256 the boards name, so top runs can be watched.

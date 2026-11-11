@@ -13,6 +13,17 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **Names on the end screens, arcade style, from Brad's play-test.** Game over and the
+  clear screens now ask for a name for every run that can be posted, filled in with the
+  last name used: Enter posts, typing replaces it, up and down change a letter, and Esc
+  skips. Names are up to 8 capitals and digits. Each run carries its own name, so players
+  taking turns on one device post under their own, and each device keeps its colour on
+  the boards, which tells apart two players with the same name. An arcade run goes on the
+  arcade board only when every level went under one name. A rough filter turns down
+  obvious vulgarities without catching innocent words like CUTLASS. The Name row on Scores,
+  the "N Set name" line and profile links are gone, and the server drops stored links.
+  Fixed: one run held for a name stopped every later run from being sent, so they all
+  read "Queued".
 * **A graphical HUD, from Brad's play-test.** The power-up bar and its six labels along
   the bottom are gone, and the HUD is icons and digits. Top left, the arsenal: bomb,
   missile, double, laser, two drones, boost with its fuel, and three nukes, each in a fixed

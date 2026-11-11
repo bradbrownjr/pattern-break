@@ -14,7 +14,8 @@ export class TouchTextEntry {
     input.type = 'text';
     input.autocomplete = 'off';
     input.spellcheck = false;
-    input.setAttribute('autocapitalize', 'none');
+    // Names are capitals (packages/core/src/name.ts), so the keyboard starts in capitals.
+    input.setAttribute('autocapitalize', 'characters');
     input.setAttribute('autocorrect', 'off');
     input.setAttribute('aria-label', 'Name entry');
     input.dataset['touchText'] = '';

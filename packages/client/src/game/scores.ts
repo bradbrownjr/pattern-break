@@ -1,8 +1,8 @@
 // The Scores screen (docs/PLAN.md, "Client UI"): the global boards from the leaderboard
-// server. Rows: the board (Arcade, then each song), the difficulty, the player's name, then
-// the board's top 10. Left and right change the board or the difficulty; Enter on Name
-// opens the name entry; Enter on a player with a link opens it. ScoresMenu is the state, so
-// tests run in Node; ScoresScreen draws it.
+// server. Rows: the board (Arcade, then each song) and the difficulty, over the board's top
+// 10. Left and right change the board or the difficulty. Names are entered on the end
+// screens (name-entry.ts), not here. ScoresMenu is the state, so tests run in Node;
+// ScoresScreen draws it.
 
 import { PLAYFIELD_WIDTH, type DifficultyName } from '@game/core';
 import { Container } from 'pixi.js';
@@ -24,14 +24,13 @@ export interface BoardChoice {
 /** What the screen shows of the board: still loading, offline, or what the server sent. */
 export type BoardState = { kind: 'loading' } | { kind: 'offline' } | { kind: 'unavailable' } | { kind: 'board'; view: BoardView };
 
-export type ScoresRow = { kind: 'board' } | { kind: 'difficulty' } | { kind: 'name' } | { kind: 'entry'; index: number };
+export const SCORES_ROWS = ['board', 'difficulty'] as const;
+export type ScoresRow = (typeof SCORES_ROWS)[number];
 
 export type ScoresCommand =
   | { type: 'moved' }
   /** The board or difficulty changed: load the board again. */
   | { type: 'changed' }
-  | { type: 'name' }
-  | { type: 'open'; url: string }
   | { type: 'back' };
 
 function wrap(i: number, step: number, count: number): number {
@@ -64,23 +63,12 @@ export class ScoresMenu {
     return this.state.kind === 'board' ? this.state.view.top : [];
   }
 
-  get rows(): ScoresRow[] {
-    return [
-      { kind: 'board' },
-      { kind: 'difficulty' },
-      { kind: 'name' },
-      ...this.entries.map((_e, index) => ({ kind: 'entry' as const, index })),
-    ];
-  }
-
   get row(): ScoresRow {
-    return this.rows[Math.min(this.cursor, this.rows.length - 1)]!;
+    return SCORES_ROWS[this.cursor]!;
   }
 
-  /** A new board came in; the cursor stays on the rows that still exist. */
   setState(state: BoardState): void {
     this.state = state;
-    this.cursor = Math.min(this.cursor, this.rows.length - 1);
   }
 
   apply(action: MenuAction): ScoresCommand | null {
@@ -88,29 +76,23 @@ export class ScoresMenu {
     switch (action) {
       case 'up':
       case 'down':
-        this.cursor = wrap(this.cursor, action === 'up' ? -1 : 1, this.rows.length);
+        this.cursor = wrap(this.cursor, action === 'up' ? -1 : 1, SCORES_ROWS.length);
         return { type: 'moved' };
       case 'left':
       case 'right': {
         const step = action === 'left' ? -1 : 1;
-        if (row.kind === 'board' && this.boards.length > 1) {
+        if (row === 'board' && this.boards.length > 1) {
           this.board = wrap(this.board, step, this.boards.length);
           return { type: 'changed' };
         }
-        if (row.kind === 'difficulty' && this.difficulties.length > 1) {
+        if (row === 'difficulty' && this.difficulties.length > 1) {
           this.difficulty = wrap(this.difficulty, step, this.difficulties.length);
           return { type: 'changed' };
         }
         return null;
       }
       case 'confirm':
-        if (row.kind === 'name') return { type: 'name' };
-        if (row.kind === 'entry') {
-          const link = this.entries[row.index]?.link;
-          return link ? { type: 'open', url: link } : null;
-        }
-        if (row.kind === 'board' || row.kind === 'difficulty') return this.apply('right');
-        return null;
+        return this.apply('right');
       case 'back':
         return { type: 'back' };
     }
@@ -122,7 +104,7 @@ const TOP = 30;
 const ROW = 11;
 const LABEL_X = 96;
 const VALUE_X = 168;
-const LIST_TOP = TOP + 3 * ROW + 6;
+const LIST_TOP = TOP + 2 * ROW + 8;
 // The list's columns: rank (right-aligned), name, the arcade levels reached, score
 // (right-aligned), and the "<" on the player's own row, mirroring the ">" cursor.
 const RANK_X = 84;
@@ -152,8 +134,8 @@ export function playerColour(mark: number): number {
 export class ScoresScreen {
   readonly container = new Container();
   #marker = new PixelText('>', AMBER);
-  #labels = ['Board', 'Difficulty', 'Name'].map((t) => new PixelText(t, GREY));
-  #values = [0, 1, 2].map(() => new PixelText('', GREY));
+  #labels = ['Board', 'Difficulty'].map((t) => new PixelText(t, GREY));
+  #values = [0, 1].map(() => new PixelText('', GREY));
   #rank: PixelText[] = [];
   #name: PixelText[] = [];
   #levels: PixelText[] = [];
@@ -184,17 +166,15 @@ export class ScoresScreen {
     }
   }
 
-  update(menu: ScoresMenu, nickname: string | null | undefined, blinkBright: boolean): void {
-    const row = menu.row;
-    const values = [menu.choice.label, DIFFICULTY_LABELS[menu.difficultyName], nickname ?? (nickname === null ? 'None' : '-')];
+  update(menu: ScoresMenu, blinkBright: boolean): void {
+    const values = [menu.choice.label, DIFFICULTY_LABELS[menu.difficultyName]];
     values.forEach((value, i) => {
       const selected = menu.cursor === i;
-      const changeable = i < 2;
       this.#labels[i]!.color = selected ? AMBER : GREY;
       const v = this.#values[i]!;
-      v.text = changeable && selected ? `< ${value} >` : changeable ? `  ${value}` : value;
+      v.text = selected ? `< ${value} >` : `  ${value}`;
       v.color = selected ? WHITE : GREY;
-      v.place(changeable ? VALUE_X - 12 : VALUE_X, TOP + i * ROW);
+      v.place(VALUE_X - 12, TOP + i * ROW);
     });
 
     const arcade = menu.choice.name === 'arcade';
@@ -209,10 +189,9 @@ export class ScoresScreen {
       if (!entry) continue;
       const [rank, name, levels, score] = cells;
       const text = entryText(entry, arcade);
-      const selected = row.kind === 'entry' && row.index === i;
-      const color = selected ? AMBER : playerColour(entry.mark);
+      const color = playerColour(entry.mark);
       rank.text = text.rank;
-      name.text = entry.link ? `${text.name} *` : text.name;
+      name.text = text.name;
       levels.text = text.levels;
       score.text = text.score;
       for (const cell of cells) cell.color = color;
@@ -249,12 +228,10 @@ export class ScoresScreen {
     this.#note.color = menu.state.kind === 'board' ? GREY : MAGENTA;
     this.#note.place(CENTER, LIST_TOP + 2 * ROW, 'center');
 
-    const link = row.kind === 'entry' && entries[row.index]?.link;
-    this.#hint.text = row.kind === 'name' ? 'Enter Edit  Esc Back' : link ? 'Enter Open  Esc Back' : 'Esc Back';
+    this.#hint.text = 'Esc Back';
     this.#hint.place(CENTER, 204, 'center');
 
     this.#marker.visible = blinkBright;
-    const markerY = row.kind === 'entry' ? LIST_TOP + row.index * ROW : TOP + menu.cursor * ROW;
-    this.#marker.place((row.kind === 'entry' ? RANK_X - 18 : LABEL_X - 10), markerY);
+    this.#marker.place(LABEL_X - 10, TOP + menu.cursor * ROW);
   }
 }

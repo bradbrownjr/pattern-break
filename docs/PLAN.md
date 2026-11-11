@@ -394,8 +394,10 @@ every bar of every generated level.
 - Song select: the Levels row on the title menu (called Practice until its scores counted;
   Brad, 2026-11-10), with its author; the difficulty under it.
 - Scores, from the title menu: the global boards when online, Arcade and each song, top 10
-  and the player's own place, and the player's name and link (built 2026-11-10; see
-  "Server").
+  and the player's own place (built 2026-11-10; see "Server").
+- Name entry, on game over and the clear screens: every run that can be posted asks for a
+  name, arcade style, filled in with the last name used, so players taking turns each post
+  under their own (Brad, 2026-11-11). Enter posts, Esc skips.
 - Hangar intro before level 1 of each run from Play, skippable: in black and white, the
   captain boards the fighter and puts the song's cassette in the deck; pressing Play
   starts the song, the canopy closes, and the level floods into colour with the song
@@ -437,10 +439,17 @@ in the data folder (`/data` in the image).
 - `GET /api/songs/:hash` returns metadata, author and source links, and the player count.
 - `GET /api/replays/:sha` returns a listed run's replay, so top runs can be watched.
 - **Players:** v1 uses an anonymous device keypair (Ed25519 through Web Crypto: Chrome 137,
-  Firefox 129, Safari 17, per MDN's compatibility data) plus a chosen nickname, set with
-  `PUT /api/players/me`. A player can add one profile link (their music page: Mod Archive,
-  Bandcamp, SoundCloud, and so on), shown on their leaderboard entries. Accounts and
-  magic-link login come later.
+  Firefox 129, Safari 17, per MDN's compatibility data). Accounts and magic-link login come
+  later.
+- **Names (Brad, 2026-11-11):** each run is posted with the name entered for it, so a
+  device isn't one player: players taking turns on a console each post under their own.
+  A board's place belongs to a device and name together; each device has its own colour on
+  the boards, which tells apart two players with the same name. An arcade run goes on the
+  arcade board only when every level went under one name; each level goes on its song's
+  board either way. A name is 1 to 8 capitals, digits, inner spaces and `. - ! ?`, as on
+  an arcade's high score table. A rough filter turns down obvious vulgarities: roots that
+  sit inside innocent words (ASS in CUTLASS) count only as whole words, to avoid the
+  "Scunthorpe problem" (Wikipedia). There are no profile links, which could carry abuse.
 - Rate limiting per IP and per player (`@fastify/rate-limit`). Replays are stored so top
   runs can be watched.
 - Module storage: uploaded modules are stored only for hash lookup and validation. They
