@@ -976,6 +976,33 @@ Firefox and WebKit run the same tests in CI; their latency reporting and `curren
 size are not measured here. On a PulseAudio null sink, Firefox 159 reported an 8.6 ms
 latency (2026-11-10).
 
+**Sync** (`audio/sync.ts`, the screen in `game/sync-screen.ts`). The Settings row Sync holds
+`userOffsetMs` (`settings.syncMs`, -300 to +100 in steps of 5); Enter on it opens the Sync
+screen.
+
+- `SyncSession` schedules 24 clicks, 500 ms apart and 1 s after the start, as
+  `AudioBufferSourceNode`s straight to `context.destination`, so a Music or Effects volume
+  of 0 doesn't silence them. The title music stops while it runs and starts again on the
+  way out.
+- A press is read as the song clock reads one: `currentTime - outputLatencyOf(context)`. Its
+  gap to the nearest click's context time is what the reported latency misses plus how
+  the player presses on a beat. `getOutputTimestamp()` would place a press more finely, but
+  its idea of latency can differ from `outputLatency`, and the offset has to correct the
+  clock the game uses, so the session uses the clock's own reading. `currentTime` moves in
+  8 to 10 ms steps; the median over 16 presses evens them out.
+- `syncResult()` drops the first 4 presses, then those over 100 ms from the median, and
+  returns the negated median of the rest, rounded to 5 ms and kept in range. Fewer than 8
+  presses left gives null ("Too uneven"); so does running out of clicks.
+- Presses come from keys (any but Esc), a mouse or touch on its pointerdown (a capture
+  listener on `window`, ahead of the touch controls, which swallow theirs), and gamepad
+  buttons as `#pollPads` sees them. A touch button is skipped there, as its pointerdown
+  already counted. On the result, a press within `PROMPT_DELAY_MS` doesn't keep it, so
+  the last press can't.
+- Tests: `test/sync.test.ts` (the arithmetic and the screen's text) and
+  `test/browser/sync.test.ts`, which renders the clicks in an `OfflineAudioContext`, checks
+  each starts within a frame of its scheduled time, and gets -50 ms back from presses 50 ms
+  late.
+
 ### Sound effects
 
 The research and design are in [`SOUND-EFFECTS.md`](SOUND-EFFECTS.md). In code:

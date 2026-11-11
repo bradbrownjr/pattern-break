@@ -11,7 +11,7 @@ recorded in the [changelog](CHANGELOG.md). The design behind every item is in
 
 | Item | What it delivers | Stage |
 |---|---|---|
-| [M6: mobile and polish](#m6-mobile-and-polish) | Latency calibration, phone performance, tuned difficulty, name entry without a keyboard. | Next |
+| [M6: mobile and polish](#m6-mobile-and-polish) | Name entry without a keyboard, phone performance, difficulty targets. | Next |
 | [Boss patterns](#later) | A mini boss at the end of level 4 and the final boss at the end of level 8, from the song's patterns. | Later |
 | [Per-song enemy overrides](#later) | A sidecar file that changes which instrument spawns which enemy for one song. | Later |
 | [Amiga PAL mode](#later) | An optional 320x256 display mode. | Later |
@@ -29,13 +29,31 @@ start the next until the current one is done.
 
 ## M6: mobile and polish
 
-**Goal:** good on a phone.
+**Goal:** as good on a phone as on a computer.
 
-- [ ] The latency calibration screen.
-- [ ] A performance pass on a mid-range Android phone.
-- [ ] Difficulty tuning across about 20 varied modules.
-- [ ] Name entry for the leaderboards by gamepad and touch: today it takes typing and
-      pasting only (M5, 2026-11-10).
+Decided 2026-11-10: desktop and phone count equally; a change is done when it is right on
+both. Difficulty is tuned to measured targets, on the bundled songs plus a few varied
+public-domain or CC0 test songs kept in test fixtures, never bundled.
+
+- [ ] **Name entry without a keyboard:** a gamepad cycles each character with up and
+      down and moves with left and right; a touch on a field opens the phone's keyboard.
+- [ ] **Performance:** an on-screen frame-time readout; a measured pass under Chrome's 4x
+      and 6x CPU throttling, fixing what stands out; then Brad's phone.
+- [ ] **Difficulty targets:** per difficulty, set and test enemies a minute, bullets on
+      screen, the narrowest gap, and how far a scripted bot gets, on the 16 bundled songs
+      and 4 to 6 varied test songs (licenses checked as for bundled songs, kept in
+      `packages/analysis/fixtures`). Brad confirms the targets by play-test.
+
+**Acceptance:**
+
+- A gamepad alone and a touch screen alone can each set a name (model tests, and a browser
+  test for the touch path).
+- Under 4x CPU throttling in headless Chromium, the sim and renderer work of a frame
+  stays under 8 ms at the 95th percentile on the busiest bundled level.
+- Every bundled and test song meets its difficulty's targets on every difficulty.
+
+**Docs:** `PLAN.md` "Level generation"; `DEVELOPMENT.md` "Performance", "Leaderboards in
+the game"; `SONG-DIGEST.md` for the test songs.
 
 ---
 
@@ -57,10 +75,8 @@ Ideas that come after M6. Each gets its own section here, with tasks, once it's 
 
 These need Brad's answer before the work that depends on them. Don't guess.
 
-1. **Platform priority:** desktop web first or mobile first. Affects how early M6 work
-   starts.
-2. **Peak dots:** they are off on every difficulty (2026-11-08). They could come back as a
+1. **Peak dots:** they are off on every difficulty (2026-11-08). They could come back as a
    display option, as solid obstacles on hard, or not at all.
-3. **Shots through walls:** the player's shots pass through the LED walls, so turrets on
+2. **Shots through walls:** the player's shots pass through the LED walls, so turrets on
    the bar tips can be hit; enemy bullets stop on them (2026-11-09, for Brad's play-test).
    The other way, turrets are hard to reach behind taller bars.

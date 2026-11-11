@@ -26,7 +26,8 @@ import {
   type LevelData,
 } from '@game/core';
 import { Container } from 'pixi.js';
-import { createAudioPlayer, type AudioPlayer } from '../audio/index.ts';
+import { createAudioPlayer, outputLatencyOf, type AudioPlayer } from '../audio/index.ts';
+import { SyncSession, type SyncResult } from '../audio/sync.ts';
 import { EffectsMixer } from '../audio/mixer.ts';
 import { MenuSounds, type MenuSound } from '../audio/sfx.ts';
 import { SongNotes } from '../audio/song-notes.ts';
@@ -108,6 +109,7 @@ import {
 } from './songs.ts';
 import { REPLAY_HINT, bestKey, recordBest, resultRow, resultRows, scoreBreakdown } from './results.ts';
 import { browserStorage, loadSettings, saveSettings, volumeGain, type Settings } from './settings.ts';
+import { SyncScreen } from './sync-screen.ts';
 
 type Mode =
   | 'start'
@@ -117,6 +119,7 @@ type Mode =
   | 'controls'
   | 'settings'
   | 'keys'
+  | 'sync'
   | 'help'
   | 'credits'
   | 'scores'
@@ -259,6 +262,9 @@ export class Game {
   readonly #controlsPages = new ControlsPages();
   readonly #controls = new ControlsScreen();
   readonly #settingsScreen = new SettingsScreen();
+  readonly #syncScreen = new SyncScreen();
+  /** The Sync screen's clicks and presses, and its result once they are done (null: too uneven). */
+  #sync: { session: SyncSession; result: SyncResult | null | undefined; shownAt: number } | null = null;
   readonly #keysScreen = new KeysScreen();
   readonly #keysMenu = new KeysMenu();
   #bindings: Bindings = loadBindings(browserStorage());
@@ -397,6 +403,7 @@ export class Game {
       this.#jukebox.container,
       this.#controls.container,
       this.#settingsScreen.container,
+      this.#syncScreen.container,
       this.#keysScreen.container,
       this.#help.container,
       this.#credits.container,
@@ -427,6 +434,14 @@ export class Game {
     window.addEventListener('pointerup', (e) => {
       if (e.pointerType !== 'mouse') this.#onPointer();
     });
+    // On the Sync screen a click or touch counts on its press, before the touch controls take it.
+    window.addEventListener(
+      'pointerdown',
+      () => {
+        if (this.#mode === 'sync') this.#syncPress();
+      },
+      { capture: true },
+    );
     this.#touch = new TouchControls(document.body, this.#r.renderer.canvas as HTMLCanvasElement, () => this.#onPointer());
     this.#touch.setStartScreen(this.#mode === 'start');
     window.addEventListener('blur', () => {
@@ -493,6 +508,7 @@ export class Game {
     this.#jukebox.container.visible = mode === 'jukebox';
     this.#controls.container.visible = mode === 'controls';
     this.#settingsScreen.container.visible = mode === 'settings';
+    this.#syncScreen.container.visible = mode === 'sync';
     this.#keysScreen.container.visible = mode === 'keys';
     this.#help.container.visible = mode === 'help';
     this.#credits.container.visible = mode === 'credits';
@@ -606,6 +622,9 @@ export class Game {
       case 'profile':
         this.#profileKey(e);
         return;
+      case 'sync':
+        if (!e.repeat) this.#syncKey(e.code);
+        return;
       default:
         break;
     }
@@ -690,6 +709,9 @@ export class Game {
         const jukeboxAction = padMenuAction(bit);
         if (jukeboxAction) this.#onMenu(jukeboxAction);
         return;
+      case 'sync':
+        this.#syncPad(bit);
+        return;
       case 'controls':
       case 'settings':
       case 'keys':
@@ -729,6 +751,10 @@ export class Game {
 
   #onPointer(): void {
     if (this.#capture) this.#endCapture();
+    // A click or touch while the clicks play counted on its pointerdown (start()).
+    else if (this.#mode === 'sync') {
+      if (this.#sync?.result !== undefined) this.#syncKey('Enter');
+    }
     else if (this.#mode === 'start') this.#leaveStart();
     else if (this.#mode === 'demo') this.#toTitle();
     else if (this.#mode === 'replay') this.#endReplay(true);
@@ -1156,11 +1182,16 @@ export class Game {
         saveSettings(browserStorage(), this.#settings);
         this.#applyVolumes();
         this.#applyLook();
+        this.#applySync();
         // A taste of the new effects level; the music is playing to hear its own.
         if (this.#settings.effects !== before.effects) this.#fx?.play('killShip');
         else this.#sound('change');
         break;
       }
+      case 'sync':
+        this.#sound('select');
+        void this.#openSync();
+        return;
       case 'keys':
         this.#sound('select');
         this.#keysMenu.row = 0;
@@ -1177,6 +1208,95 @@ export class Game {
         return;
     }
     this.#settingsScreen.update(this.#settingsMenu.cursor, this.#settingsMenu.values);
+  }
+
+  // Sync ----------------------------------------------------------------------------------
+
+  /** Opens the Sync screen: the title music stops and the clicks start. Called from a key press or click. */
+  async #openSync(): Promise<void> {
+    this.#stopMusic();
+    this.#setMode('sync');
+    this.#syncScreen.update({ phase: 'running', presses: 0 });
+    try {
+      const player = await this.#getPlayer();
+      if (this.#mode !== 'sync') return;
+      const context = player.context;
+      if (context instanceof AudioContext && context.state !== 'running') await context.resume();
+      if (this.#mode !== 'sync') return;
+      this.#sync?.session.stop();
+      const session = new SyncSession(context, () => outputLatencyOf(context));
+      session.start();
+      this.#sync = { session, result: undefined, shownAt: 0 };
+    } catch (err) {
+      this.#showError(err);
+    }
+  }
+
+  /** A press on the beat: a key, a click, a touch or a button. */
+  #syncPress(): void {
+    const sync = this.#sync;
+    if (!sync || sync.result !== undefined) return;
+    this.#syncScreen.update({ phase: 'running', presses: sync.session.press() });
+    if (sync.session.done) this.#finishSync();
+  }
+
+  /** The clicks are done, or ran out: the result, which the player keeps or not. */
+  #finishSync(): void {
+    const sync = this.#sync;
+    if (!sync || sync.result !== undefined) return;
+    sync.session.stop();
+    sync.result = sync.session.result();
+    sync.shownAt = performance.now();
+    this.#syncScreen.update({ phase: 'result', result: sync.result, was: this.#settings.syncMs });
+  }
+
+  #syncKey(code: string): void {
+    const sync = this.#sync;
+    if (code === 'Escape') {
+      this.#leaveSync(false);
+    } else if (sync?.result === undefined) {
+      this.#syncPress();
+    } else if (performance.now() - sync.shownAt < PROMPT_DELAY_MS) {
+      // The last press of the run doesn't also keep the result.
+    } else if (code === 'KeyR') {
+      this.#sound('select');
+      void this.#openSync();
+    } else if ((code === 'Enter' || code === 'Space') && sync.result) {
+      this.#leaveSync(true);
+    }
+  }
+
+  /** A on the result keeps it, Y retries and B leaves; while the clicks play any other button is a press. */
+  #syncPad(bit: number): void {
+    if (bit === PadBit.b || bit === PadBit.select) {
+      this.#leaveSync(false);
+      return;
+    }
+    if (this.#sync?.result === undefined) {
+      // A touch button counted on its pointerdown already.
+      if (((this.#touch?.bits ?? 0) & bit) === 0) this.#syncPress();
+      return;
+    }
+    if (bit === PadBit.y) this.#syncKey('KeyR');
+    else if (bit === PadBit.a || bit === PadBit.start) this.#syncKey('Enter');
+  }
+
+  /** Back to Settings, keeping the measured offset if `keep`; the title music starts again. */
+  #leaveSync(keep: boolean): void {
+    const result = this.#sync?.result;
+    this.#sync?.session.stop();
+    this.#sync = null;
+    if (keep && result) {
+      this.#settings = { ...this.#settings, syncMs: result.offsetMs };
+      this.#settingsMenu.values.syncMs = result.offsetMs;
+      saveSettings(browserStorage(), this.#settings);
+      this.#applySync();
+      this.#sound('change');
+    } else {
+      this.#sound('back');
+    }
+    this.#setMode('settings');
+    void this.#playMusic(this.#titleSong, 'title', TITLE_FADE_IN_S);
   }
 
   // Keys ----------------------------------------------------------------------------------
@@ -1453,6 +1573,7 @@ export class Game {
       created.then(
         (p) => {
           this.#playerReady = p;
+          p.userOffsetMs = this.#settings.syncMs;
           p.onEnded = () => this.#onSongEnded();
         },
         () => {
@@ -1467,6 +1588,11 @@ export class Game {
   #applyVolumes(): void {
     if (this.#musicVolume) this.#musicVolume.gain.value = volumeGain(this.#settings.music);
     if (this.#fx) this.#fx.volume = volumeGain(this.#settings.effects);
+  }
+
+  /** Sets the song clock's offset from the Sync setting. */
+  #applySync(): void {
+    if (this.#playerReady) this.#playerReady.userOffsetMs = this.#settings.syncMs;
   }
 
   /** Shows `level`'s terrain, copper bars and sparks, or none. */
@@ -2343,6 +2469,12 @@ export class Game {
         break;
       }
       case 'settings': {
+        r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
+        break;
+      }
+      case 'sync': {
+        const sync = this.#sync;
+        if (sync && sync.result === undefined && sync.session.expired) this.#finishSync();
         r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
         break;
       }

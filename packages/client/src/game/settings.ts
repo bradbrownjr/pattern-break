@@ -2,6 +2,7 @@
 // blocked (a private window, cleared site data), so reading falls back to the defaults and
 // a failed write is ignored.
 
+import { SYNC_MAX_MS, SYNC_MIN_MS, SYNC_STEP_MS } from '../audio/sync.ts';
 import type { Flashing } from '../render/flash.ts';
 
 /** Volume levels: 0 is off, 5 is full. */
@@ -18,9 +19,11 @@ export interface Settings {
   crt: boolean;
   /** The walls' LED colours: neon green to red, or colour-blind safe (LED_CIVIDIS). */
   leds: 'neon' | 'colourBlind';
+  /** The audio offset in ms, from the Sync screen or set by hand (SongClock.userOffsetMs). */
+  syncMs: number;
 }
 
-export const DEFAULT_SETTINGS: Settings = { music: 5, effects: 4, flashing: 'reduced', shake: true, crt: true, leds: 'neon' };
+export const DEFAULT_SETTINGS: Settings = { music: 5, effects: 4, flashing: 'reduced', shake: true, crt: true, leds: 'neon', syncMs: 0 };
 
 const KEY = 'pattern-break.settings';
 
@@ -31,6 +34,12 @@ export function volumeGain(level: number): number {
 
 function level(v: unknown, fallback: number): number {
   return typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= VOLUME_LEVELS ? v : fallback;
+}
+
+function syncMs(v: unknown): number {
+  return typeof v === 'number' && Number.isInteger(v) && v % SYNC_STEP_MS === 0 && v >= SYNC_MIN_MS && v <= SYNC_MAX_MS
+    ? v
+    : DEFAULT_SETTINGS.syncMs;
 }
 
 /** Reads the settings from `storage`, with defaults for anything missing or out of range. */
@@ -46,6 +55,7 @@ export function loadSettings(storage: Pick<Storage, 'getItem'> | null): Settings
       shake: typeof o['shake'] === 'boolean' ? o['shake'] : DEFAULT_SETTINGS.shake,
       crt: typeof o['crt'] === 'boolean' ? o['crt'] : DEFAULT_SETTINGS.crt,
       leds: o['leds'] === 'neon' || o['leds'] === 'colourBlind' ? o['leds'] : DEFAULT_SETTINGS.leds,
+      syncMs: syncMs(o['syncMs']),
     };
   } catch {
     return { ...DEFAULT_SETTINGS };

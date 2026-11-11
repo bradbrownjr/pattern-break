@@ -488,6 +488,7 @@ const SETTINGS_LABELS: Record<SettingsItem, string> = {
   shake: 'Shake',
   crt: 'CRT',
   leds: 'LEDs',
+  sync: 'Sync',
   keys: 'Keys',
   back: 'Back',
 };
@@ -504,17 +505,23 @@ function choiceText(values: Settings, item: ChoiceItem): string {
   if (item === 'leds') return values.leds === 'colourBlind' ? 'Colour-blind' : 'Neon';
   return values[item] ? 'On' : 'Off';
 }
+/** The Sync row's value: the offset in ms, signed when not 0. */
+export function syncText(ms: number): string {
+  return `${ms > 0 ? '+' : ''}${ms} ms`;
+}
+
 /** The widest two-way value, so its right arrow clears it. */
 const CHOICE_WIDTH = textWidth('Colour-blind');
 const SETTINGS_TOP = 76;
-const SETTINGS_ROW = 16;
+const SETTINGS_ROW = 15;
 const CELL_W = 10;
 const CELL_H = 5;
 const CELL_GAP = 3;
 
 /**
  * The settings: Music and Effects as rows of five LED cells, lit up to the volume, green to
- * red, with "Off" at 0; Flashing, Shake, CRT and LED colours as words; Keys; then Back.
+ * red, with "Off" at 0; Flashing, Shake, CRT and LED colours as words; the Sync offset;
+ * Keys; then Back.
  */
 export class SettingsScreen {
   readonly container = new Container();
@@ -537,7 +544,7 @@ export class SettingsScreen {
       const left = new PixelText('<', WHITE).place(VALUE_X - 12, y);
       const right = new PixelText('>', WHITE).place(VALUE_X + VOLUME_LEVELS * (CELL_W + CELL_GAP) + 4, y);
       const off = new PixelText('Off', GREY).place(VALUE_X, y);
-      if (isChoiceItem(item)) {
+      if (isChoiceItem(item) || item === 'sync') {
         right.place(VALUE_X + CHOICE_WIDTH + 4, y);
         this.container.addChild(left, right, off);
       } else if (item !== 'back' && item !== 'keys') {
@@ -562,6 +569,12 @@ export class SettingsScreen {
       this.#labels[row]!.color = selected ? AMBER : GREY;
       for (const a of this.#arrows[row]!) a.visible = selected;
       if (item === 'back' || item === 'keys') return;
+      if (item === 'sync') {
+        const value = this.#off[row]!;
+        value.text = syncText(values.syncMs);
+        value.color = selected ? WHITE : GREY;
+        return;
+      }
       if (isChoiceItem(item)) {
         const value = this.#off[row]!;
         value.text = choiceText(values, item);

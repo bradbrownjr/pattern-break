@@ -5,6 +5,7 @@
 import { Difficulty, type DifficultyName } from '@game/core';
 import { KEY_ACTIONS, PAD_ACTIONS, SLOTS, type PadAction } from './bindings.ts';
 import type { MenuAction } from './input.ts';
+import { SYNC_MAX_MS, SYNC_MIN_MS, SYNC_STEP_MS } from '../audio/sync.ts';
 import { VOLUME_LEVELS, type Settings } from './settings.ts';
 
 export const DIFFICULTY_LABELS: Record<DifficultyName, string> = {
@@ -321,7 +322,7 @@ export class ControlsPages {
   }
 }
 
-export const SETTINGS_ITEMS = ['music', 'effects', 'flashing', 'shake', 'crt', 'leds', 'keys', 'back'] as const;
+export const SETTINGS_ITEMS = ['music', 'effects', 'flashing', 'shake', 'crt', 'leds', 'sync', 'keys', 'back'] as const;
 export type SettingsItem = (typeof SETTINGS_ITEMS)[number];
 
 /** The two-way settings, each value left to right as the screen shows them. */
@@ -339,7 +340,8 @@ function isChoice(item: SettingsItem): item is Choice {
 
 /**
  * Music and Effects volume, 0 (off) to 5; Flashing (Reduced or Full), Shake and CRT (Off or
- * On), LED colours (Neon or Colour-blind); Keys, which opens the Keys screen;
+ * On), LED colours (Neon or Colour-blind); Sync, the audio offset, where left and right
+ * step SYNC_STEP_MS and confirm opens the Sync screen; Keys, which opens the Keys screen;
  * then Back. Left and right change a value and stop at the ends; confirm steps a volume up
  * and wraps from 5 to off, and flips a two-way setting, so a click alone can reach every
  * value. Back, or confirm on Back, leaves.
@@ -360,7 +362,7 @@ export class SettingsMenu {
     this.values[item] = v;
   }
 
-  apply(action: MenuAction): 'moved' | 'changed' | 'keys' | 'back' | null {
+  apply(action: MenuAction): 'moved' | 'changed' | 'sync' | 'keys' | 'back' | null {
     const item = this.item;
     switch (action) {
       case 'up':
@@ -370,6 +372,13 @@ export class SettingsMenu {
       case 'left':
       case 'right': {
         if (item === 'back' || item === 'keys') return null;
+        if (item === 'sync') {
+          const step = action === 'left' ? -SYNC_STEP_MS : SYNC_STEP_MS;
+          const v = Math.max(SYNC_MIN_MS, Math.min(SYNC_MAX_MS, this.values.syncMs + step));
+          if (v === this.values.syncMs) return null;
+          this.values.syncMs = v;
+          return 'changed';
+        }
         if (isChoice(item)) {
           const v = SETTINGS_CHOICES[item][action === 'left' ? 0 : 1];
           if (v === this.values[item]) return null;
@@ -382,7 +391,7 @@ export class SettingsMenu {
         return 'changed';
       }
       case 'confirm':
-        if (item === 'back' || item === 'keys') return item;
+        if (item === 'back' || item === 'keys' || item === 'sync') return item;
         if (isChoice(item)) {
           const [a, b] = SETTINGS_CHOICES[item];
           this.#set(item, this.values[item] === a ? b : a);

@@ -16,7 +16,7 @@ describe('settings', () => {
 
   it('saves and loads', () => {
     const s = memory();
-    const saved = { music: 2, effects: 0, flashing: 'full', shake: false, crt: true, leds: 'colourBlind' } as const;
+    const saved = { music: 2, effects: 0, flashing: 'full', shake: false, crt: true, leds: 'colourBlind', syncMs: -120 } as const;
     saveSettings(s, saved);
     expect(loadSettings(s)).toEqual(saved);
   });
@@ -27,8 +27,12 @@ describe('settings', () => {
     expect(loadSettings(null)).toEqual(DEFAULT_SETTINGS);
     s.setItem('pattern-break.settings', '{not json');
     expect(loadSettings(s)).toEqual(DEFAULT_SETTINGS);
-    s.setItem('pattern-break.settings', JSON.stringify({ music: 9, effects: 2.5, flashing: 'none', shake: 1, crt: 'yes', leds: 'blue' }));
+    s.setItem('pattern-break.settings', JSON.stringify({ music: 9, effects: 2.5, flashing: 'none', shake: 1, crt: 'yes', leds: 'blue', syncMs: 7 }));
     expect(loadSettings(s)).toEqual(DEFAULT_SETTINGS);
+    for (const syncMs of [-305, 105, 7, 2.5, '0']) {
+      s.setItem('pattern-break.settings', JSON.stringify({ syncMs }));
+      expect(loadSettings(s).syncMs).toBe(0);
+    }
     s.setItem('pattern-break.settings', JSON.stringify({ music: 1 }));
     expect(loadSettings(s)).toEqual({ ...DEFAULT_SETTINGS, music: 1 });
   });

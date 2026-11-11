@@ -294,6 +294,20 @@ describe('SettingsMenu', () => {
     expect(m.apply('right')).toBeNull();
   });
 
+  it('steps Sync by 5 ms within -300 to +100, and opens the Sync screen on confirm', () => {
+    const m = new SettingsMenu(DEFAULT_SETTINGS);
+    while (m.item !== 'sync') m.apply('down');
+    expect(m.apply('left')).toBe('changed');
+    expect(m.values.syncMs).toBe(-5);
+    m.values.syncMs = 100;
+    expect(m.apply('right')).toBeNull();
+    m.values.syncMs = -300;
+    expect(m.apply('left')).toBeNull();
+    expect(m.apply('right')).toBe('changed');
+    expect(m.values.syncMs).toBe(-295);
+    expect(m.apply('confirm')).toBe('sync');
+  });
+
   it('works on its own copy of the settings', () => {
     const start = { ...DEFAULT_SETTINGS, music: 3, effects: 3 };
     new SettingsMenu(start).apply('left');

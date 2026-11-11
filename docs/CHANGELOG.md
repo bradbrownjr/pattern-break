@@ -13,6 +13,14 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **M6: a Sync screen for the audio offset.** Under Settings, clicks play every half
+  second and the player presses on each; the median gap over 16 presses, after 4 warm-up
+  presses and any slips over 100 ms, becomes the offset, so the walls and the presses line
+  up with what the player hears, Bluetooth headphones included. The Sync row sets it by
+  hand too, -300 to +100 ms in 5 ms steps, and it is kept with the settings. A press is
+  read the way the game's clock reads one, not with `getOutputTimestamp()` as planned, so
+  the offset corrects the clock the game uses. Tested in Node and, with the clicks
+  rendered, in Chromium, Firefox and WebKit.
 * **Practice is now Levels, from Brad's review.** Its runs go on the song boards, so it
   isn't practice any more. A song played from it opens with a "Ready" card.
 * **M5: leaderboards.** Global boards per song and difficulty, and an arcade board for a
