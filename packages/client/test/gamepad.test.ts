@@ -2,8 +2,10 @@ import { InputBit } from '@game/core';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_PAD, assign, emptyPad } from '../src/game/bindings.ts';
 import {
+  PAD_DEAD_ZONE,
   PadBit,
   PadCapture,
+  addPadLean,
   PadTracker,
   PadWatcher,
   REPEAT_DELAY_MS,
@@ -198,5 +200,30 @@ describe('InputSampler with a pad', () => {
     s.keyDown('ArrowLeft');
     s.setPad(PadBit.fire);
     expect(s.sample()).toBe(InputBit.left | InputBit.fire);
+  });
+});
+
+describe('addPadLean', () => {
+  const lean = (p: PadSnapshot) => {
+    const out = { x: 0, y: 0 };
+    addPadLean(p, DEFAULT_PAD, out);
+    return out;
+  };
+
+  it('is nothing in the round dead zone, then rises from its edge to a full push', () => {
+    expect(lean(pad([], [0.2, 0.1]))).toEqual({ x: 0, y: 0 });
+    expect(lean(pad([], [PAD_DEAD_ZONE, 0])).x).toBe(0);
+    expect(lean(pad([], [1, 0])).x).toBeCloseTo(1);
+    expect(lean(pad([], [-1, 0])).x).toBeCloseTo(-1);
+    // Halfway between the dead zone's edge and full travel is half speed.
+    expect(lean(pad([], [0, -(PAD_DEAD_ZONE + 1) / 2])).y).toBeCloseTo(-0.5);
+    // A diagonal keeps its direction.
+    const d = lean(pad([], [0.7, 0.7]));
+    expect(d.x).toBeCloseTo(d.y);
+  });
+
+  it('takes the D-pad as a full push on its axis', () => {
+    expect(lean(pad([15]))).toEqual({ x: 1, y: 0 });
+    expect(lean(pad([12, 14], [0, 0.6]))).toEqual({ x: -1, y: -1 });
   });
 });

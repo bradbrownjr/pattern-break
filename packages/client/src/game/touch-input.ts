@@ -1,10 +1,15 @@
 // The on-screen touch controls' logic, apart from the DOM so tests run in Node (the DOM
-// side is touch.ts). A floating stick appears where the left thumb lands and steers in 8
-// directions; buttons on the right hold the same bits as a gamepad's (gamepad.ts), so the
-// game reads touch and pads the same way, in play and in the menus (Brad, 2026-11-10).
+// side is touch.ts). A floating stick appears where the left thumb lands; how far it leans
+// sets the ship's speed (stickLean, through InputSampler.setLean), and its 8 directions
+// move the menus' cursor. Buttons on the right hold the same bits as a gamepad's
+// (gamepad.ts), so the game reads touch and pads the same way, in play and in the menus
+// (Brad, 2026-11-10).
 
 import { InputBit } from '@game/core';
 import { PadBit } from './gamepad.ts';
+import { radialLean, type Lean } from './lean.ts';
+
+export type { Lean } from './lean.ts';
 
 export const TOUCH_BUTTONS = ['pause', 'nuke', 'boost', 'missile', 'bomb', 'fire'] as const;
 export type TouchButton = (typeof TOUCH_BUTTONS)[number];
@@ -22,9 +27,15 @@ export const TOUCH_BITS: Record<TouchButton, number> = {
   fire: InputBit.fire | PadBit.a,
 };
 
-/** The stick's reach from its centre, and the dead zone in the middle, in CSS px. */
-export const STICK_RADIUS = 40;
-export const STICK_DEAD_ZONE = 10;
+/**
+ * The stick's reach from its centre, and the dead zone in the middle, in CSS px (Brad,
+ * 2026-11-12: 40 and 10 made the ship hard to steer). No platform guideline gives these;
+ * game-dev write-ups suggest a stick 100 to 140 px across and a dead zone of 10 to 15% of
+ * its reach (bugnet.io, "How to fix mobile virtual joystick feeling bad"; abratabia.com,
+ * "Virtual joystick"). 112 px across, and 8 px is 14%.
+ */
+export const STICK_RADIUS = 56;
+export const STICK_DEAD_ZONE = 8;
 /** A touch on the stick's side that ends this soon without leaving the dead zone is a tap. */
 export const TAP_MS = 300;
 /** sin 22.5 degrees: an axis counts once it has this share of the lean, giving 8 equal sectors. */
@@ -41,6 +52,17 @@ export function stickBits(dx: number, dy: number, deadZone = STICK_DEAD_ZONE): n
   if (dy > k) bits |= InputBit.down;
   else if (dy < -k) bits |= InputBit.up;
   return bits;
+}
+
+/**
+ * How far the stick leans when the thumb is (dx, dy) CSS px from its centre: nothing in
+ * the dead zone, then rising from 0 at its edge to 1 at STICK_RADIUS, along the thumb's
+ * direction, so the ship goes as fast as the stick is pushed. The dead zone is round and
+ * the lean is measured from its edge, as Microsoft's XInput guide does for a gamepad's
+ * stick.
+ */
+export function stickLean(dx: number, dy: number, out: Lean = { x: 0, y: 0 }): Lean {
+  return radialLean(dx / STICK_RADIUS, dy / STICK_RADIUS, STICK_DEAD_ZONE / STICK_RADIUS, out);
 }
 
 /**
@@ -79,6 +101,10 @@ export class FloatingStick {
 
   get bits(): number {
     return stickBits(this.knobX - this.baseX, this.knobY - this.baseY);
+  }
+
+  lean(out: Lean): Lean {
+    return stickLean(this.knobX - this.baseX, this.knobY - this.baseY, out);
   }
 }
 

@@ -1245,6 +1245,20 @@ Run `pnpm dev` and open the URL it prints.
   - Kept in `localStorage` under `pattern-break.bindings`; invalid, reserved or repeated
     entries are dropped on load, and a keyboard layout with a direction left empty falls
     back to the defaults.
+- **Stick speed** (`lean.ts`, `InputSampler.setLean`; Brad, 2026-11-12): the touch stick
+  and a pad's stick set the ship's speed by how far they lean. Each stick's lean goes
+  through a round dead zone and is measured from its edge, 0 there and 1 at full travel,
+  as Microsoft's XInput guide shows (Microsoft Learn, "Getting Started With XInput", Dead
+  Zone). A pad's dead zone is that guide's `XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE`, 7849 of
+  32767 (24%); the touch stick's is 8 of its 56 px. The axes a pad's up, down, left and
+  right are bound to make its stick; a button or hat bound to a direction is a full lean.
+  The sim knows only a direction held or not, at one speed, so the sampler holds each
+  axis's bit on a share of ticks equal to its lean: a running total gains the lean each
+  tick, and each whole one is a tick held (a quarter lean is one tick in four, 45 px a
+  second). A new push, or one the other way, moves on its first tick. Keys stay full
+  speed. The input log records the bits, so replays and the sim are unchanged. The
+  sticks' direction bits still move the menus' cursor (past half way for a pad's axis),
+  but don't go to the sim.
 - **Sound effects** play in runs, replays, and the demo (see "Sound effects" under "Audio
   and clock").
 - **Score:** top right in play. Each kill shows its points where the enemy was, amber when
@@ -1290,10 +1304,15 @@ Run `pnpm dev` and open the URL it prints.
   DOM elements over the canvas, shown on a screen with a coarse pointer or once a touch is
   seen, hidden on the start screen (its tap starts the sound) and while
   `gamepadConnected()` is true (a pad shows up there once a button on it is pressed). A
-  touch on the stick's side puts a floating stick there: 40 px of reach, a 10 px dead
-  zone, 8 equal sectors, and dragged past its reach its centre follows the thumb. A touch
-  there that ends within 300 ms without leaving the dead zone is a tap, which acts like a
-  click. In play six buttons show the HUD's symbols (`render/icons.ts`, drawn as SVG):
+  touch on the stick's side puts a floating stick there: 56 px of reach, an 8 px dead
+  zone, and dragged past its reach its centre follows the thumb. In play it steers by how
+  far it leans (see "Stick speed" below); in menus its 8 equal sectors move the cursor.
+  Until 2026-11-12 it had 40 px of reach and a 10 px dead zone, and any lean past the
+  dead zone was full speed, which Brad found "nearly impossible to play". No platform
+  guideline gives a size; game-dev write-ups suggest 100 to 140 px across and a dead
+  zone of 10 to 15% of the reach (bugnet.io, "How to fix mobile virtual joystick feeling
+  bad"; abratabia.com, "Virtual joystick"), so 112 px across with 14%. A touch there that
+  ends within 300 ms without leaving the dead zone is a tap, which acts like a click. In play six buttons show the HUD's symbols (`render/icons.ts`, drawn as SVG):
   pause, nuke, boost, missile, bomb and fire, in a grid of two columns with fire at the
   bottom right. Each holds a gamepad's bits (`TOUCH_BITS`). Pointer Events track each
   finger by `pointerId`, so the stick and buttons work together; `Game.#pollPads` ORs the

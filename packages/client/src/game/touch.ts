@@ -22,6 +22,7 @@ import {
   TOUCH_BUTTONS,
   touchLayout,
   touchVisible,
+  type Lean,
   type TouchButton,
   type TouchKey,
 } from './touch-input.ts';
@@ -83,6 +84,7 @@ export class TouchControls {
   #held = 0;
   /** Bits pressed since the last frame read them, so a tap shorter than a frame still counts. */
   #latched = 0;
+  #lean: Lean = { x: 0, y: 0 };
   /** Each finger on a button: the square, its bits, and the keys on show when it landed. */
   #buttonPointers = new Map<number, { slot: number; bits: number; keys: string }>();
   #touchScreen: boolean;
@@ -162,6 +164,14 @@ export class TouchControls {
   /** The bits the controls hold now: the stick's direction and each button held. */
   get bits(): number {
     return this.visible ? this.#held | this.#latched | (this.#stickPointer === null ? 0 : this.#stick.bits) : 0;
+  }
+
+  /** Adds the stick's lean to `out`: how fast it steers the ship, while a thumb is on it. */
+  addLean(out: Lean): void {
+    if (!this.visible || this.#stickPointer === null) return;
+    this.#stick.lean(this.#lean);
+    out.x += this.#lean.x;
+    out.y += this.#lean.y;
   }
 
   /** Called once a frame after its input is read: a tap that has lifted lets go now. */

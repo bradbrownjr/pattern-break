@@ -55,7 +55,8 @@ import {
   type Bindings,
   type KeyAction,
 } from './bindings.ts';
-import { PadBit, PadCapture, PadTracker, PadWatcher, connectedPads, padMenuAction, padProfile, readGamepads } from './gamepad.ts';
+import { PadBit, PadCapture, PadTracker, PadWatcher, connectedPads, padMenuAction, padProfile, readGamepadLean, readGamepads } from './gamepad.ts';
+import type { Lean } from './lean.ts';
 import { TouchControls } from './touch.ts';
 import { BACK_SLOT, FOURTH_SLOT, SELECT_SLOT, THIRD_SLOT, type TouchKey } from './touch-input.ts';
 import { enterFullScreen, exitFullScreen } from './fullscreen.ts';
@@ -254,6 +255,8 @@ export class Game {
   readonly #r: GameRenderer;
   /** The on-screen controls, made in start(). */
   #touch: TouchControls | null = null;
+  /** The sticks' lean this frame (#pollPads). */
+  #lean: Lean = { x: 0, y: 0 };
   /** The songs Levels and the jukebox offer: the bundled ones, then the imported ones. */
   readonly #songs: BundledSong[];
   /** The jukebox's note line: an import's progress or result, or a removal, until `until`. */
@@ -826,7 +829,12 @@ export class Game {
     if (this.#capture) this.#capturePad(pads, active);
     const bits = readGamepads(pads, this.#bindings) | (this.#touch?.bits ?? 0);
     this.#padHeld = bits;
-    this.#input.setPad(bits);
+    // The sticks steer the ship by how far they lean (setLean), so their direction bits,
+    // which move the menus' cursor, don't go to the sim; the keys' still do.
+    this.#input.setPad(bits & ~(PadBit.up | PadBit.down | PadBit.left | PadBit.right));
+    const lean = readGamepadLean(pads, this.#bindings, this.#lean);
+    this.#touch?.addLean(lean);
+    this.#input.setLean(lean.x, lean.y);
     const presses = this.#pads.update(bits, now);
     if (!capturing) for (const bit of presses) this.#onPadPress(bit);
     this.#touch?.endFrame();

@@ -13,6 +13,13 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **The sticks steer by how far they're pushed.** Brad found the touch stick "way too
+  sensitive": past a 10 px dead zone it was full speed. Now the touch stick and a
+  gamepad's stick move the ship as fast as they lean, from still at the dead zone's edge to
+  full speed at full reach. The touch stick is larger (112 px across) with an 8 px dead
+  zone, and a pad's stick uses the dead zone Microsoft's XInput guide gives. The sim still
+  sees a direction held or not, so a part push holds it on a share of ticks; replays and
+  the leaderboards are unchanged. Keys and the D-pad stay full speed.
 * **Full screen, a phone held upright, and menu keys as icons.** Brad's requests: the game
   goes full screen on the first tap, click or key, on any device (not an iPhone's Safari,
   which can't; adding the game to the home screen does it there), and Settings has a

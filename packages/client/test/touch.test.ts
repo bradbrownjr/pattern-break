@@ -8,6 +8,7 @@ import {
   TOUCH_BITS,
   TOUCH_BUTTONS,
   stickBits,
+  stickLean,
   touchLayout,
   touchVisible,
   type Rect,
@@ -54,6 +55,19 @@ describe('stick', () => {
     s.start(50, 50);
     s.move(53, 52);
     expect([s.still, s.bits]).toEqual([true, 0]);
+  });
+});
+
+describe('stick lean', () => {
+  it('is nothing in the dead zone, then rises from its edge to 1 at full reach', () => {
+    expect(stickLean(STICK_DEAD_ZONE, 0)).toEqual({ x: 0, y: 0 });
+    expect(stickLean(STICK_RADIUS, 0).x).toBeCloseTo(1);
+    expect(stickLean(0, 2 * STICK_RADIUS).y).toBeCloseTo(1);
+    expect(stickLean(-(STICK_DEAD_ZONE + STICK_RADIUS) / 2, 0).x).toBeCloseTo(-0.5);
+  });
+
+  it('a few pixels of thumb is a slow ship, not a full-speed one', () => {
+    expect(stickLean(0, STICK_DEAD_ZONE + 4).y).toBeLessThan(0.1);
   });
 });
 

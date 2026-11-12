@@ -90,6 +90,10 @@ export class InputSampler {
   #latched = 0;
   /** Sim bits the gamepads hold, from the last setPad(). */
   #padBits = 0;
+  /** The sticks' lean on x and y, from the last setLean(), and each axis's running total. */
+  #lean = [0, 0];
+  #sign = [0, 0];
+  #total = [0, 0];
 
   keyDown(code: string): void {
     const bit = this.keys.bit(code);
@@ -114,18 +118,52 @@ export class InputSampler {
     this.#padBits = sim;
   }
 
+  /**
+   * The touch stick's and gamepads' lean, -1 to 1 on each axis (y down), read once a frame.
+   * The sim only knows a direction held or not, at one speed, so a lean of a quarter holds
+   * the direction on one tick in four (sample()): the ship goes as fast as the stick is
+   * pushed (Brad, 2026-11-12). The input log records the bits, so replays don't change.
+   */
+  setLean(x: number, y: number): void {
+    this.#lean[0] = Math.max(-1, Math.min(1, x));
+    this.#lean[1] = Math.max(-1, Math.min(1, y));
+  }
+
   /** Forgets every key, for when the window loses focus and key-up events go elsewhere. */
   clear(): void {
     this.#held.clear();
     this.#heldBits = 0;
     this.#latched = 0;
+    this.#lean[0] = this.#lean[1] = 0;
   }
 
   /** The input byte for the next tick: keys and buttons held now, plus those tapped since the last sample. */
   sample(): number {
-    const bits = this.#heldBits | this.#padBits | this.#latched;
+    const bits = this.#heldBits | this.#padBits | this.#latched | this.#axis(0, InputBit.left, InputBit.right) | this.#axis(1, InputBit.up, InputBit.down);
     this.#latched = 0;
     return bits;
+  }
+
+  /**
+   * One axis's bit for this tick: its lean adds to a running total, and each whole one is a
+   * tick held. A new push, or one the other way, starts the total a lean short of 1, so it
+   * moves at once.
+   */
+  #axis(axis: number, minus: number, plus: number): number {
+    const lean = this.#lean[axis]!;
+    const sign = Math.sign(lean);
+    if (sign !== this.#sign[axis]) {
+      this.#sign[axis] = sign;
+      this.#total[axis] = 1 - Math.abs(lean);
+    }
+    if (sign === 0) return 0;
+    const total = this.#total[axis]! + Math.abs(lean);
+    if (total < 1) {
+      this.#total[axis] = total;
+      return 0;
+    }
+    this.#total[axis] = total - 1;
+    return sign < 0 ? minus : plus;
   }
 
   #recompute(): void {

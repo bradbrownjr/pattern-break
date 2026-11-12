@@ -108,3 +108,37 @@ describe('InputSampler', () => {
     expect(s.sample()).toBe(0);
   });
 });
+
+describe('InputSampler.setLean', () => {
+  /** The bits of the next `n` ticks. */
+  const ticks = (s: InputSampler, n: number) => Array.from({ length: n }, () => s.sample());
+
+  it('holds a direction on a share of ticks as large as the lean, moving on the first', () => {
+    const s = new InputSampler();
+    s.setLean(0.25, 0);
+    const right = ticks(s, 8).map((b) => b & InputBit.right);
+    expect(right.filter(Boolean).length).toBe(2);
+    expect(right[0]).toBe(InputBit.right);
+    s.setLean(1, -1);
+    expect(ticks(s, 4)).toEqual(Array(4).fill(InputBit.right | InputBit.up));
+  });
+
+  it('starts over on a push the other way, and stops at once on letting go', () => {
+    const s = new InputSampler();
+    s.setLean(0.1, 0);
+    ticks(s, 5);
+    s.setLean(-0.1, 0);
+    expect(s.sample()).toBe(InputBit.left);
+    s.setLean(0, 0);
+    expect(ticks(s, 20).every((b) => b === 0)).toBe(true);
+  });
+
+  it('adds to the keys, and clear() lets go of it', () => {
+    const s = new InputSampler();
+    s.keyDown('Space');
+    s.setLean(0, 1);
+    expect(s.sample()).toBe(InputBit.fire | InputBit.down);
+    s.clear();
+    expect(s.sample()).toBe(0);
+  });
+});

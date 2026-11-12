@@ -19,6 +19,7 @@
 import { InputBit } from '@game/core';
 import { PAD_ACTIONS, STANDARD_PROFILE, padLayout, type Bindings, type PadAction, type PadBindings } from './bindings.ts';
 import type { MenuAction } from './input.ts';
+import { radialLean, type Lean } from './lean.ts';
 
 /** What a pad is pressing, as bits. Directions and fire share InputBit's values. */
 export const PadBit = {
@@ -95,6 +96,48 @@ export function inputHeld(pad: PadSnapshot, input: string): boolean {
     return Math.min(d, HAT_TURN - d) <= HAT_STEP * 1.1;
   }
   return false;
+}
+
+/**
+ * The stick's dead zone, as a share of full travel: XInput's
+ * XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE, 7849 of 32767 (Microsoft Learn, "Getting Started
+ * With XInput", Dead Zone), which is round and measures the lean from its edge.
+ */
+export const PAD_DEAD_ZONE = 7849 / 32767;
+
+const LEAN_DIRECTIONS = ['left', 'right', 'up', 'down'] as const;
+
+/**
+ * How far one pad steers, through `layout`, added to `out`: its axes for up, down, left
+ * and right through a round dead zone (PAD_DEAD_ZONE), so the ship goes as fast as the
+ * stick is pushed (Brad, 2026-11-12). A button or hat held for a direction is a full lean
+ * on its axis.
+ */
+export function addPadLean(pad: PadSnapshot, layout: Readonly<PadBindings>, out: Lean, scratch: Lean = { x: 0, y: 0 }): void {
+  const analog = { left: 0, right: 0, up: 0, down: 0 };
+  const digital = { left: false, right: false, up: false, down: false };
+  for (const dir of LEAN_DIRECTIONS) {
+    for (const input of layout[dir]) {
+      if (input === null) continue;
+      if (input[0] === 'a') {
+        const v = pad.axes[Number(input.slice(1, -1))] ?? 0;
+        if (Math.abs(v) > IN_RANGE) continue;
+        analog[dir] = Math.max(analog[dir], input.endsWith('-') ? -v : v);
+      } else if (inputHeld(pad, input)) {
+        digital[dir] = true;
+      }
+    }
+  }
+  const lean = radialLean(analog.right - analog.left, analog.down - analog.up, PAD_DEAD_ZONE, scratch);
+  out.x += digital.left || digital.right ? Number(digital.right) - Number(digital.left) : lean.x;
+  out.y += digital.up || digital.down ? Number(digital.down) - Number(digital.up) : lean.y;
+}
+
+/** How far the connected pads steer together, into `out`. */
+export function readGamepadLean(pads: readonly Gamepad[], bindings: Bindings, out: Lean): Lean {
+  out.x = out.y = 0;
+  for (const pad of pads) addPadLean(pad, padLayout(bindings, padProfile(pad)), out);
+  return out;
 }
 
 /** The PadBits one pad is pressing, through `layout`. */

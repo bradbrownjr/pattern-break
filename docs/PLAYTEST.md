@@ -111,3 +111,16 @@ pixels look even enough; each menu key's icon says what it does without a word; 
 never get missed; nothing names a keyboard key while the touch keys are on show. On the PC,
 the click goes full screen; in Chrome or Edge Esc pauses and holding it leaves full screen,
 in Firefox Esc leaves it.
+
+### 8. Stick speed
+
+**Why:** the touch stick and a gamepad's stick were full speed past a small dead zone,
+which made the ship hard to steer on the phone. Since 2026-11-12 the ship goes as fast as
+the stick is pushed, and the touch stick is larger (112 px across, 8 px dead zone).
+
+Play a level on the phone, then one with a gamepad's stick. Try lining up with an enemy a
+few pixels away, and dodging at full speed.
+
+**Looking for:** whether small corrections are easy, whether a full push still feels fast
+enough to dodge, any visible stutter at slow speeds, and whether the stick's ring feels the
+right size. Say if it wants a curve (slower near the centre) or a different dead zone.
