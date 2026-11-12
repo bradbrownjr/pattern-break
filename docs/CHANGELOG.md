@@ -13,6 +13,11 @@ Fixes**, in that order.
 
 ## Milestones
 
+* **Screenshots and docs brought up to date.** Brad asked: `pnpm screenshots` redrew the
+  14 figures that had changed (the new HUD, Help's falling wall row, Settings' Fullscreen
+  row, the Scores screen without its name row), and their alt text now says what they show.
+  The README's status covers breaking walls, full screen and the phone's layout, and PLAN
+  and the development guide cover the upright picture, Fullscreen and stick speed.
 * **The sticks steer by how far they're pushed.** Brad found the touch stick "way too
   sensitive": past a 10 px dead zone it was full speed. Now the touch stick and a
   gamepad's stick move the ship as fast as they lean, from still at the dead zone's edge to

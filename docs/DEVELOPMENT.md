@@ -945,7 +945,7 @@ game pixel is a 2x2 block.
 - GIF frame delays are whole hundredths of a second, so `fps` must divide 100; the script
   rejects other values.
 - The script fails a clip over 5 MB. Keep clips a few seconds long: `gameplay-clip` is 4 s at
-  25 fps, 100 frames, about 1.7 MB.
+  25 fps, 100 frames, about 2.1 MB (2026-11-12).
 
 Clip bytes are stable like the stills: two runs gave the same SHA-256 for
 `docs/img/gameplay-clip.gif` (2026-11-08).
@@ -1205,11 +1205,12 @@ Run `pnpm dev` and open the URL it prints.
   Esc goes back to where it was opened.
 - **Settings** (`settings.ts`, `SettingsMenu`, `SettingsScreen`), from the title menu: Music
   and Effects volume as five LED cells each, off to 5; Flashing (Reduced or Full), Shake and
-  CRT (Off or On), and LEDs (Neon or Colour-blind) as words; Keys, which opens the Keys
-  screen; then Back. Left and right
-  change a value and stop at the ends; Enter steps a volume up and wraps to off, and flips
-  the others. Each volume step halves the gain. The defaults are Music 5, Effects 4,
-  Flashing Reduced, Shake On, CRT On (Brad, 2026-11-10) and LEDs Neon.
+  CRT (Off or On), LEDs (Neon or Colour-blind) and Fullscreen (Off or On; see "Full
+  screen") as words; Sync and Perf; Keys, which opens the Keys screen; then Back, eleven
+  rows 14 px apart. Left and right change a value and stop at the ends; Enter steps a
+  volume up and wraps to off, and flips the others. Each volume step halves the gain. The
+  defaults are Music 5, Effects 4, Flashing Reduced, Shake On, CRT On (Brad, 2026-11-10),
+  LEDs Neon and Fullscreen On.
   Changes take effect at once (a kill sound plays at the new effects level) and are kept in
   `localStorage` under `pattern-break.settings`; where storage is blocked, the defaults
   apply and changes last until the page closes. What Flashing and Shake do is under
@@ -1287,8 +1288,8 @@ Run `pnpm dev` and open the URL it prints.
 - **Gamepad:** a pad that reports the Gamepad API's "standard" mapping
   (https://w3c.github.io/gamepad/, "Remapping"), which fixes its button and axis numbers,
   works at once; any other pad does nothing until its inputs are set on the Keys screen.
-  The standard layout, which the Keys screen changes: in play the left stick (past half
-  way) or the D-pad flies; A and RT (buttons 0, 7) fire; B (1) drops bombs; X (2) nukes; LB
+  The standard layout, which the Keys screen changes: in play the left stick (as fast as
+  it leans; see "Stick speed") or the D-pad flies; A and RT (buttons 0, 7) fire; B (1) drops bombs; X (2) nukes; LB
   and LT (4, 6) boost; RB (5) launches a missile; Start pauses. In menus the stick or D-pad moves (held, it repeats after 400 ms, then
   every 100 ms), Fire (A or RT) or Start selects, and Bomb (B) or Select goes back. On game over and level
   complete B or Select is Esc, Y (3) watches the replay, and any other button is any key. A pad can't leave the start
@@ -1312,9 +1313,9 @@ Run `pnpm dev` and open the URL it prints.
   guideline gives a size; game-dev write-ups suggest 100 to 140 px across and a dead
   zone of 10 to 15% of the reach (bugnet.io, "How to fix mobile virtual joystick feeling
   bad"; abratabia.com, "Virtual joystick"), so 112 px across with 14%. A touch there that
-  ends within 300 ms without leaving the dead zone is a tap, which acts like a click. In play six buttons show the HUD's symbols (`render/icons.ts`, drawn as SVG):
-  pause, nuke, boost, missile, bomb and fire, in a grid of two columns with fire at the
-  bottom right. Each holds a gamepad's bits (`TOUCH_BITS`). Pointer Events track each
+  ends within 300 ms without leaving the dead zone is a tap, which acts like a click. In
+  play six buttons show the HUD's symbols (`render/icons.ts`, drawn as SVG): pause, nuke,
+  boost, missile, bomb and fire, in a grid of two columns with fire at the bottom right. Each holds a gamepad's bits (`TOUCH_BITS`). Pointer Events track each
   finger by `pointerId`, so the stick and buttons work together; `Game.#pollPads` ORs the
   touch bits with the pads'. A press is also latched until the frame reads it
   (`endFrame`), so a tap that lands and lifts between two frames still counts.

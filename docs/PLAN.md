@@ -346,7 +346,9 @@ every bar of every generated level.
 
 - Internal resolution **384x216** (16:9), scaled by a whole number of device pixels with
   nearest-neighbour filtering and letterboxed (2026-11-10: whole CSS pixels left a phone
-  at 1x). An optional 320x256 "Amiga PAL" mode later.
+  at 1x). The exception is a touch screen held upright: the picture fills the width in the
+  top half, over the touch pad, at whatever scale that takes (Brad, 2026-11-12). An
+  optional 320x256 "Amiga PAL" mode later.
 - Palette: near-black background with neon cyan, magenta, lime, and amber accents. LED
   segments go green at the screen edge to amber to red 12 segments in, and stay red beyond.
   Unlit segments are not drawn, so the passage is plain background (2026-11-09).
@@ -424,10 +426,12 @@ every bar of every generated level.
 - Help, from the title and pause menus: a key to every sprite and HUD icon, and what each
   enemy and bonus scores (built 2026-11-10).
 - Settings, from the title menu: Music and Effects volume, Flashing, Shake, CRT, LED
-  colours, Sync (the audio offset, and the screen that measures it, 2026-11-10), Perf
-  (frame stats in the corner and a report on game over and the clear screens, for checking
-  a phone, 2026-11-11) and Keys (built). Keyboard, gamepad
-  (Gamepad API) and on-screen touch controls are built (touch 2026-11-10).
+  colours, Fullscreen (on by default; 2026-11-12), Sync (the audio offset, and the screen
+  that measures it, 2026-11-10), Perf (frame stats in the corner and a report on game over
+  and the clear screens, for checking a phone, 2026-11-11) and Keys (built). Keyboard,
+  gamepad (Gamepad API) and on-screen touch controls are built (touch 2026-11-10). Off
+  play the touch buttons give way to icon keys for only what a screen uses, and the touch
+  stick and a pad's stick set the ship's speed by how far they lean (2026-11-12).
 - Results screen: score breakdown, personal best in this browser, watch or save the
   replay, and the run's place on the board once posted (built 2026-11-10).
 

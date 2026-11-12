@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-<img src="docs/img/gameplay-clip.gif" width="768" alt="Four seconds of play in an LED cavern. Columns of square LED segments, lit green at the screen edges through yellow and orange to red at their tips, hang from the top and rise from the bottom and scroll from right to left, one column per row of the song. Small magenta and amber turrets ride in on the tips of the floor and ceiling and fire amber pellets, and small magenta enemy ships fly in from the right and fire round magenta bullets. A small cyan ship on the left, inside a faint cyan ring that is its shield, keeps firing cyan shots, drops a bomb that bursts on the floor, and moves up and down to dodge. Amber capsules marked &quot;P&quot; rest on the floor bars and scroll away with them. Three ship icons in the top left corner show the lives left, followed by a bomb icon and &quot;x3&quot; in amber, and the score in the top right corner counts up as each kill shows its points where the enemy was. Along the bottom edge runs the power-up meter, six LED cells labelled Double, Missile, Shield, Drone, Laser and Boost, with Double lit green and &quot;Shield 6&quot; lit lime.">
+<img src="docs/img/gameplay-clip.gif" width="768" alt="Four seconds of play in an LED cavern. Columns of square LED segments, lit green at the screen edges through yellow and orange to red at their tips, hang from the top and rise from the bottom and scroll from right to left, one column per row of the song. Behind them, soft horizontal bands of teal, olive, amber and violet sway up and down and glow brighter with the bass. A small cyan ship on the left, inside a faint cyan ring that is its shield, with a small glowing drone orb beside it, fires rows of cyan shots, angled shots and missiles at magenta enemy ships flying in from the right and dodges up and down. Turrets ride in on the column tips and fire amber pellets, and each kill bursts into coloured specks with its points in white digits. Amber-framed capsules showing a laser icon scroll past. In the HUD, a row of small power-up icons on a dark panel in the top left corner, bright for what the ship has and faint for the rest, ending in three faint nuke icons; &quot;x3&quot; in amber and the score counting up from 4100 to 5600 in the top right; three ship icons for the lives in the bottom left; six cyan shield pips in the bottom right.">
 
 A side-scrolling neon tunnel shooter where every level is built from a song. The songs are
 tracker modules, often called mods: music files made in a tracker, a program that arranges
@@ -10,7 +10,7 @@ short sound samples into patterns of notes and beats. The formats are MOD, XM, S
 
 The terrain is a cavern of LED meter bars, one bar per row of the song: the cave squeezes on
 every hit and winds up and down with the melody, so the tunnel moves with the music. The
-notes in its patterns will spawn the enemies. The same file always makes the same level, so
+notes in its patterns spawn the enemies. The same file always makes the same level, so
 every song gets its own leaderboard.
 
 ## Status
@@ -24,15 +24,18 @@ notes; you have three lives, a shield that takes a few hits and bounces you off 
 and a gun, and kills score double on their instrument's beat. Every 20 000 points gives a
 life.
 A bomb takes out tanks on the floor, and a nuke earned by playing the beat clears the
-screen. Shooting down a whole formation drops a capsule that unlocks the next power-up:
+screen. Missiles and bombs break the walls, and a ceiling cut loose falls on whatever is
+under it, enemies and ship alike. Shooting down a whole formation drops a capsule that unlocks the next power-up:
 boost, double shot, laser, missile, drone or a shield refill. Sound effects are synthesized in the
 browser, with the pitched ones on the song's notes. Settings has the music and effects
 volume, reduced flashing (on until changed), switches for screen shake and a CRT look,
-colour-blind LED colours, and Sync, which measures the audio delay from presses on a click
+colour-blind LED colours, full screen, and Sync, which measures the audio delay from presses on a click
 so the walls match what the player hears. A short black-and-white intro opens each run: the captain boards the
 fighter and puts the first song's cassette in the deck, and pressing Play starts the
-level, which floods into colour with the music. A gamepad works next to the keyboard, both
-can be remapped, and a phone or tablet gets on-screen controls. Every
+level, which floods into colour with the music. A gamepad works next to the keyboard, and both
+can be remapped. A phone or tablet plays full screen with on-screen controls, held
+sideways or upright, where the picture sits above the pad; its stick, like a gamepad's,
+moves the ship as fast as it is pushed. Every
 run can be watched again or saved as a replay file. Level data and replays come out
 byte-for-byte the same in Node, Chromium, Firefox, and WebKit, which is what lets one song
 have one leaderboard: each song and difficulty has a global board, and the arcade run has
