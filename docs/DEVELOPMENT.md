@@ -1299,17 +1299,20 @@ Run `pnpm dev` and open the URL it prints.
   finger by `pointerId`, so the stick and buttons work together; `Game.#pollPads` ORs the
   touch bits with the pads'. A press is also latched until the frame reads it
   (`endFrame`), so a tap that lands and lifts between two frames still counts.
-  - **Menu keys** (Brad, 2026-11-12): off play, `Game.#touchKeys` swaps the buttons for
-    labelled keys in the game's font (`labelSvg`), each on one of the six squares, and
-    hides the rest. Select (A) takes fire's square and Back (B) bomb's; a screen's other
-    keys go above them. They are named for what they do: Retry and Title on game over;
-    Next, Credits or Title on a clear screen; Replay (Y) and Save once a replay is offered;
-    Post, Skip and Name (which opens the phone's keyboard) on the name entry; Remove, then
-    Confirm in magenta, on an imported song in the jukebox; Keep, Retry and Back on the
-    Sync result; Stop while a replay plays. A key with an `action` (Save, Name) runs it on
+  - **Menu keys** (Brad, 2026-11-12: only what a screen uses, as icons, not words): off
+    play, `Game.#touchKeys` swaps the buttons for keys, each with its own pixel icon
+    (`render/icons.ts`) on one of the six squares, and hides the rest. Select (A, a lime
+    tick) takes fire's square and Back (B, a white turning arrow) bomb's; a screen's other
+    keys go above them. Each does what its screen needs: Retry (a circular arrow) and
+    Title (home) on game over; Next or Credits (an arrow) or Title on a clear screen;
+    Replay (Y, play) and Save (down into a tray) once a replay is offered; Post (up out of
+    a tray), Skip and Name (a letter and a text cursor; it opens the phone's keyboard) on
+    the name entry; Remove (a bin, magenta to confirm) on an imported song in the jukebox;
+    Keep, Retry and Back on the Sync result; Stop while a replay plays. Each key's name is
+    its `aria-label`. A key with an `action` (Save, Name) runs it on
     its lift, inside the touch's own event, as opening the keyboard needs. While the keys
     are on show, prompts that name keyboard keys ("Esc Title  Any key Retry", "R Replay  S
-    Save", "Esc Back") are left out, since the keys say it. Back on the title does nothing
+    Save", "Esc Back") are left out, since they name keys the player doesn't have. Back on the title does nothing
     alone, but held while Select chooses Play it starts in god mode, as Esc held does, and
     it is the B in the Konami code.
   - **Layout** (`touchLayout`): held sideways, the buttons go in the bar right of the
@@ -1317,16 +1320,24 @@ Run `pnpm dev` and open the URL it prints.
     Size), one column if not, and at the right edge over the picture if the bar is
     narrower still; the stick's side is the left 40% of the screen. Held upright (taller
     than wide, on a touch screen with no pad: `TouchControls.pictureTop`), the renderer
-    puts the picture at the top (`GameRenderer.resize(true)`) and the pad goes under it:
-    the same two columns at the right, up to 72 px, and the stick's side left of them
-    (Brad, 2026-11-12). The picture keeps its whole-number scale either way.
-  - **Full screen:** a touch's lift asks for full screen
-    (`requestFullscreen({ navigationUI: 'hide' })`), since a touch's `pointerup` is a user
-    activation; leaving it (Android's back gesture), the next touch goes back in. Not on an
-    iPhone, where MDN's compatibility data says the API is "Only available on iPad, not on
-    iPhone"; there, adding the game to the home screen is the way to lose the browser's
-    bars, and the installed app (the manifest's `display: fullscreen`, landscape) doesn't
-    ask.
+    makes the picture fill the window's width, centred in its top half
+    (`GameRenderer.resize(true)`), and the pad goes under it: the same two columns at the
+    right, up to 72 px, and the stick's side left of them (Brad, 2026-11-12). A phone's
+    width is seldom a whole multiple of 384 device px, so upright the picture's pixels
+    are uneven by a device pixel; everywhere else it keeps its whole-number scale.
+- **Full screen** (`fullscreen.ts`; Brad, 2026-11-12, on every device): the page asks
+  with `requestFullscreen({ navigationUI: 'hide' })`, which needs a user activation (the
+  HTML spec's activation-triggering events: a key other than Esc, a mouse's pointerdown,
+  any other pointer's pointerup). A touch or pen asks on every lift while it's off, so
+  one swiped away (Android's back gesture) comes back. A mouse or key asks once, leaving
+  the start screen: browsers take Esc, the game's pause and back key, to leave full
+  screen, and asking again on the next key would fight the player. Where Keyboard Lock
+  exists (Chromium; MDN lists no Firefox or Safari), `navigator.keyboard.lock(['Escape'])`
+  gives Esc to the game, and the spec requires a press over 2 s to still leave. Settings,
+  Fullscreen turns it off (and leaves full screen) or on (and asks). Not on an iPhone,
+  where MDN's compatibility data says the API is "Only available on iPad, not on iPhone";
+  there, adding the game to the home screen is the way to lose the browser's bars, and
+  the installed app (the manifest's `display: fullscreen`, landscape) doesn't ask.
 - **Jukebox:** the bundled songs, then the imported ones, then Import and Back. Where the
   browser's file picker can pick a folder (`webkitdirectory`, Baseline since August 2025
   per MDN), left and right on Import choose "< File >" or "< Folder >" (Brad, 2026-11-10:
@@ -1356,7 +1367,7 @@ Run `pnpm dev` and open the URL it prints.
 - **Removing an imported song:** on its row the right-hand column reads "Del Remove"
   ("Select Remove" after a pad press); the first Del or Select turns it to "Del Confirm"
   in magenta for 3 s, and a second removes the song and its cached levels. On a touch
-  screen a Remove key does the same, and the length stays in the column.
+  screen a Remove key (a bin) does the same, and the length stays in the column.
 
 Two query parameters help in development:
 

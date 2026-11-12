@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { PadBit } from '../../src/game/gamepad.ts';
 import { TouchControls } from '../../src/game/touch.ts';
 import { BACK_SLOT, SELECT_SLOT, THIRD_SLOT } from '../../src/game/touch-input.ts';
+import { BACK_ICON_MAP, RETRY_ICON_MAP, SAVE_ICON_MAP } from '../../src/render/icons.ts';
 
 const made: TouchControls[] = [];
 
@@ -85,14 +86,14 @@ describe('touch controls', () => {
     expect([t.visible, t.bits]).toEqual([true, 0]);
   });
 
-  it('menus show only their labelled keys, which hold pad bits or act on the lift', () => {
+  it('menus show only their keys, which hold pad bits or act on the lift', () => {
     const t = make();
     shown(t);
     let saved = 0;
     t.setKeys([
-      { slot: SELECT_SLOT, label: 'Retry', bits: PadBit.a },
-      { slot: BACK_SLOT, label: 'Title', bits: PadBit.b },
-      { slot: THIRD_SLOT, label: 'Save', bits: 0, action: () => saved++ },
+      { slot: SELECT_SLOT, label: 'Retry', icon: RETRY_ICON_MAP, bits: PadBit.a },
+      { slot: BACK_SLOT, label: 'Title', icon: BACK_ICON_MAP, bits: PadBit.b },
+      { slot: THIRD_SLOT, label: 'Save', icon: SAVE_ICON_MAP, bits: 0, action: () => saved++ },
     ]);
     const all = [...t.root.querySelectorAll<HTMLElement>('[data-button]')];
     expect(all.filter((b) => b.style.display !== 'none').map((b) => b.dataset['label'])).toEqual(['Save', 'Title', 'Retry']);
@@ -121,10 +122,10 @@ describe('touch controls', () => {
     const t = make();
     shown(t);
     let acted = 0;
-    t.setKeys([{ slot: SELECT_SLOT, label: 'Save', bits: 0, action: () => acted++ }]);
+    t.setKeys([{ slot: SELECT_SLOT, label: 'Save', icon: SAVE_ICON_MAP, bits: 0, action: () => acted++ }]);
     const b = t.root.querySelector<HTMLElement>('[data-label="Save"]')!;
     pointer(b, 'pointerdown', 0, 0, 9);
-    t.setKeys([{ slot: SELECT_SLOT, label: 'Next', bits: PadBit.a, action: () => acted++ }]);
+    t.setKeys([{ slot: SELECT_SLOT, label: 'Next', icon: RETRY_ICON_MAP, bits: PadBit.a, action: () => acted++ }]);
     pointer(b, 'pointerup', 0, 0, 9);
     expect(acted).toBe(0);
   });

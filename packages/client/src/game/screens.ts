@@ -510,16 +510,17 @@ const SETTINGS_LABELS: Record<SettingsItem, string> = {
   shake: 'Shake',
   crt: 'CRT',
   leds: 'LEDs',
+  fullScreen: 'Fullscreen',
   sync: 'Sync',
   perf: 'Perf',
   keys: 'Keys',
   back: 'Back',
 };
 
-type ChoiceItem = 'flashing' | 'shake' | 'crt' | 'leds' | 'perf';
+type ChoiceItem = 'flashing' | 'shake' | 'crt' | 'leds' | 'fullScreen' | 'perf';
 
 function isChoiceItem(item: SettingsItem): item is ChoiceItem {
-  return item === 'flashing' || item === 'shake' || item === 'crt' || item === 'leds' || item === 'perf';
+  return item === 'flashing' || item === 'shake' || item === 'crt' || item === 'leds' || item === 'fullScreen' || item === 'perf';
 }
 
 /** What the two-way settings show for each value. */
@@ -535,16 +536,16 @@ export function syncText(ms: number): string {
 
 /** The widest two-way value, so its right arrow clears it. */
 const CHOICE_WIDTH = textWidth('Colour-blind');
-/** Ten rows, the last (Back) ending above the screen's bottom edge. */
-const SETTINGS_TOP = 64;
-const SETTINGS_ROW = 15;
+/** Eleven rows, the last (Back) ending above the screen's bottom edge. */
+const SETTINGS_TOP = 62;
+const SETTINGS_ROW = 14;
 const CELL_W = 10;
 const CELL_H = 5;
 const CELL_GAP = 3;
 
 /**
  * The settings: Music and Effects as rows of five LED cells, lit up to the volume, green to
- * red, with "Off" at 0; Flashing, Shake, CRT and LED colours as words; the Sync offset;
+ * red, with "Off" at 0; Flashing, Shake, CRT, LED colours and Fullscreen as words; the Sync offset;
  * Perf; Keys; then Back.
  */
 export class SettingsScreen {

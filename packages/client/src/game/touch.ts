@@ -3,7 +3,7 @@
 // (https://www.w3.org/TR/pointerevents3/) track each finger by pointerId, so the stick and
 // any number of buttons work at once. Each finger is captured by the element it landed on,
 // and a button stays held until that finger lifts. Off play the menus swap the buttons for
-// labelled ones (setKeys), and a touch on a phone puts the page in full screen.
+// keys with their own icons (setKeys).
 
 import {
   BOMB_ICON_MAP,
@@ -13,10 +13,7 @@ import {
   NUKE_MAP,
   PAUSE_ICON_MAP,
   iconSvg,
-  labelSvg,
 } from '../render/icons.ts';
-import { GLYPH_HEIGHT, textWidth } from '../render/font.ts';
-import { CYAN, MAGENTA } from '../render/palette.ts';
 import {
   FloatingStick,
   STICK_RADIUS,
@@ -48,22 +45,6 @@ function svgUrl(svg: string): string {
 
 const ICON_URLS = TOUCH_BUTTONS.map((id) => svgUrl(iconSvg(ICONS[id])));
 
-/**
- * Asks for full screen from a touch's lift, which counts as the user activation the
- * Fullscreen API needs. Not where it can't (an iPhone: MDN's compatibility data, "Only
- * available on iPad, not on iPhone"), or where the page already fills the screen, as an
- * installed app does.
- */
-function fullScreen(): void {
-  if (document.fullscreenElement || !document.fullscreenEnabled) return;
-  if (typeof matchMedia === 'function' && matchMedia('(display-mode: fullscreen)').matches) return;
-  const root = document.documentElement;
-  if (typeof root.requestFullscreen !== 'function') return;
-  root.requestFullscreen({ navigationUI: 'hide' }).catch(() => {
-    // Refused (not from a real touch, or the browser said no): stay in the page.
-  });
-}
-
 function div(style: Partial<CSSStyleDeclaration>): HTMLDivElement {
   const el = document.createElement('div');
   Object.assign(el.style, style);
@@ -94,7 +75,6 @@ export class TouchControls {
   /** What each square holds and does now: the play buttons', or a menu key's. */
   #slotBits: number[] = TOUCH_BUTTONS.map((id) => TOUCH_BITS[id]);
   #slotAction: ((() => void) | null)[] = TOUCH_BUTTONS.map(() => null);
-  #slotLabel: (string | null)[] = TOUCH_BUTTONS.map(() => null);
   /** The keys on show, as a string to compare: 'play' for the play buttons. */
   #keys = 'play';
   #stick = new FloatingStick();
@@ -174,14 +154,6 @@ export class TouchControls {
       },
       { capture: true },
     );
-    // Capture, ahead of the buttons, which stop their touches going further.
-    window.addEventListener(
-      'pointerup',
-      (e) => {
-        if (e.pointerType === 'touch') fullScreen();
-      },
-      { capture: true },
-    );
     parent.append(this.root);
     this.layout();
     this.#update();
@@ -210,7 +182,7 @@ export class TouchControls {
    * square, with the other squares hidden. Called every frame; only a change touches the DOM.
    */
   setKeys(keys: readonly TouchKey[] | null): void {
-    const sig = keys === null ? 'play' : keys.map((k) => `${k.slot}:${k.label}:${k.bits}:${k.warn ? 1 : 0}`).join('|');
+    const sig = keys === null ? 'play' : keys.map((k) => `${k.slot}:${k.label}:${k.bits}`).join('|');
     if (keys) for (const k of keys) this.#slotAction[k.slot] = k.action ?? null;
     if (sig === this.#keys) return;
     this.#keys = sig;
@@ -220,26 +192,22 @@ export class TouchControls {
       if (keys === null) {
         this.#slotBits[i] = TOUCH_BITS[TOUCH_BUTTONS[i]!];
         this.#slotAction[i] = null;
-        this.#slotLabel[i] = null;
         s.display = '';
         s.backgroundImage = ICON_URLS[i]!;
         b.setAttribute('aria-label', TOUCH_BUTTONS[i]!);
         delete b.dataset['label'];
       } else if (key) {
         this.#slotBits[i] = key.bits;
-        this.#slotLabel[i] = key.label;
         s.display = '';
-        s.backgroundImage = svgUrl(labelSvg(key.label, key.warn ? MAGENTA : CYAN));
+        s.backgroundImage = svgUrl(iconSvg(key.icon));
         b.setAttribute('aria-label', key.label);
         b.dataset['label'] = key.label;
       } else {
         this.#slotBits[i] = 0;
         this.#slotAction[i] = null;
-        this.#slotLabel[i] = null;
         s.display = 'none';
       }
     });
-    this.#sizeFaces();
   }
 
   get visible(): boolean {
@@ -271,7 +239,6 @@ export class TouchControls {
       s.width = `${rect.width}px`;
       s.height = `${rect.height}px`;
     });
-    this.#sizeFaces();
     Object.assign(this.#zone.style, {
       left: `${l.stick.x}px`,
       top: `${l.stick.y}px`,
@@ -281,23 +248,6 @@ export class TouchControls {
     this.#restX = l.restX;
     this.#restY = l.restY;
     this.#drawStick();
-  }
-
-  /**
-   * An icon fills 58% of its button. Labels share one size, the largest at which the
-   * longest on show fits, at a whole number of device pixels a font pixel where it can be,
-   * so they stay sharp.
-   */
-  #sizeFaces(): void {
-    const dpr = window.devicePixelRatio || 1;
-    const size = parseFloat(this.#buttons[0]!.style.width) || 0;
-    const widest = Math.max(1, ...this.#slotLabel.map((l) => (l ? textWidth(l) : 0)));
-    const fit = Math.max(1, size - 10) / widest;
-    const k = fit * dpr >= 1 ? Math.floor(fit * dpr) / dpr : fit;
-    this.#buttons.forEach((b, i) => {
-      const label = this.#slotLabel[i];
-      b.style.backgroundSize = label ? `${textWidth(label) * k}px ${GLYPH_HEIGHT * k}px` : '58%';
-    });
   }
 
   #update(): void {

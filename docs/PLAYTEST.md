@@ -64,7 +64,7 @@ shots feel in time with the music after.
 gamepad in Node alone, not on real devices.
 
 Finish or lose a run and enter a name on the game over or clear screen: once on the phone
-(tap Name for its keyboard), once with a gamepad on the PC. Then let the other
+(tap the Name key, a letter and a cursor, for its keyboard), once with a gamepad on the PC. Then let the other
 player take a turn and post under their own name.
 
 **Looking for:** the keyboard opens in capitals and stays open, the keyboard's Enter and
@@ -96,15 +96,18 @@ braking out from under a block feels fair.
 
 ### 7. The phone, upright and sideways
 
-**Why:** the touch controls gained an upright layout, labelled menu keys and full screen
+**Why:** the touch controls gained an upright layout, menu keys with icons and full screen
 on 2026-11-12. Headless Chromium as a phone checked the layout; a real phone checks the
 rest.
 
 On the phone, open the game in the browser and tap the start screen. Go through the menus,
 the jukebox and a run held upright, then the same held sideways. Lose a run and try
-Replay, Save, Retry and Title. Swipe out of full screen once and tap again.
+Replay, Save, Retry and Title. Swipe out of full screen once and tap again. On the PC,
+click the start screen, then press Esc in a run.
 
 **Looking for:** the page goes full screen on the first tap and back in after a swipe out;
-the picture sits at the top with the pad under it when upright; the menu keys read
-clearly and do what they say; quick taps on them never get missed; and nothing names a
-keyboard key while the touch keys are on show.
+upright, the picture fills the width in the top half, with the pad under it, and its
+pixels look even enough; each menu key's icon says what it does without a word; quick taps
+never get missed; nothing names a keyboard key while the touch keys are on show. On the PC,
+the click goes full screen; in Chrome or Edge Esc pauses and holding it leaves full screen,
+in Firefox Esc leaves it.

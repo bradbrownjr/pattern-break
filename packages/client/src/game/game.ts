@@ -58,6 +58,22 @@ import {
 import { PadBit, PadCapture, PadTracker, PadWatcher, connectedPads, padMenuAction, padProfile, readGamepads } from './gamepad.ts';
 import { TouchControls } from './touch.ts';
 import { BACK_SLOT, FOURTH_SLOT, SELECT_SLOT, THIRD_SLOT, type TouchKey } from './touch-input.ts';
+import { enterFullScreen, exitFullScreen } from './fullscreen.ts';
+import {
+  BACK_ICON_MAP,
+  NAME_ICON_MAP,
+  NEXT_ICON_MAP,
+  POST_ICON_MAP,
+  REMOVE_ARMED_ICON_MAP,
+  REMOVE_ICON_MAP,
+  REPLAY_ICON_MAP,
+  RETRY_ICON_MAP,
+  SAVE_ICON_MAP,
+  SELECT_ICON_MAP,
+  SKIP_ICON_MAP,
+  STOP_ICON_MAP,
+  TITLE_ICON_MAP,
+} from '../render/icons.ts';
 import { CodeListener, keyToken, padToken, type CodeToken } from './secrets.ts';
 import { InputSampler, KeyMap, type MenuAction } from './input.ts';
 import { DisplayClock, InputLog, catchUp, targetTick } from './loop.ts';
@@ -468,6 +484,24 @@ export class Game {
       },
       { capture: true },
     );
+    // Full screen (fullscreen.ts), from a user activation. A touch or pen asks on every lift
+    // while it's off, so one swiped away comes back. A mouse or key asks once, leaving the
+    // start screen: without Keyboard Lock, Esc (pause and back) leaves full screen, and
+    // asking again on the next key would fight the player. Settings turns it on or off.
+    window.addEventListener(
+      'pointerdown',
+      (e) => {
+        if (e.pointerType === 'mouse' && this.#mode === 'start' && this.#settings.fullScreen) enterFullScreen();
+      },
+      { capture: true },
+    );
+    window.addEventListener(
+      'pointerup',
+      (e) => {
+        if (e.pointerType !== 'mouse' && this.#settings.fullScreen) enterFullScreen();
+      },
+      { capture: true },
+    );
     this.#touch = new TouchControls(document.body, this.#r.renderer.canvas as HTMLCanvasElement, () => this.#onPointer(true));
     this.#touch.onPlacement = () => this.#place();
     this.#place();
@@ -541,11 +575,11 @@ export class Game {
 
   /**
    * The touch buttons for the screen on show (Brad, 2026-11-12): the six play buttons in
-   * play, and off it only the keys the screen uses, named for what they do.
+   * play, and off it only the keys the screen uses, as icons.
    */
   #touchKeys(): TouchKey[] | null {
-    const select = (label = 'Select'): TouchKey => ({ slot: SELECT_SLOT, label, bits: PadBit.a });
-    const back = (label = 'Back'): TouchKey => ({ slot: BACK_SLOT, label, bits: PadBit.b });
+    const select = (label = 'Select', icon: readonly string[] = SELECT_ICON_MAP): TouchKey => ({ slot: SELECT_SLOT, label, icon, bits: PadBit.a });
+    const back = (label = 'Back', icon: readonly string[] = BACK_ICON_MAP): TouchKey => ({ slot: BACK_SLOT, label, icon, bits: PadBit.b });
     switch (this.#mode) {
       case 'play':
       case 'intro':
@@ -568,38 +602,40 @@ export class Game {
         const song = row.kind === 'song' ? this.#songs[row.song] : undefined;
         if (song?.imported) {
           const armed = this.#removeArmed !== null && this.#removeArmed.song === song && performance.now() < this.#removeArmed.until;
-          keys.push({ slot: THIRD_SLOT, label: armed ? 'Confirm' : 'Remove', bits: PadBit.select, warn: armed });
+          keys.push({ slot: THIRD_SLOT, label: armed ? 'Confirm' : 'Remove', icon: armed ? REMOVE_ARMED_ICON_MAP : REMOVE_ICON_MAP, bits: PadBit.select });
         }
         return keys;
       }
       case 'sync': {
         const sync = this.#sync;
         if (!sync || sync.result === undefined) return [back()];
-        const retry: TouchKey = { slot: THIRD_SLOT, label: 'Retry', bits: PadBit.y };
+        const retry: TouchKey = { slot: THIRD_SLOT, label: 'Retry', icon: RETRY_ICON_MAP, bits: PadBit.y };
         return sync.result ? [select('Keep'), retry, back()] : [retry, back()];
       }
       case 'replay':
-        return [select('Stop')];
+        return [select('Stop', STOP_ICON_MAP)];
       case 'gameover':
       case 'complete': {
         if (this.#nameEntry) {
           if (!this.#nameEntryUp()) return [];
           const entry = this.#nameEntry;
           return [
-            select('Post'),
-            back('Skip'),
-            { slot: THIRD_SLOT, label: 'Name', bits: 0, action: () => this.#touchText?.open(entry.name, NAME_MAX, true) },
+            select('Post', POST_ICON_MAP),
+            back('Skip', SKIP_ICON_MAP),
+            { slot: THIRD_SLOT, label: 'Name', icon: NAME_ICON_MAP, bits: 0, action: () => this.#touchText?.open(entry.name, NAME_MAX, true) },
           ];
         }
         const action = this.#mode === 'gameover' ? 'Retry' : (this.#completeView?.action ?? 'Title');
-        const keys = [select(action)];
-        if (action !== 'Title' && action !== 'Back') keys.push(back('Title'));
+        const icon = action === 'Retry' ? RETRY_ICON_MAP : action === 'Title' ? TITLE_ICON_MAP : action === 'Back' ? BACK_ICON_MAP : NEXT_ICON_MAP;
+        const keys = [select(action, icon)];
+        if (action !== 'Title' && action !== 'Back') keys.push(back('Title', TITLE_ICON_MAP));
         if (this.#offerReplay && this.#lastReplay) {
           keys.push(
-            { slot: THIRD_SLOT, label: 'Replay', bits: PadBit.y },
+            { slot: THIRD_SLOT, label: 'Replay', icon: REPLAY_ICON_MAP, bits: PadBit.y },
             {
               slot: FOURTH_SLOT,
               label: 'Save',
+              icon: SAVE_ICON_MAP,
               bits: 0,
               action: () => {
                 if (this.#onEndScreen()) this.#saveReplay();
@@ -702,7 +738,9 @@ export class Game {
     if (modifier && !keys.action(e.code)) return;
     switch (this.#mode) {
       case 'start':
-        if (!e.repeat) this.#leaveStart();
+        if (e.repeat) return;
+        if (this.#settings.fullScreen && e.key !== 'Escape') enterFullScreen();
+        this.#leaveStart();
         return;
       case 'demo':
         // Any key leaves the demo and does nothing else.
@@ -1324,6 +1362,10 @@ export class Game {
         this.#applyVolumes();
         this.#applyLook();
         this.#applySync();
+        if (this.#settings.fullScreen !== before.fullScreen) {
+          if (this.#settings.fullScreen) enterFullScreen();
+          else exitFullScreen();
+        }
         // A taste of the new effects level; the music is playing to hear its own.
         if (this.#settings.effects !== before.effects) this.#fx?.play('killShip');
         else this.#sound('change');

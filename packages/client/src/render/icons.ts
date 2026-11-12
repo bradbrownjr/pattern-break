@@ -2,7 +2,6 @@
 // so a button shows the same symbol as the HUD. One character a pixel: '.' is clear, the
 // rest are ICON_COLORS keys. No Pixi here, so the DOM side can draw them too.
 
-import { GLYPH_ADVANCE, GLYPH_HEIGHT, GLYPH_WIDTH, glyphRows, textWidth } from './font.ts';
 import { AMBER, BACKGROUND, CYAN, LIME, MAGENTA, VIOLET, WHITE } from './palette.ts';
 
 export const ICON_COLORS: Record<string, number> = { m: MAGENTA, w: WHITE, a: AMBER, l: LIME, g: 0x3c7a1a, c: CYAN, v: VIOLET, k: BACKGROUND };
@@ -143,22 +142,128 @@ export function iconSvg(map: readonly string[], colors: Record<string, number> =
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges">${rects}</svg>`;
 }
 
-/**
- * `text` in the game's pixel font as an SVG, one rect a lit pixel, for a labelled touch
- * button. Its viewBox is textWidth(text) by GLYPH_HEIGHT.
- */
-export function labelSvg(text: string, color: number): string {
-  const fill = `#${color.toString(16).padStart(6, '0')}`;
-  let rects = '';
-  let x0 = 0;
-  for (const char of text) {
-    const rows = glyphRows(char);
-    for (let y = 0; y < GLYPH_HEIGHT; y++) {
-      for (let x = 0; x < GLYPH_WIDTH; x++) {
-        if (((rows[y]! >> (GLYPH_WIDTH - 1 - x)) & 1) !== 0) rects += `<rect x="${x0 + x}" y="${y}" width="1" height="1"/>`;
-      }
-    }
-    x0 += GLYPH_ADVANCE;
-  }
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${textWidth(text)} ${GLYPH_HEIGHT}" shape-rendering="crispEdges" fill="${fill}">${rects}</svg>`;
-}
+
+// The touch keys off play (game/touch.ts, Brad, 2026-11-12: icons, not words). The key a
+// screen's confirm is on is lime, Back white, the rest cyan.
+
+/** Select, Keep: a tick. */
+export const SELECT_ICON_MAP = [
+  '.......',
+  '......l',
+  '.....ll',
+  'l...ll.',
+  'll.ll..',
+  '.lll...',
+  '..l....',
+];
+/** Back: an arrow turning back to the left. */
+export const BACK_ICON_MAP = [
+  '..w....',
+  '.ww....',
+  'wwwwww.',
+  '.ww...w',
+  '..w...w',
+  '......w',
+  '..wwww.',
+];
+/** Retry: a circle closing on its arrow. */
+export const RETRY_ICON_MAP = [
+  '..lll.l',
+  '.l...ll',
+  'l...lll',
+  'l......',
+  'l.....l',
+  '.l...l.',
+  '..lll..',
+];
+/** Title: home. */
+export const TITLE_ICON_MAP = [
+  '...w...',
+  '..www..',
+  '.wwwww.',
+  'wwwwwww',
+  '.ww.ww.',
+  '.ww.ww.',
+  '.ww.ww.',
+];
+/** Next, and Credits after the last level: an arrow on. */
+export const NEXT_ICON_MAP = [
+  '...l...',
+  '...ll..',
+  'llllll.',
+  'lllllll',
+  'llllll.',
+  '...ll..',
+  '...l...',
+];
+/** Replay: play. */
+export const REPLAY_ICON_MAP = [
+  '.c.....',
+  '.cc....',
+  '.ccc...',
+  '.cccc..',
+  '.ccc...',
+  '.cc....',
+  '.c.....',
+];
+/** Save: down into a tray. */
+export const SAVE_ICON_MAP = [
+  '...c...',
+  '...c...',
+  '.c.c.c.',
+  '..ccc..',
+  '...c...',
+  'c.....c',
+  'ccccccc',
+];
+/** Post a name: up out of a tray. */
+export const POST_ICON_MAP = [
+  '...l...',
+  '..lll..',
+  '.l.l.l.',
+  '...l...',
+  '...l...',
+  'l.....l',
+  'lllllll',
+];
+/** Skip: on to the end. */
+export const SKIP_ICON_MAP = [
+  '.......',
+  '.w...w.',
+  '.ww..w.',
+  '.www.w.',
+  '.ww..w.',
+  '.w...w.',
+  '.......',
+];
+/** Name: a letter and a text cursor, for the keyboard it opens. */
+export const NAME_ICON_MAP = [
+  '.c..www',
+  'c.c..w.',
+  'c.c..w.',
+  'ccc..w.',
+  'c.c..w.',
+  'c.c..w.',
+  '....www',
+];
+/** Remove an imported song: a bin; magenta to confirm. */
+export const REMOVE_ICON_MAP = [
+  '..www..',
+  'wwwwwww',
+  '.w.w.w.',
+  '.w.w.w.',
+  '.w.w.w.',
+  '.w.w.w.',
+  '.wwwww.',
+];
+export const REMOVE_ARMED_ICON_MAP = REMOVE_ICON_MAP.map((row) => row.replaceAll('w', 'm'));
+/** Stop a replay. */
+export const STOP_ICON_MAP = [
+  '.......',
+  '.wwwww.',
+  '.wwwww.',
+  '.wwwww.',
+  '.wwwww.',
+  '.wwwww.',
+  '.......',
+];

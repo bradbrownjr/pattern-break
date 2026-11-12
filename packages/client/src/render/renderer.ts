@@ -107,20 +107,30 @@ export class GameRenderer {
 
   /**
    * Scales the canvas to the largest whole multiple of device pixels that fits the window,
-   * centred, or at the top (`top`) for a phone held upright with the touch pad under it.
+   * centred. For a phone held upright with the touch pad under it (`top`), the picture
+   * instead fills the window's width, centred in its top half (Brad, 2026-11-12): a phone's
+   * width is seldom a whole multiple, so its pixels are a device pixel uneven there.
    */
   resize(top = false): void {
     const dpr = window.devicePixelRatio || 1;
-    const k = integerScale(window.innerWidth, window.innerHeight, dpr);
     const canvas = this.renderer.canvas as HTMLCanvasElement;
-    canvas.style.width = `${(PLAYFIELD_WIDTH * k) / dpr}px`;
-    canvas.style.height = `${(PLAYFIELD_HEIGHT * k) / dpr}px`;
+    let devicePx: number;
+    let marginTop = 0;
+    if (top) {
+      devicePx = (window.innerWidth * dpr) / PLAYFIELD_WIDTH;
+      marginTop = Math.max(0, Math.floor((window.innerHeight / 2 - (PLAYFIELD_HEIGHT * devicePx) / dpr) / 2));
+    } else {
+      devicePx = integerScale(window.innerWidth, window.innerHeight, dpr);
+    }
+    canvas.style.width = `${(PLAYFIELD_WIDTH * devicePx) / dpr}px`;
+    canvas.style.height = `${(PLAYFIELD_HEIGHT * devicePx) / dpr}px`;
+    canvas.style.marginTop = `${marginTop}px`;
     this.#parent.style.background = LETTERBOX;
     this.#overlay.style.width = canvas.style.width;
     this.#overlay.style.height = canvas.style.height;
-    this.#overlay.style.background = overlayBackground(k / dpr, k);
+    this.#overlay.style.background = overlayBackground(devicePx / dpr, devicePx);
     this.#parent.style.alignItems = top ? 'flex-start' : 'center';
-    this.#overlay.style.top = top ? '0' : '50%';
+    this.#overlay.style.top = top ? `${marginTop}px` : '50%';
     this.#overlay.style.transform = top ? 'translateX(-50%)' : 'translate(-50%, -50%)';
   }
 

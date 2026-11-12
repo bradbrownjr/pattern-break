@@ -90,19 +90,20 @@ export interface Rect {
 }
 
 /**
- * A labelled button the menus show in place of the play buttons (Brad, 2026-11-12: the
- * menus show only what they use, named for what it does).
+ * A key the menus show in place of the play buttons (Brad, 2026-11-12: the menus show only
+ * what they use, as icons).
  */
 export interface TouchKey {
   /** The square it takes, in TOUCH_BUTTONS order: SELECT_SLOT is fire's, at the bottom right. */
   slot: number;
+  /** What it does, for screen readers and tests; the button shows `icon`. */
   label: string;
+  /** Its pixel map (render/icons.ts). */
+  icon: readonly string[];
   /** What it holds while pressed, as a pad's buttons would; 0 for one that only has `action`. */
   bits: number;
   /** Called on its lift, inside the touch's own event, so it can open the keyboard or save a file. */
   action?: () => void;
-  /** Drawn in magenta: a press to confirm. */
-  warn?: boolean;
 }
 
 /** Where the menu keys go: Select on fire's square, Back on bomb's, the rest above them. */

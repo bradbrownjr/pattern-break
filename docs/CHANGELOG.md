@@ -13,15 +13,17 @@ Fixes**, in that order.
 
 ## Milestones
 
-* **The phone plays full screen, upright too, with menu keys named for what they do.**
-  Brad's request: a tap puts the page in full screen on Android (an iPhone's Safari can't;
-  adding the game to the home screen does it there). Held upright, the picture sits at the
-  top with the pad under it: the stick at the left and the six buttons in the same grid as
-  sideways. Off play the six buttons give way to labelled keys, only the ones a screen
-  uses: Select and Back in the menus; Retry, Title, Replay and Save on game over; Post,
+* **Full screen, a phone held upright, and menu keys as icons.** Brad's requests: the game
+  goes full screen on the first tap, click or key, on any device (not an iPhone's Safari,
+  which can't; adding the game to the home screen does it there), and Settings has a
+  Fullscreen row to turn it off. In Chrome and Edge, Esc stays the pause key and holding
+  it leaves full screen. Held upright, the picture fills the width in the top half, with
+  the pad under it: the stick at the left and the six buttons in the same grid as
+  sideways. Off play the six buttons give way to only the keys a screen uses, each an
+  icon: Select and Back in the menus; Retry, Title, Replay and Save on game over; Post,
   Skip and Name on the name entry; Remove in the jukebox, which touch couldn't do before.
-  Prompts that name keyboard keys are left out while the keys show. A tap shorter than a
-  frame no longer gets missed. Holding Back while choosing Play gives god mode on touch.
+  Prompts that name keyboard keys are left out while they show. A tap shorter than a frame
+  no longer gets missed. Holding Back while choosing Play gives god mode on touch.
 
 # November 11, 2026
 

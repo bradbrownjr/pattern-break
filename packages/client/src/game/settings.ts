@@ -23,9 +23,11 @@ export interface Settings {
   syncMs: number;
   /** Frame stats: the corner readout and a report on game over and the clear screens (perf.ts). */
   perf: boolean;
+  /** Whether the game asks for full screen (fullscreen.ts). */
+  fullScreen: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { music: 5, effects: 4, flashing: 'reduced', shake: true, crt: true, leds: 'neon', syncMs: 0, perf: false };
+export const DEFAULT_SETTINGS: Settings = { music: 5, effects: 4, flashing: 'reduced', shake: true, crt: true, leds: 'neon', syncMs: 0, perf: false, fullScreen: true };
 
 const KEY = 'pattern-break.settings';
 
@@ -59,6 +61,7 @@ export function loadSettings(storage: Pick<Storage, 'getItem'> | null): Settings
       leds: o['leds'] === 'neon' || o['leds'] === 'colourBlind' ? o['leds'] : DEFAULT_SETTINGS.leds,
       syncMs: syncMs(o['syncMs']),
       perf: typeof o['perf'] === 'boolean' ? o['perf'] : DEFAULT_SETTINGS.perf,
+      fullScreen: typeof o['fullScreen'] === 'boolean' ? o['fullScreen'] : DEFAULT_SETTINGS.fullScreen,
     };
   } catch {
     return { ...DEFAULT_SETTINGS };
