@@ -38,7 +38,8 @@ export class SyncScreen {
     this.container.addChild(shadow, heading, this.#hint, this.#big, this.#detail, this.#was, this.#prompt);
   }
 
-  update(view: SyncView): void {
+  /** `touch`: the touch buttons are on show and name what they do, so the keys are left out. */
+  update(view: SyncView, touch = false): void {
     if (view.phase === 'running') {
       this.#hint.visible = true;
       this.#big.text = syncProgress(view.presses);
@@ -64,6 +65,7 @@ export class SyncScreen {
     this.#big.place(CENTER, 100, 'center');
     this.#detail.place(CENTER, 126, 'center');
     this.#was.place(CENTER, 140, 'center');
+    if (touch) this.#prompt.text = '';
     this.#prompt.place(CENTER, 176, 'center');
   }
 }

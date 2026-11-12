@@ -118,6 +118,40 @@ describe('layout', () => {
   });
 });
 
+describe('upright', () => {
+  it.each([
+    [412, 915, 2.625],
+    [390, 844, 3],
+    [360, 740, 4],
+  ])('%i x %i at %f: the pad goes under a picture at the top, in the same two columns', (width, height, dpr) => {
+    const pic = { ...picture(width, height, dpr), y: 0 };
+    const l = touchLayout(width, height, pic);
+    const below = pic.y + pic.height;
+    for (const b of l.buttons) {
+      expect(inside(b, width, height)).toBe(true);
+      expect(b.y).toBeGreaterThanOrEqual(below);
+      expect(b.width).toBeGreaterThanOrEqual(44);
+    }
+    // Two columns, three rows, in TOUCH_BUTTONS order: pause and nuke on top, fire at the bottom right.
+    expect(new Set(l.buttons.map((b) => b.x)).size).toBe(2);
+    expect(new Set(l.buttons.map((b) => b.y)).size).toBe(3);
+    const fire = l.buttons[TOUCH_BUTTONS.indexOf('fire')]!;
+    expect(fire.x).toBe(Math.max(...l.buttons.map((b) => b.x)));
+    expect(fire.y).toBe(Math.max(...l.buttons.map((b) => b.y)));
+    // The stick's side is under the picture, left of the buttons, and its ring rests in it.
+    expect(l.stick.y).toBe(below);
+    for (const b of l.buttons) expect(apart(l.stick, b)).toBe(true);
+    expect(l.restX).toBeGreaterThan(l.stick.x);
+    expect(l.restX).toBeLessThan(l.stick.x + l.stick.width);
+    expect(l.restY).toBeGreaterThan(below);
+  });
+
+  it('a 412 x 915 phone gets 72 px buttons', () => {
+    const l = touchLayout(412, 915, { ...picture(412, 915, 2.625), y: 0 });
+    expect(l.buttons[0]!.width).toBe(72);
+  });
+});
+
 describe('visibility', () => {
   it('shows on a touch screen, but not with a gamepad connected or on the start screen', () => {
     expect(touchVisible(true, false, false)).toBe(true);

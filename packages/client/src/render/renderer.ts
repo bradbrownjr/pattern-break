@@ -105,8 +105,11 @@ export class GameRenderer {
     this.copper.container.position.set(this.#shake.x, this.#shake.y);
   }
 
-  /** Scales the canvas to the largest whole multiple of device pixels that fits the window. */
-  resize(): void {
+  /**
+   * Scales the canvas to the largest whole multiple of device pixels that fits the window,
+   * centred, or at the top (`top`) for a phone held upright with the touch pad under it.
+   */
+  resize(top = false): void {
     const dpr = window.devicePixelRatio || 1;
     const k = integerScale(window.innerWidth, window.innerHeight, dpr);
     const canvas = this.renderer.canvas as HTMLCanvasElement;
@@ -116,6 +119,9 @@ export class GameRenderer {
     this.#overlay.style.width = canvas.style.width;
     this.#overlay.style.height = canvas.style.height;
     this.#overlay.style.background = overlayBackground(k / dpr, k);
+    this.#parent.style.alignItems = top ? 'flex-start' : 'center';
+    this.#overlay.style.top = top ? '0' : '50%';
+    this.#overlay.style.transform = top ? 'translateX(-50%)' : 'translate(-50%, -50%)';
   }
 
   /** The CRT setting: bloom, scanlines and a vignette, or none. */

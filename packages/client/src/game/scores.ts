@@ -166,7 +166,8 @@ export class ScoresScreen {
     }
   }
 
-  update(menu: ScoresMenu, blinkBright: boolean): void {
+  /** `touch`: the touch buttons are on show and say Back themselves. */
+  update(menu: ScoresMenu, blinkBright: boolean, touch = false): void {
     const values = [menu.choice.label, DIFFICULTY_LABELS[menu.difficultyName]];
     values.forEach((value, i) => {
       const selected = menu.cursor === i;
@@ -228,7 +229,7 @@ export class ScoresScreen {
     this.#note.color = menu.state.kind === 'board' ? GREY : MAGENTA;
     this.#note.place(CENTER, LIST_TOP + 2 * ROW, 'center');
 
-    this.#hint.text = 'Esc Back';
+    this.#hint.text = touch ? '' : 'Esc Back';
     this.#hint.place(CENTER, 204, 'center');
 
     this.#marker.visible = blinkBright;

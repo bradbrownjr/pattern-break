@@ -307,7 +307,8 @@ export class CreditsScreen {
   }
 
   /** Draws the roll where it is now, with `note` (a warning) in place of the detail line. */
-  update(note = ''): void {
+  /** `touch`: the touch buttons are on show and say Select and Back themselves. */
+  update(note = '', touch = false): void {
     const roll = this.#roll;
     if (!roll) return;
     this.#content.y = (this.#heading.visible ? VIEW_TOP.menu : VIEW_TOP.ending) - Math.round(roll.offset);
@@ -328,10 +329,10 @@ export class CreditsScreen {
     } else if (isLink(row)) {
       detail = row.detail;
     } else if (roll.ended) {
-      detail = 'Any key Title';
+      detail = touch ? '' : 'Any key Title';
       color = CYAN;
     } else {
-      detail = roll.loop ? 'Up Down Select' : 'Up Down Select  Esc Skip';
+      detail = roll.loop || touch ? 'Up Down Select' : 'Up Down Select  Esc Skip';
       color = DIM_GREY;
     }
     const key = `${detail}|${color}`;

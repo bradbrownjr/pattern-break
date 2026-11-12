@@ -2,7 +2,8 @@
 // they sit in the bars beside the picture at the screen's own resolution. Pointer Events
 // (https://www.w3.org/TR/pointerevents3/) track each finger by pointerId, so the stick and
 // any number of buttons work at once. Each finger is captured by the element it landed on,
-// and a button stays held until that finger lifts.
+// and a button stays held until that finger lifts. Off play the menus swap the buttons for
+// labelled ones (setKeys), and a touch on a phone puts the page in full screen.
 
 import {
   BOMB_ICON_MAP,
@@ -12,7 +13,10 @@ import {
   NUKE_MAP,
   PAUSE_ICON_MAP,
   iconSvg,
+  labelSvg,
 } from '../render/icons.ts';
+import { GLYPH_HEIGHT, textWidth } from '../render/font.ts';
+import { CYAN, MAGENTA } from '../render/palette.ts';
 import {
   FloatingStick,
   STICK_RADIUS,
@@ -22,6 +26,7 @@ import {
   touchLayout,
   touchVisible,
   type TouchButton,
+  type TouchKey,
 } from './touch-input.ts';
 
 const ICONS: Record<TouchButton, readonly string[]> = {
@@ -36,6 +41,28 @@ const ICONS: Record<TouchButton, readonly string[]> = {
 const RING = 'rgba(45, 226, 230, 0.55)';
 const FACE = 'rgba(7, 8, 15, 0.55)';
 const FACE_HELD = 'rgba(45, 226, 230, 0.35)';
+
+function svgUrl(svg: string): string {
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+const ICON_URLS = TOUCH_BUTTONS.map((id) => svgUrl(iconSvg(ICONS[id])));
+
+/**
+ * Asks for full screen from a touch's lift, which counts as the user activation the
+ * Fullscreen API needs. Not where it can't (an iPhone: MDN's compatibility data, "Only
+ * available on iPad, not on iPhone"), or where the page already fills the screen, as an
+ * installed app does.
+ */
+function fullScreen(): void {
+  if (document.fullscreenElement || !document.fullscreenEnabled) return;
+  if (typeof matchMedia === 'function' && matchMedia('(display-mode: fullscreen)').matches) return;
+  const root = document.documentElement;
+  if (typeof root.requestFullscreen !== 'function') return;
+  root.requestFullscreen({ navigationUI: 'hide' }).catch(() => {
+    // Refused (not from a real touch, or the browser said no): stay in the page.
+  });
+}
 
 function div(style: Partial<CSSStyleDeclaration>): HTMLDivElement {
   const el = document.createElement('div');
@@ -64,11 +91,20 @@ export class TouchControls {
   #base = div({ position: 'absolute', borderRadius: '50%', border: `2px solid ${RING}`, boxSizing: 'border-box' });
   #knob = div({ position: 'absolute', borderRadius: '50%', background: RING });
   #buttons: HTMLDivElement[] = [];
+  /** What each square holds and does now: the play buttons', or a menu key's. */
+  #slotBits: number[] = TOUCH_BUTTONS.map((id) => TOUCH_BITS[id]);
+  #slotAction: ((() => void) | null)[] = TOUCH_BUTTONS.map(() => null);
+  #slotLabel: (string | null)[] = TOUCH_BUTTONS.map(() => null);
+  /** The keys on show, as a string to compare: 'play' for the play buttons. */
+  #keys = 'play';
   #stick = new FloatingStick();
   #stickPointer: number | null = null;
   #stickSince = 0;
   #held = 0;
-  #buttonPointers = new Map<number, number>();
+  /** Bits pressed since the last frame read them, so a tap shorter than a frame still counts. */
+  #latched = 0;
+  /** Each finger on a button: the square, its bits, and the keys on show when it landed. */
+  #buttonPointers = new Map<number, { slot: number; bits: number; keys: string }>();
   #touchScreen: boolean;
   #padConnected = false;
   #startScreen = true;
@@ -76,6 +112,8 @@ export class TouchControls {
   #restY = 0;
   readonly #canvas: HTMLElement;
   readonly #onTap: () => void;
+  /** Called when the picture's place may change: a touch first seen, a gamepad in or out. */
+  onPlacement: (() => void) | null = null;
 
   /**
    * `canvas` is the game's picture, for the layout; `onTap` runs for a quick touch on the
@@ -99,7 +137,7 @@ export class TouchControls {
         border: `2px solid ${RING}`,
         borderRadius: '10px',
         backgroundColor: FACE,
-        backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(iconSvg(ICONS[id]))}")`,
+        backgroundImage: ICON_URLS[TOUCH_BUTTONS.indexOf(id)]!,
         backgroundRepeat: 'no-repeat',
         backgroundPosition: 'center',
         backgroundSize: '58%',
@@ -107,7 +145,8 @@ export class TouchControls {
       });
       b.dataset['button'] = id;
       b.setAttribute('aria-label', id);
-      b.addEventListener('pointerdown', (e) => this.#press(e, id, b));
+      const slot = this.#buttons.length;
+      b.addEventListener('pointerdown', (e) => this.#press(e, slot, b));
       const lift = (e: PointerEvent) => this.#lift(e, b);
       b.addEventListener('pointerup', lift);
       b.addEventListener('pointercancel', lift);
@@ -130,7 +169,16 @@ export class TouchControls {
         if (e.pointerType === 'touch' && !this.#touchScreen) {
           this.#touchScreen = true;
           this.#update();
+          this.onPlacement?.();
         }
+      },
+      { capture: true },
+    );
+    // Capture, ahead of the buttons, which stop their touches going further.
+    window.addEventListener(
+      'pointerup',
+      (e) => {
+        if (e.pointerType === 'touch') fullScreen();
       },
       { capture: true },
     );
@@ -141,7 +189,57 @@ export class TouchControls {
 
   /** The bits the controls hold now: the stick's direction and each button held. */
   get bits(): number {
-    return this.visible ? this.#held | (this.#stickPointer === null ? 0 : this.#stick.bits) : 0;
+    return this.visible ? this.#held | this.#latched | (this.#stickPointer === null ? 0 : this.#stick.bits) : 0;
+  }
+
+  /** Called once a frame after its input is read: a tap that has lifted lets go now. */
+  endFrame(): void {
+    this.#latched = 0;
+  }
+
+  /**
+   * True when the picture should sit at the top with the pad under it: a touch screen held
+   * upright with no gamepad. Not tied to the start screen, so the picture doesn't jump.
+   */
+  get pictureTop(): boolean {
+    return this.#touchScreen && !this.#padConnected && window.innerHeight > window.innerWidth;
+  }
+
+  /**
+   * The buttons to show: null for the six play buttons, or labelled menu keys, each on its
+   * square, with the other squares hidden. Called every frame; only a change touches the DOM.
+   */
+  setKeys(keys: readonly TouchKey[] | null): void {
+    const sig = keys === null ? 'play' : keys.map((k) => `${k.slot}:${k.label}:${k.bits}:${k.warn ? 1 : 0}`).join('|');
+    if (keys) for (const k of keys) this.#slotAction[k.slot] = k.action ?? null;
+    if (sig === this.#keys) return;
+    this.#keys = sig;
+    this.#buttons.forEach((b, i) => {
+      const key = keys?.find((k) => k.slot === i);
+      const s = b.style;
+      if (keys === null) {
+        this.#slotBits[i] = TOUCH_BITS[TOUCH_BUTTONS[i]!];
+        this.#slotAction[i] = null;
+        this.#slotLabel[i] = null;
+        s.display = '';
+        s.backgroundImage = ICON_URLS[i]!;
+        b.setAttribute('aria-label', TOUCH_BUTTONS[i]!);
+        delete b.dataset['label'];
+      } else if (key) {
+        this.#slotBits[i] = key.bits;
+        this.#slotLabel[i] = key.label;
+        s.display = '';
+        s.backgroundImage = svgUrl(labelSvg(key.label, key.warn ? MAGENTA : CYAN));
+        b.setAttribute('aria-label', key.label);
+        b.dataset['label'] = key.label;
+      } else {
+        this.#slotBits[i] = 0;
+        this.#slotAction[i] = null;
+        this.#slotLabel[i] = null;
+        s.display = 'none';
+      }
+    });
+    this.#sizeFaces();
   }
 
   get visible(): boolean {
@@ -152,6 +250,7 @@ export class TouchControls {
     if (connected === this.#padConnected) return;
     this.#padConnected = connected;
     this.#update();
+    this.onPlacement?.();
   }
 
   /** True on the start screen, where the controls stay hidden. */
@@ -172,6 +271,7 @@ export class TouchControls {
       s.width = `${rect.width}px`;
       s.height = `${rect.height}px`;
     });
+    this.#sizeFaces();
     Object.assign(this.#zone.style, {
       left: `${l.stick.x}px`,
       top: `${l.stick.y}px`,
@@ -183,6 +283,23 @@ export class TouchControls {
     this.#drawStick();
   }
 
+  /**
+   * An icon fills 58% of its button. Labels share one size, the largest at which the
+   * longest on show fits, at a whole number of device pixels a font pixel where it can be,
+   * so they stay sharp.
+   */
+  #sizeFaces(): void {
+    const dpr = window.devicePixelRatio || 1;
+    const size = parseFloat(this.#buttons[0]!.style.width) || 0;
+    const widest = Math.max(1, ...this.#slotLabel.map((l) => (l ? textWidth(l) : 0)));
+    const fit = Math.max(1, size - 10) / widest;
+    const k = fit * dpr >= 1 ? Math.floor(fit * dpr) / dpr : fit;
+    this.#buttons.forEach((b, i) => {
+      const label = this.#slotLabel[i];
+      b.style.backgroundSize = label ? `${textWidth(label) * k}px ${GLYPH_HEIGHT * k}px` : '58%';
+    });
+  }
+
   #update(): void {
     const visible = this.visible;
     this.root.style.display = visible ? 'block' : 'none';
@@ -191,28 +308,34 @@ export class TouchControls {
 
   #releaseAll(): void {
     this.#held = 0;
+    this.#latched = 0;
     this.#buttonPointers.clear();
     this.#stickPointer = null;
     for (const b of this.#buttons) b.style.backgroundColor = FACE;
     this.#drawStick();
   }
 
-  #press(e: PointerEvent, id: TouchButton, b: HTMLDivElement): void {
+  #press(e: PointerEvent, slot: number, b: HTMLDivElement): void {
     swallow(e);
     capture(b, e.pointerId);
-    this.#buttonPointers.set(e.pointerId, TOUCH_BITS[id]);
-    this.#held |= TOUCH_BITS[id];
+    const bits = this.#slotBits[slot]!;
+    this.#buttonPointers.set(e.pointerId, { slot, bits, keys: this.#keys });
+    this.#held |= bits;
+    this.#latched |= bits;
     b.style.backgroundColor = FACE_HELD;
   }
 
   #lift(e: PointerEvent, b: HTMLDivElement): void {
-    if (!this.#buttonPointers.has(e.pointerId)) return;
+    const press = this.#buttonPointers.get(e.pointerId);
+    if (!press) return;
     swallow(e);
     this.#buttonPointers.delete(e.pointerId);
     let held = 0;
-    for (const bits of this.#buttonPointers.values()) held |= bits;
+    for (const p of this.#buttonPointers.values()) held |= p.bits;
     this.#held = held;
     b.style.backgroundColor = FACE;
+    // A key's action runs on a lift over the same keys it landed on, not a cancel.
+    if (e.type === 'pointerup' && press.keys === this.#keys) this.#slotAction[press.slot]?.();
   }
 
   #stickDown(e: PointerEvent): void {

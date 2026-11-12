@@ -9,6 +9,20 @@ Fixes**, in that order.
 
 ---
 
+# November 12, 2026
+
+## Milestones
+
+* **The phone plays full screen, upright too, with menu keys named for what they do.**
+  Brad's request: a tap puts the page in full screen on Android (an iPhone's Safari can't;
+  adding the game to the home screen does it there). Held upright, the picture sits at the
+  top with the pad under it: the stick at the left and the six buttons in the same grid as
+  sideways. Off play the six buttons give way to labelled keys, only the ones a screen
+  uses: Select and Back in the menus; Retry, Title, Replay and Save on game over; Post,
+  Skip and Name on the name entry; Remove in the jukebox, which touch couldn't do before.
+  Prompts that name keyboard keys are left out while the keys show. A tap shorter than a
+  frame no longer gets missed. Holding Back while choosing Play gives god mode on touch.
+
 # November 11, 2026
 
 ## Milestones

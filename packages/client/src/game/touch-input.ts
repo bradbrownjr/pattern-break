@@ -89,6 +89,28 @@ export interface Rect {
   height: number;
 }
 
+/**
+ * A labelled button the menus show in place of the play buttons (Brad, 2026-11-12: the
+ * menus show only what they use, named for what it does).
+ */
+export interface TouchKey {
+  /** The square it takes, in TOUCH_BUTTONS order: SELECT_SLOT is fire's, at the bottom right. */
+  slot: number;
+  label: string;
+  /** What it holds while pressed, as a pad's buttons would; 0 for one that only has `action`. */
+  bits: number;
+  /** Called on its lift, inside the touch's own event, so it can open the keyboard or save a file. */
+  action?: () => void;
+  /** Drawn in magenta: a press to confirm. */
+  warn?: boolean;
+}
+
+/** Where the menu keys go: Select on fire's square, Back on bomb's, the rest above them. */
+export const SELECT_SLOT = 5;
+export const BACK_SLOT = 4;
+export const THIRD_SLOT = 3;
+export const FOURTH_SLOT = 2;
+
 export interface TouchLayout {
   /** Each button's square, in TOUCH_BUTTONS order. */
   buttons: Rect[];
@@ -108,11 +130,17 @@ const STICK_SHARE = 0.4;
 
 /**
  * Lays the controls out for a `width` x `height` CSS px window with the picture at
- * `picture`. The buttons go in the bar right of the picture, in two columns when it is wide
- * enough and one when not; a bar too narrow for even one keeps them at the right edge, over
- * the picture. Fire is at the bottom right, under the thumb.
+ * `picture`. Held sideways, the buttons go in the bar right of the picture, in two columns
+ * when it is wide enough and one when not; a bar too narrow for even one keeps them at the
+ * right edge, over the picture. Upright (portraitPad), they go under the picture in the
+ * same two columns, with the stick's side left of them. Fire is at the bottom right, under
+ * the thumb.
  */
 export function touchLayout(width: number, height: number, picture: Rect): TouchLayout {
+  const below = picture.y + picture.height;
+  if (height > width && height - below >= 3 * MIN_BUTTON + 4 * GAP) {
+    return portraitLayout(width, height, below);
+  }
   const bar = Math.max(0, width - (picture.x + picture.width));
   const tall = Math.floor((height - 4 * GAP) / 3);
   const twoColumns = Math.min(MAX_BUTTON, tall, Math.floor((bar - 3 * GAP) / 2));
@@ -143,6 +171,29 @@ export function touchLayout(width: number, height: number, picture: Rect): Touch
     stick: { x: 0, y: 0, width: Math.floor(width * STICK_SHARE), height },
     restX,
     restY: Math.round(height - GAP - STICK_RADIUS - (height - 2 * STICK_RADIUS) / 6),
+  };
+}
+
+/** The upright layout: everything in the part of the window under the picture, from `top` down. */
+function portraitLayout(width: number, height: number, top: number): TouchLayout {
+  const room = height - top;
+  const size = Math.max(MIN_BUTTON, Math.min(MAX_BUTTON, Math.floor((room - 4 * GAP) / 3), Math.floor((width / 2 - 3 * GAP) / 2)));
+  const blockW = 2 * size + GAP;
+  const blockH = 3 * size + 2 * GAP;
+  const left = width - GAP - blockW;
+  const blockTop = height - GAP - blockH - Math.floor((room - blockH) / 6);
+  const buttons = TOUCH_BUTTONS.map((_, i) => ({
+    x: left + (i % 2) * (size + GAP),
+    y: blockTop + Math.floor(i / 2) * (size + GAP),
+    width: size,
+    height: size,
+  }));
+  const stickWidth = left - GAP;
+  return {
+    buttons,
+    stick: { x: 0, y: top, width: stickWidth, height: room },
+    restX: Math.round(stickWidth / 2),
+    restY: Math.round(blockTop + blockH / 2),
   };
 }
 

@@ -1290,17 +1290,43 @@ Run `pnpm dev` and open the URL it prints.
   DOM elements over the canvas, shown on a screen with a coarse pointer or once a touch is
   seen, hidden on the start screen (its tap starts the sound) and while
   `gamepadConnected()` is true (a pad shows up there once a button on it is pressed). A
-  touch on the left 40% of the screen puts a floating stick there: 40 px of reach, a 10 px
-  dead zone, 8 equal sectors, and dragged past its reach its centre follows the thumb. A
-  touch there that ends within 300 ms without leaving the dead zone is a tap, which acts
-  like a click. Six buttons on the right show the HUD's symbols (`render/icons.ts`, drawn
-  as SVG): pause, nuke, boost, missile, bomb and fire, fire lowest. Each holds a gamepad's
-  bits (`TOUCH_BITS`): fire is also A and bomb also B in menus, and pause is Start, so
-  holding pause while pressing fire on Play starts in god mode. `touchLayout` puts them in
-  the bar right of the picture, in two columns if they fit at 44 CSS px or more (WCAG 2.2,
-  2.5.5 Target Size), one column if not, and at the right edge over the picture if the
-  bar is narrower still. Pointer Events track each finger by `pointerId`, so the stick and
-  buttons work together; `Game.#pollPads` ORs the touch bits with the pads'.
+  touch on the stick's side puts a floating stick there: 40 px of reach, a 10 px dead
+  zone, 8 equal sectors, and dragged past its reach its centre follows the thumb. A touch
+  there that ends within 300 ms without leaving the dead zone is a tap, which acts like a
+  click. In play six buttons show the HUD's symbols (`render/icons.ts`, drawn as SVG):
+  pause, nuke, boost, missile, bomb and fire, in a grid of two columns with fire at the
+  bottom right. Each holds a gamepad's bits (`TOUCH_BITS`). Pointer Events track each
+  finger by `pointerId`, so the stick and buttons work together; `Game.#pollPads` ORs the
+  touch bits with the pads'. A press is also latched until the frame reads it
+  (`endFrame`), so a tap that lands and lifts between two frames still counts.
+  - **Menu keys** (Brad, 2026-11-12): off play, `Game.#touchKeys` swaps the buttons for
+    labelled keys in the game's font (`labelSvg`), each on one of the six squares, and
+    hides the rest. Select (A) takes fire's square and Back (B) bomb's; a screen's other
+    keys go above them. They are named for what they do: Retry and Title on game over;
+    Next, Credits or Title on a clear screen; Replay (Y) and Save once a replay is offered;
+    Post, Skip and Name (which opens the phone's keyboard) on the name entry; Remove, then
+    Confirm in magenta, on an imported song in the jukebox; Keep, Retry and Back on the
+    Sync result; Stop while a replay plays. A key with an `action` (Save, Name) runs it on
+    its lift, inside the touch's own event, as opening the keyboard needs. While the keys
+    are on show, prompts that name keyboard keys ("Esc Title  Any key Retry", "R Replay  S
+    Save", "Esc Back") are left out, since the keys say it. Back on the title does nothing
+    alone, but held while Select chooses Play it starts in god mode, as Esc held does, and
+    it is the B in the Konami code.
+  - **Layout** (`touchLayout`): held sideways, the buttons go in the bar right of the
+    picture, in two columns if they fit at 44 CSS px or more (WCAG 2.2, 2.5.5 Target
+    Size), one column if not, and at the right edge over the picture if the bar is
+    narrower still; the stick's side is the left 40% of the screen. Held upright (taller
+    than wide, on a touch screen with no pad: `TouchControls.pictureTop`), the renderer
+    puts the picture at the top (`GameRenderer.resize(true)`) and the pad goes under it:
+    the same two columns at the right, up to 72 px, and the stick's side left of them
+    (Brad, 2026-11-12). The picture keeps its whole-number scale either way.
+  - **Full screen:** a touch's lift asks for full screen
+    (`requestFullscreen({ navigationUI: 'hide' })`), since a touch's `pointerup` is a user
+    activation; leaving it (Android's back gesture), the next touch goes back in. Not on an
+    iPhone, where MDN's compatibility data says the API is "Only available on iPad, not on
+    iPhone"; there, adding the game to the home screen is the way to lose the browser's
+    bars, and the installed app (the manifest's `display: fullscreen`, landscape) doesn't
+    ask.
 - **Jukebox:** the bundled songs, then the imported ones, then Import and Back. Where the
   browser's file picker can pick a folder (`webkitdirectory`, Baseline since August 2025
   per MDN), left and right on Import choose "< File >" or "< Folder >" (Brad, 2026-11-10:
@@ -1329,8 +1355,8 @@ Run `pnpm dev` and open the URL it prints.
   its personal best stays with it, and replays find it by hash.
 - **Removing an imported song:** on its row the right-hand column reads "Del Remove"
   ("Select Remove" after a pad press); the first Del or Select turns it to "Del Confirm"
-  in magenta for 3 s, and a second removes the song and its cached levels. Touch has no
-  remove yet.
+  in magenta for 3 s, and a second removes the song and its cached levels. On a touch
+  screen a Remove key does the same, and the length stays in the column.
 
 Two query parameters help in development:
 

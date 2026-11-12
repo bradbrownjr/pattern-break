@@ -5,6 +5,7 @@ import { InputBit } from '@game/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { PadBit } from '../../src/game/gamepad.ts';
 import { TouchControls } from '../../src/game/touch.ts';
+import { BACK_SLOT, SELECT_SLOT, THIRD_SLOT } from '../../src/game/touch-input.ts';
 
 const made: TouchControls[] = [];
 
@@ -51,6 +52,9 @@ describe('touch controls', () => {
     pointer(fire, 'pointerdown', r.x + 5, r.y + 5, 2);
     expect(t.bits).toBe(InputBit.fire | PadBit.a);
     pointer(fire, 'pointerup', r.x + 5, r.y + 5, 2);
+    // The press is kept until the frame reads it, so a tap shorter than a frame counts.
+    expect(t.bits).toBe(InputBit.fire | PadBit.a);
+    t.endFrame();
     expect(t.bits).toBe(0);
   });
 
@@ -79,5 +83,49 @@ describe('touch controls', () => {
     expect([t.visible, t.root.style.display, t.bits]).toEqual([false, 'none', 0]);
     t.setPadConnected(false);
     expect([t.visible, t.bits]).toEqual([true, 0]);
+  });
+
+  it('menus show only their labelled keys, which hold pad bits or act on the lift', () => {
+    const t = make();
+    shown(t);
+    let saved = 0;
+    t.setKeys([
+      { slot: SELECT_SLOT, label: 'Retry', bits: PadBit.a },
+      { slot: BACK_SLOT, label: 'Title', bits: PadBit.b },
+      { slot: THIRD_SLOT, label: 'Save', bits: 0, action: () => saved++ },
+    ]);
+    const all = [...t.root.querySelectorAll<HTMLElement>('[data-button]')];
+    expect(all.filter((b) => b.style.display !== 'none').map((b) => b.dataset['label'])).toEqual(['Save', 'Title', 'Retry']);
+    const retry = t.root.querySelector<HTMLElement>('[data-label="Retry"]')!;
+    pointer(retry, 'pointerdown', 0, 0, 6);
+    expect(t.bits).toBe(PadBit.a);
+    pointer(retry, 'pointerup', 0, 0, 6);
+    t.endFrame();
+    expect(t.bits).toBe(0);
+    const save = t.root.querySelector<HTMLElement>('[data-label="Save"]')!;
+    pointer(save, 'pointerdown', 0, 0, 7);
+    expect([t.bits, saved]).toEqual([0, 0]);
+    t.endFrame();
+    pointer(save, 'pointerup', 0, 0, 7);
+    expect(saved).toBe(1);
+    // Back to play: all six, with their own bits.
+    t.setKeys(null);
+    expect(all.every((b) => b.style.display === '' && b.dataset['label'] === undefined)).toBe(true);
+    const fire = t.root.querySelector<HTMLElement>('[data-button="fire"]')!;
+    pointer(fire, 'pointerdown', 0, 0, 8);
+    expect(t.bits).toBe(InputBit.fire | PadBit.a);
+    pointer(fire, 'pointerup', 0, 0, 8);
+  });
+
+  it('a key that changed under the finger does not act on its lift', () => {
+    const t = make();
+    shown(t);
+    let acted = 0;
+    t.setKeys([{ slot: SELECT_SLOT, label: 'Save', bits: 0, action: () => acted++ }]);
+    const b = t.root.querySelector<HTMLElement>('[data-label="Save"]')!;
+    pointer(b, 'pointerdown', 0, 0, 9);
+    t.setKeys([{ slot: SELECT_SLOT, label: 'Next', bits: PadBit.a, action: () => acted++ }]);
+    pointer(b, 'pointerup', 0, 0, 9);
+    expect(acted).toBe(0);
   });
 });

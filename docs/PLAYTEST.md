@@ -64,7 +64,7 @@ shots feel in time with the music after.
 gamepad in Node alone, not on real devices.
 
 Finish or lose a run and enter a name on the game over or clear screen: once on the phone
-(touch the screen for its keyboard), once with a gamepad on the PC. Then let the other
+(tap Name for its keyboard), once with a gamepad on the PC. Then let the other
 player take a turn and post under their own name.
 
 **Looking for:** the keyboard opens in capitals and stays open, the keyboard's Enter and
@@ -93,3 +93,18 @@ block once, and brake out from under the next.
 **Looking for:** whether the broken walls, the falling block and the rubble are easy to
 read, whether crushing enemies feels worth setting up, the crumble sound, and whether
 braking out from under a block feels fair.
+
+### 7. The phone, upright and sideways
+
+**Why:** the touch controls gained an upright layout, labelled menu keys and full screen
+on 2026-11-12. Headless Chromium as a phone checked the layout; a real phone checks the
+rest.
+
+On the phone, open the game in the browser and tap the start screen. Go through the menus,
+the jukebox and a run held upright, then the same held sideways. Lose a run and try
+Replay, Save, Retry and Title. Swipe out of full screen once and tap again.
+
+**Looking for:** the page goes full screen on the first tap and back in after a swipe out;
+the picture sits at the top with the pad under it when upright; the menu keys read
+clearly and do what they say; quick taps on them never get missed; and nothing names a
+keyboard key while the touch keys are on show.

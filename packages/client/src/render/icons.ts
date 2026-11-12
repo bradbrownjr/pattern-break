@@ -2,6 +2,7 @@
 // so a button shows the same symbol as the HUD. One character a pixel: '.' is clear, the
 // rest are ICON_COLORS keys. No Pixi here, so the DOM side can draw them too.
 
+import { GLYPH_ADVANCE, GLYPH_HEIGHT, GLYPH_WIDTH, glyphRows, textWidth } from './font.ts';
 import { AMBER, BACKGROUND, CYAN, LIME, MAGENTA, VIOLET, WHITE } from './palette.ts';
 
 export const ICON_COLORS: Record<string, number> = { m: MAGENTA, w: WHITE, a: AMBER, l: LIME, g: 0x3c7a1a, c: CYAN, v: VIOLET, k: BACKGROUND };
@@ -140,4 +141,24 @@ export function iconSvg(map: readonly string[], colors: Record<string, number> =
     }
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges">${rects}</svg>`;
+}
+
+/**
+ * `text` in the game's pixel font as an SVG, one rect a lit pixel, for a labelled touch
+ * button. Its viewBox is textWidth(text) by GLYPH_HEIGHT.
+ */
+export function labelSvg(text: string, color: number): string {
+  const fill = `#${color.toString(16).padStart(6, '0')}`;
+  let rects = '';
+  let x0 = 0;
+  for (const char of text) {
+    const rows = glyphRows(char);
+    for (let y = 0; y < GLYPH_HEIGHT; y++) {
+      for (let x = 0; x < GLYPH_WIDTH; x++) {
+        if (((rows[y]! >> (GLYPH_WIDTH - 1 - x)) & 1) !== 0) rects += `<rect x="${x0 + x}" y="${y}" width="1" height="1"/>`;
+      }
+    }
+    x0 += GLYPH_ADVANCE;
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${textWidth(text)} ${GLYPH_HEIGHT}" shape-rendering="crispEdges" fill="${fill}">${rects}</svg>`;
 }

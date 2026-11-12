@@ -57,6 +57,7 @@ import {
 } from './bindings.ts';
 import { PadBit, PadCapture, PadTracker, PadWatcher, connectedPads, padMenuAction, padProfile, readGamepads } from './gamepad.ts';
 import { TouchControls } from './touch.ts';
+import { BACK_SLOT, FOURTH_SLOT, SELECT_SLOT, THIRD_SLOT, type TouchKey } from './touch-input.ts';
 import { CodeListener, keyToken, padToken, type CodeToken } from './secrets.ts';
 import { InputSampler, KeyMap, type MenuAction } from './input.ts';
 import { DisplayClock, InputLog, catchUp, targetTick } from './loop.ts';
@@ -202,6 +203,8 @@ interface Playback {
 interface CompleteView {
   heading: string;
   lines: string[];
+  /** What any key does, for the prompt ("Any key Next") and a touch screen's Select key. */
+  action: 'Next' | 'Credits' | 'Title' | 'Back';
   /** A line to show in amber (a new best), or none. */
   highlight?: number;
   after: () => void;
@@ -466,6 +469,8 @@ export class Game {
       { capture: true },
     );
     this.#touch = new TouchControls(document.body, this.#r.renderer.canvas as HTMLCanvasElement, () => this.#onPointer(true));
+    this.#touch.onPlacement = () => this.#place();
+    this.#place();
     this.#touchText = new TouchTextEntry(document.body);
     this.#touchText.onChange = (text) => {
       if (this.#nameEntry?.replace(text)) this.#refreshEndScreen();
@@ -479,10 +484,7 @@ export class Game {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') void this.#pause();
     });
-    window.addEventListener('resize', () => {
-      this.#r.resize();
-      this.#touch?.layout();
-    });
+    window.addEventListener('resize', () => this.#place());
     // The mouse wheel scrolls the help screen.
     window.addEventListener('wheel', (e) => {
       if (this.#mode !== 'help' || e.deltaY === 0) return;
@@ -524,6 +526,92 @@ export class Game {
       (err: unknown) => console.error('hangar intro unavailable:', err),
     );
     requestAnimationFrame(this.#frame);
+  }
+
+  /** Sizes and places the picture, then the touch controls around it. */
+  #place(): void {
+    this.#r.resize(this.#touch?.pictureTop ?? false);
+    this.#touch?.layout();
+  }
+
+  /** True while the touch buttons are on show: on-screen prompts leave out keys then, since the buttons say what they do. */
+  #touchShown(): boolean {
+    return this.#touch?.visible ?? false;
+  }
+
+  /**
+   * The touch buttons for the screen on show (Brad, 2026-11-12): the six play buttons in
+   * play, and off it only the keys the screen uses, named for what they do.
+   */
+  #touchKeys(): TouchKey[] | null {
+    const select = (label = 'Select'): TouchKey => ({ slot: SELECT_SLOT, label, bits: PadBit.a });
+    const back = (label = 'Back'): TouchKey => ({ slot: BACK_SLOT, label, bits: PadBit.b });
+    switch (this.#mode) {
+      case 'play':
+      case 'intro':
+      case 'hangar':
+        return null;
+      case 'title':
+      case 'paused':
+      case 'controls':
+      case 'settings':
+      case 'keys':
+      case 'help':
+      case 'credits':
+      case 'scores':
+        // Back on the title does nothing alone, but held while Select chooses Play it gives
+        // god mode, as Esc does, and B is in the Konami code.
+        return [select(), back()];
+      case 'jukebox': {
+        const keys = [select(), back()];
+        const row = this.#jukeboxMenu.row;
+        const song = row.kind === 'song' ? this.#songs[row.song] : undefined;
+        if (song?.imported) {
+          const armed = this.#removeArmed !== null && this.#removeArmed.song === song && performance.now() < this.#removeArmed.until;
+          keys.push({ slot: THIRD_SLOT, label: armed ? 'Confirm' : 'Remove', bits: PadBit.select, warn: armed });
+        }
+        return keys;
+      }
+      case 'sync': {
+        const sync = this.#sync;
+        if (!sync || sync.result === undefined) return [back()];
+        const retry: TouchKey = { slot: THIRD_SLOT, label: 'Retry', bits: PadBit.y };
+        return sync.result ? [select('Keep'), retry, back()] : [retry, back()];
+      }
+      case 'replay':
+        return [select('Stop')];
+      case 'gameover':
+      case 'complete': {
+        if (this.#nameEntry) {
+          if (!this.#nameEntryUp()) return [];
+          const entry = this.#nameEntry;
+          return [
+            select('Post'),
+            back('Skip'),
+            { slot: THIRD_SLOT, label: 'Name', bits: 0, action: () => this.#touchText?.open(entry.name, NAME_MAX, true) },
+          ];
+        }
+        const action = this.#mode === 'gameover' ? 'Retry' : (this.#completeView?.action ?? 'Title');
+        const keys = [select(action)];
+        if (action !== 'Title' && action !== 'Back') keys.push(back('Title'));
+        if (this.#offerReplay && this.#lastReplay) {
+          keys.push(
+            { slot: THIRD_SLOT, label: 'Replay', bits: PadBit.y },
+            {
+              slot: FOURTH_SLOT,
+              label: 'Save',
+              bits: 0,
+              action: () => {
+                if (this.#onEndScreen()) this.#saveReplay();
+              },
+            },
+          );
+        }
+        return keys;
+      }
+      default:
+        return [];
+    }
   }
 
   // Screens -------------------------------------------------------------------------------
@@ -702,8 +790,8 @@ export class Game {
     this.#padHeld = bits;
     this.#input.setPad(bits);
     const presses = this.#pads.update(bits, now);
-    if (capturing) return;
-    for (const bit of presses) this.#onPadPress(bit);
+    if (!capturing) for (const bit of presses) this.#onPadPress(bit);
+    this.#touch?.endFrame();
   }
 
   #onPadPress(bit: number): void {
@@ -919,7 +1007,9 @@ export class Game {
 
   /** God mode: Esc, or a pad's Start, held while Play is chosen by another key or button. */
   #godHeld(): boolean {
-    return this.#escHeld || ((this.#padHeld & PadBit.start) !== 0 && !this.#confirmByStart);
+    // On a touch screen it is Back held, as Esc is on a keyboard.
+    const touchBack = ((this.#touch?.bits ?? 0) & PadBit.b) !== 0;
+    return this.#escHeld || touchBack || ((this.#padHeld & PadBit.start) !== 0 && !this.#confirmByStart);
   }
 
   #onTitleEvent(event: TitleEvent): void {
@@ -1267,7 +1357,7 @@ export class Game {
   async #openSync(): Promise<void> {
     this.#stopMusic();
     this.#setMode('sync');
-    this.#syncScreen.update({ phase: 'running', presses: 0 });
+    this.#syncScreen.update({ phase: 'running', presses: 0 }, this.#touchShown());
     try {
       const player = await this.#getPlayer();
       if (this.#mode !== 'sync') return;
@@ -1287,7 +1377,7 @@ export class Game {
   #syncPress(): void {
     const sync = this.#sync;
     if (!sync || sync.result !== undefined) return;
-    this.#syncScreen.update({ phase: 'running', presses: sync.session.press() });
+    this.#syncScreen.update({ phase: 'running', presses: sync.session.press() }, this.#touchShown());
     if (sync.session.done) this.#finishSync();
   }
 
@@ -1298,7 +1388,7 @@ export class Game {
     sync.session.stop();
     sync.result = sync.session.result();
     sync.shownAt = performance.now();
-    this.#syncScreen.update({ phase: 'result', result: sync.result, was: this.#settings.syncMs });
+    this.#syncScreen.update({ phase: 'result', result: sync.result, was: this.#settings.syncMs }, this.#touchShown());
   }
 
   #syncKey(code: string): void {
@@ -2277,16 +2367,18 @@ export class Game {
     this.#message.container.visible = true;
     const results = this.#results;
     const naming = this.#nameEntry !== null;
+    // On a touch screen the buttons name what they do, so the keys are left out.
+    const touch = this.#touchShown();
     this.#message.show(
       'Game over',
       MAGENTA,
       [
         ...(results?.rows ?? [`Score ${this.#state.score}`]),
-        ...(!naming && this.#offerReplay && this.#lastReplay ? [REPLAY_HINT] : []),
+        ...(!naming && !touch && this.#offerReplay && this.#lastReplay ? [REPLAY_HINT] : []),
         ...(this.#boardLine ? [this.#boardLine] : []),
         ...this.#nameLines(),
         ...(this.#perfLines ?? []),
-        naming ? nameHint(this.#lastPressPad) : 'Esc Title  Any key Retry',
+        ...(touch ? [] : [naming ? nameHint(this.#lastPressPad) : 'Esc Title  Any key Retry']),
       ],
       results?.highlight ?? -1,
     );
@@ -2336,7 +2428,8 @@ export class Game {
     if (run?.kind === 'arcade' && run.level < run.songs.length - 1) {
       this.#completeView = {
         heading: `Level ${run.level + 1} clear`,
-        lines: [`${this.#song.title}, ${difficulty}`, ...score, 'Any key Next'],
+        lines: [`${this.#song.title}, ${difficulty}`, ...score],
+        action: 'Next',
         highlight,
         after: () => {
           this.#sound('start');
@@ -2348,14 +2441,16 @@ export class Game {
       const total = this.#runScore;
       this.#completeView = {
         heading: 'All clear',
-        lines: [difficulty, ...score, 'Any key Credits'],
+        lines: [difficulty, ...score],
+        action: 'Credits',
         highlight,
         after: () => this.#openCredits({ difficulty, total }),
       };
     } else {
       this.#completeView = {
         heading: 'Song clear',
-        lines: [`${this.#song.title}, ${difficulty}`, ...score, 'Any key Title'],
+        lines: [`${this.#song.title}, ${difficulty}`, ...score],
+        action: 'Title',
         highlight,
         after: () => this.#toTitle(),
       };
@@ -2382,12 +2477,15 @@ export class Game {
     // Drawn again on the screen it's on (a new line, the cursor's blink), the key delay runs on.
     if (this.#mode !== 'complete') this.#setMode('complete');
     this.#message.container.visible = true;
-    // While the name entry is up, R and S type, so the replay keys wait, and its hint is the prompt.
+    // While the name entry is up, R and S type, so the replay keys wait, and its hint is the
+    // prompt. On a touch screen the buttons name what they do, so the keys are left out.
     const naming = this.#nameEntry !== null;
-    const lines = naming ? [...view.lines.slice(0, -1).filter((l) => l !== REPLAY_HINT), nameHint(this.#lastPressPad)] : [...view.lines];
-    if (this.#boardLine) lines.splice(lines.length - 1, 0, this.#boardLine);
-    lines.splice(lines.length - 1, 0, ...this.#nameLines());
-    if (this.#perfLines) lines.splice(lines.length - 1, 0, ...this.#perfLines);
+    const touch = this.#touchShown();
+    const lines = view.lines.filter((l) => l !== REPLAY_HINT || (!naming && !touch));
+    if (this.#boardLine) lines.push(this.#boardLine);
+    lines.push(...this.#nameLines());
+    if (this.#perfLines) lines.push(...this.#perfLines);
+    if (!touch) lines.push(naming ? nameHint(this.#lastPressPad) : `Any key ${view.action}`);
     this.#message.show(view.heading, LIME, lines, view.highlight ?? -1);
     this.#afterComplete = view.after;
   }
@@ -2448,7 +2546,7 @@ export class Game {
   /** A message on the level-complete screen that any key dismisses back to the title. */
   #notice(heading: string, lines: string[]): void {
     this.#stopMusic();
-    this.#completeView = { heading, lines: [...lines, 'Any key Title'], after: () => this.#toTitle() };
+    this.#completeView = { heading, lines, action: 'Title', after: () => this.#toTitle() };
     this.#showComplete();
   }
 
@@ -2513,7 +2611,8 @@ export class Game {
     const check = stopped ? 'Stopped' : score === replay.score ? 'Score matches' : `Recorded ${replay.score}`;
     this.#completeView = {
       heading: 'Replay end',
-      lines: [`${song.title}, ${DIFFICULTY_LABELS[replay.difficulty]}`, `Score ${score}`, check, 'Any key Back'],
+      lines: [`${song.title}, ${DIFFICULTY_LABELS[replay.difficulty]}`, `Score ${score}`, check],
+      action: 'Back',
       after: () => this.#returnFromReplay(from),
     };
     this.#showComplete();
@@ -2563,6 +2662,7 @@ export class Game {
 
   readonly #frame = (now: number): void => {
     const start = performance.now();
+    this.#touch?.setKeys(this.#touchKeys());
     this.#pollPads(now);
     const r = this.#r;
     const level = this.#level;
@@ -2618,7 +2718,7 @@ export class Game {
         break;
       }
       case 'scores': {
-        if (this.#scoresMenu) this.#scoresScreen.update(this.#scoresMenu, blink);
+        if (this.#scoresMenu) this.#scoresScreen.update(this.#scoresMenu, blink, this.#touchShown());
         r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
         break;
       }
@@ -2637,7 +2737,7 @@ export class Game {
         this.#creditsRoll?.tick(Math.max(0, Math.min(100, now - this.#creditsAt)));
         this.#creditsAt = now;
         const note = this.#creditsNote && now < this.#creditsNote.until ? this.#creditsNote.text : '';
-        this.#credits.update(note);
+        this.#credits.update(note, this.#touchShown());
         r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
         break;
       }
@@ -2825,7 +2925,8 @@ export class Game {
       levels: this.#barLevels,
       note: note?.text ?? '',
       warn: note?.warn ?? false,
-      removeHint: song?.imported ? `${key} ${isArmed ? 'Confirm' : 'Remove'}` : '',
+      // On a touch screen the Remove key says it instead.
+      removeHint: song?.imported && !this.#touchShown() ? `${key} ${isArmed ? 'Confirm' : 'Remove'}` : '',
       removeArmed: isArmed,
       importFolder: this.#jukeboxMenu.importFolder,
     });
