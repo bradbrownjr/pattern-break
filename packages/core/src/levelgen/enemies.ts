@@ -220,7 +220,7 @@ export function placeEnemies(
       const y = slotTop * Q8 + (TURRET_HEIGHT * Q8) / 2;
       let spawn = 0;
       while (spawn < tickCount && x - scroll[spawn]! > ENTRY_X_Q8) spawn++;
-      add(EnemyKind.turret, inst, spawn, x, y, onCeiling ? 1 : 0, 0, fireTicks(inst, spawn, tickCount, 1 << 30, (t) => x - scroll[t]!));
+      add(EnemyKind.turret, inst, spawn, x, y, onCeiling ? 1 : 0, 0, fireTicks(inst, spawn, tickCount, tune.turretShots, (t) => x - scroll[t]!));
       return onCeiling ? 1 : 0;
     }
     return -1;

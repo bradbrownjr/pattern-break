@@ -226,12 +226,13 @@ export const DRONE_DELAY_TICKS = 16;
  * Shield (Brad, 2026-11-10): every life starts with SHIELD_MAX points, and the shield
  * power-up fills it again. Each hit costs its SHIELD_COST; while any points are left the
  * shield takes the hit, even one that costs more than is left, and the life is kept. With
- * none left, any hit costs a life. So a full shield takes three ships' bullets, two tank
- * shells, one turret shell, or two touches of the wall.
+ * none left, any hit costs a life. So a full shield takes six ships' bullets, three tank
+ * shells, two turret shells, or two touches of the wall. The bullet costs were 2, 3 and 6
+ * until 2026-11-13, when no one could clear level 1 on normal (Brad).
  */
 export const SHIELD_MAX = 6;
 /** Shield points each hit costs: an enemy bullet by the kind that fired it (indexed by EnemyKind), ramming an enemy, a wall. */
-export const SHIELD_BULLET_COST = [6, 3, 2] as const;
+export const SHIELD_BULLET_COST = [3, 2, 1] as const;
 export const SHIELD_RAM_COST = 3;
 export const SHIELD_WALL_COST = 3;
 /**

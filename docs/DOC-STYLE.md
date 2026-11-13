@@ -117,6 +117,7 @@ and, for attribution, wrong.
 | `docs/CHANGELOG.md` | Anyone asking what's done | Finished work, newest first |
 | `docs/DEVELOPMENT.md` | Anyone changing the code | Setup, commands, layout, conventions, checks, process |
 | `docs/SELF-HOSTING.md` | Anyone running the Docker image | Docker, Compose and Unraid setup, tags, HTTPS, updating |
+| `docs/REFERENCES.md` | Anyone asking where a decision came from | Every published source the project rests on, by topic |
 | `docs/DOC-STYLE.md` | Anyone writing | This file |
 | `CLAUDE.md` | Coding agents | Working rules; points to the files above |
 

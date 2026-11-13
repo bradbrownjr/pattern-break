@@ -42,6 +42,10 @@ levels, or any songs from Levels.
 
 **Looking for:**
 
+- Since 2026-11-13 (lighter bullet costs, fewer turret shells, a new level order): can you
+  clear the arcade run's first levels on Normal, losing a life or two along the way? The
+  aim is a win you have to work for, not a clean sweep. If Normal is now too easy or still
+  too hard, say which levels.
 - Is Easy too easy, or still too much for a new player? Your son's take matters most here.
 - Is Hard a fair challenge, or too busy? It sends about 2.5 to 3 ships a second on most songs.
 - Any death that felt unfair, with nothing you could have done: note the song,

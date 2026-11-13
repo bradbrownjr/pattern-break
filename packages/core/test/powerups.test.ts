@@ -272,11 +272,11 @@ describe('shield', () => {
     expect([s.lives, s.shield]).toEqual([2, SHIELD_MAX]);
   });
 
-  it("takes three ships' bullets, two tank shells or one turret shell; the next hit costs a life", () => {
+  it("takes six ships' bullets, three tank shells or two turret shells; the next hit costs a life", () => {
     for (const [kind, hits] of [
-      [EnemyKind.ship, 3],
-      [EnemyKind.tank, 2],
-      [EnemyKind.turret, 1],
+      [EnemyKind.ship, 6],
+      [EnemyKind.tank, 3],
+      [EnemyKind.turret, 2],
     ] as const) {
       const s = createSimState();
       for (let k = 0; k < hits; k++) {

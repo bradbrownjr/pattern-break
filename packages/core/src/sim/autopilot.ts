@@ -9,6 +9,10 @@
 // take one. It steers for capsules it can reach (each unlocks a power-up). Walls that
 // blasts break open up for it, and it dodges falling blocks as it dodges bullets, braking
 // and backing up out from under them.
+//
+// Its dodging is perfect, so it says little about how a person fares. Given a miss share,
+// it fails to see that share of the enemy bullets, a stand-in for a person's lapses of
+// attention (2026-11-13): `pnpm check:difficulty` flies every level that way too.
 
 import { solidWalls } from '../levelgen/path-check.ts';
 import { EnemyKind, EnemyTuning, type Level } from '../levelgen/types.ts';
@@ -121,7 +125,7 @@ const SHOT_HH = (SHOT_HEIGHT * Q8) / 2;
 const SHOT_HW = (SHOT_WIDTH * Q8) / 2;
 /** Steps along a shot's path checked against the walls, Q8. */
 const AIM_STEP = 8 * Q8;
-/** Lining up order: ships first (they fly at the ship), then turrets (a hit costs the whole shield), then tanks. */
+/** Lining up order: ships first (they fly at the ship), then turrets (a hit costs half the shield), then tanks. */
 const AIM_RANK = [1, 2, 0];
 
 /**
@@ -342,9 +346,27 @@ function clearRange(level: Level, walls: { ceiling: Uint8Array; floor: Uint8Arra
   }
 }
 
-/** Flies `level` from the start and returns the input log, one byte per tick. */
-export function autopilotInputs(level: Level): Uint16Array {
+/**
+ * Whether the autopilot misses the bullet fired into `slot` at tick `t`, given it misses
+ * `missPercent` in 100: an integer hash of the two, so the choice is fixed per level and
+ * doesn't fall into step with a regular beat.
+ */
+function missesBullet(t: number, slot: number, missPercent: number): boolean {
+  let h = Math.imul(t, BULLET_SLOTS) + slot;
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
+  return ((h ^ (h >>> 16)) >>> 0) % 100 < missPercent;
+}
+
+/**
+ * Flies `level` from the start and returns the input log, one byte per tick. With
+ * `missPercent` above 0, that share of the enemy bullets (out of 100) goes unseen for its
+ * whole flight; 0 sees every one.
+ */
+export function autopilotInputs(level: Level, missPercent = 0): Uint16Array {
   const inputs = new Uint16Array(level.tickCount);
+  /** Per bullet slot: 1 while it holds a bullet the bot has seen fired, 2 one it missed. */
+  const seen = new Uint8Array(BULLET_SLOTS);
   const state = createSimState();
   const walls = solidWalls(level);
   let seenBreaks = 0;
@@ -374,7 +396,14 @@ export function autopilotInputs(level: Level): Uint16Array {
     roomFilled = 0;
     predictBlocks(state);
     let liveCount = 0;
-    for (let b = 0; b < BULLET_SLOTS; b++) if (state.bulletActive[b]) live[liveCount++] = b;
+    for (let b = 0; b < BULLET_SLOTS; b++) {
+      if (!state.bulletActive[b]) {
+        seen[b] = 0;
+        continue;
+      }
+      if (seen[b] === 0) seen[b] = missesBullet(t, b, missPercent) ? 2 : 1;
+      if (seen[b] === 1) live[liveCount++] = b;
+    }
     for (let i = state.firstLive; i < state.nextSpawn; i++) {
       if (state.enemyStatus[i] === EnemyStatus.alive && e.kind[i] === EnemyKind.ship) live[liveCount++] = -1 - i;
     }

@@ -111,8 +111,8 @@ export const shots: Shot[] = [
       'the right, its thumb at the top. Cyan section names, then rows of an icon, a white label and a ' +
       'value on the right. Enemies: the magenta ship sprite, Ship, 100 in amber; the turret, Turret, 200; ' +
       'the lime tank, "Tank 3 hits", 300. Shield: the player ship inside a cyan ring, "Each life", "6 ' +
-      'points" in grey; a magenta dot, "Ship bullet", -2 in amber; a lime block, "Tank shell", -3; an ' +
-      'amber pellet, "Turret shell", -6; no icon, Wall, "-3 Bounce" in amber; no icon, "Falling wall", ' +
+      'points" in grey; a magenta dot, "Ship bullet", -1 in amber; a lime block, "Tank shell", -2; an ' +
+      'amber pellet, "Turret shell", -3; no icon, Wall, "-3 Bounce" in amber; no icon, "Falling wall", ' +
       '-3; no icon, Ram, -3.',
     caption: 'The help screen at its top. Not used in the README.',
     usedIn: [],
@@ -316,7 +316,7 @@ export const shots: Shot[] = [
       'The player ship on the left is inside a faint cyan ring, its shield, with cyan shots ahead; "200" ' +
       'in white on the right where an enemy was destroyed, and an amber-framed capsule on a floor tip. In ' +
       'the HUD, a row of small power-up icons on a dark panel in the top left corner, bright for what the ' +
-      'ship has and faint for the rest, ending in three faint nuke icons; "x2" in amber and "0002000" in ' +
+      'ship has and faint for the rest, ending in three faint nuke icons; "x2" in amber and "0001800" in ' +
       'the top right; three ship icons for the lives in the bottom left; six cyan shield pips in the ' +
       'bottom right.',
     caption: 'The pause menu over play. Not used in the README.',
@@ -391,11 +391,11 @@ export const shots: Shot[] = [
       'olive and amber, the copper bars. Two small magenta and amber turrets hang upside down from tips ' +
       'of the ceiling. A small cyan ship with a magenta engine flame flies on the left inside a faint ' +
       'cyan ring, its shield, with a row of cyan shots ahead of it, and "200" in white pixel digits on ' +
-      'the right where an enemy was just destroyed. An amber-framed capsule showing a white and cyan orb, ' +
+      'the right where an enemy was just destroyed. An amber-framed capsule showing a cyan missile, ' +
       'the next power-up, sits on a floor tip. In the HUD, a row of small power-up icons on a dark panel ' +
       'in the top left corner, bright for what the ship has and faint for the rest, ending in three faint ' +
-      'nuke icons; here the bomb, the missile and the angled double shot are bright. "x2" in amber and ' +
-      '"0002000" in white are in the top right corner; three small ship icons for the lives are in the ' +
+      'nuke icons; here the bomb and the angled double shot are bright. "x2" in amber and ' +
+      '"0001800" in white are in the top right corner; three small ship icons for the lives are in the ' +
       'bottom left; six cyan shield pips are in the bottom right.',
     caption: 'Pattern Break at 21.5 seconds into the test song on normal, with the ship flown by the autopilot.',
     usedIn: ['readme'],

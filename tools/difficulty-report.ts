@@ -6,15 +6,19 @@
 // - enemy bullets on screen at once, the 95th percentile and the most, over the bot's run;
 // - the narrowest gap in px, turrets and tank tracks counted as wall (solidWalls), and the
 //   5th percentile gap over the bars;
-// - how far the bot got (percent of the song) and the lives it lost.
+// - how far the bot got (percent of the song) and the lives it lost;
+// - the same bot missing HUMAN_MISS_PERCENT of the enemy bullets, a stand-in for a person
+//   (docs/PLAN.md, "Difficulty guardrails"): how far it got, the lives it lost, and the
+//   shield points it spent a minute.
 //
 // Usage: node tools/difficulty-report.ts [--check] [--json out.json] [file.mod ...]
 // With no files it measures the bundled songs (music/manifest.json) and the test songs
 // (packages/analysis/fixtures/test-songs) on easy, normal and hard, and Crush on impossible
 // too. --check (pnpm check:difficulty) fails unless the guardrails hold (docs/PLAN.md,
 // "Difficulty guardrails"): the autopilot finishes every level; on every song each step up
-// has more enemies a minute; and no level has as many enemies a minute as the median level
-// one difficulty up.
+// has more enemies a minute; no level has as many enemies a minute as the median level
+// one difficulty up; and missing HUMAN_MISS_PERCENT of the bullets, the autopilot finishes
+// every easy and normal level.
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
@@ -36,6 +40,13 @@ import {
   type DifficultyName,
   type Level,
 } from '../packages/core/src/index.ts';
+
+/**
+ * The share of enemy bullets (out of 100) the human model misses. With the rules before
+ * 2026-11-13, the autopilot missing 15 failed level 1 on normal, as Brad did; at 20 every
+ * easy and normal level must be finished.
+ */
+export const HUMAN_MISS_PERCENT = 20;
 
 const ROOT = resolve(fileURLToPath(import.meta.url), '..', '..');
 const { values, positionals } = parseArgs({
@@ -67,6 +78,39 @@ export interface LevelReport {
   botReachedPct: number;
   botFinished: boolean;
   botLivesLost: number;
+  humanReachedPct: number;
+  humanFinished: boolean;
+  humanLivesLost: number;
+  humanShieldPerMin: number;
+}
+
+/** Flies `level` with the autopilot missing `missPercent` of the bullets. */
+function fly(level: Level, missPercent: number) {
+  const inputs = autopilotInputs(level, missPercent);
+  const state = createSimState();
+  const bullets = new Uint8Array(level.tickCount);
+  let t = 0;
+  let lost = 0;
+  let shieldSpent = 0;
+  while (!state.dead && !state.finished && t < level.tickCount) {
+    const hit = state.hitTick;
+    const shield = state.shield;
+    tick(level, state, inputs[t] ?? 0);
+    // Extra lives come with the score, so each life lost counts, not the difference.
+    if (state.hitTick !== hit) lost++;
+    else if (state.shield < shield) shieldSpent += shield - state.shield;
+    let n = 0;
+    for (let b = 0; b < BULLET_SLOTS; b++) n += state.bulletActive[b]!;
+    bullets[t++] = n;
+  }
+  const reached = state.dead ? state.deathTick : state.tick;
+  return {
+    bullets: bullets.slice(0, t),
+    reachedPct: Math.round((reached / level.tickCount) * 1000) / 10,
+    finished: state.finished,
+    lost,
+    shieldSpent,
+  };
 }
 
 function percentile(sorted: ArrayLike<number>, q: number): number {
@@ -85,22 +129,9 @@ function measure(song: string, level: Level): LevelReport {
   for (let i = 0; i < level.barCount; i++) gaps[i] = PLAYFIELD_HEIGHT - (walls.ceiling[i]! + walls.floor[i]!) * SEGMENT_PITCH;
   gaps.sort();
 
-  const inputs = autopilotInputs(level);
-  const state = createSimState();
-  const bullets = new Uint8Array(level.tickCount);
-  let t = 0;
-  let lost = 0;
-  while (!state.dead && !state.finished && t < level.tickCount) {
-    const hit = state.hitTick;
-    tick(level, state, inputs[t] ?? 0);
-    // Extra lives come with the score, so each life lost counts, not the difference.
-    if (state.hitTick !== hit) lost++;
-    let n = 0;
-    for (let b = 0; b < BULLET_SLOTS; b++) n += state.bulletActive[b]!;
-    bullets[t++] = n;
-  }
-  const flown = bullets.slice(0, t).sort();
-  const reached = state.dead ? state.deathTick : state.tick;
+  const bot = fly(level, 0);
+  const human = fly(level, HUMAN_MISS_PERCENT);
+  const flown = bot.bullets.sort();
   return {
     song,
     difficulty: level.difficulty,
@@ -113,15 +144,19 @@ function measure(song: string, level: Level): LevelReport {
     bulletsMax: flown.length ? flown[flown.length - 1]! : 0,
     gapMinPx: gaps[0] ?? 0,
     gapP5Px: percentile(gaps, 0.05),
-    botReachedPct: Math.round((reached / level.tickCount) * 1000) / 10,
-    botFinished: state.finished,
-    botLivesLost: lost,
+    botReachedPct: bot.reachedPct,
+    botFinished: bot.finished,
+    botLivesLost: bot.lost,
+    humanReachedPct: human.reachedPct,
+    humanFinished: human.finished,
+    humanLivesLost: human.lost,
+    humanShieldPerMin: Math.round((human.shieldSpent / seconds) * 600) / 10,
   };
 }
 
 const openmpt = await loadOpenMpt();
 const rows: LevelReport[] = [];
-const header = ['song', 'diff', 's', 'en/min', 'ship', 'turr', 'tank', 'bul95', 'bulMax', 'gapMin', 'gap5', 'bot%', 'lost'];
+const header = ['song', 'diff', 's', 'en/min', 'ship', 'turr', 'tank', 'bul95', 'bulMax', 'gapMin', 'gap5', 'bot%', 'lost', 'hum%', 'hLost', 'hShld'];
 console.log(header.join('\t'));
 for (const file of files) {
   const song = basename(file).replace(/\.[^.]+$/, '');
@@ -133,7 +168,7 @@ for (const file of files) {
     const r = measure(song, generateLevel(data, difficulty));
     rows.push(r);
     console.log(
-      [r.song, r.difficulty.slice(0, 4), r.seconds, r.enemiesPerMin, r.shipsPerMin, r.turretsPerMin, r.tanksPerMin, r.bulletsP95, r.bulletsMax, r.gapMinPx, r.gapP5Px, r.botReachedPct, r.botLivesLost].join('\t'),
+      [r.song, r.difficulty.slice(0, 4), r.seconds, r.enemiesPerMin, r.shipsPerMin, r.turretsPerMin, r.tanksPerMin, r.bulletsP95, r.bulletsMax, r.gapMinPx, r.gapP5Px, r.botReachedPct, r.botLivesLost, r.humanReachedPct, r.humanLivesLost, r.humanShieldPerMin].join('\t'),
     );
   }
 }
@@ -144,6 +179,11 @@ function guardrailFailures(reports: readonly LevelReport[]): string[] {
   const failures: string[] = [];
   for (const r of reports) {
     if (!r.botFinished) failures.push(`${r.song} ${r.difficulty}: the autopilot got ${r.botReachedPct}% of the way`);
+  }
+  for (const r of reports) {
+    if ((r.difficulty === 'easy' || r.difficulty === 'normal') && !r.humanFinished) {
+      failures.push(`${r.song} ${r.difficulty}: missing ${HUMAN_MISS_PERCENT}% of the bullets, the autopilot got ${r.humanReachedPct}% of the way`);
+    }
   }
   const steps: DifficultyName[] = ['easy', 'normal', 'hard'];
   const rate = (song: string, d: DifficultyName) => reports.find((r) => r.song === song && r.difficulty === d)?.enemiesPerMin;

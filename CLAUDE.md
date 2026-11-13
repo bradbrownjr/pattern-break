@@ -16,6 +16,8 @@ tracker. The docs, each with one job:
   them. What they find becomes roadmap items.
 - **`docs/SOUND-EFFECTS.md`**: the sound effects' research, with sources, their design,
   and what was measured. The generator, `packages/chipfx`, is meant for reuse.
+- **`docs/REFERENCES.md`**: every study, guide, specification and other published source
+  the project rests on, by topic, with what each informed.
 
 ## Writing
 
@@ -78,6 +80,9 @@ forgotten next session.
 - Rely on published knowledge, not assumed knowledge: before setting a design target, a
   standard, or a technical fact, find and cite a published source, and say so when none
   exists (Brad, 2026-11-11).
+- Every source research turns up that informs a decision goes in `docs/REFERENCES.md`, with
+  what it informed and where, as well as beside the decision; so do searches that found
+  nothing (Brad, 2026-11-13).
 - On-screen text is arcade terse: labels and key prompts ("R Replay"), never sentences
   (Brad, 2026-11-09; see `docs/DOC-STYLE.md`, "On-screen text is arcade terse").
 - Completed roadmap items move to the changelog without waiting for Brad's play-test, and

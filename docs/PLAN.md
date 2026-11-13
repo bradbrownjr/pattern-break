@@ -185,7 +185,9 @@ every bar of every generated level.
     three heights.
   - **Fire:** an enemy fires at the ship on its instrument's notes while it is on screen
     ahead of the ship, and no more often than the difficulty allows. Ships wait 0.25 s and
-    fire 0, 1 or 2 times by difficulty. A bullet is aimed when fired and flies straight.
+    fire 0, 1 or 2 times by difficulty; turrets fire 1, 3 or 4 times (2026-11-13: until
+    then a turret fired on every drum note it could, 103 shells a minute on level 1's
+    normal, most of that level's fire). A bullet is aimed when fired and flies straight.
   - **Per difficulty** (`EnemyTuning`): the least time between turrets, between tanks and
     between formations, enemy bullet speed, and how many bullets can be in flight. No enemy
     appears or fires in a song's first 2 s.
@@ -202,7 +204,21 @@ every bar of every generated level.
      generated level is impossible;
   2. on every song, each step up (easy, normal, hard) has more enemies a minute;
   3. no level has as many enemies a minute as the median level one difficulty up, so no
-     song is an outlier for its difficulty.
+     song is an outlier for its difficulty;
+  4. the human model finishes every easy and normal level (2026-11-13).
+
+  The autopilot dodges perfectly, so the first three say little about a person: before
+  2026-11-13 it finished level 1 on normal untouched while Brad couldn't clear it. The
+  human model is the autopilot failing to see 20% of the enemy bullets
+  (`HUMAN_MISS_PERCENT`), a stand-in for lapses of attention. Missing 15%, it failed level 1
+  on normal under the old rules, as Brad did; so 20% is a player a little less steady than
+  that, and Hard may beat it. A reaction delay was tried first and made no difference:
+  shots take a median 1.5 to 2.2 s to reach the ship, against a mean visual reaction time
+  of 0.21 to 0.23 s (Woods et al. 2015). The aim for normal comes from Juul's study of
+  failure: players who failed some and then finished rated a game highest, above those who
+  never failed. The report prints the lives the model lost and the shield points it spent a
+  minute; on the arcade levels on normal it loses 0 to 2 lives, and 7 on the last, Keygen
+  9000, where score brings extra lives. The sources are in [REFERENCES.md](REFERENCES.md).
 
   They are relative on purpose. No published standard sets enemies a minute or bullets on
   screen for an arcade shooter; write-ups on the genre describe difficulty in kind (rank
@@ -239,10 +255,15 @@ every bar of every generated level.
   (axis-aligned bounding box) or small hitboxes. Enemy bullets stop on the walls. Bullets
   are aimed with `Math.sqrt`, which IEEE 754 rounds the same in every engine.
 - **Shield (2026-11-10):** every life starts with a 6-point shield. A ship's bullet costs
-  2, a tank's shell 3, a turret's shell 6, ramming an enemy 3, and touching a wall 3,
+  1, a tank's shell 2, a turret's shell 3, ramming an enemy 3, and touching a wall 3,
   which bounces the ship back towards the middle of the cave instead of killing it. While
   it has points it takes any hit; with none, a hit costs a life. It flickers with a thud
-  on each hit. (Brad's play-test: no one had finished a level.)
+  on each hit. (Brad's play-test: no one had finished a level.) The bullet costs were 2, 3
+  and 6 until 2026-11-13, when Brad couldn't clear level 1 on normal; he set the new ones,
+  and an enemy missile, when bosses have them, will cost 2. Brief invincibility after a
+  shield hit was considered and left out: Brad would rather not unless it proves needed,
+  and the lower costs and the turret cap were enough in the human model (see "Difficulty
+  guardrails").
 - **Extra lives (2026-11-10):** one each time the score reaches a multiple of 20 000, up
   to 9.
 - **Lives (2026-11-09):** three. A hit with the shield empty costs one; ramming an enemy destroys it too. The

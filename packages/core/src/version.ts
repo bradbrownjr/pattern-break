@@ -10,7 +10,8 @@
  * (2026-11-09). 5 = each ship's formation, for power-up capsules (2026-11-09). 6 = every
  * gap 14 px wider, one segment a side (2026-11-10). 7 = the impossible difficulty
  * (2026-11-10). 8 = Amiga resampler emulation off, which changes MODs' analysis
- * (2026-11-10). 9 = no peak hold: peak dots are gone (Brad, 2026-11-11).
+ * (2026-11-10). 9 = no peak hold: peak dots are gone (Brad, 2026-11-11). 10 = each turret
+ * fires at most 1, 3 or 4 shots by difficulty (2026-11-13).
  * Pre-release: no scores are kept yet.
  *
  * SIM_VERSION 1 = the ship and terrain (M1). 2 = enemies, shots, enemy bullets and three
@@ -27,10 +28,11 @@
  * bounce off the walls, and an extra life every 20 000 points (2026-11-10). 13 = the
  * player's shots and laser stop on the walls, and missiles burst on them (Brad,
  * 2026-11-11). 14 = missiles and bombs break the walls, and the ceiling beyond a cut falls,
- * crushing what it meets (Brad, 2026-11-11).
+ * crushing what it meets (Brad, 2026-11-11). 15 = enemy bullets cost the shield 1 (ship),
+ * 2 (tank) and 3 (turret) points, not 2, 3 and 6 (Brad, 2026-11-13).
  */
-export const GEN_VERSION = 9;
-export const SIM_VERSION = 14;
+export const GEN_VERSION = 10;
+export const SIM_VERSION = 15;
 
 /** Fixed simulation tick rate (docs/PLAN.md, "Simulation"). */
 export const TICK_HZ = 120;

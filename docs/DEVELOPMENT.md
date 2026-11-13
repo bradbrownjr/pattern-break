@@ -385,7 +385,9 @@ by formula, so nothing in the list depends on how the player flies.
   climbs, 3 (slide down) dives, 1 (arpeggio) with a nonzero parameter hops.
 - **Fire ticks:** the instrument's note ticks from the enemy's spawn (ships: 30 ticks after),
   taken while its screen x at that tick is within 104 to 376 and at least
-  `fireIntervalTicks` after the last one taken. Ships take at most `shipShots`.
+  `fireIntervalTicks` after the last one taken. Ships take at most `shipShots`, turrets
+  `turretShots` (since `GEN_VERSION` 10, 2026-11-13; before it a turret took every one,
+  about 3.6 each on Neon Techno's normal, where turrets fired 103 shells a minute).
 
 | `EnemyTuning` | Easy | Normal | Hard |
 |---|---|---|---|
@@ -397,6 +399,7 @@ by formula, so nothing in the list depends on how the player flies.
 | Bullet speed (Q8 per tick) | 224 | 288 | 352 |
 | Bullets in flight | 4 | 8 | 12 |
 | Shots per ship | 0 | 1 | 2 |
+| Shots per turret | 1 | 3 | 4 |
 | Ship speed (Q8 per tick) | 224 | 288 | 352 |
 
 On the nine songs (2026-11-09), normal gives 27 to 97 turrets, 1 to 21 tanks, and 77 to
@@ -512,8 +515,8 @@ formation count and that many u8 sizes.
   walls always cost a life): `state.shield` is 6 points (`SHIELD_MAX`) at the start of the
   run and of every life, and the shield power-up fills it again, so capsules skip it while
   it is full. A hit costs `SHIELD_BULLET_COST` by the kind that fired the bullet
-  (`state.bulletKind`, set from `level.enemies.kind` in `fireAtShip`): a ship's 2, a tank's
-  3, a turret's 6; ramming an enemy 3 (`SHIELD_RAM_COST`, which Brad didn't set); a wall 3
+  (`state.bulletKind`, set from `level.enemies.kind` in `fireAtShip`): a ship's 1, a tank's
+  2, a turret's 3 (Brad, `SIM_VERSION` 15; 2, 3 and 6 before); ramming an enemy 3 (`SHIELD_RAM_COST`, which Brad didn't set); a wall 3
   (`SHIELD_WALL_COST`). While any points are left the shield takes the hit, even one that
   costs more than is left: the life and the streak are kept, and a rammed enemy is still
   destroyed, scoring nothing. `state.shieldHitTick` records the hit for the flicker and
@@ -584,8 +587,8 @@ formation count and that many u8 sizes.
   through the walls from `solidWalls()`, so it steers clear of turrets and tank tracks.
   - **Aim:** it lines up on an enemy up to 200 px ahead that a shot fired now would reach
     without meeting a wall (checked every 8 px along the shot's path, at the tick the shot
-    gets there): ships first, since they fly at it, then turrets, whose shell costs the
-    whole shield, then tanks; the nearest of a kind first. A turret or tank on a wall is
+    gets there): ships first, since they fly at it, then turrets, whose shell costs half
+    the shield, then tanks; the nearest of a kind first. A turret or tank on a wall is
     lined up from the nearest clear height that still hits it. It keeps fire held down.
   - **Weapons:** it presses bomb when it can drop one and a tank or floor turret is 60 to
     140 px ahead, and launches a missile at any enemy up to 240 px ahead and within 12 px
@@ -621,6 +624,13 @@ formation count and that many u8 sizes.
     the walls ahead, and the bullets and ships are listed once a tick.
   - On the terrain alone (`withoutEnemies(level)`) it always reaches the end; tests use
     that to show the path exists.
+  - **Missing bullets** (2026-11-13): `autopilotInputs(level, missPercent)` fails to see
+    `missPercent` in 100 of the enemy bullets for their whole flight, a stand-in for a
+    person's lapses of attention, since its own dodging is perfect. Which bullets is an
+    integer hash of the tick each was fired and its slot (`missesBullet`), so it is fixed
+    per level and doesn't fall into step with a regular beat, as a plain multiply and
+    modulo did. A reaction delay was tried first and changed nothing: shots take a median
+    1.5 to 2.2 s to reach the ship, against a person's 0.21 to 0.23 s (`REFERENCES.md`).
 - **Speed:** `pnpm --filter @game/analysis bench:sim` on the fixture ran 12.5 to 13.7
   million ticks per second in Node 26 in the cloud development container (checked
   2026-11-08, before enemies). With enemies and power-ups it runs 0.5 to 0.6 million, 4000
@@ -697,7 +707,7 @@ the boards don't depend on it; update that hash in the same commit.
 run of level 1 (Neon Techno on normal) recorded by the game in Chromium.
 `test/replay.test.ts` checks that it names this `GEN_VERSION` and `SIM_VERSION` and the song
 file's SHA-256, builds the level from `music/neon_techno.mod`, runs the inputs, and gets the
-recorded score (100 900) on the recorded last tick, in Node and in every browser.
+recorded score (103 200) on the recorded last tick, in Node and in every browser.
 
 **Bundled songs.** `packages/analysis/test/music.test.ts` analyzes every song in
 `music/manifest.json`, builds its level on each difficulty, and checks that it has enemies,
@@ -710,7 +720,9 @@ each bundled and test song's level on easy, normal and hard (and Crush on imposs
 flies it with the autopilot and the enemies, and prints per level: enemies a minute, and
 ships, turrets and tanks; enemy bullets on screen, the 95th percentile and the most; the
 narrowest gap and the 5th percentile gap, with turrets and tank tracks as wall; how far
-the autopilot got and the lives it lost. It fails unless the guardrails in `docs/PLAN.md`,
+the autopilot got and the lives it lost; and the same for the autopilot missing 20% of
+the bullets (`HUMAN_MISS_PERCENT`, the human model), with the shield points it spent a
+minute. It fails unless the guardrails in `docs/PLAN.md`,
 "Difficulty guardrails", hold. `--json <file>` saves the rows, and song files named on the
 command line are measured in place of the bundled and test songs. It takes a few
 minutes, too long for `pnpm test`, so CI runs it as its own job. The test songs are in
@@ -1433,8 +1445,9 @@ adding the file and its entry. The generated test song (`pb-fixture-01.mod`) sta
 The part each song plays is set in `songs.ts`, not the manifest:
 
 - `TITLE_SONG_ID`: the title and demo music, and Levels' first song (The_Epic_Chip).
-- `LEVEL_SONG_IDS`: the eight arcade levels in order, by scroll speed, from Neon Techno to
-  Keygen 9000.
+- `LEVEL_SONG_IDS`: the eight arcade levels in order, from Neon Techno to Keygen 9000:
+  Neon Techno first as Brad chose, then by how hard the human model finds each on normal
+  (2026-11-13; [`SONG-DIGEST.md`](SONG-DIGEST.md), "Bundled").
 - `IMPOSSIBLE_SONG_IDS`: the secret Impossible difficulty's run, one level: Crush, the
   fastest song measured.
 - `CREDITS_SONG_ID`: the ending's credit roll, after the last level (Sleepy Snow).
@@ -1462,11 +1475,11 @@ is added.
 | The_Epic_Chip | `the_epic_chip.xm` | Drozerix | Title, demo |
 | Neon Techno | `neon_techno.mod` | Drozerix | Level 1 |
 | RNDD_Keygen#1.0 | `rndd_keygen_1.xm` | Drozerix | Level 2 |
-| CHiP_OVERTURE | `chip_overture.xm` | Drozerix | Level 3 |
-| The_Dim_Dungeon | `the_dim_dungeon.xm` | Drozerix | Level 4 |
-| 4_RNDD! | `4_rndd.xm` | Drozerix | Level 5 |
-| Girl From Mars | `girl_from_mars.xm` | Drozerix | Level 6 |
-| Wrath_of_the_Djinn | `wrath_of_the_djinn.xm` | Drozerix | Level 7 |
+| Girl From Mars | `girl_from_mars.xm` | Drozerix | Level 3 |
+| 4_RNDD! | `4_rndd.xm` | Drozerix | Level 4 |
+| CHiP_OVERTURE | `chip_overture.xm` | Drozerix | Level 5 |
+| Wrath_of_the_Djinn | `wrath_of_the_djinn.xm` | Drozerix | Level 6 |
+| The_Dim_Dungeon | `the_dim_dungeon.xm` | Drozerix | Level 7 |
 | Keygen 9000 | `keygen_9000.xm` | Drozerix | Level 8, game over |
 | Crush | `crush.xm` | Drozerix | Impossible |
 | Augmented_Emotions | `augmented_emotions.xm` | Drozerix | Pack |

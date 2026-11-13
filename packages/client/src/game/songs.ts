@@ -60,7 +60,8 @@ export const SONGS: readonly BundledSong[] = manifest.map((entry) => {
 export const TITLE_SONG_ID = 'the_epic_chip';
 
 /**
- * The arcade run's levels, first to last, ordered by scroll speed. The mini boss ends level 4
+ * The arcade run's levels, first to last: Neon Techno, Brad's pick for level 1, then by how
+ * hard the human model finds each on normal (docs/SONG-DIGEST.md). The mini boss ends level 4
  * and the final boss level 8. The list is in music/arcade.json, which the server reads too,
  * to check arcade runs. Why each song was picked, and the ones that weren't, are in
  * docs/SONG-DIGEST.md.

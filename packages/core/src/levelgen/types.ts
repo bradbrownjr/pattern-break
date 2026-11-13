@@ -63,6 +63,8 @@ export type ShipMotion = (typeof ShipMotion)[keyof typeof ShipMotion];
  *   between two turrets, two tanks, or the starts of two ship formations.
  * - `formationSize`: ships in a formation, one per note of the phrase that sends it.
  * - `fireIntervalTicks`: the least time between two shots of one enemy.
+ * - `turretShots`: shots each turret may fire (2026-11-13: until then a turret fired on
+ *   every drum note it could, about 3.6 shots each on level 1, most of that level's fire).
  * - `bulletSpeedQ8`, `maxBullets`: enemy bullet speed, and how many can be in flight.
  * - `shipShots`: shots each ship may fire. `shipSpeedQ8`: how fast ships cross the screen.
  */
@@ -72,6 +74,7 @@ const HARD_TUNING = {
   formationSpacingTicks: 168,
   formationSize: 4,
   fireIntervalTicks: 48,
+  turretShots: 4,
   bulletSpeedQ8: 352,
   maxBullets: 12,
   shipShots: 2,
@@ -85,6 +88,7 @@ export const EnemyTuning = {
     formationSpacingTicks: 360,
     formationSize: 2,
     fireIntervalTicks: 120,
+    turretShots: 1,
     bulletSpeedQ8: 224,
     maxBullets: 4,
     shipShots: 0,
@@ -96,6 +100,7 @@ export const EnemyTuning = {
     formationSpacingTicks: 240,
     formationSize: 3,
     fireIntervalTicks: 72,
+    turretShots: 3,
     bulletSpeedQ8: 288,
     maxBullets: 8,
     shipShots: 1,

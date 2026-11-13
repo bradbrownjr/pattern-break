@@ -9,6 +9,22 @@ Fixes**, in that order.
 
 ---
 
+# November 13, 2026
+
+## Milestones
+
+* **Normal can be won.** Brad couldn't clear level 1 on normal. On that level, Neon Techno,
+  turrets fired 103 shells a minute, each costing the whole shield, so it was the hardest
+  arcade level by the new measure below. Enemy bullets now cost the shield 1 (ship), 2
+  (tank) and 3 (turret) points, as Brad set, not 2, 3 and 6, and each turret fires at most
+  1, 3 or 4 shells by difficulty. `pnpm check:difficulty` gained a human model: the
+  autopilot misses 20% of the enemy bullets, and it must finish every easy and normal
+  level. With the old rules it failed level 1 on normal, as Brad did. With the new ones
+  it loses 0 to 2 lives on each arcade level on normal, and 7 on the last. Levels 2 to 7
+  are now in order of how hard the model finds them. The studies behind it, and every
+  other source the project has used, are listed in the new `docs/REFERENCES.md`.
+  `GEN_VERSION` 10 and `SIM_VERSION` 15, so the leaderboards start over.
+
 # November 12, 2026
 
 ## Milestones
