@@ -313,10 +313,10 @@ export const shots: Shot[] = [
       'A frame of play in an LED cavern, dim horizontal bands of colour across its passage, with a dark ' +
       'translucent panel in the middle. On the panel, "Paused" in large amber pixel letters, and below it ' +
       'a menu: "Resume" in amber with an amber ">" before it, then "Controls", "Help" and "Quit" in grey. ' +
-      'The player ship on the left is inside a faint cyan ring, its shield, with cyan shots ahead; "200" ' +
-      'in white on the right where an enemy was destroyed, and an amber-framed capsule on a floor tip. In ' +
+      'The player ship on the left is inside a faint cyan ring, its shield, with cyan shots ahead, and an ' +
+      'amber-framed capsule sits on a floor tip. In ' +
       'the HUD, a row of small power-up icons on a dark panel in the top left corner, bright for what the ' +
-      'ship has and faint for the rest, ending in three faint nuke icons; "x2" in amber and "0001800" in ' +
+      'ship has and faint for the rest, ending in three faint nuke icons; "x2" in amber and "0002900" in ' +
       'the top right; three ship icons for the lives in the bottom left; six cyan shield pips in the ' +
       'bottom right.',
     caption: 'The pause menu over play. Not used in the README.',
@@ -352,7 +352,7 @@ export const shots: Shot[] = [
     alt:
       'A dark translucent panel over a frame of play. "Song clear" in large lime pixel letters, then in ' +
       'small grey type "pb fixture 01, Normal" and four rows with labels on the left and numbers lined up ' +
-      'on the right: "Kills 29" 6300, "Beat bonus" 200, "Score" 6500, and in amber "New best" 6500. Below ' +
+      'on the right: "Kills 33" 7900, "Beat bonus" 1400, "Score" 9300, and in amber "New best" 9300. Below ' +
       'them "R Replay  S Save" in grey and "Any key Title" in cyan.',
     caption: 'The results over play, as if the test song ended at 40 seconds, the score a new best. Not used in the README.',
     usedIn: [],
@@ -375,7 +375,7 @@ export const shots: Shot[] = [
       'and rising from the bottom. On the left, where the ship was, a scatter of single cyan, white, ' +
       'magenta and amber pixels flies apart inside a large thin ring of dots, magenta along the top, teal ' +
       'on the right, lime at the bottom and amber on the left, over soft horizontal bands of violet, teal ' +
-      'and olive. Cyan shots fly on to the right, past "200" in white where an enemy was destroyed. The ' +
+      'and olive. Cyan shots fly on to the right. The ' +
       'power-up icons, "x2" and the score are at the top, three ship icons at the bottom left, and the ' +
       'six shield pips at the bottom right, all dark now.',
     caption: 'The ship breaking apart, 200 ms after it blew up. Not used in the README.',
@@ -390,12 +390,11 @@ export const shots: Shot[] = [
       'tips, leaving a dark passage across the middle, crossed by soft horizontal bands of violet, teal, ' +
       'olive and amber, the copper bars. Two small magenta and amber turrets hang upside down from tips ' +
       'of the ceiling. A small cyan ship with a magenta engine flame flies on the left inside a faint ' +
-      'cyan ring, its shield, with a row of cyan shots ahead of it, and "200" in white pixel digits on ' +
-      'the right where an enemy was just destroyed. An amber-framed capsule showing a cyan missile, ' +
+      'cyan ring, its shield, with a row of cyan shots ahead of it. An amber-framed capsule showing a cyan missile, ' +
       'the next power-up, sits on a floor tip. In the HUD, a row of small power-up icons on a dark panel ' +
       'in the top left corner, bright for what the ship has and faint for the rest, ending in three faint ' +
       'nuke icons; here the bomb and the angled double shot are bright. "x2" in amber and ' +
-      '"0001800" in white are in the top right corner; three small ship icons for the lives are in the ' +
+      '"0002900" in white are in the top right corner; three small ship icons for the lives are in the ' +
       'bottom left; six cyan shield pips are in the bottom right.',
     caption: 'Pattern Break at 21.5 seconds into the test song on normal, with the ship flown by the autopilot.',
     usedIn: ['readme'],
@@ -409,13 +408,13 @@ export const shots: Shot[] = [
       'edges through yellow and orange to red at their tips, hang from the top and rise from the bottom ' +
       'and scroll from right to left, one column per row of the song. Behind them, soft horizontal bands ' +
       'of teal, olive, amber and violet sway up and down and glow brighter with the bass. A small cyan ' +
-      'ship on the left, inside a faint cyan ring that is its shield, with a small glowing drone orb ' +
-      'beside it, fires rows of cyan shots, angled shots and missiles at magenta enemy ships flying in ' +
+      'ship on the left, inside a faint cyan ring that is its shield, joined partway by a small glowing ' +
+      'drone orb, fires rows of cyan shots, angled shots and missiles at magenta enemy ships flying in ' +
       'from the right and dodges up and down. Turrets ride in on the column tips and fire amber pellets, ' +
       'and each kill bursts into coloured specks with its points in white digits. Amber-framed capsules ' +
       'showing a laser icon scroll past. In the HUD, a row of small power-up icons on a dark panel in the ' +
       'top left corner, bright for what the ship has and faint for the rest, ending in three faint nuke ' +
-      'icons; "x3" in amber and the score counting up from 4100 to 5600 in the top right; three ship ' +
+      'icons; "x3", then "x4", in amber and the score counting up from 5000 to 7700 in the top right; three ship ' +
       'icons for the lives in the bottom left; six cyan shield pips in the bottom right.',
     caption: 'Four seconds of the test song on normal, flown by the autopilot through the sim.',
     usedIn: ['readme'],

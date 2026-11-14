@@ -33,6 +33,13 @@ export function scoreBreakdown(state: SimState): ScoreBreakdown {
 
 /** The end screens' replay keys. */
 export const REPLAY_HINT = 'R Replay  S Save';
+/** The end screens' replay buttons on a gamepad. */
+export const REPLAY_HINT_PAD = 'Y Replay  X Save';
+
+/** The replay keys for the keyboard, or the buttons for a gamepad (`pad`). */
+export function replayHint(pad: boolean): string {
+  return pad ? REPLAY_HINT_PAD : REPLAY_HINT;
+}
 
 const KEY = 'pattern-break.bests';
 

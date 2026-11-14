@@ -47,9 +47,9 @@ In the order of the arcade run. The_Epic_Chip is the title and demo music and is
 | 2 | [RNDD_Keygen#1.0](https://modarchive.org/index.php?request=view_by_moduleid&query=172896) | Drozerix | 1:10 | 8.3 | 17.8 | 69 / 97 | 9 |
 | 3 | [Girl From Mars](https://modarchive.org/index.php?request=view_by_moduleid&query=173935) | Drozerix | 1:52 | 15.5 | 26.9 | 62 / 97 | 9 |
 | 4 | [4_RNDD!](https://modarchive.org/index.php?request=view_by_moduleid&query=172898) | Drozerix | 2:02 | 14.2 | 27.5 | 69 / 97 | 8 |
-| 5 | [CHiP_OVERTURE](https://modarchive.org/index.php?request=view_by_moduleid&query=172185) | Drozerix | 2:15 | 10.7 | 32.0 | 62 / 83 | 8 |
-| 6 | [Wrath_of_the_Djinn](https://modarchive.org/index.php?request=view_by_moduleid&query=173080) | Drozerix | 1:52 | 16.0 | 20.0 | 83 / 104 | 9 |
-| 7 | [The_Dim_Dungeon](https://modarchive.org/index.php?request=view_by_moduleid&query=172732) | Drozerix | 1:41 | 12.0 | 17.0 | 76 / 104 | 9 |
+| 5 | [The_Dim_Dungeon](https://modarchive.org/index.php?request=view_by_moduleid&query=172732) | Drozerix | 1:41 | 12.0 | 17.0 | 76 / 104 | 9 |
+| 6 | [CHiP_OVERTURE](https://modarchive.org/index.php?request=view_by_moduleid&query=172185) | Drozerix | 2:15 | 10.7 | 32.0 | 62 / 83 | 8 |
+| 7 | [Wrath_of_the_Djinn](https://modarchive.org/index.php?request=view_by_moduleid&query=173080) | Drozerix | 1:52 | 16.0 | 20.0 | 83 / 104 | 9 |
 | 8 | [Keygen 9000](https://modarchive.org/index.php?request=view_by_moduleid&query=173938) | Drozerix | 3:20 | 16.0 | 34.7 | 76 / 104 | 9 |
 | Impossible | [Crush](https://modarchive.org/index.php?request=view_by_moduleid&query=179581) | Drozerix | 2:05 | 24.0 | 54.0 | 62 / 97 | 10 |
 
@@ -59,13 +59,17 @@ on 2026-11-10 before bundling: Public Domain on its page, the MD5 matches
 (1613a27c819396c6d4e74b426c21a36a), the comments praise it with no mention of a cover, and
 its only text is the artist's name banner and contact address.
 
-The run is about 18 minutes on normal. Neon Techno is level 1 and Keygen 9000 level 8, as
-Brad chose. Since 2026-11-13 the levels between are ordered by how hard each is for the
-human model (the autopilot missing 20% of the enemy bullets; [PLAN.md](PLAN.md),
-"Difficulty guardrails") on normal: the lives it lost, then the shield points it spent a
-minute. RNDD_Keygen#1.0 0 and 1.7, Girl From Mars 0 and 3.2, 4_RNDD! 1 and 5.9,
-CHiP_OVERTURE 2 and 5.3, Wrath_of_the_Djinn 2 and 6.4, The_Dim_Dungeon 2 and 10.1; Neon
-Techno is 0 and 4.8, and Keygen 9000 7 and 15.6. Brad agreed to a ramp by difficulty. Until
+The lengths are the whole songs. Since 2026-11-14 the arcade ends a level by 2:30
+([PLAN.md](PLAN.md), "Level length"), which cuts Neon Techno to 2:26 and Keygen 9000 to
+2:28 on normal, so the run is about 16 minutes on normal (18 before). Neon Techno is
+level 1 and Keygen 9000 level 8, as Brad chose. Since 2026-11-13 the levels between are ordered by how
+hard each is for the human model (the autopilot missing 20% of the enemy bullets;
+[PLAN.md](PLAN.md), "Difficulty guardrails") on normal: the lives it lost, then the shield
+points it spent a minute. Measured again on 2026-11-14, after the rule that keeps ships
+coming: RNDD_Keygen#1.0 0 and 1.7, Girl From Mars 0 and 3.2, 4_RNDD! 1 and 5.9,
+The_Dim_Dungeon 1 and 7.1, CHiP_OVERTURE 2 and 5.3, Wrath_of_the_Djinn 2 and 6.4; Neon
+Techno, cut, is 0 and 5.3, and Keygen 9000, cut, 2 and 7.3. The_Dim_Dungeon moved from
+level 7 to 5 (it was 2 and 10.1 on 2026-11-13). Brad agreed to a ramp by difficulty. Until
 then they were ordered by scroll speed, which put the hardest level by this measure,
 Neon Techno, first: its turrets fired 103 shells a minute on normal, each costing the whole
 shield. Neon Techno was checked again on 2026-11-10 before bundling:
@@ -74,7 +78,7 @@ no comments, and its only text is its title banner and a contact address. RNDD_K
 on its page, the MD5 matches (d5c5e8661d259428a115537c536a59dc), the page has no comments,
 and its only text is the artist's banner, "Composed&Sampled By: Drozerix/M0n50n" and a
 contact address. Wrath_of_the_Djinn's sample names read "A Grand Keygen Chipp ... Gott That Boss? :)";
-it led into the last level until the reorder put The_Dim_Dungeon between them.
+it leads into the last level, as it did before the 2026-11-13 reorder.
 
 ### Credits song
 

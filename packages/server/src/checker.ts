@@ -1,5 +1,5 @@
 // Checks submitted runs by running them again (docs/PLAN.md, "Server"). A song's level is
-// built once per song, difficulty and GEN_VERSION: the LevelData from the song file is
+// built once per song, difficulty, GEN_VERSION and arcade cut (ARCADE_MAX_SAMPLES): the LevelData from the song file is
 // written to the cache folder, and the Level is kept in memory for the next check, so a
 // check after the first re-runs only the sim. Runs in the check worker (check-worker.ts),
 // off the request thread.
@@ -7,10 +7,12 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
+  ARCADE_MAX_SAMPLES,
   Difficulty,
   GEN_VERSION,
   SIM_VERSION,
   createSimState,
+  cutLevelData,
   decodeReplay,
   deserializeLevelData,
   generateLevel,
@@ -33,17 +35,25 @@ export type Rejection =
   | 'wrong songs'
   | 'mixed difficulty'
   | 'level not cleared'
+  | 'wrong length'
   | 'song unreadable';
 
-export type LevelResult = { score: number; ticks: number; finished: boolean };
+/** A level built for checking; `data` is the whole song's. */
+type Built = { level: Level; data: LevelData };
+
+/** One level's result; `position` is its place in the arcade (0-based), -1 for a run from Levels. */
+export type LevelResult = { score: number; ticks: number; finished: boolean; position: number };
 
 export type CheckResult =
   | { ok: true; difficulty: DifficultyName; levels: LevelResult[]; total: number; title: string; artist: string }
   | { ok: false; reason: Rejection; level: number };
 
 export interface CheckJob {
-  /** 'song' is one replay; 'arcade' is the run's level replays in order. */
-  kind: 'song' | 'arcade';
+  /**
+   * 'song' is one replay from Levels; 'arcade' is the run's level replays in order; 'level'
+   * is one arcade level's replay, posted when it's cleared.
+   */
+  kind: 'song' | 'arcade' | 'level';
   replays: Uint8Array[];
   /** The arcade's songs for each difficulty, by hash, from music/arcade.json. */
   arcade?: { levels: string[]; impossible: string[] };
@@ -64,7 +74,7 @@ export class Checker {
   readonly #readSong: SongReader;
   readonly #cacheDir: string;
   readonly #memoryLevels: number;
-  readonly #levels = new Map<string, { level: Level; data: LevelData }>();
+  readonly #levels = new Map<string, Built>();
   #openmpt: Promise<OpenMpt> | null = null;
 
   constructor(options: CheckerOptions) {
@@ -83,15 +93,24 @@ export class Checker {
       }
     }
     if (replays.length === 0) return { ok: false, reason: 'bad replay', level: 0 };
-    if (job.kind === 'song' && replays.length !== 1) return { ok: false, reason: 'bad replay', level: 1 };
+    if (job.kind !== 'arcade' && replays.length !== 1) return { ok: false, reason: 'bad replay', level: 1 };
     const difficulty = replays[0]!.difficulty;
 
-    if (job.kind === 'arcade') {
+    // Each replay's place in the arcade, -1 for a run from Levels.
+    const positions = replays.map(() => -1);
+    if (job.kind === 'song') {
+      // A song's board is for the whole song, as Levels plays it.
+      if (replays[0]!.cut) return { ok: false, reason: 'wrong length', level: 0 };
+    } else {
       const order = difficulty === 'impossible' ? job.arcade?.impossible : job.arcade?.levels;
       if (!order || replays.length > order.length) return { ok: false, reason: 'wrong songs', level: 0 };
       for (let i = 0; i < replays.length; i++) {
         if (replays[i]!.difficulty !== difficulty) return { ok: false, reason: 'mixed difficulty', level: i };
-        if (replays[i]!.moduleHash !== order[i]) return { ok: false, reason: 'wrong songs', level: i };
+        // A run's levels are the arcade's songs in order; a lone level is any one of them.
+        positions[i] = job.kind === 'arcade' ? i : order.indexOf(replays[i]!.moduleHash);
+        if (order[positions[i]!] !== replays[i]!.moduleHash) return { ok: false, reason: 'wrong songs', level: i };
+        // The arcade plays every song cut to its length cap.
+        if (!replays[i]!.cut) return { ok: false, reason: 'wrong length', level: i };
       }
     }
 
@@ -104,7 +123,7 @@ export class Checker {
         return { ok: false, reason: 'old version', level: i };
       }
       if (replay.cheats !== 0) return { ok: false, reason: 'cheat', level: i };
-      const built = await this.#level(replay.moduleHash, replay.difficulty);
+      const built = await this.#level(replay.moduleHash, replay.difficulty, replay.cut);
       if (!built) return { ok: false, reason: 'song unreadable', level: i };
       if (i === 0) meta = { title: built.data.meta.title, artist: built.data.meta.artist };
       const state = runInputLog(built.level, replay.inputs, createSimState(replay.cheats));
@@ -114,20 +133,24 @@ export class Checker {
       if (job.kind === 'arcade' && i < replays.length - 1 && !state.finished) {
         return { ok: false, reason: 'level not cleared', level: i };
       }
-      levels.push({ score: state.score, ticks: replay.inputs.length, finished: state.finished });
+      levels.push({ score: state.score, ticks: replay.inputs.length, finished: state.finished, position: positions[i]! });
       total += state.score;
     }
     return { ok: true, difficulty, levels, total, ...meta };
   }
 
-  /** The song's level at a difficulty, built or cached; null when the song can't be read. */
-  async #level(hash: string, difficulty: DifficultyName): Promise<{ level: Level; data: LevelData } | null> {
+  /**
+   * The song's level at a difficulty, whole or cut to the arcade's length cap, built or
+   * cached; null when the song can't be read.
+   */
+  async #level(hash: string, difficulty: DifficultyName, cut: boolean): Promise<Built | null> {
     const tempo = Difficulty[difficulty].tempoPermille;
     const key = `${hash}-${tempo}-${GEN_VERSION}`;
-    const hit = this.#levels.get(key);
+    const memoryKey = cut ? `${key}-cut` : key;
+    const hit = this.#levels.get(memoryKey);
     if (hit) {
-      this.#levels.delete(key);
-      this.#levels.set(key, hit);
+      this.#levels.delete(memoryKey);
+      this.#levels.set(memoryKey, hit);
       return hit;
     }
     const file = join(this.#cacheDir, `${key}.level`);
@@ -152,8 +175,9 @@ export class Checker {
       await writeFile(tmp, serializeLevelData(data));
       await rename(tmp, file);
     }
-    const built = { level: generateLevel(data, difficulty), data };
-    this.#levels.set(key, built);
+    const played = cut ? cutLevelData(data, ARCADE_MAX_SAMPLES) : data;
+    const built = { level: generateLevel(played, difficulty), data };
+    this.#levels.set(memoryKey, built);
     while (this.#levels.size > this.#memoryLevels) this.#levels.delete(this.#levels.keys().next().value!);
     return built;
   }

@@ -4,14 +4,19 @@
 // so players taking turns on one device post under their own names. A board lists the best
 // run of each key and name, so each holds one place on it.
 //
-// Boards are per (song, difficulty) and, for arcade runs, per difficulty. Only runs from
+// Boards are per (song, difficulty) for runs from Levels, and for the arcade per
+// difficulty: one for the run's total and one for each level (level-1 to level-8). Only runs from
 // the server's own GEN_VERSION and SIM_VERSION are listed: a version bump starts the
 // boards over, and the old runs stay in the table.
 
 import { createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 
-export type Board = { kind: 'song'; song: string; difficulty: string } | { kind: 'arcade'; difficulty: string };
+export type Board =
+  | { kind: 'song'; song: string; difficulty: string }
+  | { kind: 'arcade'; difficulty: string }
+  /** An arcade level, 1-based, as the arcade plays it (cut to its length cap). */
+  | { kind: 'level'; level: number; difficulty: string };
 
 export interface Player {
   id: number;
@@ -94,9 +99,9 @@ CREATE TABLE IF NOT EXISTS runs (
 CREATE INDEX IF NOT EXISTS runs_board ON runs (board, difficulty, gen, sim, score DESC);
 `;
 
-/** The board column: the song's hash, or 'arcade'. */
+/** The board column: the song's hash, 'arcade', or 'level-' and the level. */
 function boardKey(board: Board): string {
-  return board.kind === 'arcade' ? 'arcade' : board.song;
+  return board.kind === 'arcade' ? 'arcade' : board.kind === 'level' ? `level-${board.level}` : board.song;
 }
 
 export class Database {

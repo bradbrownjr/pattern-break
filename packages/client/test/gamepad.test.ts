@@ -43,11 +43,11 @@ describe('padBits with the standard layout', () => {
     expect(padBits(pad([], [0.49, -0.49]))).toBe(0);
   });
 
-  it('fires on A and RT, bombs on B, nukes on X, missiles on RB, boosts on LB or LT; Fire also confirms; Y is for menus', () => {
+  it('fires on A and RT, bombs on B, nukes on X, missiles on RB, boosts on LB or LT; Fire also confirms; Nuke also saves; Y is for menus', () => {
     expect(padBits(pad([0]))).toBe(PadBit.fire | PadBit.a);
     expect(padBits(pad([7]))).toBe(PadBit.fire | PadBit.a);
     expect(padBits(pad([1]))).toBe(PadBit.b | InputBit.bomb);
-    expect(padBits(pad([2]))).toBe(InputBit.nuke);
+    expect(padBits(pad([2]))).toBe(InputBit.nuke | PadBit.x);
     expect(padBits(pad([3]))).toBe(PadBit.y);
     expect(padBits(pad([5]))).toBe(InputBit.missile);
     expect([4, 6].map((b) => padBits(pad([b])))).toEqual([InputBit.boost, InputBit.boost]);
@@ -148,8 +148,9 @@ describe('padMenuAction', () => {
 });
 
 describe('PadTracker', () => {
-  it('reports Y, for the replay on the end screens', () => {
+  it('reports Y and X, to watch and save the replay on the end screens', () => {
     expect(new PadTracker().update(PadBit.y, 0)).toEqual([PadBit.y]);
+    expect(new PadTracker().update(PadBit.x | InputBit.nuke, 0)).toEqual([PadBit.x]);
   });
 
   it('reports each button once as it goes down', () => {

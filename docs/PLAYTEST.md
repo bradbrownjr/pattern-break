@@ -46,6 +46,9 @@ levels, or any songs from Levels.
   clear the arcade run's first levels on Normal, losing a life or two along the way? The
   aim is a win you have to work for, not a clean sweep. If Normal is now too easy or still
   too hard, say which levels.
+- Since 2026-11-14 (ships through all of level 1, arcade levels ending by 2:30): do ships
+  keep coming through level 1 now, and does the level feel the right length? Does the
+  music's fade at the cut sound like an ending, or like it was chopped?
 - Is Easy too easy, or still too much for a new player? Your son's take matters most here.
 - Is Hard a fair challenge, or too busy? It sends about 2.5 to 3 ships a second on most songs.
 - Any death that felt unfair, with nothing you could have done: note the song,
@@ -73,7 +76,9 @@ player take a turn and post under their own name.
 
 **Looking for:** the keyboard opens in capitals and stays open, the keyboard's Enter and
 the gamepad's A post, B skips, up and down change letters, and both names show on Scores in
-different places.
+different places. Since 2026-11-14, with the gamepad: after the name, the prompts name its
+buttons ("A Retry  B Title", "Y Replay  X Save"), X saves the replay, and a key press
+turns the prompts back to keys.
 
 ### 5. The title demo
 

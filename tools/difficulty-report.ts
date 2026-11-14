@@ -3,6 +3,7 @@
 // generateLevel), and the autopilot flown through it with the normal lives. Per level:
 //
 // - enemies a minute, and of those, ships, turrets and tanks;
+// - the longest wait between ships while the song plays at least a note a second;
 // - enemy bullets on screen at once, the 95th percentile and the most, over the bot's run;
 // - the narrowest gap in px, turrets and tank tracks counted as wall (solidWalls), and the
 //   5th percentile gap over the bars;
@@ -14,11 +15,13 @@
 // Usage: node tools/difficulty-report.ts [--check] [--json out.json] [file.mod ...]
 // With no files it measures the bundled songs (music/manifest.json) and the test songs
 // (packages/analysis/fixtures/test-songs) on easy, normal and hard, and Crush on impossible
-// too. --check (pnpm check:difficulty) fails unless the guardrails hold (docs/PLAN.md,
+// too. An arcade song longer than the arcade's length cap is measured a second time as
+// the arcade cuts it, as song@arcade. --check (pnpm check:difficulty) fails unless the guardrails hold (docs/PLAN.md,
 // "Difficulty guardrails"): the autopilot finishes every level; on every song each step up
 // has more enemies a minute; no level has as many enemies a minute as the median level
-// one difficulty up; and missing HUMAN_MISS_PERCENT of the bullets, the autopilot finishes
-// every easy and normal level.
+// one difficulty up; missing HUMAN_MISS_PERCENT of the bullets, the autopilot finishes
+// every easy and normal level; and while the song plays at least a note a second, ships
+// never stop for more than DROUGHT_SPACINGS + 1 formation spacings.
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
@@ -26,14 +29,18 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { analyze, loadOpenMpt } from '../packages/analysis/src/index.ts';
 import {
+  ARCADE_MAX_SAMPLES,
   BULLET_SLOTS,
+  DROUGHT_SPACINGS,
   Difficulty,
   EnemyKind,
+  EnemyTuning,
   PLAYFIELD_HEIGHT,
   SEGMENT_PITCH,
   TICK_HZ,
   autopilotInputs,
   createSimState,
+  cutLevelData,
   generateLevel,
   solidWalls,
   tick,
@@ -71,6 +78,7 @@ export interface LevelReport {
   shipsPerMin: number;
   turretsPerMin: number;
   tanksPerMin: number;
+  shipGapS: number;
   bulletsP95: number;
   bulletsMax: number;
   gapMinPx: number;
@@ -122,7 +130,21 @@ function measure(song: string, level: Level): LevelReport {
   const perMin = (n: number) => Math.round((n / seconds) * 600) / 10;
   const e = level.enemies;
   const kinds = [0, 0, 0];
-  for (let k = 0; k < e.count; k++) kinds[e.kind[k]!]!++;
+  // The longest wait between ships while the song keeps playing at least a note a
+  // second; a quiet stretch has nothing to make ships from.
+  const notesAt = new Uint32Array(level.tickCount + 1);
+  for (const t of level.noteTick) if (t < level.tickCount) notesAt[t + 1]!++;
+  for (let t = 1; t <= level.tickCount; t++) notesAt[t]! += notesAt[t - 1]!;
+  let lastShip = -1;
+  let shipGap = 0;
+  for (let k = 0; k < e.count; k++) {
+    kinds[e.kind[k]!]!++;
+    if (e.kind[k] !== EnemyKind.ship) continue;
+    const t = e.spawnTick[k]!;
+    const busy = (notesAt[t]! - notesAt[lastShip + 1]!) * TICK_HZ >= t - lastShip;
+    if (lastShip >= 0 && busy && t - lastShip > shipGap) shipGap = t - lastShip;
+    lastShip = t;
+  }
 
   const walls = solidWalls(level);
   const gaps = new Int32Array(level.barCount);
@@ -140,6 +162,7 @@ function measure(song: string, level: Level): LevelReport {
     shipsPerMin: perMin(kinds[EnemyKind.ship]!),
     turretsPerMin: perMin(kinds[EnemyKind.turret]!),
     tanksPerMin: perMin(kinds[EnemyKind.tank]!),
+    shipGapS: Math.round((shipGap / TICK_HZ) * 10) / 10,
     bulletsP95: percentile(flown, 0.95),
     bulletsMax: flown.length ? flown[flown.length - 1]! : 0,
     gapMinPx: gaps[0] ?? 0,
@@ -156,8 +179,16 @@ function measure(song: string, level: Level): LevelReport {
 
 const openmpt = await loadOpenMpt();
 const rows: LevelReport[] = [];
-const header = ['song', 'diff', 's', 'en/min', 'ship', 'turr', 'tank', 'bul95', 'bulMax', 'gapMin', 'gap5', 'bot%', 'lost', 'hum%', 'hLost', 'hShld'];
+const header = ['song', 'diff', 's', 'en/min', 'ship', 'turr', 'tank', 'shpGap', 'bul95', 'bulMax', 'gapMin', 'gap5', 'bot%', 'lost', 'hum%', 'hLost', 'hShld'];
 console.log(header.join('\t'));
+const arcade = JSON.parse(readFileSync(join(ROOT, 'music', 'arcade.json'), 'utf8')) as { levels: string[]; impossible: string[] };
+const arcadeSongs = new Set([...arcade.levels, ...arcade.impossible]);
+function report(r: LevelReport): void {
+  rows.push(r);
+  console.log(
+    [r.song, r.difficulty.slice(0, 4), r.seconds, r.enemiesPerMin, r.shipsPerMin, r.turretsPerMin, r.tanksPerMin, r.shipGapS, r.bulletsP95, r.bulletsMax, r.gapMinPx, r.gapP5Px, r.botReachedPct, r.botLivesLost, r.humanReachedPct, r.humanLivesLost, r.humanShieldPerMin].join('\t'),
+  );
+}
 for (const file of files) {
   const song = basename(file).replace(/\.[^.]+$/, '');
   const bytes = new Uint8Array(readFileSync(file));
@@ -165,11 +196,10 @@ for (const file of files) {
   if (song === 'crush' && positionals.length === 0) difficulties.push('impossible');
   for (const difficulty of difficulties) {
     const data = analyze(openmpt, bytes, Difficulty[difficulty].tempoPermille);
-    const r = measure(song, generateLevel(data, difficulty));
-    rows.push(r);
-    console.log(
-      [r.song, r.difficulty.slice(0, 4), r.seconds, r.enemiesPerMin, r.shipsPerMin, r.turretsPerMin, r.tanksPerMin, r.bulletsP95, r.bulletsMax, r.gapMinPx, r.gapP5Px, r.botReachedPct, r.botLivesLost, r.humanReachedPct, r.humanLivesLost, r.humanShieldPerMin].join('\t'),
-    );
+    report(measure(song, generateLevel(data, difficulty)));
+    // An arcade song past the length cap is also measured as the arcade plays it.
+    const cut = cutLevelData(data, ARCADE_MAX_SAMPLES);
+    if (arcadeSongs.has(song) && cut !== data) report(measure(`${song}@arcade`, generateLevel(cut, difficulty)));
   }
 }
 if (values.json) writeFileSync(values.json, `${JSON.stringify(rows, null, 2)}\n`);
@@ -184,6 +214,10 @@ function guardrailFailures(reports: readonly LevelReport[]): string[] {
     if ((r.difficulty === 'easy' || r.difficulty === 'normal') && !r.humanFinished) {
       failures.push(`${r.song} ${r.difficulty}: missing ${HUMAN_MISS_PERCENT}% of the bullets, the autopilot got ${r.humanReachedPct}% of the way`);
     }
+  }
+  for (const r of reports) {
+    const limit = (EnemyTuning[r.difficulty].formationSpacingTicks * (DROUGHT_SPACINGS + 1)) / TICK_HZ;
+    if (r.shipGapS > limit) failures.push(`${r.song} ${r.difficulty}: ${r.shipGapS} s without ships while the song plays, over ${limit} s`);
   }
   const steps: DifficultyName[] = ['easy', 'normal', 'hard'];
   const rate = (song: string, d: DifficultyName) => reports.find((r) => r.song === song && r.difficulty === d)?.enemiesPerMin;

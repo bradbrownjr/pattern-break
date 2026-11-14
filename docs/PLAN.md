@@ -183,6 +183,12 @@ every bar of every generated level.
     semitone above its instrument's middle note (at most 24 px), and moves by its note's
     effect: vibrato weaves, a slide up climbs, a slide down dives, an arpeggio hops between
     three heights.
+  - **No long wait for ships (Brad, 2026-11-14):** after three formation spacings (6 s on
+    normal) without a new formation, the next drum note too early for a turret starts one.
+    Songs whose tunes play on fixed-pitch samples have most of their instruments classed as
+    drums: before this, Neon Techno went 108 s on normal with only turrets and tanks, the
+    stretch Brad found ships stopped in. With it, no arcade level waits more than 6 s for
+    ships on normal while its song plays, and turret counts don't change.
   - **Fire:** an enemy fires at the ship on its instrument's notes while it is on screen
     ahead of the ship, and no more often than the difficulty allows. Ships wait 0.25 s and
     fire 0, 1 or 2 times by difficulty; turrets fire 1, 3 or 4 times (2026-11-13: until
@@ -205,7 +211,13 @@ every bar of every generated level.
   2. on every song, each step up (easy, normal, hard) has more enemies a minute;
   3. no level has as many enemies a minute as the median level one difficulty up, so no
      song is an outlier for its difficulty;
-  4. the human model finishes every easy and normal level (2026-11-13).
+  4. the human model finishes every easy and normal level (2026-11-13);
+  5. while a song plays at least a note a second, no level goes more than four formation
+     spacings (8 s on normal) without a new ship (2026-11-14). A song going quiet has
+     nothing to build ships from, such as Girl From Mars's 11 s outro.
+
+  An arcade song longer than the length cap (see "Level length") is measured both whole and
+  as the arcade cuts it.
 
   The autopilot dodges perfectly, so the first three say little about a person: before
   2026-11-13 it finished level 1 on normal untouched while Brad couldn't clear it. The
@@ -232,6 +244,19 @@ every bar of every generated level.
   `packages/analysis/fixtures/test-songs`, chosen for range among the unbundled ones: the most
   notes a second, the fewest, the longest, the shortest, and one whose Hard level killed the
   autopilot before 2026-11-11.
+- **Level length (Brad, 2026-11-14):** in the arcade run, a level ends by 2:30 of play
+  (`ARCADE_MAX_SAMPLES`), counted at its difficulty's tempo, so Easy's slower song is cut
+  earlier in the song. Brad found level 1's 3:32 "a bit of a slog". The cut comes at the
+  start of the last order (a step in the song's pattern list) by 2:30, so the level ends on
+  a pattern boundary, and the music fades out over the last 3 s; the survival bonus is paid
+  there as at a song's end. Of the arcade songs only Neon Techno (3:32 on normal, cut at
+  2:26) and Keygen 9000 (3:20, cut at 2:28) are long enough to be cut. Levels, imported
+  songs and the Jukebox play songs whole. `cutLevelData` cuts the LevelData before
+  `generateLevel`, so the cut level is the whole level's first part, rebuilt. The model is
+  Geometry Dash, where a level ends at its maker's End trigger and its song can fade out;
+  rated levels there are at least 30 s and the standard is 60 s or more. DDR plays a full
+  LONG VERSION only as two stages (sources in [REFERENCES.md](REFERENCES.md), "Level
+  length"). No source sets a length; 2:30 cuts only the two longest arcade songs.
 - **Boss (after M6; see the roadmap):** the last pattern, or the most-repeated one, becomes a boss
   whose weak points pulse on the lead channel. In the arcade run, a mini boss ends level 4
   and the final boss ends level 8.
@@ -324,8 +349,9 @@ every bar of every generated level.
   instrument. A **streak multiplier** adds 1 for every 10 kills without losing a life, up
   to 4. Reaching the end of the song adds 1000 a life left. Game over before the song ends
   keeps the partial score.
-- **Replay format:** a header `{ moduleHash, difficulty, GEN_VERSION, SIM_VERSION, score }`
-  plus run-length-encoded input bits per tick. That is all the server needs. A player can
+- **Replay format:** a header `{ moduleHash, difficulty, GEN_VERSION, SIM_VERSION, score }`,
+  the cheat flags and whether the level was the arcade's cut (see "Level length"), plus
+  run-length-encoded input bits per tick. That is all the server needs. A player can
   watch a run's replay and save it as a `.pbreplay` file (2026-11-09; the byte layout is in
   `DEVELOPMENT.md`, "Replays").
 
@@ -423,10 +449,15 @@ every bar of every generated level.
 - Title screen: chrome logo, the title song (The_Epic_Chip), a menu driven by up, down,
   left, right, confirm and back (the same actions on keyboard and gamepad), and an attract
   mode: on the song's change, the title song's level flown by the autopilot.
-- Arcade run: levels in a fixed order, eight planned (Neon Techno first, the full
-  Keygen 9000 last), each opening with a card that credits its song. Levels plays any one
-  song. A mini boss ends level 4 and the final boss ends level 8 (see "Level generation").
+- Arcade run: levels in a fixed order, eight planned (Neon Techno first, Keygen 9000
+  last), each opening with a card that credits its song, and each ending by 2:30 (see
+  "Level length"). Levels plays any one song whole. A mini boss ends level 4 and the final boss ends level 8 (see "Level generation").
 - Game over plays the sparse opening of Keygen 9000 and fades out.
+- **Prompts follow the device (Brad, 2026-11-14):** the key prompts on game over, the clear
+  screen, Sync, Scores and Credits name the keyboard's keys, or a gamepad's buttons when the
+  last press was a pad's, and change when the player switches: game over reads "A Retry  B
+  Title" and "Y Replay  X Save". X, Nuke's button, saves the replay on the end screens. On
+  a touch screen the buttons name themselves and the prompts are left out.
 - Jukebox: plays the bundled songs and imported ones, with an LED spectrum and each song's
   title, length and author (lengths since 2026-11-11). Licenses are on the Credits screen.
 - Library: bundled songs plus imported ones, managed in the Jukebox (Brad, 2026-11-10):
@@ -462,7 +493,8 @@ One Fastify process serves the API under `/api` and the built client. SQLite thr
 `node:sqlite` holds players, songs and runs; replays and uploaded songs are files beside it
 in the data folder (`/data` in the image).
 
-- `POST /api/runs`: a song run (one replay) or an arcade run (its level replays in order),
+- `POST /api/runs`: a song run (one replay), an arcade run (its level replays in order),
+  or one cleared arcade level,
   the player's public key, and an Ed25519 signature over the body. The server needs each
   song file to rebuild its level:
   1. If the hash is a bundled song or already stored, it loads the file from storage.
@@ -471,14 +503,16 @@ in the data folder (`/data` in the image).
      again. Imported songs get boards from day one (Brad, 2026-11-11).
   3. A worker thread runs `@game/core` levelgen and sim on the replay. Level data is cached
      per song, difficulty and `GEN_VERSION`, so a check after the first re-runs only the
-     sim. The run is accepted only if its versions are the server's, it has no cheat flags,
-     and the computed score equals the claimed score.
+     sim. A replay marked as the arcade's cut is checked on the cut level. The run is
+     accepted only if its versions are the server's, it has no cheat flags, and the
+     computed score equals the claimed score.
 - **Arcade board (Brad, 2026-11-11):** beside the per-song boards, one board per difficulty
   for an arcade run's total. Each level starts from a fresh sim state, so the total is the
   sum of the level scores, and the server checks each level as above. The levels must be
-  the arcade's songs for that difficulty, in order. A run that ends in a game over counts,
-  with the levels it reached.
-- `GET /api/leaderboards/:hash?difficulty=` and `GET /api/leaderboards/arcade?difficulty=`
+  the arcade's songs for that difficulty, in order, each played as the arcade cuts it. A run
+  that ends in a game over counts, with the levels it reached.
+- `GET /api/leaderboards/:hash?difficulty=`, `GET /api/leaderboards/arcade?difficulty=` and
+  `GET /api/leaderboards/level-<n>?difficulty=`
   return the top N plus the caller's rank.
 - `GET /api/songs/:hash` returns metadata, author and source links, and the player count.
 - `GET /api/replays/:sha` returns a listed run's replay, so top runs can be watched.
@@ -489,8 +523,14 @@ in the data folder (`/data` in the image).
   device isn't one player: players taking turns on a console each post under their own.
   A board's place belongs to a device and name together; each device has its own colour on
   the boards, which tells apart two players with the same name. An arcade run goes on the
-  arcade board only when every level went under one name; each level goes on its song's
-  board either way. A name is 1 to 8 capitals, digits, inner spaces and `. - ! ?`, as on
+  arcade board only when every level went under one name; each level goes on its Level
+  board either way.
+- **Level boards (Brad, 2026-11-14):** the arcade plays songs cut to its length cap (see
+  "Level length"), so its levels are scored apart from the whole songs: one board per
+  arcade level (Level 1 to 8) and difficulty, beside the arcade total. Song boards hold
+  only runs from Levels, the whole song. A replay marked as the cut goes only on arcade
+  and Level boards, and an unmarked one only on song boards. Both versions stay playable
+  and scored: the arcade for the 2:30 cut, Levels for the full song. A name is 1 to 8 capitals, digits, inner spaces and `. - ! ?`, as on
   an arcade's high score table. A rough filter turns down obvious vulgarities: roots that
   sit inside innocent words (ASS in CUTLASS) count only as whole words, to avoid the
   "Scunthorpe problem" (Wikipedia). There are no profile links, which could carry abuse.

@@ -4,17 +4,23 @@
 //
 // Binary form, little-endian, no padding: magic 'PBRP', u32 format version, u32
 // genVersion, u32 simVersion, 32 bytes moduleHash, u8 difficulty id, u8 cheats (Cheat
-// flags; format 2 on), i32 score, u32 tick
-// count, u32 run count, then each run of equal input bits as u16 bits and its length in
+// flags; format 2 on), u8 flags (ReplayFlag; format 3 on), i32 score, u32 tick count, u32
+// run count, then each run of equal input bits as u16 bits and its length in
 // ticks as an unsigned LEB128 varint (1 to 5 bytes, at least 1). The runs' lengths add up
 // to the tick count. decodeReplay throws on anything else.
 
 import { Difficulty, type DifficultyName } from '../levelgen/types.ts';
 import { Cheat } from './constants.ts';
 
-export const REPLAY_FORMAT_VERSION = 2;
+export const REPLAY_FORMAT_VERSION = 3;
 const MAGIC = [0x50, 0x42, 0x52, 0x50];
-const HEADER_BYTES = 4 + 4 + 4 + 4 + 32 + 1 + 1 + 4 + 4 + 4;
+const HEADER_BYTES = 4 + 4 + 4 + 4 + 32 + 1 + 1 + 1 + 4 + 4 + 4;
+
+/** Bits of a replay's flags byte. */
+export const ReplayFlag = {
+  /** The level was cut to the arcade's length cap (cutLevelData, ARCADE_MAX_SAMPLES). */
+  cut: 1,
+} as const;
 
 export interface Replay {
   /** SHA-256 of the song file, 64 lowercase hex digits. */
@@ -22,6 +28,11 @@ export interface Replay {
   difficulty: DifficultyName;
   /** Cheat flags the run had (0 for none); a replay with any is kept off the boards. */
   cheats: number;
+  /**
+   * True when the run played the arcade's cut of the song (cutLevelData with
+   * ARCADE_MAX_SAMPLES), which is the whole song when it is short enough.
+   */
+  cut: boolean;
   genVersion: number;
   simVersion: number;
   /** The score the recorded run ended with, the lives bonus included. */
@@ -91,6 +102,7 @@ export function encodeReplay(replay: Replay): Uint8Array<ArrayBuffer> {
   p += 32;
   out[p++] = Difficulty[replay.difficulty].id;
   out[p++] = replay.cheats;
+  out[p++] = replay.cut ? ReplayFlag.cut : 0;
   view.setInt32(p, replay.score, true);
   view.setUint32(p + 4, replay.inputs.length, true);
   view.setUint32(p + 8, bits.length, true);
@@ -112,11 +124,14 @@ export function decodeReplay(bytes: Uint8Array): Replay {
   const fail = (why: string): never => {
     throw new Error(`replay: ${why}`);
   };
-  if (bytes.length < HEADER_BYTES) fail('truncated header');
+  if (bytes.length < 8) fail('truncated header');
   for (let i = 0; i < 4; i++) if (bytes[i] !== MAGIC[i]) fail('not a replay (bad magic)');
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const format = view.getUint32(4, true);
-  if (format !== REPLAY_FORMAT_VERSION) fail(`format ${format}, expected ${REPLAY_FORMAT_VERSION}`);
+  // Format 2 has no flags byte; it reads as uncut, and its old versions turn it away later.
+  if (format !== REPLAY_FORMAT_VERSION && format !== 2) fail(`format ${format}, expected ${REPLAY_FORMAT_VERSION}`);
+  const flagBytes = format === 2 ? 0 : 1;
+  if (bytes.length < HEADER_BYTES - 1 + flagBytes) fail('truncated header');
   const genVersion = view.getUint32(8, true);
   const simVersion = view.getUint32(12, true);
   const moduleHash = hashHex(bytes.subarray(16, 48));
@@ -124,12 +139,15 @@ export function decodeReplay(bytes: Uint8Array): Replay {
   if (difficulty === null) return fail(`unknown difficulty id ${bytes[48]}`);
   const cheats = bytes[49]!;
   if ((cheats & ~(Cheat.infiniteLives | Cheat.god)) !== 0) fail(`unknown cheat flags ${cheats}`);
-  const score = view.getInt32(50, true);
-  const tickCount = view.getUint32(54, true);
-  const runCount = view.getUint32(58, true);
+  const flags = flagBytes ? bytes[50]! : 0;
+  if ((flags & ~ReplayFlag.cut) !== 0) fail(`unknown flags ${flags}`);
+  const at = 50 + flagBytes;
+  const score = view.getInt32(at, true);
+  const tickCount = view.getUint32(at + 4, true);
+  const runCount = view.getUint32(at + 8, true);
   if (runCount > tickCount) fail('more runs than ticks');
   const inputs = new Uint16Array(tickCount);
-  let p = HEADER_BYTES;
+  let p = at + 12;
   let t = 0;
   for (let r = 0; r < runCount; r++) {
     if (p + 3 > bytes.length) fail('truncated runs');
@@ -150,5 +168,5 @@ export function decodeReplay(bytes: Uint8Array): Replay {
   }
   if (t !== tickCount) fail('run lengths do not add up to the tick count');
   if (p !== bytes.length) fail('trailing bytes');
-  return { moduleHash, difficulty, cheats, genVersion, simVersion, score, inputs };
+  return { moduleHash, difficulty, cheats, cut: (flags & ReplayFlag.cut) !== 0, genVersion, simVersion, score, inputs };
 }

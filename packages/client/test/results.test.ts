@@ -5,7 +5,7 @@
 
 import { createSimState } from '@game/core';
 import { describe, expect, it } from 'vitest';
-import { RESULT_WIDTH, bestKey, loadBest, recordBest, resultRows, scoreBreakdown } from '../src/game/results.ts';
+import { RESULT_WIDTH, bestKey, loadBest, recordBest, replayHint, resultRows, scoreBreakdown } from '../src/game/results.ts';
 
 function memory(): Storage {
   const m = new Map<string, string>();
@@ -65,5 +65,12 @@ describe('personal best', () => {
       },
     } as unknown as Storage;
     expect(recordBest(blocked, 'a:b', 10, false)).toEqual({ previous: null, isNew: true });
+  });
+});
+
+describe('replay hint', () => {
+  it("names the keys, or a gamepad's buttons", () => {
+    expect(replayHint(false)).toBe('R Replay  S Save');
+    expect(replayHint(true)).toBe('Y Replay  X Save');
   });
 });

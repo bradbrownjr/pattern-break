@@ -1,10 +1,11 @@
 // A replay recorded in Chromium (the game's own recording, saved with S on the game-over
 // screen; docs/DEVELOPMENT.md, "Replays") must give the recorded score wherever it runs.
 // This file runs in Node (the `node` project) and in real browsers (the `browser`
-// project): each builds the level from the song file and runs the replay's inputs.
+// project): each builds the level from the song file, cut as the arcade cuts it, and runs
+// the replay's inputs.
 // Re-record it after a GEN_VERSION or SIM_VERSION bump.
 
-import { Difficulty, GEN_VERSION, SIM_VERSION, decodeReplay, generateLevel, runInputLog } from '@game/core';
+import { ARCADE_MAX_SAMPLES, Difficulty, GEN_VERSION, SIM_VERSION, cutLevelData, decodeReplay, generateLevel, runInputLog } from '@game/core';
 import { describe, expect, it } from 'vitest';
 import { analyze, loadOpenMpt, sha256Hex } from '../src/index.ts';
 
@@ -25,7 +26,10 @@ describe('recorded replay', () => {
     const song = await read(new URL('../../../music/neon_techno.mod', import.meta.url));
     expect(await sha256Hex(song)).toBe(replay.moduleHash);
     const openmpt = await loadOpenMpt();
-    const level = generateLevel(analyze(openmpt, song, Difficulty[replay.difficulty].tempoPermille), replay.difficulty);
+    const data = analyze(openmpt, song, Difficulty[replay.difficulty].tempoPermille);
+    // Level 1 of the arcade, so cut to the arcade's length cap.
+    expect(replay.cut).toBe(true);
+    const level = generateLevel(cutLevelData(data, ARCADE_MAX_SAMPLES), replay.difficulty);
     const state = runInputLog(level, replay.inputs);
     // The run ended on its last recorded tick, with the recorded score.
     expect([state.score, state.tick, state.dead || state.finished]).toEqual([replay.score, replay.inputs.length, true]);

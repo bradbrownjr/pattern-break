@@ -105,6 +105,14 @@ function shipMotion(effect: number, param: number): number {
 }
 
 /**
+ * After this many formation spacings without a new formation, a drum note that comes
+ * while turrets are still spaced out starts a formation instead. Songs whose tunes play
+ * on fixed-pitch samples have most of their instruments classed as drums, and without
+ * this rule Neon Techno went 108 s on Normal with no ships (docs/PLAN.md, "Enemies").
+ */
+export const DROUGHT_SPACINGS = 3;
+
+/**
  * Places the enemies of `terrain` from the notes in `levelData`. `drums` marks the drum
  * instruments (findDrums). Walking the notes in time order:
  * - A drum note places a turret on the tip of the bar it plays on, so the turret reaches
@@ -113,6 +121,8 @@ function shipMotion(effect: number, param: number): number {
  *   at least two) sends a tank in from the right along the floor.
  * - Any other note starts a formation of ships, and the next notes of that instrument add
  *   to it. Each ship flies at a height from its note's pitch, moving by its note's effect.
+ *   When no formation has started for DROUGHT_SPACINGS spacings, a drum note too early
+ *   for a turret starts one.
  * Each kind keeps its difficulty's spacing. A turret or tank is placed only if the path
  * check still passes with it counted as wall (solidWalls()). Every enemy fires on its own
  * instrument's later notes, while it is ahead of the ship, no more often than the
@@ -270,16 +280,9 @@ export function placeEnemies(
     if (t < ENEMY_GRACE_TICKS || t >= tickCount) continue;
     while (row + 1 < barCount && barStartSample[row + 1]! <= time) row++;
     const inst = resolvedInstrument[k]!;
-    if (drums[inst]) {
-      if (t - lastTurret < tune.turretSpacingTicks) continue;
-      const placed = tryTurret(row, inst, nextTurretOnCeiling);
-      if (placed >= 0) {
-        lastTurret = t;
-        nextTurretOnCeiling = placed === 0;
-      }
-    } else if (inst === bass) {
-      if (t - lastTank >= tune.tankSpacingTicks && tryTank(t, inst)) lastTank = t;
-    } else if (
+    const turretReady = t - lastTurret >= tune.turretSpacingTicks;
+    const drought = t - lastFormation >= tune.formationSpacingTicks * DROUGHT_SPACINGS;
+    if (
       inst === formationInstrument &&
       formationLeft > 0 &&
       t - formationLast >= FOLLOW_MIN_TICKS &&
@@ -288,6 +291,15 @@ export function placeEnemies(
       addShip(t, k);
       formationLeft--;
       formationLast = t;
+    } else if (drums[inst] && (turretReady || !drought)) {
+      if (!turretReady) continue;
+      const placed = tryTurret(row, inst, nextTurretOnCeiling);
+      if (placed >= 0) {
+        lastTurret = t;
+        nextTurretOnCeiling = placed === 0;
+      }
+    } else if (inst === bass) {
+      if (t - lastTank >= tune.tankSpacingTicks && tryTank(t, inst)) lastTank = t;
     } else if (t - lastFormation >= tune.formationSpacingTicks) {
       formationSize.push(0);
       addShip(t, k);

@@ -353,6 +353,21 @@ uses it too. The shared rules (`MIN_GAP_OVERLAP_PX`, `gapShiftLimitPx`, the tank
 are in `levelgen/rules.ts`. Tests run the check on random loud songs at every difficulty,
 on each fixture, and on every bundled song.
 
+### Level length
+
+`level-data/cut.ts`: `cutSample(data, maxSamples)` is the start of the last order whose
+first row is after the song's start and at or before `maxSamples`, or the last row's start
+when no order begins in that span, or `totalSamples` when the song ends by then.
+`cutLevelData(data, maxSamples)` returns a LevelData that ends there: `totalSamples` set,
+the rows and notes before it, and the analysis frames taken by then (`floor(end /
+hopFrames)`), all as views of the original arrays. It returns `data` itself when nothing is
+cut, which is how callers tell a shortened level. The arcade passes `ARCADE_MAX_SAMPLES`
+(2:30 at 48 kHz) for every level; `generateLevel` needs nothing else. In the client,
+`Game.#makeLevel` cuts, keeps shortened levels in a `WeakSet`, and caches levels by
+difficulty and cut. `#fadeCut` starts a 3 s fade (`CUT_FADE_SECONDS`) from the frame loop
+when the song clock is that close to the level's end, so a pause holds it, and the clear
+screen stops the song. The server keys its in-memory levels the same way.
+
 ### Enemies
 
 `placeEnemies()` in `levelgen/enemies.ts` runs at the end of `generateLevel` and fills
@@ -379,7 +394,10 @@ by formula, so nothing in the list depends on how the player flies.
   touches and the two after, with it counted as wall; otherwise it is dropped.
 - **Ships:** a note starts a formation if `formationSpacingTicks` have passed since the last
   one; the same instrument's next notes at least 12 ticks apart, within 120 ticks of the
-  first, add ships up to `formationSize`. A ship's y is its offset from the cave's centre
+  first, add ships up to `formationSize`. Once `DROUGHT_SPACINGS` (3) formation spacings
+  pass with no new formation, a drum note that comes too soon for a turret starts one, and
+  that drum's next notes can add to it (`GEN_VERSION` 11, 2026-11-14). The follow-up check
+  comes before the drum check for that reason. A ship's y is its offset from the cave's centre
   line: `(middle - note) * 2` px, clamped to 24. Its motion comes from libopenmpt's effect
   number on the note (`soundlib/modcommand.h`): 5, 7 and 26 (vibrato) weave, 2 (slide up)
   climbs, 3 (slide down) dives, 1 (arpeggio) with a nonzero parameter hops.
@@ -646,21 +664,24 @@ formation count and that many u8 sizes.
 ### Replays
 
 `sim/replay.ts` holds a run as a `Replay`: the song file's SHA-256, the difficulty, the
-cheats the run had, `GEN_VERSION`, `SIM_VERSION`, the score it ended with, and the input
-bits of every tick. A replay with any cheat is for watching only: the M5 boards refuse it.
-`encodeReplay` writes it little-endian: magic `PBRP`, u32 format version (2), u32
+cheats the run had, whether it played the arcade's cut of the song (`cut`), `GEN_VERSION`,
+`SIM_VERSION`, the score it ended with, and the input bits of every tick. A replay with any cheat is for watching only: the M5 boards refuse it.
+`encodeReplay` writes it little-endian: magic `PBRP`, u32 format version (3), u32
 genVersion, u32 simVersion, 32 bytes of hash, u8 difficulty id, u8 cheats (the `Cheat`
-flags; added in format 2, 2026-11-10), i32 score, u32 tick count,
+flags; added in format 2, 2026-11-10), u8 flags (`ReplayFlag`, bit 0 the arcade's cut;
+added in format 3, 2026-11-14), i32 score, u32 tick count,
 u32 run count, then each run of equal bits as u16 bits and its length as an unsigned
-LEB128 varint. `decodeReplay` throws on a wrong magic or format, an unknown difficulty or
-cheat flag,
+LEB128 varint. `decodeReplay` reads format 2 as uncut, so an old file gets the "Old
+replay" notice for its versions, and throws on a wrong magic or other format, an unknown
+difficulty, cheat flag or flag,
 truncation, run lengths that don't add up to the tick count, and trailing bytes. The level
-isn't stored: it is rebuilt from the song, which is why the hash is there. The level-1 run
-in the fixture is 12 903 ticks in 3 087 bytes.
+isn't stored: it is rebuilt from the song, which is why the hash is there, and cut with
+`cutLevelData` when the flag says so. The level-1 run
+in the fixture is 17 568 ticks in 8 806 bytes.
 
 In the game (`game.ts`), each run that ends in game over or level complete keeps its
 replay, for a bundled song (its hash comes from `music/manifest.json`). On those screens R
-(or Y on a pad) watches it and S saves it as
+(or Y on a pad) watches it and S (or X, Nuke's button) saves it as
 `pattern-break-<song>-<difficulty>-<score>.pbreplay`. A replay plays in the `replay` mode:
 the song from the start at the replay's tempo, the sim fed the replay's inputs against the
 song clock as in play, and "Replay" over it. Any key stops it. At the end it shows the
@@ -706,8 +727,9 @@ the boards don't depend on it; update that hash in the same commit.
 **Recorded replay.** `packages/analysis/fixtures/replay-neon_techno-normal.pbreplay` is a
 run of level 1 (Neon Techno on normal) recorded by the game in Chromium.
 `test/replay.test.ts` checks that it names this `GEN_VERSION` and `SIM_VERSION` and the song
-file's SHA-256, builds the level from `music/neon_techno.mod`, runs the inputs, and gets the
-recorded score (103 200) on the recorded last tick, in Node and in every browser.
+file's SHA-256, builds the level from `music/neon_techno.mod` cut as the arcade cuts it (the
+replay is marked cut), runs the inputs, and gets the
+recorded score (88 400) on the recorded last tick, in Node and in every browser.
 
 **Bundled songs.** `packages/analysis/test/music.test.ts` analyzes every song in
 `music/manifest.json`, builds its level on each difficulty, and checks that it has enemies,
@@ -718,12 +740,14 @@ for the bundled songs on four difficulties, so a levelgen change that makes a re
 **Difficulty guardrails.** `pnpm check:difficulty` (`tools/difficulty-report.ts`) builds
 each bundled and test song's level on easy, normal and hard (and Crush on impossible),
 flies it with the autopilot and the enemies, and prints per level: enemies a minute, and
-ships, turrets and tanks; enemy bullets on screen, the 95th percentile and the most; the
+ships, turrets and tanks; the longest wait between ships while the song plays at least a
+note a second (`shpGap`); enemy bullets on screen, the 95th percentile and the most; the
 narrowest gap and the 5th percentile gap, with turrets and tank tracks as wall; how far
 the autopilot got and the lives it lost; and the same for the autopilot missing 20% of
 the bullets (`HUMAN_MISS_PERCENT`, the human model), with the shield points it spent a
-minute. It fails unless the guardrails in `docs/PLAN.md`,
-"Difficulty guardrails", hold. `--json <file>` saves the rows, and song files named on the
+minute. An arcade song longer than the length cap gets a second row per difficulty,
+`song@arcade`, for the level as the arcade cuts it. It fails unless the guardrails in
+`docs/PLAN.md`, "Difficulty guardrails", hold. `--json <file>` saves the rows, and song files named on the
 command line are measured in place of the bundled and test songs. It takes a few
 minutes, too long for `pnpm test`, so CI runs it as its own job. The test songs are in
 `packages/analysis/fixtures/test-songs` (licenses in that folder's README).
@@ -1166,7 +1190,8 @@ Run `pnpm dev` and open the URL it prints.
   C or L launch a missile once unlocked; V or ; nuke; either Shift or ' boosts once unlocked; and
   Esc, always, pauses (a gamepad and touch are below). Capsules unlock power-ups as they are picked up. Losing the last
   life is game over: any key retries the level, Esc goes to the title, and R and S watch
-  and save the run's replay (see "Replays"). Game over and level complete ignore keys for 0.7 s, so a key still held from
+  and save the run's replay (see "Replays"); on a pad, A retries, B goes to the title,
+  and Y and X watch and save. Game over and level complete ignore keys for 0.7 s, so a key still held from
   play doesn't skip them. The game pauses when the window loses focus or the tab is hidden.
 - **Secrets** (Brad and Brad's son, 2026-11-10), none of them shown in the game's help:
   - **Konami code:** up, up, down, down, left, right, left, right, B, A on the title
@@ -1231,7 +1256,8 @@ Run `pnpm dev` and open the URL it prints.
   from Settings: remappable controls. A Device row (Keyboard or Pad), a row per action with
   three slots, then Reset and Back. The keyboard has Up, Down, Left, Right, Fire, Bomb,
   Missile, Nuke, Boost and Pause; the pad adds Cancel (Select: back in menus, quit from
-  pause) and Replay (Y). Three slots, not two, so the defaults fit: Z, J and Space all
+  pause) and Replay (Y). Nuke's inputs (X) also save the replay on the end screens, as
+  Fire's confirm and Bomb's back out in menus (`PAD_ACTION_BITS`). Three slots, not two, so the defaults fit: Z, J and Space all
   fire, and both Shifts and ' boost. Enter on a slot waits 5 s for a key or button ("?"
   blinks; Esc, a click, or on the keyboard page a pad press, gives up); Delete empties the
   slot; Reset puts the device's defaults back. A key or input already used elsewhere
@@ -1304,7 +1330,12 @@ Run `pnpm dev` and open the URL it prints.
   it leans; see "Stick speed") or the D-pad flies; A and RT (buttons 0, 7) fire; B (1) drops bombs; X (2) nukes; LB
   and LT (4, 6) boost; RB (5) launches a missile; Start pauses. In menus the stick or D-pad moves (held, it repeats after 400 ms, then
   every 100 ms), Fire (A or RT) or Start selects, and Bomb (B) or Select goes back. On game over and level
-  complete B or Select is Esc, Y (3) watches the replay, and any other button is any key. A pad can't leave the start
+  complete B or Select is Esc, Y (3) watches the replay, X (2, Nuke) saves it, and any other
+  button is any key. **Prompts** (Brad, 2026-11-14): `Game.#setLastPressPad` notes whether
+  the last press was a pad's or a key's, and when that changes, draws game over, the clear
+  screen and Sync again; Scores and Credits read it each frame. With a pad, the prompts
+  name its buttons: "A Retry  B Title", "A Next", "Y Replay  X Save" (`replayHint`), "B
+  Back", "A Keep  Y Retry  B Back" on Sync, "A Title" and "B Skip" on Credits. A pad can't leave the start
   screen on a fresh page: browsers start sound only after a user activation, and the HTML
   spec's activation-triggering input events
   (https://html.spec.whatwg.org/multipage/interaction.html#activation-triggering-input-event)
@@ -1447,7 +1478,7 @@ The part each song plays is set in `songs.ts`, not the manifest:
 - `TITLE_SONG_ID`: the title and demo music, and Levels' first song (The_Epic_Chip).
 - `LEVEL_SONG_IDS`: the eight arcade levels in order, from Neon Techno to Keygen 9000:
   Neon Techno first as Brad chose, then by how hard the human model finds each on normal
-  (2026-11-13; [`SONG-DIGEST.md`](SONG-DIGEST.md), "Bundled").
+  (2026-11-13, measured again 2026-11-14; [`SONG-DIGEST.md`](SONG-DIGEST.md), "Bundled").
 - `IMPOSSIBLE_SONG_IDS`: the secret Impossible difficulty's run, one level: Crush, the
   fastest song measured.
 - `CREDITS_SONG_ID`: the ending's credit roll, after the last level (Sleepy Snow).
@@ -1678,7 +1709,9 @@ boards.
   - Enter checks the name with the shared rules (`packages/core/src/name.ts`) first:
     "Name needed", "Bad name", "Name refused" (the vulgarity filter).
 - **Posting.** A run from Levels goes on its song's board under the name entered. An arcade
-  level goes on its song's board when it's cleared. When the arcade run ends, at a game
+  level goes on its Level board (Level 1 to 8, the level as the arcade cuts it) when it's
+  cleared, posted as a `level` run (Brad, 2026-11-14; until then it went on its song's
+  board). When the arcade run ends, at a game
   over (with the levels cleared so far and the last try: a retry and a later end post
   again, and the board keeps the best) or after its last level, the run goes on the arcade
   board too, if every level went under the same name; a level skipped or posted under
@@ -1691,7 +1724,8 @@ boards.
 - **The end screen's line,** above the prompt once the name is posted: "Sent" as soon as
   the run is in the queue, since from there it's sent whatever the player does next, then
   "Rank 3/12", "Queued" or "Not posted: score mismatch" when the server answers.
-- **Scores,** on the title menu: rows for the board (Arcade, then each song with a hash)
+- **Scores,** on the title menu: rows for the board (Arcade, Level 1 to 8, then each song
+  with a hash)
   and the difficulty (Impossible once found), then the board's top 10, and "You 23" under
   the list when the place of the last name used on this device is lower. Each row is in
   its device's colour, `PLAYER_COLOURS[mark % 12]` (render/palette.ts: the theme's neons
@@ -1989,11 +2023,12 @@ repo (see the Dockerfile).
 | Request | Signed | Answer |
 |---|---|---|
 | `GET /api` | no | `{ genVersion, simVersion }` |
-| `POST /api/runs` | yes | `{ kind: 'song' \| 'arcade', name, replays: [base64] }`. `name` follows `packages/core/src/name.ts`: 422 `{ status: 'rejected', reason: 'bad name' }`, or `'name refused'` from the vulgarity filter. Answers `{ status: 'needModule', hashes }`, `{ status: 'accepted', runId, score, rank, players }`, or 422 `{ status: 'rejected', reason, level }`. A key's first run makes its player. |
+| `POST /api/runs` | yes | `{ kind: 'song' \| 'arcade' \| 'level', name, replays: [base64] }`: a run from Levels, an arcade run's levels in order, or one cleared arcade level. `name` follows `packages/core/src/name.ts`: 422 `{ status: 'rejected', reason: 'bad name' }`, or `'name refused'` from the vulgarity filter. Answers `{ status: 'needModule', hashes }`, `{ status: 'accepted', runId, score, rank, players }`, or 422 `{ status: 'rejected', reason, level }`. A key's first run makes its player. |
 | `PUT /api/songs/:hash` | yes | The song file as `application/octet-stream`, up to 4 MB. 403 from a key that has sent no run; 422 when its SHA-256 isn't `:hash`; 201 when stored, 200 when the server had it. |
 | `GET /api/songs/:hash` | no | `{ hash, title, author, bundled, license, sourceUrl, players }`, or 404. |
 | `GET /api/leaderboards/:hash?difficulty=&limit=&name=` | no | A song's board: `{ genVersion, simVersion, top, you, players }`. `limit` is 1 to 100, default 10. `you` is the place of the `X-PB-Key` header's key under `name`, or its best place under any name. `players` counts each key and name once. |
 | `GET /api/leaderboards/arcade?difficulty=&limit=` | no | The arcade board, the same shape. Entries have `levels`, the levels the run reached. |
+| `GET /api/leaderboards/level-<n>?difficulty=&limit=` | no | Arcade level n's board (1 to 8), the same shape: the level as the arcade cuts it, from arcade runs and `level` runs. |
 | `GET /api/replays/:sha` | no | A listed run's replay file, by the SHA-256 a board entry names. |
 
 A board lists the best run of each key and name: the highest score, the earlier run first
@@ -2023,8 +2058,9 @@ replay, in order, it turns the run down with one of these reasons:
 
 | Reason | When |
 |---|---|
-| `bad replay` | The bytes don't decode, or a song run has more than one replay. |
-| `wrong songs` | An arcade run's songs aren't the arcade's (`music/arcade.json`) for its difficulty, in order. |
+| `bad replay` | The bytes don't decode, or a song or level run has more than one replay. |
+| `wrong songs` | An arcade run's songs aren't the arcade's (`music/arcade.json`) for its difficulty, in order, or a level run's song isn't one of them. |
+| `wrong length` | An arcade or level run's replay isn't marked as the arcade's cut, or a song run's is. |
 | `mixed difficulty` | An arcade run's levels aren't all one difficulty. |
 | `old version` | The replay's `GEN_VERSION` or `SIM_VERSION` isn't the server's. |
 | `cheat` | The replay has cheat flags. Impossible counts like any difficulty (Brad, 2026-11-10). |
@@ -2033,8 +2069,10 @@ replay, in order, it turns the run down with one of these reasons:
 | `score mismatch` | The replayed score isn't the replay's score. |
 | `level not cleared` | An arcade level before the last ended in a game over. |
 
-An accepted arcade run goes on the arcade board, and each of its levels on that song's
-board. The level comes from the song's LevelData, cached in `data/levels/` as
+An accepted arcade run goes on the arcade board, and each of its levels on its Level
+board (`level-1` to `level-8` in the `board` column); a song run goes on its song's board.
+Song boards hold whole songs from Levels; Level boards the arcade's cut (Brad,
+2026-11-14). The level comes from the song's LevelData, cached in `data/levels/` as
 `<hash>-<tempo>-<GEN_VERSION>.level` and the last 32 Levels in memory.
 
 Measured in the container on Brad's Unraid server (Xeon E5-2640, 2026-11-10), on autopilot

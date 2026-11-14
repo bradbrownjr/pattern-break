@@ -48,10 +48,16 @@ export interface StoredIdentity {
   privateKey: CryptoKey;
 }
 
-/** A finished run waiting to be sent: a song run's replay, or an arcade run's level replays. */
+/** What a posted run is: a song from Levels, an arcade run, or one arcade level. */
+export type RunKind = 'song' | 'arcade' | 'level';
+
+/**
+ * A finished run waiting to be sent: a song run's replay, an arcade run's level replays, or
+ * one cleared arcade level's replay.
+ */
 export interface PendingRun {
   id?: number;
-  kind: 'song' | 'arcade';
+  kind: RunKind;
   /** The name it's posted under; none on a run queued before names went with runs. */
   name?: string;
   replays: ArrayBuffer[];

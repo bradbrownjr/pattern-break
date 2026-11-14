@@ -10,11 +10,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  ARCADE_MAX_SAMPLES,
   Difficulty,
   GEN_VERSION,
   SIM_VERSION,
   autopilotInputs,
   createSimState,
+  cutLevelData,
   encodeReplay,
   generateLevel,
   runInputLog,
@@ -69,12 +71,13 @@ async function send(player: Player, method: 'PUT' | 'POST', url: string, body: u
   });
 }
 
-/** An autopilot run on a song: real inputs, the score they make. */
-async function autopilotReplay(bytes: Uint8Array, hash: string, difficulty: DifficultyName): Promise<Replay> {
-  const level = generateLevel(analyze(await loadOpenMpt(), bytes, Difficulty[difficulty].tempoPermille), difficulty);
+/** An autopilot run on a song, whole or cut as the arcade cuts it: real inputs, the score they make. */
+async function autopilotReplay(bytes: Uint8Array, hash: string, difficulty: DifficultyName, cut = false): Promise<Replay> {
+  const data = analyze(await loadOpenMpt(), bytes, Difficulty[difficulty].tempoPermille);
+  const level = generateLevel(cut ? cutLevelData(data, ARCADE_MAX_SAMPLES) : data, difficulty);
   const inputs = autopilotInputs(withoutEnemies(level));
   const state = runInputLog(level, inputs, createSimState());
-  return { moduleHash: hash, difficulty, cheats: 0, genVersion: GEN_VERSION, simVersion: SIM_VERSION, score: state.score, inputs };
+  return { moduleHash: hash, difficulty, cheats: 0, cut, genVersion: GEN_VERSION, simVersion: SIM_VERSION, score: state.score, inputs };
 }
 
 const b64 = (replay: Replay): string => Buffer.from(encodeReplay(replay)).toString('base64');
@@ -227,7 +230,14 @@ describe('an arcade run', () => {
 
   beforeAll(async () => {
     const hash = store.arcade.levels[0]!;
-    level1 = await autopilotReplay(new Uint8Array(readFileSync(join(MUSIC, store.bundled[hash]!.file))), hash, 'normal');
+    level1 = await autopilotReplay(new Uint8Array(readFileSync(join(MUSIC, store.bundled[hash]!.file))), hash, 'normal', true);
+  }, 60_000);
+
+  it('turns away a level not cut to the length cap, and a cut level from a song board', async () => {
+    const uncut = await send(alice, 'POST', '/api/runs', { kind: 'arcade', name: 'ALICE', replays: [b64({ ...level1, cut: false })] });
+    expect(uncut.json()).toMatchObject({ status: 'rejected', reason: 'wrong length', level: 0 });
+    const song = await send(alice, 'POST', '/api/runs', { kind: 'song', name: 'ALICE', replays: [b64(level1)] });
+    expect(song.json()).toMatchObject({ status: 'rejected', reason: 'wrong length', level: 0 });
   }, 60_000);
 
   it('rejects levels out of the arcade order', async () => {
@@ -239,15 +249,27 @@ describe('an arcade run', () => {
     expect(res.json()).toMatchObject({ status: 'rejected', reason: 'wrong songs', level: 0 });
   });
 
-  it('accepts a run that ends in a game over, on the arcade board and the song board', async () => {
+  it('accepts a run that ends in a game over, on the arcade board and the Level 1 board, not the song board', async () => {
     const res = await send(alice, 'POST', '/api/runs', { kind: 'arcade', name: 'ALICE', replays: [b64(level1)] });
     expect(res.json()).toMatchObject({ status: 'accepted', score: level1.score, rank: 1 });
     const arcade = (await app.inject({ url: '/api/leaderboards/arcade?difficulty=normal' })).json();
     expect(arcade.top).toEqual([expect.objectContaining({ nickname: 'ALICE', score: level1.score, levels: 1 })]);
+    const level = (await app.inject({ url: '/api/leaderboards/level-1?difficulty=normal' })).json();
+    expect(level.top).toEqual([expect.objectContaining({ nickname: 'ALICE', score: level1.score, levels: 1 })]);
+    // Song boards are for whole songs from Levels.
     const song = (await app.inject({ url: `/api/leaderboards/${level1.moduleHash}?difficulty=normal` })).json();
-    expect(song.top).toEqual([expect.objectContaining({ nickname: 'ALICE', score: level1.score })]);
-    const info = (await app.inject({ url: `/api/songs/${level1.moduleHash}` })).json();
-    expect(info).toMatchObject({ title: 'Neon Techno', bundled: true, players: 1 });
+    expect(song.top).toEqual([]);
+  }, 60_000);
+
+  it('takes one cleared level on its Level board, and only an arcade song', async () => {
+    // From another device: one device sending the same replay again keeps its first name.
+    const jordan = newPlayer();
+    const res = await send(jordan, 'POST', '/api/runs', { kind: 'level', name: 'JORDAN', replays: [b64(level1)] });
+    expect(res.json()).toMatchObject({ status: 'accepted', score: level1.score });
+    const level = (await app.inject({ url: '/api/leaderboards/level-1?difficulty=normal' })).json();
+    expect(level.top.map((e: { nickname: string }) => e.nickname).sort()).toEqual(['ALICE', 'JORDAN']);
+    const other = await send(jordan, 'POST', '/api/runs', { kind: 'level', name: 'JORDAN', replays: [b64({ ...fixtureRun, cut: true })] });
+    expect(other.json()).toMatchObject({ status: 'rejected', reason: 'wrong songs', level: 0 });
   }, 60_000);
 });
 
@@ -256,5 +278,8 @@ describe('requests', () => {
     expect((await app.inject({ url: '/api/nope' })).statusCode).toBe(404);
     expect((await app.inject({ url: '/api/leaderboards/arcade?difficulty=silly' })).statusCode).toBe(400);
     expect((await app.inject({ url: '/api/leaderboards/xyz?difficulty=normal' })).statusCode).toBe(400);
+    expect((await app.inject({ url: '/api/leaderboards/level-0?difficulty=normal' })).statusCode).toBe(400);
+    expect((await app.inject({ url: '/api/leaderboards/level-9?difficulty=normal' })).statusCode).toBe(400);
+    expect((await app.inject({ url: '/api/leaderboards/level-8?difficulty=normal' })).statusCode).toBe(200);
   });
 });

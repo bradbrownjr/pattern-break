@@ -13,11 +13,13 @@ export type {
   LevelDataRows,
 } from './level-data/types.ts';
 export { serializeLevelData, deserializeLevelData } from './level-data/serialize.ts';
+export { ARCADE_MAX_SAMPLES, cutLevelData, cutSample } from './level-data/cut.ts';
 export * from './playfield.ts';
 export { NAME_CHARS, NAME_MAX, cleanName, isVulgar, nameProblem, nameReadings } from './name.ts';
 export { Difficulty, EnemyKind, EnemyTuning, ShipMotion, Terrain } from './levelgen/types.ts';
 export type { DifficultyName, EnemyList, Level } from './levelgen/types.ts';
 export {
+  DROUGHT_SPACINGS,
   ENEMY_GRACE_TICKS,
   emptyEnemyList,
   instrumentNotes,
@@ -56,5 +58,5 @@ export {
 } from './sim/sim.ts';
 export type { SimState } from './sim/sim.ts';
 export { autopilotInputs } from './sim/autopilot.ts';
-export { REPLAY_FORMAT_VERSION, decodeReplay, encodeReplay } from './sim/replay.ts';
+export { REPLAY_FORMAT_VERSION, ReplayFlag, decodeReplay, encodeReplay } from './sim/replay.ts';
 export type { Replay } from './sim/replay.ts';

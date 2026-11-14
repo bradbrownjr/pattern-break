@@ -9,6 +9,36 @@ Fixes**, in that order.
 
 ---
 
+# November 14, 2026
+
+## Milestones
+
+* **Ships keep coming.** Brad found that most of the way through level 1 the ships
+  stopped and only tanks and turrets came. Neon Techno plays its tunes on fixed-pitch
+  samples, so most of its instruments count as drums, and on normal it went 108 s without
+  a ship. Now, after three formation spacings (6 s on normal) with no new formation, the
+  next drum note too early for a turret starts one. Its longest wait for ships on normal is
+  6 s, it has 107 ships where it had 48, and its turrets are unchanged. A fifth difficulty
+  guardrail fails any level that goes more than four spacings without ships while its song
+  plays. The_Dim_Dungeon, now easier for the human model, moved from level 7 to 5, and
+  Wrath_of_the_Djinn leads into the last level again.
+* **Arcade levels end by 2:30.** Brad found level 1's 3:32 "a bit of a slog". In the arcade
+  run a song longer than 2:30 of play ends at the start of the last pattern by then, with
+  its music fading out over the last 3 s: Neon Techno at 2:26 and Keygen 9000 at 2:28 on
+  normal. Levels and the Jukebox play songs whole. Replays record whether the level was
+  cut (replay format 3), and the server checks arcade runs on the cut levels.
+* **Level boards.** Brad asked for the arcade's cut songs to be scored apart from the
+  whole songs. Each arcade level now has its own board per difficulty, Level 1 to 8 on
+  Scores, beside the arcade total, and a cleared level posts there. Song boards hold only
+  runs from Levels, which play the whole song, so both versions can be played and scored. Geometry Dash and
+  DDR, which the cut follows, are in `docs/REFERENCES.md`.
+* **Gamepad prompts.** With a gamepad, the prompts on game over, the clear screen, Sync,
+  Scores and Credits name its buttons ("A Retry  B Title", "Y Replay  X Save") and switch
+  back to keys when a key is pressed. X, Nuke's button, now saves the replay on the end
+  screens, so every option there has a button.
+
+  `GEN_VERSION` 11, so the leaderboards start over.
+
 # November 13, 2026
 
 ## Milestones

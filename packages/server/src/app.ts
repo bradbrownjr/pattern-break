@@ -150,7 +150,7 @@ export async function buildApp(options: AppOptions): Promise<{ app: FastifyInsta
       const body = request.body as { kind?: unknown; name?: unknown; replays?: unknown } | null;
       const kind = body?.kind;
       const encoded = body?.replays;
-      if ((kind !== 'song' && kind !== 'arcade') || !Array.isArray(encoded) || encoded.length === 0) {
+      if ((kind !== 'song' && kind !== 'arcade' && kind !== 'level') || !Array.isArray(encoded) || encoded.length === 0) {
         return reply.code(400).send({ error: 'send kind, name and replays' });
       }
       const nickname = typeof body?.name === 'string' ? body.name : '';
@@ -158,7 +158,7 @@ export async function buildApp(options: AppOptions): Promise<{ app: FastifyInsta
       if (problem) return reply.code(422).send({ status: 'rejected', reason: problem === 'vulgar' ? 'name refused' : 'bad name' });
       const player = db.ensurePlayer(request.playerKey!, now());
       const maxLevels = Math.max(options.store.arcade.levels.length, options.store.arcade.impossible.length);
-      if (encoded.length > (kind === 'song' ? 1 : maxLevels)) return reply.code(400).send({ error: 'too many replays' });
+      if (encoded.length > (kind === 'arcade' ? maxLevels : 1)) return reply.code(400).send({ error: 'too many replays' });
       const replays: Uint8Array[] = [];
       const hashes: string[] = [];
       for (const item of encoded) {
@@ -200,13 +200,20 @@ export async function buildApp(options: AppOptions): Promise<{ app: FastifyInsta
           at,
         );
       }
-      // Each level also goes on its song's board.
+      // Each level goes on a board of its own: a song's from Levels, an arcade level's
+      // (as the arcade cuts it) from the arcade.
+      const levelBoard = (i: number): Board => {
+        const position = result.levels[i]!.position;
+        return position < 0
+          ? { kind: 'song', song: hashes[i]!, difficulty: result.difficulty }
+          : { kind: 'level', level: position + 1, difficulty: result.difficulty };
+      };
       const levelRuns = result.levels.map((level, i) =>
         db.addRun(
           {
             player: player.id,
             nickname,
-            board: { kind: 'song', song: hashes[i]!, difficulty: result.difficulty },
+            board: levelBoard(i),
             gen: GEN_VERSION,
             sim: SIM_VERSION,
             score: level.score,
@@ -217,10 +224,7 @@ export async function buildApp(options: AppOptions): Promise<{ app: FastifyInsta
           at,
         ),
       );
-      const board: Board =
-        kind === 'arcade'
-          ? { kind: 'arcade', difficulty: result.difficulty }
-          : { kind: 'song', song: hashes[0]!, difficulty: result.difficulty };
+      const board: Board = kind === 'arcade' ? { kind: 'arcade', difficulty: result.difficulty } : levelBoard(0);
       const runId =
         kind === 'arcade'
           ? db.addRun(
@@ -243,17 +247,28 @@ export async function buildApp(options: AppOptions): Promise<{ app: FastifyInsta
     },
   );
 
-  // Boards. 'arcade' is the arcade run's board; any other name is a song's hash.
+  // Boards. 'arcade' is the arcade run's board, 'level-1' to 'level-8' its levels' boards,
+  // and any other name is a song's hash.
   app.get('/api/leaderboards/:board', { config: perIp(120, '1 minute') }, async (request, reply) => {
     const { board: name } = request.params as { board: string };
     const query = request.query as { difficulty?: string; limit?: string; name?: string };
     const difficulty = difficultyParam(query.difficulty);
     if (!difficulty) return reply.code(400).send({ error: 'difficulty must be one of ' + Object.keys(Difficulty).join(', ') });
-    if (name !== 'arcade' && !HASH.test(name)) return reply.code(400).send({ error: 'bad board' });
+    const level = /^level-([1-9][0-9]?)$/.exec(name);
+    const levelNumber = level ? Number(level[1]) : 0;
+    const maxLevels = Math.max(options.store.arcade.levels.length, options.store.arcade.impossible.length);
+    if (name !== 'arcade' && !HASH.test(name) && !(levelNumber >= 1 && levelNumber <= maxLevels)) {
+      return reply.code(400).send({ error: 'bad board' });
+    }
     const limit = Math.min(MAX_BOARD_LIMIT, Math.max(1, Number(query.limit ?? 10) | 0));
     const key = request.headers['x-pb-key'];
     const player = typeof key === 'string' ? db.playerByKey(key) : null;
-    const board: Board = name === 'arcade' ? { kind: 'arcade', difficulty } : { kind: 'song', song: name, difficulty };
+    const board: Board =
+      name === 'arcade'
+        ? { kind: 'arcade', difficulty }
+        : levelNumber > 0
+          ? { kind: 'level', level: levelNumber, difficulty }
+          : { kind: 'song', song: name, difficulty };
     const you = player ? { player: player.id, nickname: typeof query.name === 'string' && query.name ? query.name : null } : null;
     return { genVersion: GEN_VERSION, simVersion: SIM_VERSION, ...db.board(board, GEN_VERSION, SIM_VERSION, limit, you) };
   });

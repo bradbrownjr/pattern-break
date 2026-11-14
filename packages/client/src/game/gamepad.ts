@@ -38,6 +38,8 @@ export const PadBit = {
   start: 1 << 19,
   /** Replay (Y): watches the replay on the end screens. */
   y: 1 << 20,
+  /** Nuke's inputs (X) also save the replay on the end screens. */
+  x: 1 << 21,
 } as const;
 
 /** The bits each pad action sets. */
@@ -49,7 +51,7 @@ export const PAD_ACTION_BITS: Record<PadAction, number> = {
   fire: InputBit.fire | PadBit.a,
   bomb: InputBit.bomb | PadBit.b,
   missile: InputBit.missile,
-  nuke: InputBit.nuke,
+  nuke: InputBit.nuke | PadBit.x,
   boost: InputBit.boost,
   pause: PadBit.start,
   cancel: PadBit.select,
@@ -181,7 +183,7 @@ export const REPEAT_DELAY_MS = 400;
 export const REPEAT_INTERVAL_MS = 100;
 const DIRECTIONS = PadBit.up | PadBit.down | PadBit.left | PadBit.right;
 /** Bits in the order presses are reported. */
-const ORDER = [PadBit.up, PadBit.down, PadBit.left, PadBit.right, PadBit.a, PadBit.b, PadBit.select, PadBit.start, PadBit.y];
+const ORDER = [PadBit.up, PadBit.down, PadBit.left, PadBit.right, PadBit.a, PadBit.b, PadBit.select, PadBit.start, PadBit.y, PadBit.x];
 
 /**
  * Turns per-frame pad bits into presses: each bit that went down since the last update,

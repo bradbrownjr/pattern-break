@@ -5,6 +5,7 @@
 
 import {
   Cheat,
+  ARCADE_MAX_SAMPLES,
   Difficulty,
   GEN_VERSION,
   NAME_MAX,
@@ -15,6 +16,7 @@ import {
   Q8,
   autopilotInputs,
   createSimState,
+  cutLevelData,
   decodeReplay,
   deserializeLevelData,
   runInputLog,
@@ -40,7 +42,7 @@ import { seededRandom } from '../render/random.ts';
 import type { GameRenderer } from '../render/renderer.ts';
 import { barBinEdges, barLevels } from '../render/spectrum.ts';
 import { analyzeSerializedInWorker } from './analysis.ts';
-import { keepStorage, openLibrary, sha256Hex, type Library, type StoredSong } from './library.ts';
+import { keepStorage, openLibrary, sha256Hex, type Library, type RunKind, type StoredSong } from './library.ts';
 import {
   STANDARD_PROFILE,
   assign,
@@ -128,7 +130,7 @@ import {
   titleFromFileName,
   type BundledSong,
 } from './songs.ts';
-import { REPLAY_HINT, bestKey, recordBest, resultRow, resultRows, scoreBreakdown } from './results.ts';
+import { REPLAY_HINT, bestKey, recordBest, replayHint, resultRow, resultRows, scoreBreakdown } from './results.ts';
 import { browserStorage, loadSettings, saveSettings, volumeGain, type Settings } from './settings.ts';
 import { SyncScreen } from './sync-screen.ts';
 
@@ -168,8 +170,12 @@ type Run = { kind: 'arcade'; level: number; songs: readonly BundledSong[] } | { 
 interface SongCache {
   bytes: Promise<Uint8Array>;
   levelData: Map<number, Promise<LevelData>>;
-  levels: Map<DifficultyName, { level: Level; autopilot: Uint16Array | null }>;
+  /** Keyed by difficulty, with '-cut' after it for the arcade's cut (ARCADE_MAX_SAMPLES). */
+  levels: Map<string, { level: Level; autopilot: Uint16Array | null }>;
 }
+
+/** A cut level's music fades out over its last seconds (docs/PLAN.md, "Level length"). */
+const CUT_FADE_SECONDS = 3;
 
 /** How long game over and level complete ignore keys, so a key held from play doesn't skip them. */
 const PROMPT_DELAY_MS = 700;
@@ -422,6 +428,10 @@ export class Game {
   #runReplays: Replay[] = [];
   /** The name each cleared level was posted under, null for one not posted: the arcade board takes the run only under one name. */
   #runNames: (string | null)[] = [];
+  /** Levels the arcade's length cap ended before their song did. */
+  readonly #shortened = new WeakSet<Level>();
+  /** The cut level's fade-out has started. */
+  #cutFading = false;
   /** The end screen's leaderboard line: what became of the run, or null for none. */
   #boardLine: string | null = null;
   /** Counts runs posted, so an answer for an earlier run doesn't change this one's line. */
@@ -736,7 +746,7 @@ export class Game {
     if (keys.action(e.code) || e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
     this.#input.keyDown(e.code);
     if (e.code === 'Escape') this.#escHeld = true;
-    this.#lastPressPad = false;
+    this.#setLastPressPad(false);
     const modifier = e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta';
     if (modifier && !keys.action(e.code)) return;
     switch (this.#mode) {
@@ -841,7 +851,7 @@ export class Game {
   }
 
   #onPadPress(bit: number): void {
-    this.#lastPressPad = true;
+    this.#setLastPressPad(true);
     switch (this.#mode) {
       case 'start':
         // Browsers start sound only after a key press or click (the HTML spec's
@@ -908,10 +918,11 @@ export class Game {
           if (edit && this.#nameEntryUp()) this.#onNameEvent(this.#nameEntry.apply(edit));
           return;
         }
-        // B or Select is Esc; any other button is any key. Directions don't count, so a
-        // stick still leaning from play doesn't skip the screen.
+        // B or Select is Esc, Y and X are R and S, and any other button is any key.
+        // Directions don't count, so a stick still leaning from play doesn't skip the screen.
         if (bit === PadBit.b || bit === PadBit.select) this.#toTitle();
         else if (bit === PadBit.y && this.#onEndScreen()) this.#watchLastReplay();
+        else if (bit === PadBit.x && this.#onEndScreen()) this.#saveReplay();
         else if ((bit & (PadBit.up | PadBit.down | PadBit.left | PadBit.right)) === 0) this.#onAnyKey();
         return;
       default:
@@ -1183,10 +1194,10 @@ export class Game {
 
   /**
    * Posts the run that just ended under `name`, or doesn't (null, skipped). A run from Levels
-   * goes on its song's board. An arcade level goes on its song's board when it's cleared;
-   * when the run ends, at a game over (with the last try: a retry and a later end post again,
-   * and the board keeps the best) or after its last level, it goes on the arcade board too,
-   * if every level went under the same name.
+   * goes on its song's board. An arcade level goes on its own board (Level 1 to 8, as the
+   * arcade cuts it) when it's cleared; when the run ends, at a game over (with the last try:
+   * a retry and a later end post again, and the board keeps the best) or after its last
+   * level, it goes on the arcade board too, if every level went under the same name.
    */
   #postRun(name: string | null): void {
     this.#nameEntry = null;
@@ -1195,7 +1206,7 @@ export class Game {
     const run = this.#run;
     const boards = this.#boards;
     if (!replay || !run || !boards) return;
-    let kind: 'song' | 'arcade' = 'song';
+    let kind: RunKind = run.kind === 'arcade' ? 'level' : 'song';
     let replays = [replay];
     if (run.kind === 'arcade') {
       const finished = this.#state.finished;
@@ -1283,6 +1294,17 @@ export class Game {
   }
 
   /** Draws the end screen on show again, after its name entry or leaderboard line changed. */
+  /**
+   * Notes whether the last press was a gamepad's, and when that changes, draws the prompts
+   * on show again with the keys or the buttons. The screens drawn every frame follow it there.
+   */
+  #setLastPressPad(pad: boolean): void {
+    if (pad === this.#lastPressPad) return;
+    this.#lastPressPad = pad;
+    if (this.#mode === 'gameover' || this.#mode === 'complete') this.#refreshEndScreen();
+    else if (this.#mode === 'sync') this.#syncScreen.setPad(pad);
+  }
+
   #refreshEndScreen(blink = this.#blinkBright()): void {
     this.#nameBlink = blink;
     if (this.#mode === 'complete') this.#showComplete(this.#offerReplay);
@@ -1307,7 +1329,9 @@ export class Game {
   }
 
   #openScores(): void {
+    // The arcade's total, then each arcade level as the arcade plays it, then each song whole.
     const boards: BoardChoice[] = [{ name: 'arcade', label: 'Arcade' }];
+    for (let i = 1; i <= LEVEL_SONG_IDS.length; i++) boards.push({ name: `level-${i}`, label: `Level ${i}` });
     for (const song of this.#songs) if (song.sha256) boards.push({ name: song.sha256, label: song.title });
     const difficulties = this.#menu.impossibleFound ? DIFFICULTY_ORDER : DIFFICULTY_ORDER.filter((d) => d !== 'impossible');
     this.#scoresMenu = new ScoresMenu(boards, difficulties, this.#menu.difficulty);
@@ -1407,7 +1431,7 @@ export class Game {
   async #openSync(): Promise<void> {
     this.#stopMusic();
     this.#setMode('sync');
-    this.#syncScreen.update({ phase: 'running', presses: 0 }, this.#touchShown());
+    this.#syncScreen.update({ phase: 'running', presses: 0 }, this.#touchShown(), this.#lastPressPad);
     try {
       const player = await this.#getPlayer();
       if (this.#mode !== 'sync') return;
@@ -1427,7 +1451,7 @@ export class Game {
   #syncPress(): void {
     const sync = this.#sync;
     if (!sync || sync.result !== undefined) return;
-    this.#syncScreen.update({ phase: 'running', presses: sync.session.press() }, this.#touchShown());
+    this.#syncScreen.update({ phase: 'running', presses: sync.session.press() }, this.#touchShown(), this.#lastPressPad);
     if (sync.session.done) this.#finishSync();
   }
 
@@ -1438,7 +1462,7 @@ export class Game {
     sync.session.stop();
     sync.result = sync.session.result();
     sync.shownAt = performance.now();
-    this.#syncScreen.update({ phase: 'result', result: sync.result, was: this.#settings.syncMs }, this.#touchShown());
+    this.#syncScreen.update({ phase: 'result', result: sync.result, was: this.#settings.syncMs }, this.#touchShown(), this.#lastPressPad);
   }
 
   #syncKey(code: string): void {
@@ -1805,12 +1829,42 @@ export class Game {
     if (this.#hangar) this.#hangar.strobePeak = FLASH_PEAK[this.#settings.flashing];
   }
 
-  /** Builds `level` from `levelData` and keeps the song's notes and look for the effects. */
-  #makeLevel(levelData: LevelData, difficulty: DifficultyName): Level {
-    const level = generateLevel(levelData, difficulty);
-    this.#songNotes.set(level, new SongNotes(levelData));
-    this.#looks.set(level, songLook(levelData));
+  /**
+   * Builds `level` from `levelData`, cut to the arcade's length cap when `cut`, and keeps
+   * the song's notes and look for the effects.
+   */
+  #makeLevel(levelData: LevelData, difficulty: DifficultyName, cut = false): Level {
+    const data = cut ? cutLevelData(levelData, ARCADE_MAX_SAMPLES) : levelData;
+    const level = generateLevel(data, difficulty);
+    if (data !== levelData) this.#shortened.add(level);
+    this.#songNotes.set(level, new SongNotes(data));
+    this.#looks.set(level, songLook(data));
     return level;
+  }
+
+  /** `song`'s level at `difficulty`, whole or cut, from the cache or built from `levelData` now. */
+  #levelEntry(song: BundledSong, levelData: LevelData, difficulty: DifficultyName, cut: boolean) {
+    const cache = this.#cacheFor(song);
+    const key = cut ? `${difficulty}-cut` : difficulty;
+    let entry = cache.levels.get(key);
+    if (!entry) {
+      const level = this.#makeLevel(levelData, difficulty, cut);
+      entry = { level, autopilot: this.#options.autopilot ? autopilotInputs(level) : null };
+      cache.levels.set(key, entry);
+    }
+    return entry;
+  }
+
+  /**
+   * Fades a cut level's music out over its last CUT_FADE_SECONDS, once `clock` (song
+   * samples) gets there. Cosmetic: the level ends on its tick count either way.
+   */
+  #fadeCut(level: Level, player: AudioPlayer, clock: number): void {
+    if (this.#cutFading || !this.#shortened.has(level)) return;
+    const left = level.totalSamples - clock;
+    if (left > CUT_FADE_SECONDS * SAMPLE_RATE) return;
+    this.#cutFading = true;
+    player.fade(0, Math.max(0, left) / SAMPLE_RATE);
   }
 
   /** Plays the sounds for what happened in `level` since the last frame. */
@@ -2228,7 +2282,6 @@ export class Game {
       this.#setMode('analyzing');
     }
     try {
-      const cache = this.#cacheFor(song);
       const tempo = Difficulty[difficulty].tempoPermille;
       const loading = this.#getPlayer().then(async (p) => {
         await this.#loadSong(p, song, tempo);
@@ -2239,12 +2292,7 @@ export class Game {
       this.#playerReady = player;
       this.#song = song;
       this.#difficulty = difficulty;
-      let entry = cache.levels.get(difficulty);
-      if (!entry) {
-        const level = this.#makeLevel(levelData, difficulty);
-        entry = { level, autopilot: this.#options.autopilot ? autopilotInputs(level) : null };
-        cache.levels.set(difficulty, entry);
-      }
+      const entry = this.#levelEntry(song, levelData, difficulty, this.#run?.kind === 'arcade');
       this.#level = entry.level;
       this.#autopilot = entry.autopilot;
       this.#log = new InputLog(entry.level.tickCount);
@@ -2323,6 +2371,7 @@ export class Game {
       this.#setMode('play');
       this.#music = 'run';
       player.setVolume(1);
+      this.#cutFading = false;
       await player.start();
     } catch (err) {
       this.#showError(err);
@@ -2355,6 +2404,7 @@ export class Game {
             moduleHash: hash,
             difficulty: this.#difficulty,
             cheats: this.#state.cheats,
+            cut: this.#run?.kind === 'arcade',
             genVersion: GEN_VERSION,
             simVersion: SIM_VERSION,
             score: this.#state.score,
@@ -2417,18 +2467,20 @@ export class Game {
     this.#message.container.visible = true;
     const results = this.#results;
     const naming = this.#nameEntry !== null;
-    // On a touch screen the buttons name what they do, so the keys are left out.
+    // On a touch screen the buttons name what they do, so the keys are left out; with a
+    // gamepad, its buttons are named.
     const touch = this.#touchShown();
+    const pad = this.#lastPressPad;
     this.#message.show(
       'Game over',
       MAGENTA,
       [
         ...(results?.rows ?? [`Score ${this.#state.score}`]),
-        ...(!naming && !touch && this.#offerReplay && this.#lastReplay ? [REPLAY_HINT] : []),
+        ...(!naming && !touch && this.#offerReplay && this.#lastReplay ? [replayHint(pad)] : []),
         ...(this.#boardLine ? [this.#boardLine] : []),
         ...this.#nameLines(),
         ...(this.#perfLines ?? []),
-        ...(touch ? [] : [naming ? nameHint(this.#lastPressPad) : 'Esc Title  Any key Retry']),
+        ...(touch ? [] : [naming ? nameHint(pad) : pad ? 'A Retry  B Title' : 'Esc Title  Any key Retry']),
       ],
       results?.highlight ?? -1,
     );
@@ -2463,6 +2515,8 @@ export class Game {
     this.#finishRun();
     this.#endRun();
     this.#endFlood();
+    // A cut level's song has faded out but plays on; it ends with the level.
+    if (this.#level && this.#shortened.has(this.#level)) this.#stopMusic();
     const run = this.#run;
     const difficulty = DIFFICULTY_LABELS[this.#difficulty];
     const s = this.#state;
@@ -2519,7 +2573,7 @@ export class Game {
     return { rows, highlight: best.isNew ? rows.length - 1 : -1 };
   }
 
-  /** Shows the level-complete screen with #completeView; `offerReplay` lets R and S act. */
+  /** Shows the level-complete screen with #completeView; `offerReplay` lets R and S (Y and X) act. */
   #showComplete(offerReplay = false): void {
     const view = this.#completeView;
     if (!view) return;
@@ -2531,11 +2585,12 @@ export class Game {
     // prompt. On a touch screen the buttons name what they do, so the keys are left out.
     const naming = this.#nameEntry !== null;
     const touch = this.#touchShown();
-    const lines = view.lines.filter((l) => l !== REPLAY_HINT || (!naming && !touch));
+    const pad = this.#lastPressPad;
+    const lines = view.lines.filter((l) => l !== REPLAY_HINT || (!naming && !touch)).map((l) => (l === REPLAY_HINT ? replayHint(pad) : l));
     if (this.#boardLine) lines.push(this.#boardLine);
     lines.push(...this.#nameLines());
     if (this.#perfLines) lines.push(...this.#perfLines);
-    if (!touch) lines.push(naming ? nameHint(this.#lastPressPad) : `Any key ${view.action}`);
+    if (!touch) lines.push(naming ? nameHint(pad) : pad ? `A ${view.action}` : `Any key ${view.action}`);
     this.#message.show(view.heading, LIME, lines, view.highlight ?? -1);
     this.#afterComplete = view.after;
   }
@@ -2614,7 +2669,7 @@ export class Game {
         await this.#loadSong(p, song, tempo);
         return p;
       });
-      const [player, level] = await Promise.all([loading, this.#levelFor(song, replay.difficulty)]);
+      const [player, level] = await Promise.all([loading, this.#levelFor(song, replay.difficulty, replay.cut)]);
       if (request !== this.#musicRequest) return;
       this.#playerReady = player;
       this.#playback = { replay, song, level, from };
@@ -2629,22 +2684,16 @@ export class Game {
       this.#setMode('replay');
       this.#music = 'run';
       player.setVolume(1);
+      this.#cutFading = false;
       await player.start();
     } catch (err) {
       this.#showError(err);
     }
   }
 
-  /** The level for `song` at `difficulty`, from the cache or built now. */
-  async #levelFor(song: BundledSong, difficulty: DifficultyName): Promise<Level> {
-    const cache = this.#cacheFor(song);
-    let entry = cache.levels.get(difficulty);
-    if (!entry) {
-      const level = this.#makeLevel(await this.#levelData(song, difficulty), difficulty);
-      entry = { level, autopilot: this.#options.autopilot ? autopilotInputs(level) : null };
-      cache.levels.set(difficulty, entry);
-    }
-    return entry.level;
+  /** The level for `song` at `difficulty`, whole or cut, from the cache or built now. */
+  async #levelFor(song: BundledSong, difficulty: DifficultyName, cut: boolean): Promise<Level> {
+    return this.#levelEntry(song, await this.#levelData(song, difficulty), difficulty, cut).level;
   }
 
   /**
@@ -2768,7 +2817,7 @@ export class Game {
         break;
       }
       case 'scores': {
-        if (this.#scoresMenu) this.#scoresScreen.update(this.#scoresMenu, blink, this.#touchShown());
+        if (this.#scoresMenu) this.#scoresScreen.update(this.#scoresMenu, blink, this.#touchShown(), this.#lastPressPad);
         r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
         break;
       }
@@ -2787,7 +2836,7 @@ export class Game {
         this.#creditsRoll?.tick(Math.max(0, Math.min(100, now - this.#creditsAt)));
         this.#creditsAt = now;
         const note = this.#creditsNote && now < this.#creditsNote.until ? this.#creditsNote.text : '';
-        this.#credits.update(note, this.#touchShown());
+        this.#credits.update(note, this.#touchShown(), this.#lastPressPad);
         r.starfield.draw((now / 1000) * TITLE_DRIFT_PX_PER_S);
         break;
       }
@@ -2807,6 +2856,7 @@ export class Game {
         const player = this.#playerReady;
         if (!player || !level) break;
         const clock = player.songTimeSamples();
+        this.#fadeCut(level, player, clock);
         catchUp(level, this.#state, targetTick(clock, level.tickCount), this.#nextInput, this.#log);
         this.#playCues(level);
         this.#displaySamples = this.#clock.update(now, clock, this.#state.tick);
@@ -2827,6 +2877,7 @@ export class Game {
         if (!player || !playback) break;
         const { level, replay } = playback;
         const clock = player.songTimeSamples();
+        this.#fadeCut(level, player, clock);
         catchUp(level, this.#state, targetTick(clock, level.tickCount), (tick) => replay.inputs[tick] ?? 0, null);
         this.#playCues(level);
         this.#displaySamples = this.#clock.update(now, clock, this.#state.tick);

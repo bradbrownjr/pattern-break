@@ -56,6 +56,24 @@ only there, and cited nowhere in the repo, may be missing.
   [Synth Riders guide](https://www.itechguides.com/what-are-notes-charts-and-difficulty-levels-in-synth-riders/)
   says that game's tiers don't map to a fixed number of notes a second.
 
+## Level length
+
+- RobTop Games, ["Geometry Dash Rating System"](https://robtopgames.com/files/GDRating.pdf)
+  (PDF). A rated level "should be at least 30 seconds in length", and the best chance of a
+  rating is "Long, which means that it is 60 seconds or longer", "the length standard for
+  rated levels". The arcade's 2:30 cap leaves every level well above that (2026-11-14;
+  [PLAN.md](PLAN.md), "Level length").
+- RobTop Games, ["Geometry Dash Editor Guide"](https://www.robtopgames.com/files/GDEditor.pdf)
+  (PDF), "Song Settings" and the End trigger. A level picks a song and a "Start Offset",
+  "the fade options makes the song fade in at the start or out at the end", and the End
+  trigger "marks an object as the end of the level". So a level there ends where its maker
+  puts the end, not where the song ends, and the song can fade out: the model for cutting a
+  long song and fading it (2026-11-14).
+- RemyWiki, ["DanceDanceRevolution 5thMIX"](https://remywiki.com/AC_DDR_5th). DDR's LONG
+  VERSION songs "can only be played on the penultimate stage, and it counts as two songs
+  when played". An arcade rhythm game plays shorter cuts by default and treats a full long
+  song as an exception (2026-11-14).
+
 ## Music and licensing
 
 - Drozerix's [itch.io page](https://drozerix.itch.io): "Feel free to use my music in your
@@ -239,6 +257,11 @@ The full research, with what each source showed and what was measured, is in
 - **Arcade time per credit:** the only figure found, 1 to 3 minutes for beginners on
   classic cabinets, is from [Game Design Skills](https://gamedesignskills.com/game-design/arcade/),
   which cites no source; not used (2026-11-11).
+- **Level length in rhythm and arcade games:** no published standard for a song's or
+  level's length as played; RemyWiki's [DDR AC General Info](https://remywiki.com/DDR_AC_General_Info)
+  covers stages a credit, not lengths, and a search for DDR's cut lengths found no figure.
+  The 2:30 cap rests on Brad finding level 1's 3:32 "a bit of a slog" and on trimming only
+  the two arcade songs that run past it (2026-11-14).
 - **Showing lives as "x3":** no published rule (see "Picture and HUD").
 - **Touch stick dead zone:** no published size; the pad's XInput figure is the one used.
 - **Cassette face layout:** no text source describes it; the IEC 60094-7 standard

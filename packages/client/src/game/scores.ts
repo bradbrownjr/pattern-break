@@ -14,9 +14,9 @@ import type { BoardEntry, BoardView } from './net.ts';
 
 export const BOARD_ROWS = 10;
 
-/** A board to show: the arcade run's, or a song's by its hash. */
+/** A board to show: the arcade run's, an arcade level's, or a song's by its hash. */
 export interface BoardChoice {
-  /** 'arcade', or the song's SHA-256. */
+  /** 'arcade', 'level-1' to 'level-8', or the song's SHA-256. */
   name: string;
   label: string;
 }
@@ -166,8 +166,11 @@ export class ScoresScreen {
     }
   }
 
-  /** `touch`: the touch buttons are on show and say Back themselves. */
-  update(menu: ScoresMenu, blinkBright: boolean, touch = false): void {
+  /**
+   * `touch`: the touch buttons are on show and say Back themselves. `pad`: the last press
+   * was a gamepad's, so the hint names its button.
+   */
+  update(menu: ScoresMenu, blinkBright: boolean, touch = false, pad = false): void {
     const values = [menu.choice.label, DIFFICULTY_LABELS[menu.difficultyName]];
     values.forEach((value, i) => {
       const selected = menu.cursor === i;
@@ -229,7 +232,7 @@ export class ScoresScreen {
     this.#note.color = menu.state.kind === 'board' ? GREY : MAGENTA;
     this.#note.place(CENTER, LIST_TOP + 2 * ROW, 'center');
 
-    this.#hint.text = touch ? '' : 'Esc Back';
+    this.#hint.text = touch ? '' : pad ? 'B Back' : 'Esc Back';
     this.#hint.place(CENTER, 204, 'center');
 
     this.#marker.visible = blinkBright;

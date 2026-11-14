@@ -213,7 +213,7 @@ describe('analyze', () => {
   it('matches the golden hash for the fake song', async () => {
     // Update only together with a GEN_VERSION bump (or before the first release).
     expect(await hashLevelData(run().level)).toBe(
-      '366da82dccae7055cc6ca165403aee5fa5e9c39acc62f4ed2c336e275d803254',
+      'a2e35f294bdab2ecbe42bd060a59c5826aeaf3dcdf3e4e7410834b8b37708aeb',
     );
   });
 

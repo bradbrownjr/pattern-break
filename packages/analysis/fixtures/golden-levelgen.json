@@ -1,30 +1,30 @@
 {
-  "genVersion": 10,
+  "genVersion": 11,
   "simVersion": 15,
   "fixtures": {
     "pb-fixture-01.mod": {
       "easy": {
-        "level": "88a9a53cbe3885e2ff28b880f89529e8d87db65d8a5610178a0dd7f693b9ff19",
-        "autopilot": "2a971532ea3c0bf87d6a32fa9a35340405b86cc0a3d5ae37a90ba76f0316ec7e",
-        "zigzag": "871463fa176d1995eef185d53b8b54999955799e90e6d17e5b5517db79e6b5e0",
+        "level": "ceb2d260a9be835f82b863d9fc16f39f989329bb4be16dfa638b78775d42fc24",
+        "autopilot": "d751a7361cdc246106395283bd98937259d9f431f9df28be8f2c33b121da8553",
+        "zigzag": "a6bb8ca11cdc5e99d0ab65c7eb4c3d60a8f4d8a447ed95eaeb293d9f2e8b0276",
         "zigzagDeathTick": 915
       },
       "normal": {
-        "level": "e16bfd958072b98460f056cf950fc8bbff71973ad6bd94c007556a5f5256e341",
-        "autopilot": "5f3f0690aee925c0742b708ca5ca0ad8ae5bc9a8411ebc97fa424d73f4c28c77",
-        "zigzag": "d88046678c3bdfb710aaa2e28b72d2a15f26ca628ee644dee0a6e9546be4cd91",
+        "level": "bb97cedb1385f9a27ba312106d731d8ba50a52a1f2f84870ada4a86a261398a5",
+        "autopilot": "fc89fa8cf32a99865cf1462a615b050ac07e849105d0a2ecbf15fab988d8844a",
+        "zigzag": "8f5323868df28e789cbc6888e0e26e92bea3da7cd20ef9352129cd7a2422f509",
         "zigzagDeathTick": 672
       },
       "hard": {
-        "level": "8107703e98a386cc96feed73f10b5e58eb50895cad928939d6da224b7bbc8200",
-        "autopilot": "dc6561137e79b2fa73b97cea34c0a13ff722e5fdccbf5873e2198ac69a1f5b00",
-        "zigzag": "b302c3e652f2ac7d46a624c7932e55cb85700d7b198deb07fb7c94d0a00676a4",
-        "zigzagDeathTick": 655
+        "level": "875377457ee52149d592d03e53878fee4d4c86fadba812dd0c0e7f503d1bcb71",
+        "autopilot": "ac060474f1783337f7e04b85e418dd2302d8c6df47af4866718fa4c8d83296ff",
+        "zigzag": "72177abc710395f0a970f9dd0fc6fef76f26d27e0d36ddcc90ac9df25ac0b4d3",
+        "zigzagDeathTick": 628
       },
       "impossible": {
-        "level": "81362b3d8ba0eb7278e9fbcce6679fc22e549260b894a5dfe52cac5626ad0dae",
-        "autopilot": "3b1bff9026f9cccbd8eeb54b8dd50bd059022cd83dc2f089839c513a8b7ebab3",
-        "zigzag": "2e9226f843ea3a50d2cde45d880876009b97b9845f85d336fc8adec08a421bd8",
+        "level": "9a70536e96bccb4fa6967c8c9fc54e89bf7f75b3e4cfe2c85ecad4822f449ceb",
+        "autopilot": "cf6a7b37ec71f4a3e535b2c8f12ca3411e1df086622b4ae6a2ab718bf608c787",
+        "zigzag": "b438eefc5f2998392dd7ce0fec9d382d284c5a60065de9fd477ad8a69e951ad4",
         "zigzagDeathTick": 595
       }
     }

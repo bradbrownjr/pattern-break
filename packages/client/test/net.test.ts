@@ -83,7 +83,7 @@ beforeAll(async () => {
   const level = generateLevel(analyze(await loadOpenMpt(), bytes, Difficulty.normal.tempoPermille), 'normal');
   const inputs = autopilotInputs(withoutEnemies(level));
   const score = runInputLog(level, inputs, createSimState()).score;
-  run = { moduleHash: hash, difficulty: 'normal', cheats: 0, genVersion: GEN_VERSION, simVersion: SIM_VERSION, score, inputs };
+  run = { moduleHash: hash, difficulty: 'normal', cheats: 0, cut: false, genVersion: GEN_VERSION, simVersion: SIM_VERSION, score, inputs };
 }, 60_000);
 
 afterAll(async () => {

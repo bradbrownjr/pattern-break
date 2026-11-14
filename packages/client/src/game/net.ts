@@ -5,7 +5,7 @@
 // and are sent from it, so a run finished offline is sent once the game is back online.
 
 import { encodeReplay, type Replay } from '@game/core';
-import type { PendingRun, StoredIdentity } from './library.ts';
+import type { PendingRun, RunKind, StoredIdentity } from './library.ts';
 
 /** What became of a run sent to the leaderboard. */
 export type Outcome =
@@ -125,7 +125,7 @@ export class LeaderboardClient {
   }
 
   /** Sends a run under a name, uploading any song the server asks for once, then sending it again. */
-  async submit(run: { kind: 'song' | 'arcade'; name: string; replays: Uint8Array[] }, songBytes: SongBytes): Promise<Outcome> {
+  async submit(run: { kind: RunKind; name: string; replays: Uint8Array[] }, songBytes: SongBytes): Promise<Outcome> {
     const body = { kind: run.kind, name: run.name, replays: run.replays.map(base64) };
     for (let attempt = 0; attempt < 2; attempt++) {
       const res = await this.#json('POST', '/api/runs', body);
@@ -156,7 +156,10 @@ export class LeaderboardClient {
     return { status: 'rejected', reason: 'song missing' };
   }
 
-  /** A board: 'arcade', or a song's hash. `you` is the name whose place the board gives too. */
+  /**
+   * A board: 'arcade', an arcade level's ('level-1' to 'level-8'), or a song's hash. `you` is
+   * the name whose place the board gives too.
+   */
   async board(name: string, difficulty: string, limit = 10, you = ''): Promise<BoardView> {
     const query = `difficulty=${difficulty}&limit=${limit}${you ? `&name=${encodeURIComponent(you)}` : ''}`;
     const res = await this.#request('GET', `/api/leaderboards/${name}?${query}`);
@@ -199,7 +202,7 @@ export class Leaderboards {
    * doesn't wait on older runs; resolves to what became of it. `onQueued` hears when it's in
    * the queue, after which it's sent even if the page moves on.
    */
-  async post(kind: 'song' | 'arcade', name: string, replays: readonly Replay[], onQueued?: () => void): Promise<Outcome> {
+  async post(kind: RunKind, name: string, replays: readonly Replay[], onQueued?: () => void): Promise<Outcome> {
     const client = await this.client();
     if (!client) return { status: 'unavailable' };
     const run: PendingRun = { kind, name, replays: replays.map((r) => encodeReplay(r).buffer), at: Date.now() };
